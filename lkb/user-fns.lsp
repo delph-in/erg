@@ -2,43 +2,6 @@
 
 (in-package :cl-user)
 
-
-(defun preprocess-sentence-string (str)
-  ;; replace all punctuation by spaces
-  ;; except
-  ;; for PAGE compatability, replace #\' by #\space
-  ;; except at end of word, when replace by #\space #\s
-  (let ((in-word nil)
-        (chars (coerce str 'list))
-        (result-chars nil))
-    (do* ((next-char (car chars) (car remainder))
-          (remainder (cdr chars) (cdr remainder)))
-         ((null next-char) nil)
-         (cond ((eql next-char #\')
-                (cond 
-                 ((not in-word) 
-                  (if (or (null remainder) (eql (car remainder) #\space))
-                      nil
-                    (progn
-                      (push next-char result-chars)
-                      (setf in-word t))))
-                 ((or (null remainder) (eql (car remainder) #\space))
-                  (setf in-word nil)
-                  (push #\space result-chars)
-                  (push #\s result-chars))
-                 (t
-                  (setf in-word nil)
-                  (push #\space result-chars))))
-               ((not (alphanumericp next-char)) 
-                (setf in-word nil)
-                (push #\space result-chars))
-               (t (setf in-word t) 
-                (push next-char result-chars))))
-    ;(concatenate 'string "< "
-	   (string-trim '(#\space) (coerce (nreverse result-chars) 'string))
-    ;	   " >")
-	   ))
-
 (defun establish-linear-precedence (rule-fs)
    ;;;    A function which will order the features of a rule
    ;;;    to give (mother daughter1 ... daughtern)
@@ -109,3 +72,61 @@
                (or (= cur end)
                    (and (digit-char-p (char name cur)) (= (incf cur) end))))))))
 
+(defparameter *infl-pos-record* nil)
+
+(defun find-infl-pos (unifs orth-string sense-id)
+  (declare (ignore orth-string))
+  (let ((types
+         (for unif in unifs
+              filter
+              (if (null (path-typed-feature-list (unification-lhs unif)))
+                  (car (u-value-types (unification-rhs unif)))))))
+    (cond
+     ((null types) 
+      (format t 
+              "~%Warning ~A doesn't specify any types, no affix position found"
+              sense-id)
+      nil)
+     ((cdr types)
+      (format t 
+              "~%Warning ~A specifies multiple types, no affix position found"
+              sense-id))
+     (t
+      (let* ((type (car types))
+             (res (assoc type *infl-pos-record*)))
+        (if res (cdr res)
+          (let ((type-entry (get-type-entry type)))
+            (cond (type-entry 
+                   (eval-possible-leaf-type type)
+                   (let ((pos
+                          (extract-infl-pos-from-fs 
+                           (tdfs-indef (type-tdfs type-entry)))))
+                     (unless pos
+                       (format t "~%No position identified for ~A" sense-id))
+                     (push (cons type pos) *infl-pos-record*)
+                     pos))
+                  (t
+                   (format t "~%Warning ~A specifies invalid type,~
+ no affix position found"
+                           sense-id)
+                   nil)))))))))
+
+
+(defun extract-infl-pos-from-fs (fs)  
+  (let ((current-path '(ARGS))
+         (coindexed-position 
+          (existing-dag-at-end-of fs '(--FINAL-ARG)))
+        (position 1))
+    (if coindexed-position
+        (loop (let* ((next-path 
+                      (append current-path '(FIRST)))
+                     (new-pos 
+                      (existing-dag-at-end-of 
+                       fs next-path)))
+                (unless new-pos
+                       (return nil))
+                (when (eq new-pos coindexed-position)
+                  (return position))
+                (incf position)
+                (setf current-path 
+                  (append current-path '(REST))))))))
