@@ -7,6 +7,9 @@
 ;;   Language: Allegro Common Lisp
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; $Log$
+;; Revision 1.23  1999/11/16 03:54:00  danf
+;; Eliminated templates, moved MESSAGE out of CONT
+;;
 ;; Revision 1.22  1999/09/15 02:58:33  danf
 ;; Reduced number of spurious parses and trimmed overgeneration
 ;;
@@ -154,7 +157,7 @@
   `( ,(vsym "TOP") ,(vsym "HANDEL") ,(vsym "INDEX") ,(vsym "EVENT") 
      ,(vsym "INST") ,(vsym "ACT") ,(vsym "BV") ,(vsym "RESTR") 
      ,(vsym "SOA") ,(vsym "SCOPE") ,(vsym "QUANT") ,(vsym "XARG") 
-     ,(vsym "ARG") ,(vsym "CONST_VALUE")))
+     ,(vsym "ARG") ,(vsym "PREP") ,(vsym "ARGX") ,(vsym "CONST_VALUE")))
 
 (setf *psoa-top-h-path* 
   `(,(vsym "TOP-H")))
@@ -307,16 +310,38 @@
      (,(vsym "PAST*") (vit_tense past) (vit_perf nonperf))
      (,(vsym "FUTURE") (vit_tense future) (vit_perf nonperf))
      (,(vsym "FUTURE*") (vit_tense future) (vit_perf nonperf))
-     (,(vsym "PRESPERF") (vit_tense pres) (vit_perf perf))
-     (,(vsym "PRESPERF*") (vit_tense pres) (vit_perf perf))
-     (,(vsym "PASTPERF") (vit_tense past) (vit_perf perf))
-     (,(vsym "PASTPERF*") (vit_tense past) (vit_perf perf))
-     (,(vsym "PRES+PROGR") (vit_tense present) (vit_aspect progr))
-     (,(vsym "*SORT*") (vit_perf nonperf))
-     (,(vsym "TENSE") (vit_perf nonperf))
-     (,(vsym "NON_TENSED") (vit_perf nonperf))
-     (,(vsym "DO_PAST") (vit_tense past) (vit_perf nonperf))
-     (,(vsym "DO_PAST*") (vit_tense past) (vit_perf nonperf)))
+     (,(vsym "PROGR") (vit_perf nonperf))
+     (,(vsym "NO_ASPECT*") (vit_perf nonperf))
+     (,(vsym "PRES+PROGR") (vit_tense pres) (vit_aspect progr) (vit_perf nonperf))
+     (,(vsym "PRES+PROGR*") (vit_tense pres) (vit_aspect progr) (vit_perf nonperf))
+     (,(vsym "PRES+PROGR_STR") (vit_tense pres) (vit_aspect progr) (vit_perf nonperf))
+     (,(vsym "PRES+PERF") (vit_tense pres) (vit_perf perf))
+     (,(vsym "PRES+PERF*") (vit_tense pres) (vit_perf perf))
+     (,(vsym "PRES+NOASP") (vit_tense pres) (vit_perf nonperf))
+     (,(vsym "PRES+NOASP*") (vit_tense pres) (vit_perf nonperf))
+     (,(vsym "PRES+PERF+PROGR") (vit_tense pres) (vit_aspect progr) (vit_perf perf))
+     (,(vsym "PRES+PERF+PROGR*") (vit_tense pres) (vit_aspect progr) (vit_perf perf))
+     (,(vsym "PAST+PROGR") (vit_tense past) (vit_aspect progr) (vit_perf nonperf))
+     (,(vsym "PAST+PROGR*") (vit_tense past) (vit_aspect progr) (vit_perf nonperf))
+     (,(vsym "PAST+PERF") (vit_tense past) (vit_perf perf))
+     (,(vsym "PAST+PERF*") (vit_tense past) (vit_perf perf))
+     (,(vsym "PAST+NOASP") (vit_tense past) (vit_perf nonperf))
+     (,(vsym "PAST+NOASP*") (vit_tense past) (vit_perf nonperf))
+     (,(vsym "PAST+PERF+PROGR") (vit_tense past) (vit_aspect progr) (vit_perf perf))
+     (,(vsym "PAST+PERF+PROGR*") (vit_tense past) (vit_aspect progr) (vit_perf perf))
+     (,(vsym "FUT+PROGR") (vit_tense future) (vit_aspect progr) (vit_perf nonperf))
+     (,(vsym "FUT+PROGR*") (vit_tense future) (vit_aspect progr) (vit_perf nonperf))
+     (,(vsym "PRES+FUT+PROGR") (vit_tense future) (vit_aspect progr) (vit_perf nonperf))
+     (,(vsym "PRES+FUT+PROGR*") (vit_tense future) (vit_aspect progr) (vit_perf nonperf))
+     (,(vsym "FUT+PERF") (vit_tense future) (vit_perf perf))
+     (,(vsym "FUT+PERF*") (vit_tense future) (vit_perf perf))
+     (,(vsym "FUT+NOASP") (vit_tense future) (vit_perf nonperf))
+     (,(vsym "FUT+NOASP*") (vit_tense future) (vit_perf nonperf))
+     (,(vsym "FUT_STR") (vit_tense future) (vit_perf nonperf))
+     (,(vsym "FUT+PERF+PROGR") (vit_tense future) (vit_aspect progr) (vit_perf perf))
+     (,(vsym "FUT+PERF+PROGR*") (vit_tense future) (vit_aspect progr) (vit_perf perf))
+     (,(vsym "PRES+PAST") (vit_aspect nonprogr) (vit_perf nonperf))     
+     )
     (,(vsym "VITMOOD") vit-tenseandaspect
      ((:AND ,(vsym "INDICATIVE*") ,(vsym "STRICT_SORT")) (vit_mood ind))
      ((:AND ,(vsym "MODAL_SUBJ*") ,(vsym "STRICT_SORT")) (vit_mood ind))
@@ -331,6 +356,7 @@
 ;; form of the verb, and should be ignored here.
      ;; (,(vsym "INDICATIVE*") (vit_mood ind))
      (,(vsym "MODAL_SUBJ") (vit_mood ind))
+     (,(vsym "IND+MODSUBJ") (vit_mood ind))
      (,(vsym "WOULD_SUBJ") (vit_mood conj))
      (,(vsym "SUBJUNCTIVE") (vit_mood conj))
      (,(vsym "IND_OR_MOD_SUBJ") (vit_mood imp))
@@ -453,4 +479,4 @@
   `(,(vsym "NAMED")))
 
 #+page
-(setf *vm-ignored-sort-list* (list *vm-top-sort-symbol* MAIN::ANYTHING))
+(setf *vm-ignored-sort-list* (list *vm-top-sort-symbol*))

@@ -25,7 +25,8 @@ non_fin_verb := local &
   [ STEMHEAD vstem,
     CAT.HEAD [ VOICE active,
 	       TENSE #vittense ],
-    CONT.INDEX.VIT.VITTENSE #vittense ].
+    CONT.INDEX #index & [ VIT.VITTENSE #vittense ],
+    KEYS.KEY.EVENT #index ].
 
 ; Need to constrain MOD value for PRP verbs.  Also for passive participles.
 
@@ -59,69 +60,54 @@ prp_verb := non_fin_verb & verb_participle_affix &
   [ CAT.HEAD [ VFORM prp,
 	       TENSE progr* ] ].
 
-
 psp_verb := non_fin_verb & nomod_local &
   [ CAT.HEAD [ VFORM psp,
-	       PRD - ],
-    CONT psoa & [ INDEX #event ],
-    KEYS.KEY.EVENT #event ].
+	       TENSE nonprg,
+	       PRD - ] ].
 
 non_perf :< local.
 
-#|
 bse_verb := non_fin_verb & non_perf & nomod_local &
   [ CAT [ HEAD [ VFORM bse,
-		 PRD - ],
+		 PRD -,
+		 TENSE no_aspect* ],
 	  VAL.SUBJ < [ OPT - ] > ] ].
-|#
 
 ; Since finite verbs can project relative clauses, we introduce [MOD < nbar >]
 ; here, and make sure that no other projections of finite verbs can be
 ; adjuncts, through constraints on the head-adjunct phrase type.
 
-; Finite verbs cannot identify their INDEX with ECONT.INDEX, since the ECONT
-; will only be employed in relative clauses, where the ECONT has to be
-; unifiable with the ref-ind of the noun being modified.
-
 fin_verb := non_perf &
   [ STEMHEAD vstem,
     CAT [ HEAD [ PRD -,
                  VOICE active,
+		 TENSE #tense,
+		 VFORM fin,
 		 MOD < [ LOCAL intersective_mod &
 			       [ CAT nbar_cat ] ] > ],
 	  POSTHEAD +,
 	  VAL.SUBJ < synsem & [ LOCAL [ CAT nomp_cat_nom_min,
 					CONJ cnil ],
 				OPT - ] > ],
-    CONT psoa & [ INDEX #event ],
+    CONT psoa & [ INDEX #event & [ VIT.VITTENSE #tense ] ],
     KEYS.KEY.EVENT #event ].
 
 pres_verb := fin_verb & 
-  [ CAT.HEAD.MOOD indicative* ].
+  [ CAT.HEAD [ TENSE present*,
+	       MOOD indicative* ] ].
 
 past_verb := fin_verb & 
-  [ CAT.HEAD [ VFORM fin,
-	       TENSE past* & #vittense,
-               MOOD indicative* ],
-    CONT.INDEX.VIT.VITTENSE #vittense ].
+  [ CAT.HEAD [ TENSE past*,
+               MOOD indicative* ] ].
 
 subjunctive_verb := fin_verb & 
-  [ CAT.HEAD [ VFORM fin,
-	       MOOD subjunctive,
-	       TENSE #vittense ],
-    CONT.INDEX.VIT.VITTENSE #vittense ].
+  [ CAT.HEAD.MOOD subjunctive ].
 
 third_sg_fin_verb := pres_verb &
-  [ CAT.HEAD [ VFORM fin,
-	       TENSE present* & #vittense ],
-    CONT.INDEX.VIT.VITTENSE #vittense,
-    AGR.PNG png & [ PN 3sg ] ].
+  [ AGR.PNG png & [ PN 3sg ] ].
 
 non_third_sg_fin_verb := pres_verb &
-  [ CAT [ HEAD [ VFORM fin_or_bse,
-		 TENSE pres_or_none & #vittense ],
-	  VAL.SUBJ < [ LOCAL local & [ CONT nom-obj ] ] > ],
-    CONT.INDEX.VIT.VITTENSE #vittense,    
+  [ CAT.VAL.SUBJ < [ LOCAL local & [ CONT nom-obj ] ] >,
     AGR.PNG png & [ PN non3sg & strict_sort ] ].
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -376,7 +362,8 @@ adv_addition := lex_rule &
 				     COMPS #comps & *substlist*,
 				     SPR #spr ],
 			       POSTHEAD #ph ],
-			 CONT [ INDEX #vindex,
+			 CONT [ TOP #vtop,
+				INDEX #vindex,
 				H-CONS #hcons ],
 			 CTXT #ctxt,
 			 KEYS #keys ],
@@ -390,7 +377,7 @@ adv_addition := lex_rule &
 			  < [ LOCAL local &
 				    [ CAT.HEAD basic_lexadv,
 				      CONT [ TOP #advtop,
-					     H-CONS <! [ OUTSCPD #vh ] !> ],
+					     H-CONS <! [ OUTSCPD #vtop ] !> ],
 				      KEYS.MESSAGE 0-dlist ],
 			      OPT - ] . #comps >,
 		     SPR #spr ],
@@ -399,7 +386,7 @@ adv_addition := lex_rule &
 		    INDEX #vindex,
 		    H-CONS #hcons ],
 	     CTXT #ctxt,
-	     KEYS #keys & [ KEY.HANDEL #vh ] ],
+	     KEYS #keys ],
 	   NON-LOCAL #nonloc ],
     C-CONT.LISZT <! !> ].
 
@@ -411,6 +398,11 @@ adv_addition := lex_rule &
 ;; create a separate lexical entry for the elided form of "to", and make it
 ;; MOD < >.
 
+;; DPF 26-Nov-99 - In order to make sure that the VIT LABEL of expletive 'there'
+;; subjects gets bound by elliptical verb, we split the rule for VP ellipsis
+;; into two, one for referential subjects and one for expletives.  Don't know
+;; if this is motivated beyond the LABEL requirements of Verbmobil.
+
 vp_ellipsis := lex_rule &
   [ STEM #orth,
     DTR [ STEM #orth,
@@ -419,18 +411,17 @@ vp_ellipsis := lex_rule &
 				[ AUX +,
 				  INV - ],
 			   POSTHEAD #ph,
-			   VAL [ SUBJ #subj & < [ LOCAL.CONT.INDEX #sind ] >,
+			   VAL [ SUBJ #subj,
 				 SPR #spr,
 				 COMPS < unexpressed &
 					 [ LOCAL [ CAT.HEAD subst,
-						   CONT [ TOP #chand,
-							  INDEX #cind ],
+						   CONT.TOP #chand,
 						   KEYS.KEY #altkey ] ] > ] ],
 		     CONT [ TOP #hand,
 			    INDEX #ind,
 			    H-CONS #hcons ],
 		     CTXT #ctxt,
-		     KEYS.KEY #key & [ LABEL #label ] ],
+		     KEYS.KEY #key ],
 	     NON-LOCAL #nonloc ] ],
     SYNSEM verb_synsem &
 	 [ LOCAL [ CAT [ HEAD #head,
@@ -442,15 +433,27 @@ vp_ellipsis := lex_rule &
 			  INDEX #ind,
 			  H-CONS #hcons ],
 		   KEYS [ KEY #key,
-			  ALTKEY ellipsis_rel & #altkey &
-				       [ HANDEL #chand,
-					 LABEL #label,
-					 EVENT #cind,
-					 ROLE #sind ] ],
+			  ALTKEY #altkey & ellipsis_rel &
+				       [ HANDEL #chand ] ],
 		   CTXT #ctxt ],
 	   NON-LOCAL #nonloc ],
     C-CONT.LISZT <! #altkey !> ].
 
+vp_ellipsis_ref := vp_ellipsis &
+  [ DTR.SYNSEM.LOCAL.CAT.VAL [ SUBJ < [ LOCAL.CONT.INDEX ref-ind & #sind ] >,
+			       COMPS < [ LOCAL.CONT.INDEX #cind ] > ],
+    SYNSEM verb_synsem &
+	 [ LOCAL.KEYS.ALTKEY [ EVENT #cind,
+			       ROLE #sind ] ] ].
+
+vp_ellipsis_expl := vp_ellipsis &
+  [ DTR.SYNSEM.LOCAL.CAT.VAL.SUBJ < [ LOCAL [ CONT.INDEX there-ind,
+					      KEYS.KEY no_rel &
+						     [ LABEL #label ] ] ] >,
+    SYNSEM verb_synsem &
+	 [ LOCAL [ CONT.INDEX #event,
+		   KEYS [ KEY.LABEL #label,
+			  ALTKEY [ EVENT #event ] ] ] ] ].
 
 ;; Need to work on generalizing the semantics - since we derive this entry
 ;; from the past participle, we have to discard the tense information from

@@ -2872,7 +2872,6 @@
 (insert-db-item 'cl-user::_consequently_rel 'consequently nil nil 'dra nil nil)
 (insert-db-item 'cl-user::_distinguish_rel 'distinguish nil nil 'v13 "mental_sit" "human,anything")
 (insert-db-item 'cl-user::_bill_n_rel 'bill_n nil nil 'n "entity" nil)
-(insert-db-item 'cl-user::decl_rel 'decl nil nil 'mood nil nil)
 (insert-db-item 'cl-user::_super_rel 'super nil nil 'isect nil nil)
 (insert-db-item 'cl-user::_canteen_rel 'canteen nil nil 'n "nongeo_location" nil)
 (insert-db-item 'cl-user::holiday_rel 'holiday nil nil 'hd "time" nil)

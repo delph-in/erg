@@ -168,6 +168,11 @@
     (rootgap_l 100)
     (rootgap_r 100)
     (n_n_cmpnd 250)
+    (adjh_i 350)
+    (mid_coord_np 800)
+    (top_coord_np 700)
+    (hcomp 800)
+    (hadj_s 400)
     (vpellipsis_lr 100)
     (taglr 100)
     (vgering 100)
@@ -210,6 +215,9 @@
                                     MV_OBJ_EQUI_PRD_LE
                                     COORD_C_MLE
                                     NP_ADV_LE
+				    ORDINAL_ADJ_LE
+				    TO_C_PROP_ELIDED_LE
+				    TO_C_NONPROP_ELIDED_LE
 				    ))
 (defparameter *likely-le-types* '(COORD_C_LE DISC_ADV_LE 
 				  QUASIMODAL_LE MV_POSS_LE
@@ -221,6 +229,8 @@
 				  WH_PRO_WORD_LE
                                   MV_EMPTY_PREP*_INTRANS_LE
                                   MV_EMPTY_PREP_INTRANS_LE
+				  TO_C_NONPROP_LE
+				  HOW_ABOUT_N_OR_P_MLE1
 				  ))
 
 (defun lex-priority (mrec)
@@ -229,9 +239,12 @@
 		    (if (mrecord-history mrec)
 			(mhistory-fs (car (mrecord-history mrec)))
 		      (mrecord-fs mrec))))))
-    (cond ((member lex-type *unlikely-le-types* :test #'eq) -200)
-	  ((member lex-type *likely-le-types* :test #'eq) 800)
-	  (t 600))))
+    (format t "~%~A" lex-type)
+    (cond ((member lex-type *unlikely-le-types* :test #'eq)
+	   200)
+	  ((member lex-type *likely-le-types* :test #'eq) 
+	   (progn (format t ": 800") 800))
+	  (t 400))))
 
 (defun gen-lex-priority (fs)
   (let ((lex-type (dag-type (tdfs-indef fs)))) 
