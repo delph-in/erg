@@ -17,6 +17,9 @@
 ; Affixation
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+;; DPF (14-Oct-98) --FINAL-ARG points to the final element in a word with 
+;; spaces, since that element bears any inflection.
+
 basic_affix_bearing := word &
   [ SYNSEM.LOCAL [ STEMHEAD #stemhead,
                    AGR #agr,
@@ -163,7 +166,8 @@ hc_word := sign &
 		     CONJ cnil ],
 	     NON-LOCAL [ QUE 0-dlist,
 			 REL 0-dlist,
-			 SLASH 0-dlist ] ] ].
+			 SLASH 0-dlist ] ],
+    ROOT - ].
 
 hc_word_no_affix := hc_word &
   [ ARGS < [ AFFIX no-affix ] , ... > ].
@@ -376,8 +380,8 @@ nomod_local := local &
   [ CAT.HEAD.MOD no-mod ].
 
 nomod_synsem := lex_synsem &
-  [ LOCAL nomod_local &
-	  [ CAT.VAL.SUBJ < > ] ].
+  [ LOCAL.CAT [ HEAD.MOD no-mod,
+		VAL.SUBJ < > ] ].
 
 intersective_mod :< local.
 scopal_mod :< local.
@@ -578,11 +582,13 @@ s_equi_lt := linking_type &
 
 equi_prd_lt := linking_type & 
   [ LOCAL [ CAT.VAL.--KEYCOMP.LOCAL.CONT [ TOP #tophand,
-                                           KEY.HANDEL #hand ],
+                                           KEY [ HANDEL #hand,
+						 LABEL #label ] ],
             CONT [ TOP #tophand,
                    LISZT <! relation & [ HANDEL #hand ],
 			    support_rel & #altkey & 
 			    [ HANDEL #hand,
+			      LABEL #label,
 			      EVENT #event & event ] !>,
 		   KEY.FIG #event,
 		   ALTKEY #altkey ] ] ].
@@ -732,7 +738,8 @@ ssr_expr_lt := basic_ssr_expr_lt &
 ssr_prdp_expr_lt := basic_ssr_expr_lt &
   [ LOCAL [ CAT.VAL [ --KEYCOMP #comp,
 		      COMPS < #comp & 
-			      [ LOCAL.CONT.KEY.HANDEL #chand ],
+			      [ LOCAL.CONT.KEY [ HANDEL #chand,
+						 LABEL #label ] ],
 			      [ LOCAL.CONT.KEY _to_rel &
 					       [ PREP #expr ] ], 
 			      ... > ],
@@ -741,6 +748,7 @@ ssr_prdp_expr_lt := basic_ssr_expr_lt &
 		   LISZT <! #key,
 			    support_rel &
 			    [ HANDEL #chand,
+			      LABEL #label,
 			      EVENT #ind ] !> ] ] ].
 
 sor_lt := linking_type &
@@ -1757,9 +1765,8 @@ temp_noun_ppcomp_synsem := common_noun_ppcomp_synsem & temp_mod_synsem &
 
 
 ; For e.g. "hotel" as in "the hotel Marriott" or "the Marriott hotel Hannover"
-common_noun_npcomp_synsem := common_noun_synsem & two_arg &
-  [ LOCAL nomod_local &
-	  [ CAT.VAL.COMPS < @nomp($case=acc) &
+common_noun_npcomp_synsem := common_noun_synsem & two_arg & nomod_synsem &
+  [ LOCAL [ CAT.VAL.COMPS < @nomp($case=acc) &
 			    [ LOCAL.CONT.KEY.INST #cindex,
 			      OPT - ] >,
 	    CONT [ INDEX #index,
@@ -2334,13 +2341,13 @@ tag_synsem := lex_synsem &
 			COMPS < pronominal_synsem &
 				[ OPT -,
 				  LOCAL [ AGR #tagagr,
-					  CONT.INDEX #agr ] ] > ],
+					  CONT [ INDEX #agr,
+						 KEY.LABEL #label ] ] ] > ],
 		  
 		  MC na ],
 	    AGR #tagagr,
-	    CONT [ COMPKEY #key,
-		   INDEX #ind,
-		   KEY.LABEL #label,
+	    CONT [ INDEX #ind,
+		   KEY #key,
 		   MESSAGE <! ne_rel &
 			    [ PARAMS <! !> ] !>,
 		   LISZT <! !> ],
@@ -2619,15 +2626,14 @@ wh_adjective_word := nonconj & non_affix_bearing & mcna & nonslash & nonrel &
 					    ARG #ind ],
 			        which_rel & [ HANDEL #whhand,
 					      BV #pind,
-					      RESTR #hand,
-					      LABEL #label ],
+					      RESTR #hand ],
 			        property_rel & [ HANDEL #hand,
 						 INST #pind ],
 			        prpstn_to_prop_rel & #key &
 			        [ HANDEL #prhand,
 				  PRPSTN #ahand,
 				  PROP #pind ] !>,
-		       KEY #key & [ LABEL #label ],
+		       KEY #key,
 		       H-CONS <! is-one-of &
 				  [ SC-ARG #top,
 				    CANDS [ LIST < #prhand . #hslist >,
@@ -2893,8 +2899,12 @@ prep_cp_word := amalg_word &
   [ SYNSEM trans_prep_synsem &
       [ LOCAL [ CAT.VAL.COMPS < @cp($vform=fin) &
 				[ LOCAL [ CAT.HEAD.INV -,
-					  CONT.MESSAGE <! propositional_rel !> ],
-				  OPT - ] > ] ] ].
+					  CONT [ TOP #chand,
+						 MESSAGE <! propositional_rel &
+							    [ HANDEL #mhand,
+							      SOA #chand ] !> ]],
+				  OPT - ] >,
+		CONT.KEY.HANDEL #mhand	] ] ].
 
 ; Prepositions that don't modify nominals - e.g, 'until'
 prep_no_n_mod_word := prep_word &
@@ -4224,7 +4234,8 @@ disc_adv_synsem := canonical_synsem &
 				     VAL.COMPS *olist*,
 				     MC na_or_+ ],
 			       CONT [ INDEX #ind,
-				      MESSAGE #msg ] ] ],
+				      MESSAGE #msg ],
+			       CONJ cnil ] ],
 		  VAL [ SUBJ < >,
 			SPR < >,
 			COMPS < > ] ],
@@ -4281,11 +4292,16 @@ disc_adv_saturated_word := disc_adv_word &
 ; minute or am-pm complements and still be a prenominal adjective, as in
 ; "a ten thirty am meeting"
 
+;; DPF (22-Dec-98) - SYNSEM is typed phr_synsem in order to block "a two meeting"
+;; while admitting "a two o'clock meeting" - this works because "two o'clock"
+;; combines with "meeting" using the noun-noun compound rule, which requires
+;; the left member to have SYNSEM of type lex_synsem.
+
 hour_word := hc_word_no_affix &
   [ SYNSEM phr_synsem &
 	 [ LOCAL nomod_local &
 		 [ STEMHEAD nstem,
-		   CAT [ HEAD nominal & [ POSS - ],
+		   CAT [ HEAD noun* & [ POSS - ],
 			 VAL [ SUBJ < >,
 			       SPR < [ LOCAL local &
 					     [ CAT [ HEAD adv,
@@ -4481,8 +4497,9 @@ day_of_month_word := norm_word & non_affix_bearing &
 day_of_week_word := norm_no_affix_word &
   [ SYNSEM nomod_one_arg_with_quant &
 	   [ LOCAL [ ARG-S #comps,
-                     CAT.VAL [ SPR < >,
-			       COMPS #comps &
+                     CAT [ HEAD noun*,
+			   VAL [ SPR < >,
+				 COMPS #comps &
                                      < [ LOCAL local &
 					       [ CAT [ VAL [ SUBJ < >,
 							     COMPS *olist*,
@@ -4491,7 +4508,7 @@ day_of_week_word := norm_no_affix_word &
 						 CONT [ INDEX #ind,
 							KEY dofm_rel ] ],
 					 NON-LOCAL.SLASH 0-dlist,
-					 OPT + ] > ],
+					 OPT + ] > ] ],
                      AGR #ind,
 		     CONT [ INDEX #ind,
 			    KEY dofw_rel & #key &
@@ -4548,7 +4565,8 @@ season_word := np_sing_word &
 def_day_part_word := norm_no_affix_word &
   [ SYNSEM nomod_onearg_synsem &
 	   [ LOCAL [ ARG-S < #spr >,
-		     CAT [ VAL 
+		     CAT [ HEAD noun*,
+			   VAL 
 			    [ SPR < synsem & #spr &
 				  [ LOCAL local &
 					  [ CAT [ HEAD det,
@@ -4804,7 +4822,9 @@ specified_num_with_complements := complemented_number & specified_number &
 ;; the constraints appropriate for all lexical entries for "one"
 
 one_word := nontopkey & non_affix_bearing &
-  [ SYNSEM.LOCAL [ CAT [ HEAD intsort & [ORDINAL -],
+  [ SYNSEM.LOCAL [ CAT [ HEAD intsort & 
+			      [ ORDINAL -,
+				PRD - ],
 			 VAL [ SPR < >,
 			       COMPS < >] ],
 		   CONT.LISZT <! const_rel & 

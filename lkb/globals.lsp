@@ -87,13 +87,13 @@ three_space_lex_entry3 three_space_lex_entry4)
 (defparameter *suffix-path* '(META-SUFFIX))
 
 ;;; the path for the recursive category
-(defparameter *recursive-path* '(NON-LOCAL SLASH LIST FIRST))
+(defparameter *recursive-path* '(SYNSEM NON-LOCAL SLASH LIST FIRST))
 
 ;;; the path inside the node to be unified with the recursive node
-(defparameter *local-path* '(LOCAL))
+(defparameter *local-path* '(SYNSEM LOCAL))
 
 ;;; the path inside the node to be unified with the label node
-(defparameter *label-fs-path* '(SYNSEM))
+(defparameter *label-fs-path* '())
 
 (defparameter *label-template-type* 'label)
 

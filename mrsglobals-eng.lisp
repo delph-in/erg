@@ -7,6 +7,9 @@
 ;;   Language: Allegro Common Lisp
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; $Log$
+;; Revision 1.4  1998/10/30 01:12:04  danf
+;; Lots of Verbmobil-based changes, slower processing and somewhat broader coverage
+;;
 ;; Revision 1.3  1998/10/09 23:12:00  danf
 ;; Completed semantics through VIT for old VM dialogues
 ;;
@@ -333,11 +336,12 @@
     ,(vsym "_upstairs_rel")
     ))
 
+#|
 (setf *vm-special-label-hack-list* 
   `((,(vsym "support_rel") ,(vsym "equal_rel"))))
+|#
 
-;  `((,(vsym "nominalize_rel" . 2))
-
+(setf *vm-special-label-hack-list* nil)
 
 ;;; display of extra features in an MRS
 

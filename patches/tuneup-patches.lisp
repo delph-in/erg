@@ -3,9 +3,12 @@
 (in-package "PARSING")
 
 (setf *unlikely-le-types* '(DISCO::DISC_ADV_MLE1 DISCO::LETTER_NAME_LE
-			    DISCO::MEALTIME_WORD_LE DISCO::NUMADJ_NOUN_WORD_LE))
+			    DISCO::MEALTIME_WORD_LE DISCO::NUMADJ_NOUN_WORD_LE
+			    DISCO::SUBCONJ_INF_LE
+			    ))
 (setf *likely-le-types* '(DISCO::COORD_C_LE))
-(setf *unlikely-lexrule-types* '(DISCO::VP_ELLIPSIS))
+(setf *unlikely-lexrule-types* '(DISCO::VP_ELLIPSIS 
+				 DISCO::INTRANS_NOMINAL_GERUND))
 
 ;; Assign a priority to a task, or return NIL if it's bound to fail
 
