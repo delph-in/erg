@@ -18,6 +18,7 @@
 :end!.
 					
 :leval (progn
+	 (pushnew :page *features*)
 	 (setq user::*unifier* :csli)	; Use CSLI unifier.
 	 (setq pg::*lexical-sources*	; Get offline entries for GDBM file
 	   (list (make-instance 'pg::tdl-lex)))
@@ -66,51 +67,59 @@
 
 :leval (setq *patches-dir* 
 	(dir-append tdl::*source-grammar* "patches/")).
+:leval (setq *data-dir* 
+	(dir-append tdl::*source-grammar* "data/")).
 
 
 :leval (progn
-; load new version of MRS, and associated PAGE interface
-	 (load (dir-and-name *patches-dir* "pagenewmrsload"))
+; load MRS related-files
+	(load (dir-and-name *source-grammar* "mrsglobals-eng"))
+	(in-package :cl-user)
+	(setf mrs::*ordered-mrs-rule-list* nil) 
+	(with-open-file (istream (dir-and-name *data-dir* "raw1.rules")
+			 :direction :input)
+	 (loop (let ((rule (read istream nil nil)))
+		(unless rule (return))
+		(push rule mrs::*ordered-mrs-rule-list*))))
+	(setf mrs::*ordered-mrs-rule-list* 
+	 (nreverse mrs::*ordered-mrs-rule-list*))
 ; load patches
-	 (excl:compile-file-if-needed (dir-and-name *patches-dir* "patches"))
-	 (load (dir-and-name *patches-dir* "patches"))
+	(excl:compile-file-if-needed (dir-and-name *patches-dir* "patches"))
+	(load (dir-and-name *patches-dir* "patches"))
 	).
 
 ;;; Load TSDB code
 #|
 
-:leval (load (dir-and-name (dir-append tdl::*source-grammar* 
-				       "tsdb/src/")
-			   "load-tsdb")).
+:leval (load-system "tsdb")
 ;:leval (setf tsdb::*tsdb-semantix-hook* "mrs::get-mrs-strings").
 ;:leval (setf tsdb::*tsdb-semantix-hook* "mrs::get-mrs-resolved-strings").
 ;:leval (setf tsdb::*tsdb-exhaustive-p* t).
-
 ;:leval (setf tsdb::*tsdb-semantix-hook* nil).
-:leval (setf tsdb::*tsdb-home* "~/tsdb/lingo/jul98/evm/98-09-09/lingo/jul98/evm/98-09-10/").
 
+:leval (setf tsdb::*tsdb-home* "~/tsdb/")
 :leval (setf tsdb::*tsdb-exhaustive-p* nil).
 :leval (setf tsdb::*tsdb-semantix-hook* "mrs::get-vit-strings").
 :leval (setf tsdb::*tsdb-trees-hook* "trees::get-labeled-bracketings").
-;:leval (setf tsdb::*tsdb-home* "/eon/e2/users/aac/tsdb/may98/vm/").
-
-;:leval (setf tsdb::*tsdb-semantix-hook* "mrs::get-vit-strings").
-;:leval (setf tsdb::*tsdb-home* "/eon/e2/users/aac/tsdb/may98/msvm/").
 
 |#
+
 ;;; Set MRS globals
 
 ;;:leval (setf main::*trees-output-p* t).
 :leval (main::tree-draw :on).
 :leval (setf main::*ascii-trees* t).
-:leval (setf main::*mrs-output-p* nil).
+:leval (setf main::*mrs-output-p* t).
+:leval (setq main::*vm-arg-roles-only-p* nil).
+:leval (setq mrs::*raw-mrs-output-p* nil).
+
+#|
 :leval (progn
-	 (load "~/grammar/data/page-db-eng.lisp")
-	 ;(load (dir-and-name *patches-dir* "load-mrsrules"))
-	 (setq mrs::*mrs-to-vit* nil)
-	 (setq main::*vm-arg-roles-only-p* t)
-	 (setq mrs::*raw-mrs-output-p* nil)
+	 (load (dir-and-name *data-dir* "page-db-eng.lisp"))
+	 (setq mrs::*mrs-to-vit* t)
 	 (setq mrs::%vit-indent% ",~%    ")).
+|#
+:leval (setq mrs::*mrs-to-vit* nil).
 
 ;;
 ;;  Basic definitions and macros
@@ -185,9 +194,9 @@
 
 ; Load file of irregular morphology forms
 
-:leval (csli::cache-irregular-spellings (with-open-file (istream (dir-and-name
-tdl::*source-grammar* "irregs.tab") :direction :input) (read istream))).
+:leval (csli::cache-irregular-spellings 
+	(with-open-file 
+	 (istream (dir-and-name tdl::*source-grammar* "irregs.tab") 
+	  :direction :input) (read istream))).
 
-
-;:leval (load "~/grammar/cslipage/util/comlex").
 

@@ -203,6 +203,9 @@ handle :< thing.
 individual :< thing.
 eventtime :< thing.
 
+; Needed for VITs
+hole :< thing.
+
 ; DIVISIBLE distinguishes singular count nouns from plural and mass nouns,
 ; for determiners like "some", and for bare-plural NPs.
 
@@ -214,20 +217,10 @@ full_index := index &
     PRONTYPE prontype,
     SORT *sort* ].
 
-
-; VITTENSE cannot have the default sort 'tense', due to our compressed
-; treatment of base and non-3rd-sg verb forms.
-
-vit := *avm* &
- [ VITTENSE *sort*,
-   VITMOOD mood, 
-   VITAGR index ]. 
-
 ; This is the type of the index of the phrase modified by predicative PPs, which
 ; can either modify a ref-ind nominal or an event VP.
 
-non_expl := individual &
-  [ VIT vit ].
+non_expl :< individual.
 
 event_or_index :< non_expl.
 
@@ -236,15 +229,26 @@ overlap :< temp_relation.
 precede :< temp_relation.
 follow :< temp_relation.
 
+; VITTENSE cannot have the default sort 'tense', due to our compressed
+; treatment of base and non-3rd-sg verb forms.
+
+vit := *avm* &
+ [ VITTENSE *sort*,
+   VITMOOD mood ]. 
+
 event := event_or_index & 
-  [ TIME eventtime ].
+  [ TIME eventtime,
+    VIT vit ].
 
 ; Once used to distinguish discourse adverbs, for VIT purposes - now obsolete?
 disc_frag :< event_or_index.
 
 cont :< *avm*.
 
-mod_relation :< cont.
+; LABEL attribute is for Verbmobil, to provide some kind of link between entries
+; in the speech recognizer's word lattice and relations in the final semantics.
+mod_relation := cont &
+  [ LABEL handle ].
 
 relation := mod_relation & 
   [ HANDEL handle ].
@@ -257,6 +261,9 @@ non_number_rel :< relation.
 
 norm_relation :< non_number_rel.
 
+; Used for underspecifying word sense.
+
+appointment_rel :< reg_nom_rel.
 
 
 
@@ -314,7 +321,8 @@ basicmrs := mrs_min &
   [ LISZT *diff-list*,
     MESSAGE *diff-list*,  
     H-CONS *diff-list*,
-    H-STORE *diff-list* ].
+    H-STORE *diff-list*,
+    WGLISZT *diff-list* ].
 
 mrs := basicmrs &
   [ TOP-H handle,
@@ -570,6 +578,13 @@ unexpressed := non_canonical &
 *unexpnull* := *unexplist* & *null*.
 
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Type for Verbmobil word-hypothesis-graph data
+
+whg-item := *avm* &
+  [ WG-WORD symbol,
+    WG-ID thing,
+    WG-HNDLS *list* ].
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Types for Sign, Word, Phrase, and Lex-Entry
@@ -584,7 +599,9 @@ sign := *avm* &
   status: root-node.
 
 word := sign & 
-  [ SYNSEM lex_synsem,
+  [ SYNSEM lex_synsem &
+	   [ LOCAL.CONT [ KEY.LABEL #label,
+			  WGLISZT <! whg-item & [ WG-HNDLS < #label > ] !> ] ],
     AFFIX mod_local,
     ROOT - ].
 
@@ -602,7 +619,7 @@ lex_entry := word &
   [ STEM < #stem >,
     ARGS < [ STEM < #stem > ] >,
     INFLECTED bool ],
-  status: lex-entry.
+    status: lex-entry.
 
 basic_multi_lex_entry := word &
   [ INFLECTED bool ],
@@ -614,8 +631,9 @@ basic_multi_lex_entry := word &
 
 multi_lex_entry := basic_multi_lex_entry &
   [ STEM < #stem1, #stem2 >,
-    ARGS < [ STEM < #stem1 > ], 
-	   [ STEM < #stem2 >, AFFIX no-affix ] > ].
+    ARGS < [ STEM < #stem1 > ],
+	   [ STEM < #stem2 >,
+	     AFFIX no-affix ] > ].
 
 key_first := basic_multi_lex_entry &
   [ ARGS < [ KEY-ARG + ], ... > ].
@@ -634,9 +652,10 @@ multi_lex_entry2 := multi_lex_entry & key_second.
 
 two_space_lex_entry := basic_multi_lex_entry &
   [ STEM < #stem1, #stem2, #stem3 >,
-    ARGS < [ STEM < #stem1 > ], 
-	   [ STEM < #stem2 >, AFFIX no-affix ], 
+    ARGS < [ STEM < #stem1 > ],
+	   [ STEM < #stem2 >, AFFIX no-affix ],
 	   [ STEM < #stem3 >, AFFIX no-affix ] > ].
+
 
 two_space_lex_entry1 := two_space_lex_entry & key_first.
 two_space_lex_entry2 := two_space_lex_entry & key_second.
@@ -860,13 +879,13 @@ it-ind := expl-ind & full_index &
   [ PNG [ PN 3sg*,
 	  GEN neut* ] ].
 there-ind :< expl-ind.
-non_expl-ind := index & event_or_index.
-ref-ind :< non_expl-ind.
+non_expl-ind := index & non_expl.
+non_expl_e_or_i := non_expl-ind & event_or_index.
+ref-ind :< non_expl_e_or_i.
 deg-ind :< non_expl-ind.
-
-full_non_expl := non_expl-ind & full_index.
+full_non_expl := non_expl_e_or_i & full_index.
 full_there-ind := there-ind & full_index.
-full_ref-ind := ref-ind & full_index.
+full_ref-ind := ref-ind & full_non_expl.
 full_deg-ind := deg-ind & full_index.
 
 ; The basic semantic structure, a CONT, is just something with a handle.
@@ -1034,7 +1053,7 @@ hour_prep_rel := hour_rel &
   [ HOUR-IND individual,
     MINUTE-IND individual ].
 
-numbered_hour_rel := hour_rel &
+Numbered_hour_rel := hour_rel &
   [ INST.PNG png & [ PN 3sg*,
 		     GEN neut* ],
     HOUR string,
@@ -1043,6 +1062,8 @@ numbered_hour_rel := hour_rel &
 
 minute_rel := temp_nondim_rel &
   [ MINUTE string ].
+
+_time_rel :< hour_rel.
 
 am_pm_rel :< temp_nondim_rel.
 am_rel :< am_pm_rel.
@@ -1106,7 +1127,7 @@ recip_pro_rel := reg_nom_rel &
 basic_adj_rel :< dim_rel.
 
 adj_rel := basic_adj_rel & arg_rel &
-  [ ARG ref-ind ].
+  [ ARG non_expl ].
 
 varg_rel := relation &
   [ VARG thing ].
@@ -1161,9 +1182,6 @@ have_aux_rel :< event_arg_rel.
 support_rel :< event_rel.
 
 support_main_rel := support_rel & mod_role_rel.
-
-; Used in the identity copula 
-_equal_adj_rel :< adj_preparg_rel.
 
 ;;; AAC - added support_expr_rel
 
@@ -1402,6 +1420,9 @@ vit_arg := varg_rel & arg_rel &
 vit_parg := preparg_rel & arg_rel &
   [ PREPARG #arg,
     ARG #arg ].
+vit_parg3 := preparg_rel & arg3_rel &
+  [ PREPARG #arg,
+    ARG3 #arg ].
 ;;; AAC - has to inherit from arg2_rel
 vit_expr_2 := expr_rel & arg2_rel &
   [ EXPR #expr,
@@ -1452,14 +1473,28 @@ support_main_rel_arg := support_main_rel & vit_arg.
 support_main_rel_arg_3 := support_main_rel & vit_arg_3.
 support_expr_rel_arg_23 := support_expr_rel & vit_expr_arg_23.
 support_rel_arg := support_rel & vit_arg.
+it_adj_varg_expr_rel_arg_3 := it_adj_varg_expr_rel & vit_arg_3.
 
 ;; Relations needed in lexical types
 
 _cop_id_rel :< event_rel.
+adj_preparg_event_rel := adj_preparg_rel & event_rel.
+_equal_id_rel := adj_preparg_event_rel & vit_parg3.
+_equal_adj_rel := adj_preparg_rel & vit_parg3.
 
 ;; Relations needed for VIT conversion
 
 abstr_apply := over_prop_rel & event_rel.
+
+;; Machinery for word hyphothesis graph - preserving data for later components
+;; - makes use of the LABEL attribute in KEY relations, and accumulates these
+;; whq-elems in WGLISZT attribute of MRSs, analogous to LISZT.
+
+whg-elem := *avm* &
+  [ WHG-WORD symbol,
+    WHG-ID atom,
+    WHG-HANDELS *list* ].
+
 
 ; Discourse functions
 
@@ -1517,12 +1552,6 @@ ord_rel := adj_rel &
   [ ORD string ].
 
 title_rel :< basic_nom_rel.
-
-cop_id_rel := arg1_rel & arg3_rel &
-	      [ ID1 non_expl-ind & #id1,
-		ID2 non_expl-ind & #id2,
-		ARG1 #id1,
-		ARG3 #id2 ].
 
 _there_cop_rel := event_rel & varg_rel & aac_arg3_rel &
   [ ARG3 non_expl-ind & #arg,

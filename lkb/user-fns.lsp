@@ -34,10 +34,10 @@
                 (push #\space result-chars))
                (t (setf in-word t) 
                 (push next-char result-chars))))
-    (concatenate 'string 
-	   "< "
+    ;(concatenate 'string "< "
 	   (string-trim '(#\space) (coerce (nreverse result-chars) 'string))
-	   " >")))
+    ;	   " >")
+	   ))
 
 (defun establish-linear-precedence (rule-fs)
    ;;;    A function which will order the features of a rule

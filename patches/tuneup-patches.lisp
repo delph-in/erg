@@ -2,6 +2,11 @@
 
 (in-package "PARSING")
 
+(setf *unlikely-le-types* '(DISCO::DISC_ADV_MLE1 DISCO::LETTER_NAME_LE
+			    DISCO::MEALTIME_WORD_LE ))
+(setf *likely-le-types* '(DISCO::COORD_C_LE))
+
+
 ;; Assign a priority to a task, or return NIL if it's bound to fail
 
 (defun csli-determine-task-priority (rule-item item tasktype parser)
@@ -14,14 +19,25 @@
 				 (eval (intern '*found-chunks* 'chunk))))
 		   600
 		 (+ 300 (* (item-span rule-item) 200))))
+	;; Lower ranking for lex-entries of certain types
+	      ((and (eq (combo-item-itype rule-item) :lex-entry)
+		    (member (fs-type (cfs-fs (combo-item-cfs rule-item)))
+			    *unlikely-le-types*))
+	       -200)
+	;; Higher ranking for lex-entries of certain types
+	      ((and (eq (combo-item-itype rule-item) :lex-entry)
+		    (member (fs-type (cfs-fs (combo-item-cfs rule-item)))
+			    *likely-le-types*))
+	       800)
 	;; Lower ranking for derived words
 	      ((eq (combo-item-itype rule-item) :lex-rule)
 	       400)
 	;; Otherwise assign same preference to each lex entry (for now)
 	      (t 600))
       (case (intern (get-item-rule-name rule-item) "DISCO")
-	(disco::extradj 150)
-	(disco::extracomp 150)
+	(disco::extradj_i 100)
+	(disco::extradj_s 150)
+	(disco::extracomp 200)
 	(disco::extrasubj 100)
 	(disco::fillhead_d 150)
 	(disco::fillhead_imp 150)
@@ -30,14 +46,26 @@
 	(disco::fillhead_wh_nr_i 150)
 	(disco::fillhead_rel 150)
 	(disco::hoptcomp 200)
+	(disco::rootgap_l 100)
+	(disco::rootgap_r 100)
 	(otherwise (+ 500 (* (item-span rule-item) 500)))))))
 
 (defun csli-useless-task-filter (rule-item item parser)
   (let ((rule-name (get-item-rule-name rule-item))
 	(item-rule-name (and item (get-item-rule-name item))))
-    (not (rule-poss (funcall (parser-arg-to-fill-fn parser)
-			     rule-item parser)
-		    rule-name item-rule-name))))
+    (or (not (rule-poss (funcall (parser-arg-to-fill-fn parser)
+				 rule-item parser)
+			rule-name item-rule-name))
+	(and (member (intern rule-name "DISCO")      
+		     '(disco::root_cl disco::frag_mod disco::frag_nomod 
+		       disco::frag_subord disco::frag-excl_i disco::frag-msg_i 
+		       disco::fin-frag_i disco::coord-frag_i)
+		     :test #'eq)
+	     item
+	     (or (not (zerop (item-start item)))
+		 (< (item-end item) (chart-max-vertex 
+				     (parser-chart parser))))))))
+
 
 (in-package "LEXICON")
 

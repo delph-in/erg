@@ -7,6 +7,9 @@
 ;;   Language: Allegro Common Lisp
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; $Log$
+;; Revision 1.1  1998/09/09 01:18:50  danf
+;; Added files for newer MRS
+;;
 ;; Revision 1.6  1998/09/04 00:43:30  aac
 ;; merging WK's changes
 ;;
@@ -237,6 +240,7 @@
      (,(vsym "*SORT*") (vit_perf nonperf))
      (,(vsym "TENSE") (vit_perf nonperf))
      (,(vsym "BSE") (vit_perf nonperf))
+     (,(vsym "BSE_ONLY") (vit_perf nonperf))
      (,(vsym "IMP_VFORM") (vit_perf nonperf))
      (,(vsym "FIN") (vit_tense pres) (vit_perf nonperf)))
 

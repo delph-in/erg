@@ -14,7 +14,7 @@
 
   (when (and (boundp '*mrs-output-p*) *mrs-output-p*)
     (let ((*package* (find-package "MRS")))
-      (mrs::extract-and-output (output-stream *parser*)))))
+      (mrs::extract-and-output (list item)))))
 
 (defparameter proto-parser-fw
    '((*channel* *scanner* :stop-bw)
@@ -25,52 +25,6 @@
      (*grounding* :stop-fw *channel*)))
 
 
-; in kh-tree.lisp
-; Fix tree drawing so it can be directed to a stream
-
-(in-package "TREES")
-
-(defun KH-Parse-Tree (nodelist &key (vspace 2) (hspace 2) (stream t))
-  (let ((*tree-node-id* -1)
-	(*tree-node-list* nil))
-    (let* ((pl   (Compute-Parse-List nodelist))
-	   (tree (Create-Tree pl :vspace vspace :hspace hspace)))
-      (setf *tree-node-list* (reverse *tree-node-list*))
-      (Tree-Draw-TTY tree *tree-node-list* stream))))
-
-;; In parse-tree.lisp
-
-(defun Fast-Tree-Draw (height layout stream)
-  (let ((cr (princ-to-string #\Newline))
-        (result ""))
-    (loop 
-     for i from 0 to height do
-     (let ((s (write-to-string (svref layout i) :escape nil)))
-       (setf result (concatenate 'string result s cr))))
-    (write result :escape nil :stream stream)))
-
-(defun Tree-Draw-Tty (tree tree-node-list &optional (stream t))
-  (let* ((height (Parse-Tree-Height tree))
-	 (width (Parse-Tree-Width tree))
-	 (layout (make-array (1+ height))))
-    (loop 
-     for i from 0 to height
-     do 
-     (setf 
-      (svref layout i)
-      (make-string (1+ width) :initial-element #\Space)))
-    (loop 
-     for n in (Parse-Tree-Nodes tree) 
-     do (Tree-Place-Node layout n tree-node-list))
-    (loop
-     for e in (Parse-Tree-Edges tree)
-     do (Draw-Stubs layout (first e) (second e) (third e) (fourth e)))
-    (loop for n in (Parse-Tree-Nodes tree) do (Connect-Stubs layout n))
-    (format stream "~%")
-    (Fast-Tree-Draw height layout stream)
-    (format stream "~%")
-    ))
-
 (in-package "MRS")
 
 ; In mrsfns.lisp --- hack to suppress printing of var-extra() information
@@ -79,54 +33,6 @@
   (if (var-p var-struct)
     (var-name var-struct)
     (format nil "u")))
-
-; Add munging of MRS to conform to VIT constraints
-
-#|
-; DPF 31-May-98: TEMPORARY PATCH:
-; For the moment, call the munging twice, since on the first pass, the munger 
-; overlooks the second occurrence of the same quantifier, for some reason.
-
-(defun mrs-to-vit-convert (mrs-psoa &optional (standalone t))
-  (if (eq *mrs-for-language* 'english)
-     (let ((mrsstruct
-	    (if (boundp '*ordered-mrs-rule-list*)
-		(first (munge-mrs-struct 
-			(first
-			 (munge-mrs-struct mrs-psoa *ordered-mrs-rule-list*))
-			*ordered-mrs-rule-list*))
-	      mrs-psoa)))
-       (multiple-value-bind 
-          (vit binding-sets)
-          (mrs-to-vit mrsstruct)
-        (setf *canonical-bindings* nil)
-        (when standalone
-          (format t "~%Unscoped form")
-          (output-mrs mrsstruct 'indexed)
-            ;;; then try and find sets of bindings which will give a fully scoped 
-            ;;; structure, and output the results
-          (if binding-sets
-              (format t "~%Scoped form(s)")
-            (format t "~%WARNING: Invalid MRS structure"))
-          (for binding in binding-sets
-               do
-               (setf *canonical-bindings* (canonical-bindings binding))
-               (output-connected-mrs mrsstruct 'indexed)
-               (output-scoped-mrs mrsstruct)))
-        (when (and vit standalone)
-          (write-vit-pretty t (horrible-hack-2 vit))
-          (format t "~%"))
-	  (check-vit vit)
-          vit))
-    (let ((vit (german-mrs-to-vit mrsstruct)))
-      (when standalone
-	(format t "~%Unscoped form")
-	(output-mrs mrsstruct 'indexed))
-      (when (and vit standalone)
-	(write-vit-pretty t vit)
-	(format t "~%"))
-      vit)))
-|#
 
 (in-package "CSLI")
 
@@ -145,10 +51,16 @@
 	(t (list affix))))
 
 
-;; In /usr/local/page2.1/licensed/src/nutshell/protocols/call-eng-scanner
+#|
+;; In /usr/local/page2.3/src/nutshell/protocols/call-eng-scanner
 ;; Added special sentence boundary characters, to help with root types.
+;;
+;; 20-Sept-98 (DPF) No longer need these - now using unary rules for root types,
+;; along with useless-task-filter in tuneup-patches.lisp to block root edges
+;; which do not span the whole input.
 
 (in-package "MAIN")
+
 
 (defmethod call-component ((cpu controller)
 			   (target eng-scanner)
@@ -165,6 +77,7 @@
 	  :forward
 	:backward)))
   nil)
+|#
 
 (in-package "FEGRAMED")
 
@@ -191,119 +104,70 @@
      (close *FEGRAMED-ERROR-STREAM*)
      (setq *FEGRAMED-ERROR-STREAM* NIL))))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Changes to match new TSDB machinery
 
-; In time-convert.lisp
-; The ECASE operator doesn't work right in the following function, which is
-; inelegantly patched as follows:
+(in-package "TREES")
+
+; From trees.lisp
+
+(defun get-labeled-bracketings (parse-item)
+  (format nil "~s" (traverse-item parse-item)))
 
 (in-package "MRS")
+
+; From mrsfns.lisp
+
+(defun get-vit-strings (parse)
+  (when (and parse (eq (type-of parse) 'pg::combo-item))
+    (let* ((fs (get-parse-fs-alt parse))
+	   (sem-fs (path-value fs *initial-semantics-path*)))
+      (if (is-valid-fs sem-fs)
+	  (let* ((mrs-struct1 (sort-mrs-struct (construct-mrs sem-fs)))
+		 (mrs-struct (if (boundp '*ordered-mrs-rule-list*)
+				 (munge-mrs-struct mrs-struct1
+						   *ordered-mrs-rule-list*)
+			       mrs-struct1)))
+	    (multiple-value-bind (vit binding-sets)
+		(mrs-to-vit mrs-struct)
+	      (with-output-to-string (stream) 
+		(format nil "~S" (write-vit stream 
+					    (horrible-hack-2 vit))))))))))
+
+; From pagemrs.lisp
+
+(defun get-parse-fs-alt (parse)
+  (if (string-equal "1" (subseq user::*page-version* 0 1))
+      (lexicon::cfs-fs (pg::u-item-cfs parse))
+    (lexicon::cfs-fs (pg::combo-item-cfs parse))))
 
 #|
-(defun derive-am-pm-spec (sort)
-  (ecase sort
-    ((vsym "_MORNING_REL") 'am)
-    ((vsym "_AFTERNOON_REL") 'pm)
-    ((vsym "_EVENING_REL") 'pm)))
-|#
-
-(defun derive-am-pm-spec (sort)
-  (cond ((eq sort (vsym "_MORNING_REL")) 'am)
-	((eq sort (vsym "_AFTERNOON_REL")) 'pm)
-	((eq sort (vsym "_EVENING_REL")) 'pm)))
-
-(in-package "TDL")
-
-(in-package "MRS")
-
-; Changed output to be *standard-output* rather than "~/tmp/errorout" - don't
-; see why it used to work with the file for output.
-
-(defun check-vit (vit &optional (as-string nil) (stream *standard-output*))
-  #+allegro
-  (progn
-   (with-open-file (vit-out "~/tmp/vitcheck" :direction :output
-	                                    :if-exists :supersede)
-    (format vit-out "ensure_loaded(vitADT).~%V = ")
-    (if as-string 
-	(format vit-out "~A" vit)
-      (write-vit vit-out vit))
-    (format vit-out ",vitCheck(V).~%~%halt.~%"))
-   (excl::run-shell-command "cd /eo/e1/vm2/vitADT/lib/Vit_Adt;/opt/quintus/bin3.2/sun4-5/prolog < ~/tmp/vitcheck" :output "~/tmp/vitout" :if-output-exists :supersede :error-output "~/tmp/viterror" :if-error-output-exists :supersede)
-   (excl::run-shell-command "tail +65 ~/tmp/viterror | tail -r | tail +2 | tail -r" :output stream :error-output "~/tmp/realerrorout" :if-output-exists :supersede :if-error-output-exists :supersede)
-   (format stream "~%"))
-  #-allegro
-  (warn "function check-vit needs customising for this Lisp"))
-
-#|
-; In /usr/local/page2.3/src/tsdb/tsdb.lisp
-; Fixed WRITE-RESULTS to check the intended bindings for trees-hook
-
-(in-package "TSDB")
-
-(defun write-results (parse-id results 
-                      &optional (language *tsdb-data*)
-                      &key cache)
-  (let* ((items (main::output-stream main::*parser*))
-         (mrss 
-          (when (and *tsdb-semantix-hook* (stringp *tsdb-semantix-hook*))
-            (when (find-package "MRS")
-              (set (intern "*RAW-MRS-OUTPUT-P*" "MRS") nil)
-              (set (intern "*RAW-MRS-OUTPUT-P*" "MAIN") nil))
-            (ignore-errors
-             (funcall (symbol-function (read-from-string *tsdb-semantix-hook*))
-                      items))))
-         ;(mrss (remove nil mrss))
-         (trees 
-          (when (and *tsdb-trees-hook* (stringp *tsdb-trees-hook*))
-            (ignore-errors
-             (funcall (symbol-function (read-from-string  *tsdb-trees-hook*))
-                      items)))))
-    (if (or (= (length results) (length items) (length mrss) (length trees))
-            (and (not *tsdb-semantix-hook*) *tsdb-trees-hook*
-                 (= (length results) (length items) (length trees)))
-            (and *tsdb-semantix-hook* (not *tsdb-trees-hook*)
-                 (= (length results) (length items) (length mrss)))
-            (and (not *tsdb-semantix-hook*) (not *tsdb-trees-hook*)
-                 (= (length results) (length items))))
-      (do* ((results results (rest results))
-            (result (first results) (first results))
-            (trees (reverse trees) (rest trees))
-            (tree (first trees) (first trees))
-            (mrss (reverse mrss) (rest mrss))
-            (mrs (first mrss) (first mrss)))
-          ((null results))
-        (write-result parse-id result tree mrs language :cache cache))
-      (format 
-       *tsdb-io* 
-       "~&write-results(): mysterious mismatch [~d : ~d : ~d : ~d].~%"
-       (length results) (length items) (length trees) (length mrss)))))
-|#
-
-(in-package "MRS")
-
-; In mrsfns.lisp
 (defun expand-tsdb-results (result-file dest-file &optional (vitp nil))
-  (excl::run-shell-command (format nil "sort -n < ~A | sed -f ~A > ~A" 
-				   result-file
-				   "~/grammar/tsdb/tsnlpsed"
-				   (concatenate 'string result-file ".out")))
-  (let ((*raw-mrs-output-p* nil))
+  (let ((sent-list
+	 (tsdb::select "(parse-id i-input)" :string "(item result)" nil 
+		       result-file))
+	(tree-list
+	 (tsdb::select "(parse-id tree)" :string "(item result)" nil 
+		       result-file))
+	(mrs-list
+	 (tsdb::select "(parse-id mrs)" :string "(item result)" nil result-file))
+	(*raw-mrs-output-p* nil))
     (with-open-file 
-	(istream (concatenate 'string result-file ".out") :direction :input)
-     (with-open-file 
 	(ostream dest-file :direction :output :if-exists :supersede)
-      (do ((sent-num (read istream nil 'eof))
-	   (sent (read istream nil 'eof))
-	   (sep1 (read-char istream nil 'eof))
-	   (tree (read istream nil 'eof))
-	   (sep2 (read-char istream nil 'eof))
-	   (mrs (read istream nil 'eof))
-	   )
-	  ((eql sent-num 'eof) nil)
-	(format t "~%~A" sent)
-	(format ostream "~%~A~%" sent)
-        (output-parse-tree tree ostream)
-	(if vitp
+    (loop for rawsent in sent-list
+	  as rawtree in tree-list
+          as rawmrs in mrs-list
+	do (let* ((sentstr (cdar rawsent))
+		  (sent (subseq sentstr (1+ (position #\@ sentstr))))
+		  (treestr (cdar rawtree))
+		  (tree (read-from-string 
+			 (subseq treestr (1+ (position #\@ treestr)))))
+		  (mrsstr (cdar rawmrs))
+		  (mrs (subseq mrsstr (1+ (position #\@ mrsstr)))))
+	     (format t "~%~A" sent)
+	     (format ostream "~%~A~%" sent)
+	     (output-parse-tree tree ostream)
+	     (if vitp
 	    #|
 	    (progn
 	      (multiple-value-bind 
@@ -318,27 +182,10 @@
 	      (finish-output ostream)
 	      (check-vit mrs t ostream)
 	      (format ostream "~%"))
-	  (format ostream "~%~A~%" mrs))
-	(setf sent-num (read istream nil 'eof)
-	      sent (read istream nil 'eof)
-	      sep (read-char istream nil 'eof)
-	      tree (read istream nil 'eof)
-	      sep (read-char istream nil 'eof)
-	      mrs (read istream nil 'eof)))))))
+	  (format ostream "~%~A~%" mrs)))))))
+|#
 
-; Also in mrsfns.lisp
-(defun get-vit-strings (parse-list)
-  (loop for parse in parse-list
-        collecting
-	(let* ((fs (get-parse-fs parse))
-               (sem-fs (path-value fs *initial-semantics-path*)))
-          (if (is-valid-fs sem-fs)
-              (let* ((mrs-struct1 (sort-mrs-struct (construct-mrs sem-fs)))
-		     (mrs-struct (if (boundp '*ordered-mrs-rule-list*)
-				     (munge-mrs-struct mrs-struct1
-						       *ordered-mrs-rule-list*)
-				   mrs-struct1)))
-		 (multiple-value-bind (vit binding-sets)
-		     (mrs-to-vit mrs-struct)
-		   (with-output-to-string (stream) 
-		     (format nil "~S" (write-vit stream vit)))))))))
+;; End TSDB changes
+
+(in-package "TDL")
+
