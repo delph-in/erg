@@ -391,23 +391,31 @@ dq-punct :< quote-punct.
 sq-punct :< quote-punct.
 lp-punct :< punct.
 rp-punct :< punct.
+hyphen-punct :< punct.
 
 mobile_nom := mobile & nominal.
 
+; Enable blocking of mobile type for nominative case
+nom_case := nominal.
+
 ; Nominal gerunds
-nomger :< noun_or_nomger.
+nomger := noun_or_nomger & nom_case.
 nomger_acc := nomger & mobile_nom & [ CASE acc ].
 
 ; The following types are used to enable strict subcategorization (the usual 
 ; case)
 
-noun_acc := noun & mobile_nom & [ CASE acc ].
-noun_nom := noun & [ CASE nom ].
-partn :< noun.
+noun_case := noun & nom_case.
+noun_acc := noun_case & mobile_nom & [ CASE acc ].
+noun_nom := noun_case & [ CASE nom ].
+; For NP->S-WH (non-mobile)
+noun_obliq := noun_case & [ CASE obliq ].
+partn := noun_case.
 partn_mobile := partn & mobile.
 partn_acc := partn & [ CASE acc ].
-gerund_acc := gerund & mobile_nom & [ CASE acc ].
-gerund_nom := gerund & [ CASE nom ].
+gerund_case := gerund & nom_case.
+gerund_acc := gerund_case & mobile_nom & [ CASE acc ].
+gerund_nom := gerund_case & [ CASE nom ].
 ; For 'long' of 'for too long'
 grad_n :< noun_acc.
 
@@ -983,10 +991,6 @@ quant_or_wh_relation := arg0_relation &
     RSTR handle,
     BODY handle ].
 
-number_q_relation := quant_or_wh_relation &
-  [ PRED number_q_rel,
-    ARG0.SORT number ].
-
 ; Nominal sorts
 nominal-sort :< *sort*.
 entity :< nominal-sort.
@@ -996,7 +1000,8 @@ location :< nominal-sort.
 time :< location.
 place := location & entity.
 nom-event :< nominal-sort.
-number :< nominal-sort.
+; DPF 03-may-04 - No longer used
+;number :< nominal-sort.
 
 ; modable_rel distinguishes those relations whose nominal lexical entries can 
 ; undergo a syntactic rule to produce a modifier phrase, as in "we'll meet
@@ -1324,6 +1329,7 @@ _today_j_rel :< adj_rel.
 _tomorrow_j_rel := adj_rel & dofw_or_poss_q_rel.
 _yesterday_j_rel := adj_rel & dofw_or_poss_q_rel.
 _tonight_j_rel := adj_rel & dofw_or_poss_q_rel.
+_last+night_j_rel := adj_rel & dofw_or_poss_q_rel.
 _east_j_rel :< adj_rel.
 _north_j_rel :< adj_rel.
 _south_j_rel :< adj_rel.
@@ -1350,6 +1356,9 @@ _late_p_rel := miscprep_rel.
 _elsewhere_j_rel := adj_rel.
 _forever_j_rel := adj_rel.
 _long_j_rel :< adj_rel.
+_longer_j_rel :< adj_rel.
+_soon_p_rel :< miscprep_rel.
+_sooner_p_rel :< miscprep_rel.
 
 ; For fragments
 unknown_relation := arg0_relation &
@@ -1989,7 +1998,8 @@ basic_nom_rel := non_event_rel & instance_rel & basic_nom_or_mnp_rel.
 nom_or_mnp_rel := basic_nom_or_mnp_rel.
 nom_rel := basic_nom_rel & nom_or_mnp_rel.
 nonpro_or_mnp_rel := nom_or_mnp_rel.
-nonpro_rel := nom_rel & nonpro_or_mnp_rel.
+nonpro_or_num_rel := basic_nom_rel.
+nonpro_rel := nom_rel & nonpro_or_mnp_rel & nonpro_or_num_rel.
 nom_nondim_rel :< nom_rel.
 non_temp_nom_rel := nom_nondim_rel & nontemp_rel.
 non_temp_nonpro_rel := non_temp_nom_rel & nonpro_rel.
@@ -2005,7 +2015,10 @@ hcomp_modable_nom_rel := basic_hcomp_nom_rel & modable_rel.
 nominalize_rel := basic_hcomp_nom_rel.
 gerund_rel := non_temp_nom_rel.
 ; nom_rels for nouns that can undergo nbar-coordination (avoiding proper names)
-nom_nbar_rel := nom_rel.
+gen_nom_nbar_rel := nom_rel.
+; nom_rels for nouns that can appear in noun_noun compounds (excluding e.g. 
+; number-nouns)
+nom_nbar_rel:< gen_nom_nbar_rel.
 norm_nom_rel := reg_nom_rel & nom_nbar_rel.
 temp_abstr_or_conj_rel := predsort.
 temp_abstr_rel := nonpro_rel & temp_abstr_or_conj_rel.
@@ -2018,7 +2031,9 @@ abstr_named_np_rel :< named_np_or_num_rel.
 named_np_rel := abstr_named_np_rel & reg_nom_rel.
 ;named_num_rel := abstr_named_np_rel & reg_nom_rel & card_rel.
 named_num_or_seq_rel :< nom_rel.
-named_num_rel := named_np_or_num_rel & non_temp_nonpro_rel &
+; DPF 03-may-04 ; Changed non_temp_nonpro_rel to nom_nocmpnd_rel, to prevent
+; these from appearing in N-N-compounds
+named_num_rel := named_np_or_num_rel & nom_nocmpnd_rel & nonpro_or_num_rel &
                  named_num_or_seq_rel.
 num_seq_nom_rel := named_num_or_seq_rel & non_temp_nom_rel & 
 		   named_np_or_num_rel.
@@ -2038,7 +2053,11 @@ unnamed_day_rel := diadic_day_rel & non_day_or_deg_rel.
 non_day_or_deg_rel :< norm_rel.
 non_day_rel := temp_nondim_rel & non_day_or_deg_rel.
 ;; day_of_month_rel
-dofm_rel := diadic_day_rel & gen_named_rel.
+; DPF 03-may-04 - Replaced diadic_day_rel with day_rel,modable_rel to prevent
+; these from being nom_nbar_rel, so they won't appear in compounds, among
+; other unwanted places
+dofm_rel := day_rel & modable_rel & gen_named_rel & gen_nom_nbar_rel.
+
 ;; Need supertype of dofw_rel and pro_poss_rel and non-'the' quantifiers
 ;; for the specifier of the small class of words like "morning" as in "my 
 ;; mornings" or "Tuesday mornings"
@@ -2164,6 +2183,11 @@ abstr_excl_rel := independent_mod_rel.
 greet_rel :< abstr_excl_rel.
 
 excl_rel :< abstr_excl_rel.
+; For adjectival pro-forms like "the last", and derived number-nouns, neither
+; of which appear in N-N-compounds
+nom_nocmpnd_rel :< non_temp_nom_rel.
+num_nocmpnd_rel :< nom_nocmpnd_rel.
+
 basic_pron_rel := non_temp_nom_rel & abstr_named_rel.
 pron_rel := basic_pron_rel.
 ; Margaret herself just arrived.
@@ -2290,7 +2314,10 @@ comp_degree_rel :< degree_rel.
 non_comp_degree_rel :< degree_rel.
 
 ; For the subset of specifiers needed for adjectives (but not, e.g., subconj)
-much_or_very_deg_rel := degree_rel & nonpro_or_mnp_rel.
+; DPF 07-may-04 - Added non_temp_nom_rel to allow MNPs as complements of
+; e.g. 'under' which wants non-temporal NP.  Also blocks spurious parse for
+; "kim sings in ten minutes"
+much_or_very_deg_rel := degree_rel & nonpro_or_mnp_rel & non_temp_nom_rel.
 
 ; For specifiers of adjectives
 deg_rel :< non_comp_degree_rel.
