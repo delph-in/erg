@@ -46,8 +46,8 @@
   (lex::augment-filter 
    '((extradj (:forbid fin_non_wh_rel))
      (extradj (:forbid imper))
-     (nnomadj (:forbid imper))
-     (nnomadj (:forbid extrasubj))
+     (hadj_i (:forbid imper))
+     (hadj_i (:forbid extrasubj))
      (imper (:forbid extracomp))
      (extracomp (:forbid extracomp))
      )))

@@ -13,6 +13,7 @@
 
 (in-package "MAIN")
 
+#|
 (defmethod call-printer :after ((cpu controller)
 				(from parser)
 				&rest keys-args)
@@ -22,6 +23,7 @@
   (when (and (boundp '*mrs-output-p*) *mrs-output-p*)
     (funcall (symbol-function (read-from-string "mrs::extract-and-output"))
              (output-stream from))))
+|#
 
 (defparameter proto-parser-fw
    '((*channel* *scanner* :stop-bw)
@@ -37,6 +39,7 @@
 ; Allow lexical rules to apply to multi-word lexemes, e.g. to get
 ; "Can't Kim sleep?"
 
+#|
 (defun get-rules-for-passive-item (passive-item parser)
   ;;; get all appropriate rules for this passive item and return them as a list
   ;;; this is for bottom up parsing only
@@ -55,6 +58,7 @@
 	 (or (get-rules-by-category-info passive-item parser)
 	     (combo-parser-syn-rules parser))
        (combo-parser-syn-rules parser)))))
+|#
 
 ; in kh-tree.lisp
 ; Fix tree drawing so it can be directed to a stream
@@ -531,6 +535,43 @@ Output:
 	  :forward
 	:backward)))
   nil)
+
+;; In basemrs.lisp
+;; Change mrs output to reflect change from "outscopes" to "leq"
+
+(in-package "MRS")
+
+(defmethod mrs-output-outscopes ((mrsout simple) higher lower)
+  (with-slots (stream indentation) mrsout
+    (format stream "~VT~A >= ~A~%" 
+            (+ indentation 2) higher lower)))
+
+
+(in-package "FEGRAMED")
+
+(defun close-fegramed()
+  (when *FEGRAMED-IO-STREAM*
+    (ignore-errors
+     (pass-to-fed "quit" :wait nil :nocheck T)
+     (close *FEGRAMED-IO-STREAM*))
+    (setq *FEGRAMED-IO-STREAM* NIL))
+  (when *FEGRAMED-PID*
+    (run-process (format nil "kill -9 ~d" *FEGRAMED-PID*)
+		 :output "/dev/null" :error-output "/dev/null"
+		 :if-output-exists :overwrite
+		 :if-error-output-exists :overwrite)
+    #+:allegro(loop while (sys:os-wait t))
+    (setq *FEGRAMED-PID* NIL))
+  (when (streamp *FEGRAMED-ERROR-STREAM*)
+    (ignore-errors
+     (when (listen *FEGRAMED-ERROR-STREAM*)
+       (format T "~{~A~%~}"
+	       (loop for line = (read-line *FEGRAMED-ERROR-STREAM* NIL NIL)
+		   while line
+		   collect line)))
+     (close *FEGRAMED-ERROR-STREAM*)
+     (setq *FEGRAMED-ERROR-STREAM* NIL))))
+
 
 (in-package "TDL")
 

@@ -117,7 +117,7 @@ indicative := indicative* & strict_mood.
 modal_subj := modal_subj* & strict_mood.
 would_subj := would_subj* & strict_mood.
 subjunctive :< strict_mood.
-ind+modsubj := indicative* & modal_subj*.
+ind+modsubj := indicative* & modal_subj* & strict_mood.
 
 
 prontype :< *sort*.
@@ -147,6 +147,19 @@ bool :< luk.
 +_and_- := +* & -*.
 + :< +*.
 - :< -*.
+
+; Three-valued sort for distinguishing unmodified signs from both left-modified
+; and right-modified signs
+
+xmod :< *sort*.
+notmod :< xmod.
+hasmod :< xmod.
+lmod* :< hasmod.
+rmod* :< hasmod.
+
+lmod_and_rmod := lmod* & rmod*.
+lmod :< lmod*.
+rmod :< rmod*.
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
 ;;
@@ -205,16 +218,19 @@ full_index := individual &
     SORT *sort* ].
 
 
-; This is the type of the index of the phrase modified by predicative PPs, which
-; can either modify a ref-ind nominal or an event VP.
-non_expl :< individual.
-
-; VITTENSE cannot have the default sort 'tense', due to our 
+; VITTENSE cannot have the default sort 'tense', due to our compressed
+; treatment of base and non-3rd-sg verb forms.
 
 vit := *avm* &
  [ VITTENSE *sort*,
    VITMOOD mood, 
    VITAGR index ]. 
+
+; This is the type of the index of the phrase modified by predicative PPs, which
+; can either modify a ref-ind nominal or an event VP.
+
+non_expl := individual &
+  [ VIT vit ].
 
 temp_relation :< *sort*.
 overlap :< temp_relation.
@@ -222,8 +238,7 @@ precede :< temp_relation.
 follow :< temp_relation.
 
 event := non_expl &
-  [ TIME eventtime,
-    VIT vit ].
+  [ TIME eventtime ].
 
 cont :< *avm*.
 
@@ -248,9 +263,7 @@ cat := *avm* &
   [ HEAD head_min,
     VAL valence,
     MC luk,
-    POSTHEAD bool,
-    --SCOPEDARG *avm*,
-    --SCOPEDARG2 *avm* ].
+    POSTHEAD bool ].
 
 ; The feature MC has three possible values: +, -, and na.  Non-clauses are
 ; always MC na, since they can't really be said to be root or non-root.
@@ -277,12 +290,12 @@ cat := *avm* &
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; MRS type
 ;
+;   TOP handle,            ; Local top handle, linked by H-CONS to other handles
 ;   KEY mod_relation,      ; Pointer to the main relation in LISZT
 ;   MESSAGE *diff-list*,   ; Message type for propositions
 ;   H-STORE *diff-list*,   ; Quantifier handle store
 ;   H-CONS *diff-list*     ; Scope constraints: list of scp_pr's
 ;   TOP-H handle,          ; Top handle of MRS expression
-;   ECONT cont,            ; External content added when sign acts as modifier
 ;   ALTKEY mod_relation,   ; Pointer to an alternate relation in LISZT
 ;   COMPKEY mod_relation,  ; Pointer to the complement's main relation
 ;   OCOMPKEY mod_relation, ; Pointer to the oblique complement's main relation
@@ -291,13 +304,9 @@ cat := *avm* &
 mrs_min := cont &
   [ TOP handle,
     INDEX mod_individual,
-    KEY mod_relation,
-    ECONT cont ].
+    KEY mod_relation ].
     
-econtmrs := mrs_min &
-  [ ECONT mrs_min ].
-
-basicmrs := econtmrs &
+basicmrs := mrs_min &
   [ LISZT *diff-list*,
     MESSAGE *diff-list*,  
     H-CONS *diff-list*,
@@ -305,12 +314,10 @@ basicmrs := econtmrs &
 
 mrs := basicmrs &
   [ TOP-H handle,
+    --TOPKEY mod_relation,
     ALTKEY mod_relation,
     COMPKEY mod_relation,  
-    OCOMPKEY mod_relation, 
-    --H-CONS *diff-list*,
-    --SP-H-CONS *diff-list*
-    ].
+    OCOMPKEY mod_relation ].
 
 ; Constrains handle of scopable argument SC-ARG relative to one or more 
 ; handles
@@ -322,10 +329,9 @@ scp_pr := *top* &
 is-one-of := scp_pr &      
   [ CANDS *diff-list* ].        
 
-; Constrains handle of scopable argument to outscope argument whose handle is
-; value of CANDS.
-outscopes := scp_pr &      
-  [ OUTSCPD handle ].     
+; Constrains KEY handle to be less than or equal to the TOP handle.
+leq := scp_pr &      
+  [ OUTSCPD handle ].        
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; CONJ type -
@@ -437,10 +443,7 @@ synsem := synsem_min &
 expressed_synsem :< synsem.
 
 canonical_synsem := expressed_synsem &
-  [ MODIFIED bool,
-    --ARG handle,
-    --ARGH handle,
-    --OUTSC handle ].
+  [ MODIFIED xmod ].
 
 lex_synsem := canonical_synsem &
   [ LOCAL local_min ].
@@ -459,8 +462,7 @@ gap := non_canonical & expressed_synsem &
 		    [ LIST < #local > ] ] ].
 
 unexpressed := non_canonical &
-  [ LOCAL.CONT.ECONT.LISZT <! !>, 
-    NON-LOCAL [ SLASH 0-dlist,
+  [ NON-LOCAL [ SLASH 0-dlist,
 		REL 0-dlist,
 		QUE 0-dlist ] ].
 
@@ -516,14 +518,9 @@ unexpressed := non_canonical &
 ;;; so the definition above is overwritten by the following in the patches.tdl
 ;;; file in the directory <grammardir>/lkb/. 
 
-; Add constraint on optional arguments that their ECONT.LISZT must be empty, 
-; since lexical heads selecting for arguments will append this
-; LISZT to their own in order to allow, eg., meaning-bearing PP complements.
-
 *olist* :< *list*.
 *ocons* := *olist* & *cons* &
-  [ FIRST [ OPT +,
-	    LOCAL.CONT.ECONT.LISZT <! !> ],
+  [ FIRST.OPT +,
     REST  *olist* ].
 *onull* := *olist* & *null*.
 |#
@@ -1086,6 +1083,9 @@ excl_rel := nondim_rel &
 
 greet_rel :< excl_rel.
 
+arg_rel := relation &
+  [ ARG thing ].
+
 ; Pronouns
 pron_rel := non_temp_nom_rel &
   [ INST ref-ind ].
@@ -1098,8 +1098,8 @@ recip_pro_rel := reg_nom_rel &
 
 basic_adj_rel :< dim_rel.
 
-adj_rel := basic_adj_rel &
-  [ NARG individual ].
+adj_rel := basic_adj_rel & arg_rel &
+  [ ARG individual ].
 
 varg_rel := relation &
   [ VARG thing ].
@@ -1109,14 +1109,6 @@ preparg_rel := relation &
 
 expr_rel := relation &
   [ EXPR individual ].
-
-#|
-adj_varg_rel := adj_rel & varg_rel &
-  [ VARG handle ].
-
-adj_varg_expr_rel := adj_varg_rel & expr_rel.
-it_adj_varg_expr_rel := basic_adj_rel & varg_rel & expr_rel.
-|#
 
 basic_adj_varg_rel := basic_adj_rel & varg_rel.
 adj_varg_rel := basic_adj_varg_rel & adj_rel &
@@ -1135,11 +1127,10 @@ adj_personal_rel :< adj_rel.
 adj_abstract_rel :< adj_rel.
 
 verb_aspect_rel :< norm_relation.
-event_arg_rel :< verb_aspect_rel.
 
 prog_rel :< verb_aspect_rel.
 
-event_rel := event_arg_rel & nondim_rel &
+event_rel := verb_aspect_rel & nondim_rel &
   [ EVENT event ].
 
 mod_role_rel :< event_rel.
@@ -1149,15 +1140,14 @@ no_role_rel :< mod_role_rel.
 
 role_rel :< mod_role_rel.
 
-arg_rel := event_arg_rel &
-	   [ ARG thing ].
+event_arg_rel := event_rel & arg_rel.
 
-irrealis_rel :< arg_rel.
-_going_to_rel :< arg_rel.
+irrealis_rel :< event_arg_rel.
+_going_to_rel :< event_arg_rel.
 
 ; Used to ensure tag question agreement, but will not appear in LISZT.
-will_rel :< arg_rel.
-have_aux_rel :< arg_rel.
+will_rel :< event_arg_rel.
+have_aux_rel :< event_arg_rel.
 
 support_rel :< event_rel.
 
@@ -1167,7 +1157,7 @@ support_main_rel := support_rel & mod_role_rel.
 
 support_expr_rel := support_main_rel & expr_rel.
 
-abstr_rel :< arg_rel.
+abstr_rel :< event_arg_rel.
 
 ; AAC - added for frag
 abstr_e_rel :< event_rel.
@@ -1176,7 +1166,7 @@ abstr_e_rel :< event_rel.
 abstr_3_rel := basic_nom_rel & aac_arg3_rel.
 
 ; AAC - added for wh_adjective_word
-abstr_nom_rel := arg_rel & basic_nom_rel.
+abstr_nom_rel := event_arg_rel & basic_nom_rel.
 
 act_rel := role_rel &
 	   [ ACT individual ].
@@ -1228,7 +1218,7 @@ fig_gnd_und_rel := fig_gnd_rel & und_rel.
 ; Preposition relations
 
 prep_rel := dim_rel &
-  [ PREP individual ].	    
+  [ PREP non_expl-ind ].	    
 
 prep_mod_rel := prep_rel & arg_rel.
 
@@ -1243,9 +1233,9 @@ miscprep_rel :< prep_mod_rel.
 
 ;;; AAC - adv_rel also may have DIM
 
-adv_rel := arg_rel & dim_rel.
+adv_rel := event_arg_rel & dim_rel.
 
-neg_rel :< arg_rel.
+neg_rel :< event_arg_rel.
 
 neg_polar_rel :< adv_rel.
 
@@ -1445,13 +1435,10 @@ act_und_thm_prep_rel_autp_123 := act_und_thm_prep_rel & vit_autp_123.
 support_main_rel_arg_3 := support_main_rel & vit_arg_3.
 support_expr_rel_arg_23 := support_expr_rel & vit_expr_arg_23.
 support_rel_arg := support_rel & vit_arg.
-adj_varg_expr_rel_arg := adj_varg_expr_rel & vit_arg.
-it_adj_varg_expr_rel_arg := it_adj_varg_expr_rel & vit_arg.
-adj_preparg_rel_arg := adj_preparg_rel & vit_parg.
 
 ;; Relations needed in lexical types
 
-_equal_adj_rel :< adj_preparg_rel_arg.
+_equal_adj_rel :< adj_preparg_rel.
 
 ;; Relations needed for VIT conversion
 
@@ -1528,8 +1515,8 @@ _there_cop_rel := event_rel & varg_rel & aac_arg3_rel &
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Number relations
 
-number_rel := dim_rel & 
-  [ XARG individual ].
+number_rel := dim_rel & arg_rel &
+  [ ARG individual ].
 
 integer_rel := number_rel &
   [ I-ORD bool ].
@@ -1657,11 +1644,6 @@ intadj1  := intadj2- & digit1.
 ; pronoun.  So the new strategy is to make the INDEX a non_expl.
 ; This will unify with the indices introduced by (appropriate) controllers,
 ; and (hopefully) be identifiable if it is not controlled.
-
-; pro_ss used to have CONT.ECONT.LISZT <! !> but this runs afoul of its use
-; in wh_filler_head constructions such as "how does the seventeenth seem"
-; where "the seventeenth" is unified with the SUBJ of "how", but has a non-empty
-; ECONT.LISZT.
 
 pro_ss := non_canonical &
   [ LOCAL.CAT.HEAD.CASE acc,
