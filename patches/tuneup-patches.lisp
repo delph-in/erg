@@ -8,14 +8,17 @@
   (unless (csli-useless-task-filter rule-item item parser)
     (if (eq tasktype :add-word)
 	;; Prefer EBL chunks if available
-	(if (find-package "CHUNK") 
-	    (if (and (not (lex::cfs-rc (pg::combo-item-cfs  rule-item)))
-		     (funcall (intern 'inside-p-new 'chunk) rule-item 
-			      (eval (intern '*found-chunks* 'chunk))))
-		600
-	      (+ 300 (* (item-span rule-item) 200)))
+	(cond ((find-package "CHUNK") 
+	       (if (and (not (lex::cfs-rc (pg::combo-item-cfs  rule-item)))
+			(funcall (intern 'inside-p-new 'chunk) rule-item 
+				 (eval (intern '*found-chunks* 'chunk))))
+		   600
+		 (+ 300 (* (item-span rule-item) 200))))
+	;; Lower ranking for derived words
+	      ((eq (combo-item-itype rule-item) :lex-rule)
+	       400)
 	;; Otherwise assign same preference to each lex entry (for now)
-	  600)
+	      (t 600))
       (case (intern (get-item-rule-name rule-item) "DISCO")
 	(disco::extradj 150)
 	(disco::extracomp 150)

@@ -88,3 +88,6 @@ three_space_lex_entry3 three_space_lex_entry4)
 (defparameter *label-fs-path* '(SYNSEM))
 
 (defparameter *label-template-type* 'label)
+
+; Hide lexical rule nodes in parse tree
+(setf  *dont-show-lex-rules* t)

@@ -44,8 +44,10 @@
 ;;    yet adequate to do so}.
 
   (lex::augment-filter 
-   '((extradj (:forbid fin_non_wh_rel))
-     (extradj (:forbid imper))
+   '((extradj_i (:forbid fin_non_wh_rel))
+     (extradj_s (:forbid fin_non_wh_rel))
+     (extradj_i (:forbid imper))
+     (extradj_s (:forbid imper))
      (hadj_i (:forbid imper))
      (hadj_i (:forbid extrasubj))
      (imper (:forbid extracomp))
@@ -55,4 +57,5 @@
 
 (main::get-grammar-from-tdl)
 
-(setf main::*source-grammar* "~/grammar/")
+(setf main::*source-grammar* 
+  (namestring (make-pathname :directory (pathname-directory *load-truename*))))
