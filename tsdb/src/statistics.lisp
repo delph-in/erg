@@ -116,6 +116,16 @@
 (defmacro sum (values)
   `(apply #'+ ,values))
 
+(defun create-output-stream (file append)
+  (cond
+   ((or (stringp file) (stringp append))
+    (open (if (stringp append) append file)
+          :direction :output 
+          :if-exists (if append :append :supersede)
+          :if-does-not-exist :create))
+   ((or file append) (or file append))
+   (t *tsdb-io*)))
+
 (defun analyze (condition &optional (language *tsdb-data*))
   (let* ((key (if condition
                 (concatenate 'string language "@" condition)
@@ -231,17 +241,13 @@
 
 (defun compare-competence (olanguage nlanguage
                            &key (olabel "old") (nlabel "new")
-                                (file *tsdb-io*))
+                                file append)
 
   (let* ((oitems
           (if (stringp olanguage) (analyze-phenomena olanguage) olanguage))
          (nitems
           (if (stringp nlanguage) (analyze-phenomena nlanguage) nlanguage))
-         (stream (if (stringp file)
-                   (open file 
-                         :direction :output 
-                         :if-exists :supersede :if-does-not-exist :create)
-                   file))
+         (stream (create-output-stream file append))
          (oaverages (summarize-coverage-parameters oitems))
          (owfaverages 
           (summarize-coverage-parameters 
@@ -355,17 +361,13 @@
         \\end{tabular}~%"
        name owords oanalyses owfcoverage oifcoverage
        nwords nanalyses nwfcoverage nifcoverage))
-    (when (stringp file) (close stream))))
+    (when (or (stringp file) (stringp append)) (close stream))))
 
 (defun analyze-competence (&optional (language *tsdb-data*)
-                           &key (wf 1) (file *tsdb-io*))
+                           &key (wf 1) file append)
 
   (let* ((items (if (stringp language) (analyze-phenomena language) language))
-         (stream (if (stringp file)
-                   (open file 
-                         :direction :output 
-                         :if-exists :supersede :if-does-not-exist :create)
-                   file))
+         (stream (create-output-stream file append))
          (averages 
           (summarize-coverage-parameters 
            items :restrictor #'(lambda (foo) 
@@ -374,6 +376,8 @@
      stream
      "\\begin{tabular}{@{}|l|c|c|c|c|c|c|c|@{}}~%  ~
       \\hline~%  ~
+      \\multicolumn{8}{|c|}~%    {\\bf `{\\bf ~a}' ~a Profile~%     ~
+      {\\bf [~a]}}\\\\~%  \\hline\\hline~%  ~
       & {\\bf  total} & {\\bf ~a} & {\\bf word} & {\\bf lexical}~%    ~
         & {\\bf parser} & {\\bf total} & {\\bf overall}\\\\~%  ~
       {\\bf Phenomenon} & {\\bf items} & {\\bf items} & {\\bf string}~%    ~
@@ -383,6 +387,9 @@
         & $\\sharp$ & $\\%$\\\\~%  ~
       \\hline~%  ~
       \\hline~%"
+     (if (stringp language) language "")
+     (if (= wf 1) "Coverage" "Overgeneration")
+     (current-time :long t)
      (if (= wf 1) "positive" "negative"))
     (dolist (phenomenon items)
       (let* ((data (rest (assoc (first phenomenon) averages)))
@@ -418,7 +425,7 @@
         & {\\bf ~,2f} & {\\bf ~d} & {\\bf ~,1f}\\\\~%  \\hline~%~
         \\end{tabular}~%"
        name items restricted length words analyses results coverage))
-    (when (stringp file) (close stream))))
+    (when (or (stringp file) (stringp append)) (close stream))))
 
 (defun summarize-performance-parameters (items
                                          &key restrictor)
@@ -563,27 +570,27 @@
             (push (cons class (cons name (aref storage i))) result)))))))
 
 (defun analyze-performance (&optional (language *tsdb-data*)
-                            &key (file *tsdb-io*) restrictor)
+                            &key restrictor file append)
 
   (let* ((items (if (stringp language) (analyze-phenomena language) language))
-         (stream (if (stringp file)
-                     (open file 
-                           :direction :output 
-                           :if-exists :supersede :if-does-not-exist :create)
-                   file))
+         (stream (create-output-stream file append))
          (averages
           (summarize-performance-parameters items :restrictor restrictor)))
     (format
      stream
      "\\begin{tabular}{@{}|l|c|c|c|c|c|c|c|@{}}~%  ~
       \\hline~%  ~
+      \\multicolumn{8}{|c|}~%    {\\bf `{\\bf ~a}' Performance Profile~%     ~
+      {\\bf [~a]}}\\\\~%  \\hline~%  \\hline~%  ~
       \\raisebox{-1.5ex}[0ex][0ex]{\\bf Phenomenon}~%    & {\\bf items} ~
         & {\\bf etasks} & {\\bf filter} & {\\bf edges}~%    ~
         & {\\bf first}  & {\\bf total} & {\\bf space}\\\\~%  ~
       & $\\sharp$ & $\\propto$ & \\% & $\\propto$~%    ~
         & $\\propto$ (s) & $\\propto$ (s) & $\\propto$ (kb)\\\\~%  ~
       \\hline~%  ~
-      \\hline~%")
+      \\hline~%"
+     (if (stringp language) language)
+     (current-time :long t))
     (dolist (phenomenon items)
       (let* ((data (rest (assoc (first phenomenon) averages))))
         (when data
@@ -618,24 +625,20 @@
         & {\\bf ~,1f} & {\\bf ~d}\\\\~%"
        name items etasks filter edges first total space))
     (format stream "  \\hline~%\\end{tabular}")
-    (when (stringp file) (close stream))))
+    (when (or (stringp file) (stringp append)) (close stream))))
 
 (defun compare-performance (olanguage nlanguage 
-                            &key (file *tsdb-io*)
-                                 (format :table)
+                            &key (format :table)
                                  (olabel "old") (nlabel "new")
                                  (clabel "reduction")
-                                 orestrictor nrestrictor restrictor)
+                                 orestrictor nrestrictor restrictor
+                                 file append)
 
   (let* ((oitems 
           (if (stringp olanguage) (analyze-phenomena olanguage) olanguage))
          (nitems 
           (if (stringp nlanguage) (analyze-phenomena nlanguage) nlanguage))
-         (stream (if (stringp file)
-                   (open file 
-                         :direction :output 
-                         :if-exists :supersede :if-does-not-exist :create)
-                   file))
+         (stream (create-output-stream file append))
          (oaverages (summarize-performance-parameters 
                      oitems :restrictor (or orestrictor restrictor)))
          (naverages (summarize-performance-parameters 
@@ -744,14 +747,10 @@
 ;          (/ timereduction 100) 0.5
 ;          (/ spacereduction 100) 0.23)          
            ))))
-    (when (stringp file) (close stream))))
+    (when (or (stringp file) (stringp append)) (close stream))))
 
-(defun graph-words (data &key (file *tsdb-io*))
-  (let* ((stream (if (stringp file)
-                   (open file 
-                         :direction :output 
-                         :if-exists :supersede :if-does-not-exist :create)
-                   file))
+(defun graph-words (data &key file append)
+  (let* ((stream (create-output-stream file append))
          (mwords 
           (do ((data data (rest data))
                (wordss (list (get-field :words (first data)))
@@ -805,10 +804,11 @@
             (format stream "    ~3d ~4d~%" i (aref parses i))))
         (format stream "  /~%")
         (format stream "\\endpicture~%")))
-    (when (stringp file) (close stream))))
+    (when (or (stringp file) (stringp append)) (close stream))))
 
-(defun plot-words-first (data &key (stream *tsdb-io*))
-  (let* ((mwords 
+(defun plot-words-first (data &key file append)
+  (let* ((stream (create-output-stream file append))
+         (mwords 
           (do ((data data (rest data))
                (wordss (list (get-field :words (first data)))
                        (cons (get-field :words (first data)) wordss)))
@@ -864,15 +864,12 @@
         (when (aref firsts i)
           (format stream "    ~4d ~8,2f~%" i (average (aref firsts i)))))
       (format stream "  /~%")
-      (format stream "\\endpicture~%"))))
+      (format stream "\\endpicture~%"))
+    (when (or (stringp file) (stringp append)) (close stream))))
 
-(defun plot-words-total (data &key (file *tsdb-io*)
+(defun plot-words-total (data &key file append
                                    (threshold 1))
-  (let* ((stream (if (stringp file)
-                   (open file 
-                         :direction :output 
-                         :if-exists :supersede :if-does-not-exist :create)
-                   file))
+  (let* ((stream (create-output-stream file append))
          (mwords 
           (do ((data data (rest data))
                (wordss (list (get-field :words (first data)))
@@ -942,14 +939,10 @@
           (format stream "    ~4d ~8,2f~%" i (average (aref totals i)))))
       (format stream "  /~%")
       (format stream "\\endpicture~%"))
-    (when (stringp file) (close stream))))
+    (when (or (stringp file) (stringp append)) (close stream))))
 
-(defun plot-tasks-total (data &key (file *tsdb-io*))
-  (let* ((stream (if (stringp file)
-                   (open file 
-                         :direction :output 
-                         :if-exists :supersede :if-does-not-exist :create)
-                   file))
+(defun plot-tasks-total (data &key file append)
+  (let* ((stream (create-output-stream file append))
          (data 
           (remove -1 data :key #'(lambda (foo) (get-field :p-etasks foo))))
          (data 
@@ -1029,11 +1022,12 @@
           (format stream "    ~4d ~8,2f~%" i (average (aref totals i)))))
       (format stream "  /~%")
       (format stream "\\endpicture~%"))
-    (when (stringp file) (close stream))))
+    (when (or (stringp file) (stringp append)) (close stream))))
 
-(defun plot-words-etasks-stasks-ftasks (data &key (stream *tsdb-io*)
+(defun plot-words-etasks-stasks-ftasks (data &key file append
                                                   (threshold 1))
-  (let* ((mwords 
+  (let* ((stream (create-output-stream file append))
+         (mwords 
           (do ((data data (rest data))
                (wordss (list (get-field :words (first data)))
                        (cons (get-field :words (first data)) wordss)))
@@ -1118,4 +1112,5 @@
         (when (aref staskss i)
           (format stream "    ~4d ~8,2f~%" i (average (aref staskss i)))))
       (format stream "  /~%")
-      (format stream "\\endpicture~%"))))
+      (format stream "\\endpicture~%"))
+    (when (or (stringp file) (stringp append)) (close stream))))

@@ -7,6 +7,9 @@
 ;;   Language: Allegro Common Lisp
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; $Log$
+;; Revision 1.3  1997/12/18 18:23:36  dan
+;; Repairs to trees and MRS printing for tsdb machinery.
+;;
 ;; Revision 1.3  1997/12/16 01:16:36  dan
 ;; Returned MOD to its rightful status as HEAD feature
 ;;
@@ -210,14 +213,18 @@
 (setf *relation-type-check* 
   '((DISCO::dir_rel vit-discourse (vit_dir yes))
     (DISCO::prep_rel vit-discourse (vit_dir no))
-    (DISCO::poss_rel vit-discourse (vit_dir no))))
+    (DISCO::poss_rel vit-discourse (vit_dir no))
+    (DISCO::unspec_rel vit-discourse (vit_dir no))
+    ))
 
 (setf *top-level-rel-types* 
   '(DISCO::pron_rel DISCO::mofy_rel DISCO::the_afternoon_rel
     DISCO::the_morning_rel DISCO::the_evening_rel
     DISCO::numbered_hour_rel DISCO::minute_rel DISCO::dofw_rel 
     DISCO::named_rel DISCO::_vacation_rel DISCO::holiday_rel
-    DISCO::ctime_rel DISCO::_hour_rel DISCO::_minute_rel DISCO::dim_rel))
+    DISCO::ctime_rel DISCO::_hour_rel DISCO::_minute_rel DISCO::dim_rel
+    DISCO::unspec_rel DISCO::_next_week_rel DISCO::_next_month_rel
+    DISCO::_next_year_rel DISCO::recip_pro_rel))
 
 (setf *vm-special-label-hack-list*
   '((DISCO::support_rel . 1)

@@ -209,8 +209,11 @@ nothing :< mod-thing.
 thing :< mod-thing.
 
 handle :< thing.
-individual :< thing.
+mod_individual :< thing.
 eventtime :< thing.
+
+disc_frag :< mod_individual.
+individual :< mod_individual.
 
 index := individual &
   [ PNG png,
@@ -228,6 +231,7 @@ event := individual &
     TIME eventtime,
     REFERENCE eventtime,
     SPCH eventtime ].
+
 
 cont :< *avm*.
 
@@ -278,7 +282,7 @@ cat := *avm* &
 
 mrs := cont &
   [ TOP handle,
-    INDEX individual,
+    INDEX mod_individual,
     LISZT *diff-list*,
     KEY mod_relation,      
     MESSAGE mod_relation,  
@@ -413,15 +417,19 @@ synsem := *avm* &
     --ARG handle,
     --ARGH handle ].
 
-lex_synsem := synsem &
+expressed_synsem :< synsem.
+
+canonical_synsem :< expressed_synsem.
+
+lex_synsem := canonical_synsem &
   [ LOCAL local ].
 
-phr_synsem := synsem &
+phr_synsem := canonical_synsem &
   [ LOCAL local ].
 
 non_canonical :< synsem.
 
-gap := non_canonical &
+gap := non_canonical & expressed_synsem &
   [ LOCAL #local,
     NON-LOCAL [ REL <! !>,
 		QUE <! !>,
@@ -480,17 +488,6 @@ unexpressed := non_canonical &
 
 *onull* := *olist* & *null*.
 
-;; This is just like *olist*, but in this case we know the list will never
-;; have more than one element.
-
-*gaplist* := *list* &
-  [ FIRST gap,
-    REST  *null* ].
-
-*gapcons* := *gaplist* & *cons*.
-
-*gapnull* := *gaplist* & *null*.
-
 #| 
 ;;; LKB complains because of multiple introduction of FIRST and REST -
 ;;; so the definition above is overwritten by the following in the patches.tdl
@@ -503,6 +500,31 @@ unexpressed := non_canonical &
     REST  *olist* ].
 *onull* := *olist* & *null*.
 |#
+
+;; This is just like *olist*, but in this case we know the list will never
+;; have more than one element.
+
+*gaplist* := *list* &
+  [ FIRST gap,
+    REST  *null* ].
+
+*gapcons* := *gaplist* & *cons*.
+
+*gapnull* := *gaplist* & *null*.
+
+;; *unexplist* is used for common nouns whose specifier is possibly obligatory,
+;; but unexpressed, as in noun-noun compounds.  As usual, we use the same hack
+;; as for *olist*, to get around the lack of recursive types in TDL.
+
+*unexplist* := *list* &
+  [ FIRST unexpressed,
+    REST  *null* ].
+
+*unexpcons* := *unexplist* & *cons*.
+
+*unexpnull* := *unexplist* & *null*.
+
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Types for Sign, Word, Phrase, and Lex-Entry
@@ -622,6 +644,7 @@ n_or_p :< head.
 a_or_p :< head.
 v_or_p :< head.
 v_or_g :< head.
+n_or_v :< head.
 
 strict_head :< head.
 
@@ -638,7 +661,7 @@ verbal := subst &
   [ VFORM vform ].
 
 ; mobile things can be extracted
-mobile :< subst.
+mobile :< head.
 
 ; Adverbs modify adverbees.
 adverbee :< subst.
@@ -657,7 +680,7 @@ common :< common*.
 
 supnoun := nominal & poss-able & mobile.
 
-noun* := supnoun &
+noun* := supnoun & n_or_v &
   [ NSORT nsort ].
 
 gerund* := supnoun & adverbee & v_or_g.
@@ -666,7 +689,7 @@ gerund* := supnoun & adverbee & v_or_g.
 ; conjunctions from conjoined phrases.
 conjh :< subst.
 
-verb* := verbal & adverbee & v_or_p & v_or_g &
+verb* := verbal & adverbee & v_or_p & v_or_g & n_or_v &
   [ AUX bool,
     INV bool,
     TENSE tense,
@@ -679,7 +702,7 @@ neg :< strict_head.
 
 adv := func & particle & mobile.
 
-root-marker :< strict_head.
+root-marker := subst & strict_head.
 
 detspec :< func.
 
@@ -806,14 +829,14 @@ ne_rel :< int_rel.
 dim_rel := norm_relation &
   [ DIM non_expl-ind ].
 
-quant_or_wh_rel := dim_rel  &
+quant_or_wh_rel := dim_rel &
   [ BV ref-ind,
     RESTR handle ].
 
 demon_near_rel :< demonstrative_rel.
 demon_far_rel :< demonstrative_rel.
 
-quant_rel := quant_or_wh_rel &
+quant_rel := quant_or_wh_rel & 
   [ SCOPE handle ].
 
 udef_rel :< quant_rel.
@@ -833,20 +856,23 @@ time :< nominal-sort.
 info_bearer :< nominal-sort.
 nongeo_location :< nominal-sort.
 
+nondim_rel :< norm_relation.
+
 ; AAC - fix for ARG3 introduction
 
-aac_arg3_rel := norm_relation &
+aac_arg3_rel := nondim_rel &
   [ ARG3 thing ].
 
 ; Nominal relations
 
-basic_nom_rel := norm_relation &
+basic_nom_rel := nondim_rel &
   [ INST individual ].
 
 nom_rel := basic_nom_rel &
   [ INST non_expl-ind ].
 
-reg_nom_rel :< nom_rel.
+non_temp_nom_rel :< nom_rel.
+reg_nom_rel :< non_temp_nom_rel.
 
 diadic_nom_rel := nom_rel & aac_arg3_rel &
   [ NPREP thing & #arg3,
@@ -940,16 +966,17 @@ _workday_rel :< dofw_rel.
 named_rel := reg_nom_rel &
   [ NAMED symbol ].
 
+excl_rel := nondim_rel &
+  [ EXCL symbol ].
 
 ; Pronouns
-pron_rel := reg_nom_rel &
-  [ INST ref-ind &
-	 [ PRONTYPE prontype ] ].
+pron_rel := non_temp_nom_rel &
+  [ INST ref-ind ].
 
 refl_pro_rel := pron_rel &
   [ INST.PRONTYPE refl ].
 
-recip_pro_rel := pron_rel &
+recip_pro_rel := reg_nom_rel &
   [ INST.PRONTYPE recip ].
 
 adj_rel := dim_rel &
@@ -967,7 +994,7 @@ meas_adj_rel := adj_rel &
 adj_personal_rel :< adj_rel.
 adj_abstract_rel :< adj_rel.
 
-verb_aspect_rel :< norm_relation.
+verb_aspect_rel :< nondim_rel.
 event_arg_rel :< verb_aspect_rel.
 
 aspect_rel := verb_aspect_rel &
@@ -1036,9 +1063,11 @@ thm_expr_rel := thm_rel & expr_rel.
 ;path_rel := role_rel &
 ;	    [ PATH event ].
 
-poss_rel := norm_relation &
+poss_rel := nondim_rel &
   [ POSSR non_expl-ind,
     POSSD non_expl-ind ].
+
+_got_poss_rel :< poss_rel.
 
 fig_gnd_rel := role_rel &
   [ FIG thing,
@@ -1069,9 +1098,6 @@ adv_rel :< arg_rel.
 neg_rel :< arg_rel.
 
 neg_polar_rel :< adv_rel.
-
-excl_rel := norm_relation &
-  [ EXCL symbol ].
 
 ; Degree relations
 
@@ -1149,7 +1175,7 @@ _of_rel :< prep_mod_rel.
 _in_rel :< dir_or_state_rel.
 until_rel :< prep_mod_rel.
 
-subord_rel := norm_relation &
+subord_rel := nondim_rel &
   [ MAIN handle,
     SUBORD handle ].
 
@@ -1274,7 +1300,7 @@ _not_disc_rel :< prop_ques_rel.
 
 ; Phrasally introduced relations
 
-unspec_rel := norm_relation &
+unspec_rel := nondim_rel &
   [ HINST index,
     NHINST index ].
 
@@ -1282,7 +1308,7 @@ unspec_rel := norm_relation &
 
 probable_rel :< adj_rel.
 
-conj_rel := norm_relation &
+conj_rel := nondim_rel &
   [ C-ARG individual,
     C-HANDELS *diff-list*,
     C-INDICES *diff-list* ].
@@ -1312,7 +1338,7 @@ _there_cop_rel := event_rel & aac_arg3_rel &
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Number relations
 
-number_rel := relation &
+number_rel := dim_rel & 
   [ XARG individual ].
 
 integer_rel := number_rel &

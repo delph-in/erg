@@ -19,17 +19,17 @@
 
 (defparameter
   *tsdb-morphology-protocol*
-  '((main::*scanner* main::*morphology* :start-fw)
+  '((main::*scanner* main::*morphology* :stop-bw)
     ((main::*morphology* :parse) main::*lexicon* main::*scanner*)
-    (main::*lexicon* main::*standalone* main::*morphology*)))
+    (main::*lexicon* main::*standalone* :stop-bw)))
   
 
 (defparameter
   *tsdb-parser-protocol*
-  '((main::*scanner* main::*morphology* :start-fw)
+  '((main::*scanner* main::*morphology* :stop-bw)
     ((main::*morphology* :parse) main::*lexicon* main::*scanner*)
     (main::*lexicon* main::*parser* main::*morphology*)
-    (main::*parser* main::*standalone* main::*lexicon*)))
+    (main::*parser* main::*standalone* :stop-bw)))
 
 (defparameter *page-controller* main::*controller*)    
 

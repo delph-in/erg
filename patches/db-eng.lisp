@@ -63,6 +63,7 @@
 (insert-db-item 'disco::_suggest_loc_rel 'suggest_loc 'communicat_sit nil)
 (insert-db-item 'disco::_solution_rel 'solution 'entity nil)
 (insert-db-item 'disco::_restrict_to_rel 'restrict_to 'action_sit nil)
+(insert-db-item 'disco::_next_week_rel 'next_week nil nil)
 (insert-db-item 'disco::_difficulty_rel 'difficulty 'entity nil)
 (insert-db-item 'disco::_cool_rel 'cool nil nil)
 (insert-db-item 'disco::_circumstance_rel 'circumstance 'entity nil)
@@ -131,6 +132,7 @@
 (insert-db-item 'disco::_meantime_rel 'meantime 'time nil)
 (insert-db-item 'disco::_connect_rel 'connect 'action_sit nil)
 (insert-db-item 'disco::_big_rel 'big nil nil)
+(insert-db-item 'disco::stat_rel 'stat 'situation nil)
 (insert-db-item 'disco::_backwards_rel 'backwards nil nil)
 (insert-db-item 'disco::_ask_for_rel 'ask_for 'communicat_sit nil)
 (insert-db-item 'disco::_there_rel 'there nil nil)
@@ -394,7 +396,7 @@
 (insert-db-item 'disco::_attend_rel 'attend 'action_sit nil)
 (insert-db-item 'disco::reg_nom_rel 'abstr_nom 'entity nil)
 (insert-db-item 'disco::_agenda_rel 'agenda 'entity nil)
-(insert-db-item 'disco::temp_loc_rel 'whq nil nil)
+(insert-db-item 'disco::temp_loc_rel 'temp_loc nil nil)
 (insert-db-item 'disco::_transportation_rel 'transportation 'entity nil)
 (insert-db-item 'disco::_question_rel 'question 'info_bearer nil)
 (insert-db-item 'disco::_quarter_rel 'quarter 'entity nil)
@@ -431,6 +433,7 @@
 (insert-db-item 'disco::_reason_rel 'reason 'entity nil)
 (insert-db-item 'disco::_realize_rel 'realize 'mental_sit nil)
 (insert-db-item 'disco::_plane_rel 'plane 'vehicle nil)
+(insert-db-item 'disco::_next_month_rel 'next_month nil nil)
 (insert-db-item 'disco::_near_rel 'near_isect nil nil)
 (insert-db-item 'disco::_main_rel 'main nil nil)
 (insert-db-item 'disco::_look_seem_rel 'look_adv 'position_sit nil)
@@ -692,7 +695,7 @@
 (insert-db-item 'disco::_speak2_rel 'speak_i 'communicat_sit nil)
 (insert-db-item 'disco::_rhetoric_rel 'rhetoric 'info_bearer nil)
 (insert-db-item 'disco::_punctual_adj_rel 'punctual nil nil)
-(insert-db-item 'disco::_occupy_rel 'occupy 'position_loc nil)
+(insert-db-item 'disco::_occupy_rel 'occupy 'position_sit nil)
 (insert-db-item 'disco::_large_rel 'large nil nil)
 (insert-db-item 'disco::_trip_rel 'trip 'entity nil)
 (insert-db-item 'disco::_obligation_rel 'obligation 'entity nil)
@@ -738,7 +741,7 @@
 (insert-db-item 'disco::_cause_rel 'cause_v 'action_sit nil)
 (insert-db-item 'disco::_after_all_rel 'after_all nil nil)
 (insert-db-item 'disco::_appointment_rel 'appointment 'time nil)
-(insert-db-item 'disco::loc_rel 'whq nil nil)
+(insert-db-item 'disco::loc_rel 'abstr_loc nil nil)
 (insert-db-item 'disco::_summon_rel 'summon 'communicat_sit nil)
 (insert-db-item 'disco::_soon_rel 'soon nil nil)
 (insert-db-item 'disco::_rest_remainder_rel 'rest_n 'entity nil)
@@ -808,11 +811,9 @@
 (insert-db-item 'disco::_write_in_rel 'write_in 'action_sit nil)
 (insert-db-item 'disco::_plan_v_rel 'plan_v 'mental_sit nil)
 (insert-db-item 'disco::_mind_rel 'mind 'mental_sit nil)
-(insert-db-item 'disco::nominalize_rel 'nominalize nil nil)
 (insert-db-item 'disco::_exception_rel 'exception_n 'entity nil)
 (insert-db-item 'disco::_car_rel 'car 'vehicle nil)
 (insert-db-item 'disco::_before_d_rel 'before_subord nil nil)
-(insert-db-item 'disco::support_rel 'support 'situation nil)
 (insert-db-item 'disco::_north_pole_rel 'north_pole 'geo_location nil)
 (insert-db-item 'disco::_add_on_rel 'add_on 'mental_sit nil)
 (insert-db-item 'disco::_almost_deg_rel 'almost_grad nil nil)
@@ -842,6 +843,7 @@
 (insert-db-item 'disco::_sorry_rel 'sorry nil nil)
 (insert-db-item 'disco::_somehow_rel 'somehow nil nil)
 (insert-db-item 'disco::_organize_rel 'organize 'action_sit nil)
+(insert-db-item 'disco::nom_rel 'nom nil nil)
 (insert-db-item 'disco::_meal_rel 'meal 'sit_food_poly nil)
 (insert-db-item 'disco::_make_a_note_of_rel 'make_a_note_of 'action_sit nil)
 (insert-db-item 'disco::_like_p_rel 'like_p nil nil)
@@ -958,6 +960,7 @@
 (insert-db-item 'disco::_week_rel 'week 'time nil)
 (insert-db-item 'disco::_pension_rel 'pension 'entity nil)
 (insert-db-item 'disco::_participant_rel 'participant 'human nil)
+(insert-db-item 'disco::_next_year_rel 'next_year nil nil)
 (insert-db-item 'disco::_move_to_rel 'move_to 'move_sit nil)
 (insert-db-item 'disco::_mistake_rel 'mistake 'entity nil)
 (insert-db-item 'disco::_make_rel 'make 'action_sit nil)
@@ -1082,7 +1085,7 @@
 (insert-db-item 'disco::_hopefully_rel 'hopefully nil nil)
 (insert-db-item 'disco::_finished_rel 'finished nil nil)
 (insert-db-item 'disco::_continue_cause_rel 'continue 'position_sit nil)
-(insert-db-item 'disco::there_cop_rel 'there_cop 'situation nil)
+(insert-db-item 'disco::there_cop_rel 'there_cop 'anything nil)
 (insert-db-item 'disco::_stumble_rel 'stumble 'action_sit nil)
 (insert-db-item 'disco::_reasonable_rel 'reasonable nil nil)
 (insert-db-item 'disco::_pass_rel 'pass 'move_sit nil)
@@ -1211,11 +1214,10 @@
 (insert-db-item 'disco::_ask_about_rel 'ask_about 'communicat_sit nil)
 (insert-db-item 'disco::_absolute_rel 'absolute nil nil)
 ;;; multiple values???
-;;; which_rel: whq tloc sloc cause
 ;;; _so_rel: so so_scop
 ;;; _but_rel: but_coord but_scop but_subord
 ;;; _appointment_rel: appointment appointment_slot
-;;; _for_rel: for whq
+;;; _for_rel: for cause
 ;;; _however_rel: however_scop however_subord
 ;;; _arrange_rel: arrange arrange_agree
 ;;; _suggest_rel: suggest_to suggest

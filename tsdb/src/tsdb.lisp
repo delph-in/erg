@@ -47,6 +47,8 @@
 
 (defparameter *tsdb-cache-database-writes-p* t)
 
+(defparameter *tsdb-flush-cache-threshold* 42)
+
 (defparameter *tsdb-trees-hook* 
   (and (find-package "TREES") "trees::get-labeled-bracketings"))
 
@@ -72,13 +74,17 @@
 
 (defparameter *tsdb-global-gcs* 0)
 
+(defparameter *tsdb-tokens-to-ignore*
+  (list "." "(" ")" "!" "?" "-" "'" "[" "]" "`"))
+
 (defparameter *tsdb-debug-mode-p* nil)
 
 (defmacro tsdb-ignore-p ()
   t)
 
 (defmacro find-tsdb-directory (language)
-  `(let* ((data (dir-append *tsdb-home* (list :relative ,language))))
+  `(let* ((data (dir-append (make-pathname :directory *tsdb-home*)
+                            (list :relative ,language))))
      (namestring data)))
 
 (defun reset-tsdb-paths ()
@@ -172,8 +178,8 @@
          "~&create-cache(): tsdb(1) write cache in `~a'.~%"
          file)
         (force-output *tsdb-io*)))
-    (pairlis (list :database :file :stream)
-             (list language file stream))))
+    (pairlis (list :database :file :stream :count)
+             (list language file stream 0))))
 
 (defun cache-query (query language cache)
   (let* ((database (get-field :database cache))
@@ -185,7 +191,17 @@
     (if (string-equal language database)
       (when stream 
         (format stream "~a~%" query)
-        (force-output stream))
+        (force-output stream)
+        (incf (get-field :count cache))
+        (when (>= (get-field :count cache) *tsdb-flush-cache-threshold*)
+          (flush-cache cache :verbose t)
+          (setf (get-field :count cache) 0)
+          (let ((stream 
+                 (open (get-field :file cache)
+                       :direction :output 
+                       :if-exists :supersede :if-does-not-exist :create)))
+            (format stream "set implicit-commit off.~%")
+            (setf (get-field :stream cache) stream))))
       (format
        *tsdb-io*
        "~&cache-query() ignoring query to `~a' (on `~a' cache).~%"
@@ -367,12 +383,14 @@
          (string (remove #\: string))
          (string (remove #\. string))
          (string (remove #\? string))
-         (string (remove #\! string)))
-    (concatenate 'string string " .")))
+         (string (remove #\! string))
+         (string (string-right-trim (list #\space #\tab) string)))
+    (concatenate 'string string ".")))
 
 (defun normalize-string (string)
   (let* ((string (nsubstitute #\Space #\Newline string))
-         (string (nsubstitute #\# #\@ string)))
+         (string (nsubstitute #\# #\@ string))
+         )
     (string-trim '(#\Space #\Tab) string)))
 
 (defun shell-escape-quotes (string)
@@ -424,7 +442,7 @@
       (if (and (integerp tasks) (> tasks 0)) tasks nil))
     (setf pg::*current-number-of-tasks* 0)
     (setf pg::*maximal-number-of-tasks-exceeded-p* nil)
-    (setf (pg::ebl-parser-external-signal-fn (current-parser))
+    (setf (pg::ebl-parser-external-signal-fn (pg::get-parser :syntax))
       (if (> tasks 0)
         #'pg::maximal-number-of-tasks-exceeded-p
         #'(lambda (parser) (declare (ignore parser)))))
@@ -433,7 +451,7 @@
     (when (and derivations *tsdb-phrasal-oracle-p*)
       (install-phrasal-oracle derivations))
     (udine::reset-costs)
-    (setf (main::input-stream main::*parser*) nil)
+    (setf (main::output-stream main::*lexicon*) nil)
     (setf (main::output-stream main::*parser*) nil)
     (multiple-value-bind (result condition)
         (excl::time-a-funcall #'(lambda ()
@@ -447,7 +465,6 @@
                                         conses scons
                                         symbols ssym
                                         others sother)))
-      (declare (ignore result))
       (close foo)
       (setf main::*exhaustive* exhaustive)
       (setf (pg::combo-parser-task-priority-fn (pg::get-parser :lexicon))
@@ -462,7 +479,8 @@
          (pairlis
           (list :readings :condition :error)
           (list -1 condition (format nil "~a" condition))))
-        ((null (main::output-stream main::*lexicon*))
+        ((or (eq (first result) :INCOMPLETE-INPUT)
+             (null (main::output-stream main::*lexicon*)))
          (pairlis
           (list :readings :error)
           (list -1 "null parser input")))
@@ -470,17 +488,18 @@
          (let* ((items (main::output-stream main::*parser*))
                 (readings (length items))
                 (words (length (main::output-stream main::*lexicon*)))
-                (statistics (pg::parser-stats-readings (current-parser)))
+                (statistics 
+                 (pg::parser-stats-readings (pg::get-parser :syntax)))
                 (first (when statistics (first (last statistics))))
                 (first (when first (pg::stats-time first)))
                 (first (when first (/ first internal-time-units-per-second)))
-                (global (pg::parser-global-stats (current-parser)))
+                (global (pg::parser-global-stats (pg::get-parser :syntax)))
                 (total (when global (pg::stats-time global)))
                 (total (when total (/ total internal-time-units-per-second)))
                 (etasks (when global (pg::stats-executed global)))
                 (stasks (when global (pg::stats-successful global)))
                 (ftasks (when global (pg::stats-filtered global)))
-                (edges (pg::total-number-of-items (current-parser)))
+                (edges (pg::total-number-of-items (pg::get-parser :syntax)))
                 results)
            (when (= readings (length statistics))
              (do* ((i 0 (+ i 1))
@@ -497,8 +516,10 @@
                       (stasks (pg::stats-successful statistic))
                       (ftasks (pg::stats-filtered statistic))
                       (derivation 
-                       (format nil "~s"
-                               (pg::item-to-node item (current-parser)))))
+                       (format 
+                        nil 
+                        "~s"
+                        (pg::item-to-node item (pg::get-parser :syntax)))))
                  (push (pairlis
                         (list :result-id :time
                               :r-etasks :r-stasks :r-ftasks
@@ -748,9 +769,10 @@
     (when data
       (let ((user (current-user))
             (chart main::*draw-chart-p*)
-            (name-rule-fn (pg::ebl-parser-name-rule-fn (current-parser)))
+            (name-rule-fn 
+             (pg::ebl-parser-name-rule-fn (pg::get-parser :syntax)))
             (external-signal-fn 
-             (pg::ebl-parser-external-signal-fn (current-parser)))
+             (pg::ebl-parser-external-signal-fn (pg::get-parser :syntax)))
             (tasks pg::*maximal-number-of-tasks*)
             (preserve-daughters-p
              (and (find-symbol "PG::*PRESERVE-DAUGHTERS-P*")
@@ -763,7 +785,7 @@
             (cache (when cache (create-cache language :verbose verbose)))
             gcs result)
         (setf main::*draw-chart-p* nil)
-        (setf (pg::ebl-parser-name-rule-fn (current-parser))
+        (setf (pg::ebl-parser-name-rule-fn (pg::get-parser :syntax))
           #'get-informative-item-label)
         (setf pg::*preserve-daughters-p* t)
         (setf csli::*verbose-expansion* nil)
@@ -934,11 +956,12 @@
           (when cache (flush-cache cache :verbose verbose))
           (setf pg::*maximal-number-of-tasks-exceeded-p* nil)
           (setf pg::*maximal-number-of-tasks* tasks)
-          (setf (pg::ebl-parser-external-signal-fn (current-parser))
+          (setf (pg::ebl-parser-external-signal-fn (pg::get-parser :syntax))
             external-signal-fn)
           (setf pg::*preserve-daughters-p* preserve-daughters-p)
           (setf main::*draw-chart-p* chart)
-          (setf (pg::ebl-parser-name-rule-fn (current-parser)) name-rule-fn)
+          (setf (pg::ebl-parser-name-rule-fn (pg::get-parser :syntax)) 
+            name-rule-fn)
           (setf csli::*verbose-expansion* message)
           (setf tdl::*verbose-reader-p* reader)
           (setf tdl::*verbose-definition-p* definition)
@@ -1015,14 +1038,16 @@
             (do* ((words (sort (copy-seq words) #'string-lessp) (rest words))
                   (word (first words) (first words)))
                 ((null words))
-              (unless (morphologically-analyze-word word)
-                (push word unknown-words)
-                (when (member verbose (list :warn :fair :full :all :verbose t))
-                  (format
-                   *tsdb-io*
-                   "vocabulary(): there seems to be ~
-                    no lexicon entry for word `~a'.~%"
-                   word))))
+              (unless (member word *tsdb-tokens-to-ignore* :test #'string-equal)
+                (unless (morphologically-analyze-word word)
+                  (push word unknown-words)
+                  (when (member verbose 
+                                (list :warn :fair :full :all :verbose t))
+                    (format
+                     *tsdb-io*
+                     "vocabulary(): there seems to be ~
+                      no lexicon entry for word `~a'.~%"
+                     word)))))
             (setf tdl::*verbose-reader-p* reader)
             (setf tdl::*verbose-definition-p* definition)
             (setf csli::*verbose-expansion* expansion)
