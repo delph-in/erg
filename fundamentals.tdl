@@ -164,10 +164,12 @@ mod_local :< *avm*.
 ; respect to the head.  (An earlier approach employing a generalization about
 ; a head being final in its phrase or not might still be considered as an
 ; alternate to this stipulative one.)
-; The POSTHEAD feature should stays with MOD, since only relevant when MOD is
+; The POSTHEAD feature should stay with MOD, since only relevant when MOD is
 ; non-empty.
 
-head := *avm* &
+head_min :< *avm*.
+
+head := head_min &
   [ MOD mod_local ].
 
 valence := *avm* &
@@ -191,7 +193,12 @@ eventtime :< thing.
 disc_frag :< mod_individual.
 individual :< mod_individual.
 
-index := individual &
+; DIVISIBLE distinguishes singular count nouns from plural and mass nouns,
+; for determiners like "some", and for bare-plural NPs.
+
+index :< individual.
+
+full_index := individual &
   [ PNG png,
     DIVISIBLE bool,
     PRONTYPE prontype,
@@ -231,8 +238,6 @@ non_number_rel :< relation.
 
 norm_relation :< non_number_rel.
 
-; DIVISIBLE distinguishes singular count nouns from plural and mass nouns,
-; for determiners like "some", and for bare-plural NPs.
 
 
 
@@ -240,7 +245,7 @@ norm_relation :< non_number_rel.
 ; CAT type
 
 cat := *avm* &
-  [ HEAD head,
+  [ HEAD head_min,
     VAL valence,
     MC luk,
     POSTHEAD bool,
@@ -283,20 +288,22 @@ cat := *avm* &
 ;   OCOMPKEY mod_relation, ; Pointer to the oblique complement's main relation
 
 
-basicmrs := cont &
+mrs_min := cont &
   [ TOP handle,
     INDEX mod_individual,
-    LISZT *diff-list*,
-    KEY mod_relation,      
+    KEY mod_relation,
+    ECONT cont ].
+    
+econtmrs := mrs_min &
+  [ ECONT mrs_min ].
+
+basicmrs := econtmrs &
+  [ LISZT *diff-list*,
     MESSAGE *diff-list*,  
     H-CONS *diff-list*,
-    H-STORE *diff-list*,
-    ECONT cont ].
+    H-STORE *diff-list* ].
 
-econtmrs := basicmrs &
-  [ ECONT basicmrs ].
-
-mrs := econtmrs &
+mrs := basicmrs &
   [ TOP-H handle,
     ALTKEY mod_relation,
     COMPKEY mod_relation,  
@@ -363,10 +370,13 @@ arg2+arg3 := arg2 & arg3.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;  Contextual information
 
+ctxt_min :< *avm*.
+
 c-inds := *avm* &
   [ SPEECH eventtime ].
 
-ctxt := *avm* &
+
+ctxt := ctxt_min &
   [ ACTIVATED bool,
     C-INDS c-inds,
     PRESUP *diff-list* ].
@@ -396,43 +406,47 @@ astem :< stemhead.
 ; mother, but need to be able to change AGR on the mother (to get plural 
 ; agreement on verb when subject is a coordinated NP with "and" vs. "or").  
 
-local := mod_local &
+local_min :< mod_local.
+
+local := local_min &
   [ CAT cat,
     CONT cont,
     CONJ conj,
-    CTXT ctxt,
+    CTXT ctxt_min,
     ARG-S *list*,
     AGR index,
     THROLE throle,
     STEMHEAD stemhead ].
 
-affix :< local.
 no-affix :< mod_local.
 no-mod :< mod_local.
 
-non-local := *avm* &
+non-local_min :< *avm*.
+non-local := non-local_min &
   [ SLASH 0-1-dlist,
     QUE 0-1-dlist,
     REL 0-1-dlist ].
 
-synsem := *avm* & 
+synsem_min := *avm* &
+  [ OPT bool ].
+
+synsem := synsem_min &
   [ LOCAL mod_local,
-    NON-LOCAL non-local,
-    OPT bool,
-    --ARG handle,
-    --ARGH handle,
-    --OUTSC handle ].
+    NON-LOCAL non-local_min ].
 
 expressed_synsem :< synsem.
 
 canonical_synsem := expressed_synsem &
-  [ MODIFIED bool ].
+  [ MODIFIED bool,
+    --ARG handle,
+    --ARGH handle,
+    --OUTSC handle ].
 
 lex_synsem := canonical_synsem &
-  [ LOCAL local ].
+  [ LOCAL local_min ].
 
 phr_synsem := canonical_synsem &
-  [ LOCAL local ].
+  [ LOCAL local_min ].
 
 non_canonical := synsem &
   [ LOCAL.CONT.INDEX non_expl ].
@@ -751,18 +765,9 @@ adj* := particle & a_or_p & v_or_g_or_a & adverbee & mobile.
 
 prep* := particle & a_or_p & v_or_p & n_or_p & adverbee & mobile.
 
-nsort :< *sort*.
-proper* :< nsort.
-common* :< nsort.
-
-prop_and_com := proper* & common*.
-proper :< proper*.
-common :< common*.
-
 supnoun := nominal & poss-able & mobile.
 
-noun* := supnoun & n_or_v & n_or_p &
-  [ NSORT nsort ].
+noun* := supnoun & n_or_v & n_or_p.
 
 gerund* := supnoun & adverbee & v_or_g.
 
@@ -842,13 +847,17 @@ gerund := gerund* & strict_supnoun.
 ;; scope.  Indices are classified in the familiar HPSG way.
 
 expl-ind :< index.
-it-ind := expl-ind &
+it-ind := expl-ind & full_index &
   [ PNG [ PN 3sg*,
 	  GEN neut* ] ].
 there-ind :< expl-ind.
 non_expl-ind := index & non_expl.
 ref-ind :< non_expl-ind.
 deg-ind :< non_expl-ind.
+
+full_there-ind := there-ind & full_index.
+full_ref-ind := ref-ind & full_index.
+full_deg-ind := deg-ind & full_index.
 
 ; The basic semantic structure, a CONT, is just something with a handle.
 ; Conts are further classified into mrss (i.e., things with liszts) and
@@ -1018,8 +1027,8 @@ hour_prep_rel := hour_rel &
     MINUTE-IND individual ].
 
 numbered_hour_rel := hour_rel &
-  [ INST.PNG [ PN 3sg*,
-	       GEN neut* ],
+  [ INST.PNG png & [ PN 3sg*,
+		     GEN neut* ],
     HOUR string,
     MIN non_expl-ind,
     AM-PM non_expl-ind ].
