@@ -7,8 +7,6 @@
 ;;;
 (setf *transfer-filter-p* nil)
 
-(setf *transfer-postprocess-p* nil)
-
 (setf %transfer-properties-accumulator% nil)
 
 (setf %transfer-properties-defaults% nil)
