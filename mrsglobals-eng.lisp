@@ -7,6 +7,9 @@
 ;;   Language: Allegro Common Lisp
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; $Log$
+;; Revision 1.19  1999/06/19 18:32:44  danf
+;; Improvements to cover VM CD6 data
+;;
 ;; Revision 1.18  1999/06/18 05:56:57  aac
 ;; get the right version this time
 ;;
@@ -146,8 +149,10 @@
 (setf *psoa-handel-path* 
   `(,(vsym "TOP")))
 
+;;; Note key-handel-path cannot be accessed from the semantic FS any more
+
 (setf *key-handel-path* 
-  `(,(vsym "KEY") ,(vsym "HANDEL")))
+  `(,(vsym "SYNSEM") ,(vsym "LOCAL") ,(vsym "KEYS") ,(vsym "KEY") ,(vsym "HANDEL")))
 
 (setf *rel-handel-path* 
   `(,(vsym "HANDEL")))
@@ -421,3 +426,4 @@
 
 (setf *false-type* (vsym "-"))
 
+(setf *true-type* (vsym "+"))
