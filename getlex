@@ -1,0 +1,277 @@
+#!/bin/sh -- # -*- perl -*-
+eval 'exec perl -S $0 ${1+"$@"}'
+    if 0;
+## 
+## getlex <path>
+##
+## Rob Malouf, 3-Nov-1996
+##
+## This script looks up lexical info for page.  It reads in a <key>
+## from stdin and sends information about the word <key> to stdout.
+## The output is a list with two members.  The first element is a list
+## of the TDL definitions of the lexical entries for <key>, as
+## strings.  The second element is a list of pairs.  Each pair
+## consists of relation name needed by one of the entries in the first
+## element with its TDL definition.
+
+## This package provides a transparent interface to one or more lexical
+## databases.
+
+package Lexicon;
+
+use GDBM_File;
+use Carp;
+
+sub whowasi { (caller(1))[3] . '()' }
+
+## Create an instance variable linking a single lexicon hash to one or more
+## actual database files.  Right now, we're using a single gnu dbm file to
+## store the lexicon, so this is pretty easy. 
+
+sub TIEHASH {
+    my $type = shift; 
+    my $mode = shift;
+    my $path = shift;
+    
+    my $dbm_mode;
+    
+    croak "Usage: @{[&whowasi]} MODE PATH" if (!$mode || !$path || @_);
+
+    if ($mode =~ m/^create/) { 
+	$dbm_mode = GDBM_NEWDB|GDBM_FAST;
+    } elsif ($mode =~ m/^read/) { 
+	$dbm_mode = GDBM_READER;
+    } else {
+	croak "@{[&whowasi]}: Unknown mode $mode"; 
+    }
+
+    my $ref = GDBM_File->new("$path/lexicon.dat", $dbm_mode, 0644) 
+	or croak "@{[&whowasi]}: Can't open $path/lexicon.dat: $!"; 
+
+    return bless { DBM => $ref }, $type; 
+}
+
+## Look up an entry in the lexicon.  An entry is the TDL source for the
+## instance. Multiple entries for a single key are separated by @.  We break
+## that up and return a reference to a list of lists.  Each sub-list is a
+## pair, consisting of a code and an instance definition.
+
+sub FETCH {
+    my $self = shift;
+    my $key = shift;
+
+    my @entries;
+    
+    if ($raw = $self->{DBM}->FETCH($key)) {
+      @entries = split /@/, $raw;
+    }
+    return \@entries;
+}
+
+## Add entry to lexicon.  An entry is a reference to a list of lists.  Each
+## sub-list is a pair, consisting of a code and an instance definition.  We
+## convert that structure into a single value that can be stuffed into the DBM
+## file under the right key.  The value is the TDL source for the instance.
+## Multiple entries for a single key are separated by @.
+
+sub STORE {
+    my $self = shift;
+    my $key = shift;
+    my $list = shift;
+
+    my $record = "";
+
+    while ($entry = shift(@{$list})) {
+	$record = "$record$entry@";
+    }
+
+    $self->{DBM}->STORE($key, $record);
+}
+
+# sub DELETE {
+#     print "Delete!\n"
+# }
+
+# sub CLEAR {
+#     print "Clear!\n"
+# }
+
+# sub EXISTS {
+#     print "Exists!\n"
+# }
+
+## Since we're just using a single dbm file for the lexicon, these two are
+## easy.  The keys in the whole lexicon are just the keys int the dbm file.
+
+sub FIRSTKEY {
+    my $self = shift;
+
+    return $self->{DBM}->FIRSTKEY;
+}
+
+sub NEXTKEY {
+    my $self = shift;
+    my $last = shift;
+
+    return $self->{DBM}->NEXTKEY($last);
+}
+
+package Semrels;
+
+use GDBM_File;
+use Carp;
+
+sub whowasi { (caller(1))[3] . '()' }
+
+# Open a GDBM file.
+
+sub TIEHASH {
+    my $type = shift; 
+    my $mode = shift;
+    my $path = shift;
+    
+    my $dbm_mode;
+    
+    croak "Usage: @{[&whowasi]} MODE PATH" if (!$mode || !$path || @_);
+
+    if ($mode =~ m/^create/) { 
+	$dbm_mode = GDBM_NEWDB|GDBM_FAST;
+    } elsif ($mode =~ m/^read/) { 
+	$dbm_mode = GDBM_READER;
+    } else {
+	croak "@{[&whowasi]}: Unknown mode: $_"; 
+    }
+
+    my $ref = GDBM_File->new("$path/semrels.dat", $dbm_mode, 0644) 
+	or croak "@{[&whowasi]}: Can't open $path/semrels.dat: $!"; 
+
+    return bless { DBM => $ref }, $type; 
+}
+
+# Look up an entry in the lexicon.
+
+sub FETCH {
+    my $self = shift;
+    my $key = shift;
+    
+    return $self->{DBM}->FETCH($key);
+}
+
+# Add entry to lexicon.
+
+sub STORE {
+    my $self = shift;
+    my $key = shift;
+    my $value = (shift) . "@";
+
+    $self->{DBM}->STORE($key, $value);
+}
+
+# sub DELETE {
+#     print "Delete!\n"
+# }
+
+# sub CLEAR {
+#     print "Clear!\n"
+# }
+
+# sub EXISTS {
+#     print "Exists!\n"
+# }
+
+sub FIRSTKEY {
+    my $self = shift;
+
+    return $self->{DBM}->FIRSTKEY;
+}
+
+sub NEXTKEY {
+    my $self = shift;
+    my $last = shift;
+
+    return $self->{DBM}->NEXTKEY($last);
+}
+
+# Autoflush output
+
+$| = 1;
+
+#
+# Get path to lexicon files
+#
+
+$path = shift;
+
+if (!$path) {
+    $path = ".";
+}
+
+#
+# Open lexicon files
+#
+
+tie %LEXICON, "Lexicon", "read", $path or die "Can't open lexicon!\n";
+tie %SEMRELS, "Semrels", "read", $path or die "Can't open semrels!\n";
+
+#
+# Get input keys
+#
+
+while ($key = <STDIN>) {
+
+    chomp $key;
+
+    @rels = ();
+
+    print "(\n";
+
+#
+# Output lexical entries for <key> as a list of strings
+#
+
+# Get entries for word
+
+    print "(";
+
+    if (@list = \@{$LEXICON{$key}}) {
+	while (($_, $_) = @{shift(@list)}) {
+	    s/\"/\\\"/g;
+	    print "\"$_\"\n";
+	    my @myrels = m/\w+_rel/g;
+	    push @rels, @myrels;
+	}
+    }
+    print ")";
+    
+#
+# Output relations for <key> as a list of pairs of strings
+#
+
+    print "(\n";
+    
+# Get relations for word (skipping duplicates)
+
+    @rels = sort @rels;
+    $oldrel = "";
+
+    foreach $rel (@rels) {
+	if ($rel ne $oldrel) {
+	    if ($_ = $SEMRELS{$rel}) {
+		print "( \"$rel\"\n";
+		s/\"/\\\"/g;
+		print "\"$_\")\n";
+	    } 
+	    $oldrel = $rel;
+	}
+    }
+    
+    print "))\n";
+}
+
+#
+# Close files
+#
+    
+    untie %LEXICON;
+    untie %SEMRELS;
+
