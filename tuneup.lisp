@@ -50,6 +50,7 @@
      (extradj (:forbid imper))
      (hadj (:forbid adjh))
      (hadj (:forbid imper))
+     (hadj (:forbid extrasubj))
      (imper (:forbid extracomp))
      (extracomp (:forbid extracomp))
      )))

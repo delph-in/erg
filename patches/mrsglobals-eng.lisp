@@ -7,6 +7,9 @@
 ;;   Language: Allegro Common Lisp
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; $Log$
+;; Revision 1.5  1998/01/09 23:41:49  dan
+;; Minor changes for Verbmobil
+;;
 ;; Revision 1.4  1998/01/07 21:25:32  dan
 ;; Further debugging of SLASH amalgamation, and Verbmobil extensions
 ;;
@@ -85,8 +88,7 @@
       disco::id1 disco::id2 disco::params disco::nprep 
       disco::nomarg disco::expr disco::carg disco::varg))
 
-(setf *do-not-convert-sort-list* '(DISCO::temp_prec_rel 
-                                   DISCO::temp_over_rel))
+(setf *do-not-convert-sort-list* nil)
 
 (setf *relation-extra-feats* '(DISCO::PNG
 			       DISCO::PN
@@ -192,14 +194,21 @@
      (DISCO::PRESPERF* (vit_tense pres) (vit_perf perf))
      (DISCO::PASTPERF (vit_tense past) (vit_perf perf))
      (DISCO::PASTPERF* (vit_tense past) (vit_perf perf))
-     (DISCO::TENSE (vit_perf nonperf)))
+     (DISCO::TENSE (vit_perf nonperf))
+     (DISCO::BSE (vit_perf nonperf))
+     (DISCO::FIN (vit_tense pres) (vit_perf nonperf))
+      
+
+)
     (DISCO::VITMOOD vit-tenseandaspect
      ((:AND DISCO::INDICATIVE* DISCO::STRICT_MOOD) (vit_mood ind))
      ((:AND DISCO::MODAL_SUBJ* DISCO::STRICT_MOOD) (vit_mood ind))
+     ((:AND DISCO::IND_OR_MOD_SUBJ DISCO::STRICT_MOOD) (vit_mood imp))
+     ((:AND DISCO::STRICT_MOOD DISCO::WOULD_SUBJ*) (vit_mood conj))
      (DISCO::INDICATIVE (vit_mood ind))
      (DISCO::MODAL_SUBJ (vit_mood ind))
+     (DISCO::WOULD_SUBJ (vit_mood conj))
      (DISCO::SUBJUNCTIVE (vit_mood conj))
-     (DISCO::MODAL_SUBJ (vit_mood ind))
      (DISCO::IND_OR_MOD_SUBJ (vit_mood imp))
      )))
 
@@ -217,6 +226,7 @@
   '((DISCO::dir_rel vit-discourse (vit_dir yes))
     (DISCO::prep_rel vit-discourse (vit_dir no))
     (DISCO::poss_rel vit-discourse (vit_dir no))
+    (DISCO::meas_adj_rel vit-discourse (vit_dir no))
     (DISCO::unspec_rel vit-discourse (vit_dir no))
     ))
 
@@ -226,13 +236,25 @@
     DISCO::numbered_hour_rel DISCO::minute_rel DISCO::dofw_rel 
     DISCO::named_rel DISCO::_vacation_rel DISCO::holiday_rel
     DISCO::ctime_rel DISCO::_hour_rel DISCO::_minute_rel DISCO::dim_rel
-    DISCO::unspec_rel DISCO::_next_week_rel DISCO::_next_month_rel
-    DISCO::_next_year_rel DISCO::recip_pro_rel DISCO::_tomorrow_rel
-    DISCO::_today_rel DISCO::_the_day_after_rel))
+    DISCO::unspec_rel DISCO::recip_pro_rel DISCO::_the_day_after_rel 
+    DISCO::dofm_rel
 
-(setf *vm-special-label-hack-list*
-  '((DISCO::support_rel . 1)
-    (DISCO::nominalize_rel . 1)))
+    DISCO::_abroad_rel DISCO::_afterward_rel DISCO::_afterwards_rel 
+    DISCO::_ahead_rel DISCO::_all_day_rel DISCO::_anytime_rel 
+    DISCO::_as_soon_as_possible_rel DISCO::_aside_rel DISCO::_astray_rel 
+    DISCO::_away_rel DISCO::_back_adv_rel DISCO::_backward_rel 
+    DISCO::_backwards_rel DISCO::_beforehand_rel DISCO::_forth_rel 
+    DISCO::_forward_rel DISCO::_forwards_rel DISCO::_here_rel DISCO::_hither_rel
+    DISCO::_home_loc_rel DISCO::_last_time_rel DISCO::_maximum_adv_rel 
+    DISCO::_nearby_rel DISCO::_now_rel DISCO::_out_of_town_rel 
+    DISCO::_right_away_rel DISCO::_right_now_rel DISCO::_sometime_rel 
+    DISCO::_somewhere_rel DISCO::_then_temp_rel DISCO::_there_rel 
+    DISCO::_thereabouts_rel DISCO::_upstairs_rel
+    ))
+
+(setf *vm-special-label-hack-list* nil)
+
+;  '((DISCO::nominalize_rel . 2))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Add access function used by TSDB machinery
@@ -248,6 +270,20 @@
 		  (format stream "~%~S" mrs-struct)
                   ;(output-mrs1 mrs-struct 'simple stream)
 		  ))))))
+
+(defun get-mrs-resolved-strings (parse-list)
+  (loop for parse in parse-list
+	collecting
+        (let* ((fs (get-parse-fs parse))
+               (sem-fs (path-value fs *initial-semantics-path*)))
+          (when (is-valid-fs sem-fs)
+              (let* ((mrs-struct (sort-mrs-struct (construct-mrs sem-fs)))
+		     (binding-sets (make-scoped-mrs mrs-struct)))
+		(when binding-sets
+		  (with-output-to-string (stream) 
+		    (setf *canonical-bindings* (canonical-bindings 
+						(first binding-sets)))
+		    (output-scoped-mrs mrs-struct :stream stream))))))))
 
 (defun get-parse-fs (parse)
   (if (string-equal "1" (subseq user::*page-version* 0 1))
@@ -267,10 +303,14 @@
 		     (format nil "~S" (write-vit stream vit)))))))))
 
 (defun expand-tsdb-results (result-file dest-file &optional (vitp nil))
+  (excl::run-shell-command (format nil "sort -n < ~A | sed -f ~A > ~A" 
+				   result-file
+				   "~/grammar/tsdb/tsnlpsed"
+				   (concatenate 'string result-file ".out")))
   (let ((old-raw-mrs main::*raw-mrs-output-p*))
     (setf main::*raw-mrs-output-p* nil)
     (with-open-file 
-	(istream result-file :direction :input)
+	(istream (concatenate 'string result-file ".out") :direction :input)
      (with-open-file 
 	(ostream dest-file :direction :output :if-exists :supersede)
       (do ((sent-num (read istream nil 'eof))
@@ -297,7 +337,7 @@
 	      (finish-output ostream)
 	      (check-vit mrs t ostream)
 	      (format ostream "~%"))
-	  (format ostream "~%~S" mrs))
+	  (format ostream "~%~A~%" mrs))
 	(setf sent-num (read istream nil 'eof)
 	      sent (read istream nil 'eof)
 	      mrs (read istream nil 'eof)
