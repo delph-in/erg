@@ -150,7 +150,7 @@
     (attr_adj_pres_part 200)
     (partitive 200)
     (NP_part_lr 400)
-    (dative_lr 300)
+    ;(dative_lr 300)
     (otherwise 500)))
 
 (defun gen-rule-priority (rule)
@@ -186,6 +186,8 @@
                                     V_UNACC_LE
                                     N_INTR_LOWPRIO_LE
                                     P_NBAR_COMP_LE
+                                    N_X_TO_Y_SG_LE
+                                    N_X_TO_Y_PLUR_LE
 				    ))
 
 (defparameter *likely-le-types* '(CONJ_COMPLEX_LE

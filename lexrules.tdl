@@ -45,20 +45,26 @@ non_fin_verb := local &
 ;; to get these participles alone in attributive position, we need a 
 ;; generalization of the attributive-adjective lexical rule below.
 ;; DPF 19-Feb-01 - To avoid massive unwanted ambiguity as in "Kim is sleeping"
-;; restrict the MOD value to [AUX -].
+;; restrict the MOD value to [AUX -].  
 ;; DPF 24-Mar-01 - Added SUBJ..SLASH 0-dlist to avoid spurious gaps.
 ;; DPF 18-Aug-01 - Removed [SUBJ.OPT -] to allow participle phrases without
 ;; subjects to be no-copula clauses, as in "arriving tomorrow".
 ;; DPF 24-Sep-01 - Added [MOD..TENSE real_tense as hack to block participles
 ;; from modifying nocop VPs, as in "partial clearing" - works since nouns have
 ;; underspecified TAM.
+;; DPF 18-Apr-03 - From 19-Feb-01 - This also blocks "I am available starting
+;; on Monday"
+;; DPF 27-Apr-03 - Note that in blocking ambiguity for "Kim is sleeping"
+;; (see 19-Feb-01), we also prevent an analysis for "Kim is happy driving",
+;; so probably want to remove this constraint once parse ranking can carry the
+;; load, given that there are also contexts where we want "Kim is, sleeping"
 
 verb_participle_affix := local &
   [ STEMHEAD vstem,
     CAT [ HEAD [ MOD < [ LOCAL intersective_mod &
 			       [ CAT n_or_v_cat & 
                                      [ HEAD [ AUX -,
-                                              TAM.TENSE real_tense ] ],
+					      TAM.TENSE real_tense ] ],
                                  AGR #agr ] ] >,
 		 PRD + ],
 	  VAL.SUBJ < [ --SEMIND #agr,
@@ -190,7 +196,7 @@ er_comp_adj := local &
 est_super_adj := local &
   [ STEMHEAD astem,
     CAT.VAL.SPR < [ LOCAL local &
-                          [ KEYS.KEY _def_rel ],
+                          [ KEYS.KEY _def_q_rel ],
                     OPT - ] > ].
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -249,7 +255,7 @@ lex_rule_infl_affixed := lex_rule_compos &
                  SYNSEM #synsem ],
     C-CONT.RELS <! !> ].
 
-; ERB (05-10-97) Now that sai stamps MESSAGE int_rel on its output, that
+; ERB (05-10-97) Now that sai stamps MESSAGE int_m_rel on its output, that
 ; default has to be taken out of lex_rule.  To avoid breaking anything else, I
 ; am making a new type lex_rule_super that is just like the current lex_rule
 ; except that it doesn't identify the messages, and then having lex_rule do
@@ -283,7 +289,7 @@ lex_rule := lex_rule_super_compos &
 
 ; ERB (05-10-97) Before we had a special rule hcomp_yn_root for matrix polar
 ; questions.  Now, the unique head complement rule is taking over this job.
-; To do this, we must put the int_rel onto the inverted auxiliaries (see also
+; To do this, we must put the int_m_rel onto the inverted auxiliaries (see also
 ; sai_synsem).  The original objection to this was that the inverted
 ; auxiliaries are used for things other than matrix questions (i.e., negative
 ; inversion).  However, a) we don't currently have an analysis of negative
@@ -864,11 +870,16 @@ nominal_gerund := lex_rule &
              LKEYS [ --COMPKEY #ckey,
                      --OCOMPKEY #ockey ],
 	     NON-LOCAL #nonloc & [ SLASH 0-dlist ] ],
-    C-CONT.RELS <! #key, prpstn_rel & [ LBL #arghand,
-                                        MARG #marghand ] !> ].
+    C-CONT.RELS <! #key, prpstn_m_rel & [ LBL #arghand,
+                                          MARG #marghand ] !> ].
 
 intrans_nominal_gerund := nominal_gerund &
   [ DTR.SYNSEM intrans_subst & 
+	       [ LOCAL.CAT.VAL.COMPS #comps ],
+    SYNSEM.LOCAL.CAT.VAL.COMPS #comps ].
+
+intrans_pp_nominal_gerund := nominal_gerund &
+  [ DTR.SYNSEM prep_intrans_subst & 
 	       [ LOCAL.CAT.VAL.COMPS #comps ],
     SYNSEM.LOCAL.CAT.VAL.COMPS #comps ].
 
@@ -888,6 +899,9 @@ intrans_nominal_gerund := nominal_gerund &
 ;; of the verb's complement NP.
 ;; DPF 23-Sep-01 - But this prevents e.g. "hiring is important".  So make the
 ;; value OPT +, which seems true for nominal gerunds.
+;; DPF 03-Apr-03 - Constrained PP-comp to be [SLASH 0-dlist] (and REL and QUE)
+;; Long-standing bug.  Sigh.
+
 trans_nominal_gerund := nominal_gerund &
   [ DTR.SYNSEM trans_subst & 
 	       [ LOCAL.CAT.VAL.COMPS < [ --SEMIND #index ] >,
@@ -898,6 +912,7 @@ trans_nominal_gerund := nominal_gerund &
 					   CONJ cnil,
 					   KEYS.KEY _of_rel & 
 							[ ARG2 #index ] ],
+                                   NON-LOCAL non-local_none,
                                    --SEMIND #index,
 				   OPT + ] > ].
 
@@ -931,7 +946,7 @@ date_det_lr := lex_rule &
                                               [ HARG #mhand,
                                                 LARG #mltop ] . #hclist > >,
                                      LAST #hclast ] ],
-                     KEYS [ KEY #key & def_rel &
+                     KEYS [ KEY #key & def_q_rel &
 				      [ ARG0 #ind,
 					RSTR #rhand ],
 			    ALTKEY #altkey & [ LBL #mltop,
@@ -946,7 +961,7 @@ date_det_lr := lex_rule &
                                 ARG0.E.TENSE no_tense,
                                 ARG1 #ind,
                                 ARG2 #spind ],
-                    def_rel & [ ARG0 #spind,
+                    def_q_rel & [ ARG0 #spind,
                                 RSTR #mhand ] !> ].
 
 ; "October": NP => Determiner
@@ -1043,7 +1058,7 @@ attr_adj_lr := lex_rule &
 ;; no_rel.  This allows only intransitive (past-participle) verbs or passive 
 ;; transitive verbs to undergo this rule.
 ;; DPF 31-Jul-01 - Removed attr_adj_synsem from output since it didn't work.
-;; What was I thinking?  Also removed MOD..SPR..KEY explicit_quant_rel from
+;; What was I thinking?  Also removed MOD..SPR..KEY explicit_q_rel from
 ;; output, since this blocks "hired consultants arrive".  What was it for?
 ;; DPF 23-Sep-01 - Tempting to restrict this rule to only passives, since now 
 ;; handling pres-participles as nominal gerunds in noun-noun compounds.  (We
@@ -1094,7 +1109,7 @@ attr_verb_part_lr := lex_rule &
                            HCONS #hcons ],
                     CTXT #ctxt,
 		    KEYS #keys ],
-            MODIFIED.PERIPH na,
+            MODIFIED.LPERIPH na,
 	    NON-LOCAL #non-local ],
     C-CONT.RELS <! !> ].
 
@@ -1141,18 +1156,17 @@ basic_part_constr := lex_rule &
                     AGR.DIVISIBLE #div ],
 	    NON-LOCAL #nonlocal ] ],
    SYNSEM partitive_noun_synsem & 
-     [ LOCAL [ KEYS [ KEY #key,
-                      ALTKEY #relation ],
+     [ LOCAL [ KEYS.ALTKEY #relation,
                CONT.HCONS #hcons,
                AGR.DIVISIBLE #div ],
        NON-LOCAL #nonlocal ],
-   C-CONT [ RELS <! #key !> ] ].
+   C-CONT [ RELS <! relation !> ] ].
 
 part_nocomp_constr := basic_part_constr &
  [ SYNSEM partitive_noun_nocomp_synsem ].
 
 part_ppof_agr_constr := basic_part_constr &
- [ DTR.SYNSEM.LOCAL [ KEYS.KEY explicit_quant_agr_rel,
+ [ DTR.SYNSEM.LOCAL [ KEYS.KEY explicit_quant_agr_q_rel,
                       CAT.VAL.--KEYCOMP.LOCAL.AGR.DIVISIBLE #div ],
    SYNSEM partitive_noun_ppof_synsem &
         [ LOCAL [ CAT.VAL.--KEYCOMP.LOCAL.AGR.PNG.PN #pn,
@@ -1160,10 +1174,12 @@ part_ppof_agr_constr := basic_part_constr &
                         DIVISIBLE #div ] ] ] ].
           
 part_ppof_noagr_constr := basic_part_constr &
- [ ARGS < [ SYNSEM.LOCAL [ KEYS.KEY explicit_quant_or_udef_noagr_rel,
+ [ ARGS < [ SYNSEM.LOCAL [ CAT.VAL.--KEYCOMP.LOCAL.KEYS.ALTKEY #key,
+                           KEYS.KEY explicit_quant_or_udef_noagr_q_rel,
                            AGR #agr ] ] >,
    SYNSEM partitive_noun_ppof_synsem &
-        [ LOCAL.AGR #agr ] ].
+        [ LOCAL [ AGR #agr,
+                  KEYS.KEY #key ] ] ].
 
 ; NP-particle alternation (e.g. "look up the answer/look the answer up"
 ; Stamp canonical_synsem on NP of output to avoid spurious parse for extraction
@@ -1213,7 +1229,7 @@ dative_shift_lr := lex_rule &
 		    CTXT #ctxt ],
             LKEYS.--COMPKEY #ckey,
             NON-LOCAL #nonlocal ] ],
-   SYNSEM to_trans_verb &
+   SYNSEM empty_to_trans_verb &
 	  [ LOCAL [ CAT [ HEAD #head,
 			  VAL [ SUBJ #subj,
 				COMPS < [ OPT - ], [ OPT - ] > ] ],
