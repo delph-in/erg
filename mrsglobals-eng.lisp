@@ -7,6 +7,9 @@
 ;;   Language: Allegro Common Lisp
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; $Log$
+;; Revision 1.8  1999/02/25 20:56:36  aac
+;; adding message as a dummy relation
+;;
 ;; Revision 1.7  1999/02/01 23:18:12  aac
 ;; Removing unneeded references to VMargroles
 ;;
@@ -366,13 +369,8 @@
 (setf *construction-semantics-path*
   `(,(vsym "C-CONT") ,(vsym "LISZT") ,(vsym "LIST")))
 
-(setf *message-semantics-path*
-  `(,(vsym "SYNSEM") ,(vsym "LOCAL") ,(vsym "CONT") 
-    #+(and :page :allegro-v5.0)
-    tdl::MESSAGE
-    #-(and :page :allegro-v5.0)
-    ,(vsym "MESSAGE")
-    ,(vsym "LIST")))
+(setf *top-semantics-type* 
+  (vsym "RELATION"))
 
 (setf *non-expl-ind-type* (vsym "non_expl-ind"))
 (setf *non-expl-type* (vsym "non_expl"))
