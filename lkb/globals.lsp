@@ -78,7 +78,7 @@
 (defparameter *chart-packing-p* t)
 
 (defparameter *packing-restrictor*
-  '(RELS HCONS)
+  '(RELS HCONS RULE-NAME)
   "restrictor used when parsing with ambiguity packing")
 
 ;;; (setf *chart-packing-p* :t)
