@@ -252,17 +252,25 @@ cont :< *avm*.
 ; in the speech recognizer's word lattice and relations in the final semantics.
 mod_relation := cont &
   [ HANDEL handle,
-    LABEL handle ].
+    LABEL handle,
+    WACCENT bool ].
 
 relation :< mod_relation.
-
-no_rel :< mod_relation.
 
 number_or_degree_rel :< relation.
 
 non_number_rel :< relation.
 
 norm_relation :< non_number_rel.
+
+; Subtypes of this relation are the types for particle semantics in
+; verb-particle constructions like _together_rel in "get together"
+selected_rel :< relation.
+; Subtypes of this relation contrast with those of the above, in that they
+; supply an "independent" relation.
+independent_rel :< mod_relation.
+
+no_rel :< independent_rel.
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; MRS type
@@ -282,13 +290,13 @@ mrs_min := cont &
     INDEX individual,
     KEY mod_relation,
     LISZT *diff-list*,
-    H-STORE *diff-list* ].
+    H-STORE *diff-list*,
+    TOP-H handle ].
     
 basicmrs := mrs_min &
   [ MESSAGE *diff-list*,  
     H-CONS *diff-list*,
     WGLISZT *diff-list*,
-    TOP-H handle,
     --TOPKEY mod_relation ].
 
 basicmrs2 := basicmrs &
@@ -522,6 +530,8 @@ sign := *avm* &
     SYNSEM synsem,
     ARGS *list*,
     INFLECTED bool,
+    ACCENT bool,
+    PMOOD symbol,
     ROOT bool ],
   status: root-node.
 
@@ -537,7 +547,8 @@ word_or_lexrule := sign &
     --FINAL-ARG *avm* ].
 
 word := word_or_lexrule &
-  [ SYNSEM lex_synsem,
+  [ SYNSEM lex_synsem &
+	   [ LOCAL.CONT.TOP-H handle ],
     ROOT - ].
 
 ;; Not all phrases have SYNSEM phr_synsem, since we need to allow the head-comp
@@ -551,7 +562,9 @@ phrase := phrase_or_lexrule &
 
 lex_entry := sign &
   [ STEM < #stem >,
-    SYNSEM.LOCAL.CONT [ KEY.LABEL #label,
+    ACCENT #accent,
+    SYNSEM.LOCAL.CONT [ KEY [ LABEL #label,
+			      WACCENT #accent ],
 			WGLISZT <! whg-item & [ WG-HNDLS < #label > ] !> ],
     ARGS < [ STEM < #stem > ] >,
     INFLECTED bool ],
@@ -940,9 +953,15 @@ which_rel :< quant_rel.
 
 nominal-sort :< *sort*.
 entity :< nominal-sort.
-time :< nominal-sort.
+human :< nominal-sort.
 info_bearer :< nominal-sort.
-nongeo_location :< nominal-sort.
+space_time :< nominal-sort.
+time :< nominal-sort.
+location :< nominal-sort.
+geo_location :< location.
+nongeo_location :< location.
+meeting_sit :< nominal-sort.
+inst_loc_coll_poly :< nominal-sort.
 
 ; nondim_rel is used to determine whether the specifier that combines with its
 ; head provides the semantics (nonhead-compositional) or whether the head does:
@@ -958,7 +977,7 @@ modable_rel :< norm_relation.
 
 ; Nominal relations
 
-basic_nom_rel := norm_relation &
+basic_nom_rel := norm_relation & independent_rel &
   [ INST individual ].
 
 nom_rel := basic_nom_rel &
@@ -969,6 +988,8 @@ nom_nondim_rel := nom_rel & nondim_rel.
 non_temp_nom_rel :< nom_nondim_rel.
 reg_nom_rel := non_temp_nom_rel & nonpro_rel.
 modable_nom_rel := non_temp_nom_rel & modable_rel & nonpro_rel.
+
+generic_nom_rel :< reg_nom_rel.
 
 arg3_rel := relation &
   [ ARG3 thing ].
@@ -1079,7 +1100,9 @@ _month_rel :< non_day_diadic_modable_rel.
 _moment_rel :< non_day_rel.
 
 named_rel := reg_nom_rel &
-  [ NAMED symbol ].
+  [ NAMED atom ].
+
+unk_rel :< named_rel.
 
 ;; The relation event_or_arg_rel is designed to distinguish non-nominal signs, 
 ;; including verbs, adjectives, prepositions, and adverbs.  One use of this 
@@ -1090,11 +1113,12 @@ event_or_arg_rel :< relation.
 arg_rel := event_or_arg_rel &
   [ ARG thing ].
 
-excl_rel := nondim_rel & arg_rel &
+abstr_excl_rel := nondim_rel & arg_rel & independent_rel &
   [ EXCL symbol ].
 
-greet_rel :< excl_rel.
+greet_rel :< abstr_excl_rel.
 
+excl_rel :< abstr_excl_rel.
 
 ; Pronouns
 pron_rel := non_temp_nom_rel &
@@ -1108,8 +1132,10 @@ recip_pro_rel := reg_nom_rel &
 
 basic_adj_rel :< dim_rel.
 
-adj_rel := basic_adj_rel & arg_rel &
+abstr_adj_rel := basic_adj_rel & arg_rel &
   [ ARG non_expl ].
+
+adj_rel := abstr_adj_rel & independent_rel.
 
 arg2_rel := relation &
   [ ARG2 thing ].
@@ -1129,7 +1155,7 @@ meas_adj_rel := adj_arg3_rel &
 adj_personal_rel :< adj_rel.
 adj_abstract_rel :< adj_rel.
 
-verb_aspect_rel :< norm_relation.
+verb_aspect_rel := norm_relation & independent_rel.
 
 prog_rel :< verb_aspect_rel.
 
@@ -1174,6 +1200,9 @@ support_main_rel := support_rel & mod_role_rel.
 support_arg4_rel := support_main_rel & arg4_rel.
 support_arg24_rel := support_main_rel & arg24_rel.
 
+; Needed to allow filtering of the relations for "will" and "would" for VIT.
+will_would_rel :< support_arg4_rel.
+
 abstr_rel :< arg3_event_rel.
 
 ; AAC - added for frag
@@ -1203,20 +1232,29 @@ arg1_prep_rel := arg1_rel & prep_rel.
 
 prep_mod_rel := prep_rel & arg_rel.
 
-loc_rel :< prep_mod_rel.
-dir_rel :< loc_rel.
-state_loc_rel :< loc_rel.
+loc_abstr_rel :< prep_mod_rel.
+dir_rel :< loc_abstr_rel.
+state_loc_rel :< loc_abstr_rel.
 dir_or_state_rel := dir_rel & state_loc_rel.
 
-temp_loc_rel :< loc_rel.
+temp_loc_abstr_rel :< loc_abstr_rel.
 
 miscprep_rel :< prep_mod_rel.
 
+dir_indep_rel := dir_rel & independent_rel.
+loc_rel := loc_abstr_rel & independent_rel.
+miscprep_ind_rel := miscprep_rel & independent_rel.
+prep_mod_ind_rel := prep_mod_rel & independent_rel.
+dir_or_state_ind_rel := dir_or_state_rel & independent_rel.
+temp_loc_rel := temp_loc_abstr_rel & independent_rel.
+
 part_of_rel :< reg_diadic_nom_rel.
 
-adv_rel := arg_rel & dim_rel & norm_relation.
+abstr_adv_rel := arg_rel & dim_rel & norm_relation.
 
-neg_rel :< arg_rel.
+adv_rel := abstr_adv_rel & independent_rel.
+
+neg_rel := arg_rel & independent_rel.
 
 neg_polar_rel :< adv_rel.
 
@@ -1264,17 +1302,20 @@ prpstn_to_prop_rel := prop_rel &
   [ PRPSTN handle,
     PROP non_expl-ind ].
 
-to_dir_rel :< dir_rel.
-_to_rel :< to_dir_rel.
-_for_rel :< miscprep_rel.
-_by_rel :< miscprep_rel.
-_by_pass_rel :< miscprep_rel.
-_of_rel :< prep_mod_rel.
-_in_rel :< dir_or_state_rel.
-until_rel :< prep_mod_rel.
-_from_time_on :< miscprep_rel.
+_by_pass_rel :< miscprep_ind_rel.
+_from_time_on :< miscprep_ind_rel.
+until_rel :< prep_mod_ind_rel.
 
-subord_rel := nondim_rel &
+; Abstract relations, specialized below either to independent relations or to
+; ones that appear in verb-particle constructions.
+to_dir_rel :< dir_rel.
+_to_rel_a :< to_dir_rel.
+_for_rel_a :< miscprep_rel.
+_by_rel_a :< miscprep_rel.
+_of_rel_a :< prep_mod_rel.
+_in_rel_a :< dir_or_state_rel.
+
+subord_rel := nondim_rel & independent_rel &
   [ MAIN handle,
     SUBORD handle ].
 
@@ -1328,7 +1369,7 @@ unspec_rel := nondim_rel &
     NHINST index ].
 
 ; Used for vocatives for now.
-unspec_mod_rel :< prep_mod_rel.
+unspec_mod_rel :< prep_mod_ind_rel.
 
 ; Relation introduced for tag questions
 
@@ -1361,7 +1402,7 @@ _there_cop_rel := event_rel & arg3_rel &
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Number relations
 
-number_rel := dim_rel & arg_rel & number_or_degree_rel &
+number_rel := dim_rel & arg_rel & number_or_degree_rel & independent_rel &
   [ ARG individual ].
 
 integer_rel := number_rel &
@@ -1617,3 +1658,110 @@ gappro := pro_ss & gap.
 *substnull* := *substlist* & *olist* & *null*.
 
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Selected-for relations in verb-particle constructions
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+_to_rel_s := _to_rel_a & selected_rel.
+_to_rel := _to_rel_a & independent_rel.
+_for_rel_s := _for_rel_a & selected_rel.
+_for_rel := _for_rel_a & independent_rel.
+_by_rel_s := _by_rel_a & selected_rel.
+_by_rel := _by_rel_a & independent_rel.
+_of_rel_s := _of_rel_a & selected_rel.
+_of_rel := _of_rel_a & independent_rel.
+_in_rel_s := _in_rel_a & selected_rel.
+_in_rel := _in_rel_a & independent_rel.
+
+_out_rel_a :< dir_rel.
+_out_rel_s := _out_rel_a & selected_rel.
+_out_rel := _out_rel_a & independent_rel.
+_from_rel_a :< dir_rel.
+_from_rel_s := _from_rel_a & selected_rel.
+_from_rel := _from_rel_a & independent_rel.
+_on_rel_a :< dir_or_state_rel.
+_on_rel_s := _on_rel_a & selected_rel.
+_on_rel := _on_rel_a & independent_rel.
+_with_rel_a :< miscprep_rel.
+_with_rel_s := _with_rel_a & selected_rel.
+_with_rel := _with_rel_a & independent_rel.
+_on_idiom_rel := miscprep_rel & selected_rel.
+_at_rel_a :< state_loc_rel.
+_at_rel_s := _at_rel_a & selected_rel.
+_at_rel := _at_rel_a & independent_rel.
+_between_rel_a :< temp_loc_abstr_rel.
+_between_rel_s := _between_rel_a & selected_rel.
+_between_rel := _between_rel_a & independent_rel.
+_about_rel_a :< miscprep_rel.
+_about_rel_s := _about_rel_a & selected_rel.
+_about_rel := _about_rel_a & independent_rel.
+_over_rel_a :< dir_or_state_rel.
+_over_rel_s := _over_rel_a & selected_rel.
+_over_rel := _over_rel_a & independent_rel.
+_against_rel_a :< miscprep_rel.
+_against_rel_s := _against_rel_a & selected_rel.
+_against_rel := _against_rel_a & independent_rel.
+_up_rel := dir_rel & selected_rel.
+_forth_rel_a :< abstr_adv_rel.
+_forth_rel_s := _forth_rel_a & selected_rel.
+_forth_rel := _forth_rel_a & independent_rel.
+_forward_rel_a :< abstr_adv_rel.
+_forward_rel_s := _forward_rel_a & selected_rel.
+_forward_rel := _forward_rel_a & independent_rel.
+_off_rel_a :< dir_or_state_rel.
+_off_rel_s := _off_rel_a & selected_rel.
+_off_rel := _off_rel_a & independent_rel.
+_back_adv_rel_a :< abstr_adv_rel.
+_back_adv_rel_s := _back_adv_rel_a & selected_rel.
+_back_adv_rel := _back_adv_rel_a & independent_rel.
+_down_rel := dir_rel & selected_rel.
+_across_rel_a :< dir_or_state_rel.
+_across_rel_s := _across_rel_a & selected_rel.
+_across_rel := _across_rel_a & independent_rel.
+_around_adv_rel_a :< abstr_adv_rel.
+_around_adv_rel_s := _around_adv_rel_a & selected_rel.
+_around_adv_rel := _around_adv_rel_a & independent_rel.
+_together_rel_a :< abstr_adv_rel.
+_together_rel_s := _together_rel_a & selected_rel.
+_together_rel := _together_rel_a & independent_rel.
+_as_rel := miscprep_rel & independent_rel.
+_short_rel_a :< abstr_adj_rel.
+_short_rel_s := _short_rel_a & selected_rel.
+_short_rel := _short_rel_a & independent_rel.
+_without_rel_a :< miscprep_rel.
+_without_rel_s := _without_rel_a & selected_rel.
+_without_rel := _without_rel_a & independent_rel.
+_aside_rel_a :< abstr_adv_rel.
+_aside_rel_s := _aside_rel_a & selected_rel.
+_aside_rel := _aside_rel_a & independent_rel.
+_away_adv_rel_a :< abstr_adv_rel.
+_away_adv_rel_s := _away_adv_rel_a & selected_rel.
+_away_adv_rel := _away_adv_rel_a & independent_rel.
+_around_rel_a :< miscprep_rel.
+_around_rel_s := _around_rel_a & selected_rel.
+_around_rel := _around_rel_a & independent_rel.
+_through_rel_a :< dir_rel.
+_through_rel_s := _through_rel_a & selected_rel.
+_through_rel := _through_rel_a & independent_rel.
+_along_p_rel_a :< dir_or_state_rel.
+_along_p_rel_s := _along_p_rel_a & selected_rel.
+_along_p_rel := _along_p_rel_a & independent_rel.
+_to_do_with_rel_a :< miscprep_rel.
+_to_do_with_rel_s := _to_do_with_rel_a & selected_rel.
+_to_do_with_rel := _to_do_with_rel_a & independent_rel.
+_behind_rel_a :< dir_or_state_rel.
+_behind_rel_s := _behind_rel_a & selected_rel.
+_behind_rel := _behind_rel_a & independent_rel.
+_after_prepx_rel_a :< temp_loc_abstr_rel.
+_after_prepx_rel_s := _after_prepx_rel_a & selected_rel.
+_after_prepx_rel := _after_prepx_rel_a & independent_rel.
+_into_rel := to_dir_rel & selected_rel.
+_upon_rel_a :< state_loc_rel.
+_upon_rel_s := _upon_rel_a & selected_rel.
+_upon_rel := _upon_rel_a & independent_rel.
+_apart_rel_a :< abstr_adj_rel.
+_apart_rel_s := _apart_rel_a & selected_rel.
+_apart_rel := _apart_rel_a & independent_rel.
+_open_rel_a :< abstr_adj_rel.
+_open_rel_s := _open_rel_a & selected_rel.
+_open_rel := _open_rel_a & independent_rel.
