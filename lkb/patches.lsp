@@ -49,4 +49,13 @@
   (declare (ignore val))
   t)
 
+(in-package :lkb)
+
+(defun idiom-rel-p (rel)
+  ;;; cheat for now
+  (let* ((relpred (mrs::rel-pred rel))
+         (relname (when relpred (string relpred))))
+    (and relname
+         (equal "_i_rel" (subseq relname (- (length relname) 6))))))
+
 (in-package :cl-user)

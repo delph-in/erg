@@ -75,7 +75,8 @@
 ;;; Remember to touch letypes.tdl before loading ERG to flush the lexicon 
 ;;; cache, ensuring that mal-letypes.tdl gets loaded.
 ;
-;(defparameter *mal-active-p* t)
+#+:arboretum
+(defparameter *mal-active-p* t)
 
 (defparameter *maximal-lex-rule-applications* 7
    "The number of lexical rule applications which may be made
@@ -120,7 +121,7 @@
   #+:psql
   ;; bmw20 (16 Feb 04) - phase out use of :table
   ;;  '((:user "bmw20") (:db "erg") (:host "localhost") (:table "erg2"))
-  '((:db "erg") (:host "localhost") (:port "5432") (:table "erg"))
+  '((:user "danf") (:db "erg") (:host "localhost") (:port "5432") (:table "erg"))
   #-:psql
   nil)
 
