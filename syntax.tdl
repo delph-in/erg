@@ -5,7 +5,7 @@
 ;;;  The grammar rules for English
 ;;;
 ;;;  Created: Rob Malouf, 3-Nov-1994
-;;;  Last revised: Dan Flickinger, 24-Feb-97
+;;;  Last revised: Dan Flickinger, 20-Oct-97
 ;;;
 ;;;  $Id$
 
@@ -23,16 +23,16 @@
 non_headed_phrase :< phrase.
 
 headed_phrase := phrase & 
-  [ SYNSEM.LOCAL [ CAT [ HEAD head & #head,
-			 AGR #agr ],
+  [ SYNSEM.LOCAL [ CAT.HEAD head & #head,
+                   AGR #agr,
 		   CONJ #conj,
 		   CONT [ KEY #key,
 			  ALTKEY #altkey,
 			  COMPKEY #ckey,
 			  OCOMPKEY #ockey ] ],
     HEAD-DTR.SYNSEM.LOCAL local &
-		 [ CAT [ HEAD #head,
-			 AGR #agr ],
+		 [ CAT.HEAD #head,
+                   AGR #agr,
 		   CONJ #conj,
 		   CONT [ KEY #key,
 			  ALTKEY #altkey,
@@ -64,7 +64,7 @@ head_nexus_phrase := head_nexus_rel_phrase & head_nexus_que_phrase &
 
 ; All phrases are either unary or binary.
 
-unary_phrase := phrase &
+unary_phrase := headed_phrase &
   [ SYNSEM.LOCAL [ CONT [ LISZT *diff-list* &
 				[ LIST #first,
 				  LAST #last ],
@@ -141,19 +141,25 @@ binary_phrase := sign &
 					  TOP-H #top ],
 				   CTXT.C-INDS #c-inds ] ] > ].
 
-binary_rule_right_to_left := rule &
-  [ ARGS < [ ] , [ KEY-ARG + ] > ].
+binary_headed_phrase := headed_phrase & binary_phrase &
+  [ NON-HEAD-DTR sign ].
+
+binary_rule_left_to_right := rule & sign &
+  [ ARGS < [ KEY-ARG + ] , [ KEY-ARG bool ] > ].
+
+binary_rule_right_to_left := rule & sign &
+  [ ARGS < [ KEY-ARG bool ], [ KEY-ARG + ] > ].
 
 head_only := unary_phrase & headed_phrase &
   [ HEAD-DTR #head & [ SYNSEM.LOCAL.CONJ cnil ],
     ARGS < #head > ].
 
-head_initial := binary_phrase & headed_phrase &
+head_initial := binary_headed_phrase &
   [ HEAD-DTR #head,
     NON-HEAD-DTR #non-head & [ SYNSEM.LOCAL.CONJ cnil ],
     ARGS < #head, #non-head > ].
 
-head_final := binary_phrase & headed_phrase &
+head_final := binary_headed_phrase &
   [ HEAD-DTR #head,
     NON-HEAD-DTR #non-head & [ SYNSEM.LOCAL.CONJ cnil ],
     ARGS < #non-head, #head > ].
@@ -165,30 +171,56 @@ head_final := binary_phrase & headed_phrase &
 ; C-CONT and the liszts of the daughters.
 
 head_compositional := headed_phrase &
-  [ C-CONT [ HANDEL #hand,
+  [ C-CONT [ TOP #hand,
 	     INDEX #index,
 	     H-CONS <! !>,
 	     H-STORE <! !>,
 	     MODCONT #modcont ],
-    HEAD-DTR.SYNSEM.LOCAL.CONT [ HANDEL #hand,
+    HEAD-DTR.SYNSEM.LOCAL.CONT [ TOP #hand,
 				 INDEX #index,
 				 MODCONT #modcont ] ].
 
-nonhead_compositional := headed_phrase &
-  [ C-CONT [ HANDEL #hand,
+nonhead_compositional := binary_headed_phrase &
+  [ C-CONT [ TOP #hand,
 	     INDEX #index,
 	     LISZT <! !>,
 	     H-STORE <! !> ],
-    NON-HEAD-DTR.SYNSEM.LOCAL.CONT [ HANDEL #hand,
+    NON-HEAD-DTR.SYNSEM.LOCAL.CONT [ TOP #hand,
 				     INDEX #index ] ].
 
-;;
-;; Root phrases
-;;
+; DPF (01-14-96) Removed restriction on HEAD-DTR saying [QUE <! !>], in order
+; to allow the head_comp rule to admit "which of the books" with partitive
+; "which".  May be too permissive.
+;   Identify ROOT value of mother with that of the head-daughter.
+
+rqip := binary_headed_phrase &
+  [ SYNSEM [ LOCAL.CAT.ROOT #root,
+             NON-LOCAL [ QUE *diff-list* &
+			     [ LIST #first,
+			       LAST #last ],
+			 REL #rel ] ],
+    HEAD-DTR.SYNSEM [ LOCAL.CAT.ROOT #root,
+		      NON-LOCAL [ QUE *diff-list* &
+				      [ LIST #first,
+					LAST #middle ],
+				  REL <! !> ] ],
+    NON-HEAD-DTR.SYNSEM.NON-LOCAL [ QUE *diff-list* &
+					[ LIST #middle,
+					  LAST #last ],
+				    REL #rel ] ].
 
 non_clause := head_nexus_phrase & 
   [ SYNSEM.LOCAL [ CAT.ROOT na,
 		   CONT.MESSAGE no_rel ] ].
+
+non_clause_unary := unary_phrase &
+  [ SYNSEM [ LOCAL [ CAT.ROOT #root & na,
+		     CONT.MESSAGE no_rel ],
+	     NON-LOCAL [ QUE #que,
+			 REL <! !> ] ],
+    HEAD-DTR.SYNSEM [ LOCAL.CAT.ROOT #root,
+		      NON-LOCAL [ QUE #que,
+				  REL <! !> ] ] ].
 
 ; ERB (05-10-97) The immediate subtypes of clause are now rel_cl and
 ; non_rel_clause.  The latter groups together decl, imp, and (wh_)interrog,
@@ -201,8 +233,7 @@ non_clause := head_nexus_phrase &
 
 clause := head_compositional &
   [ SYNSEM [ LOCAL [ CAT [ HEAD verbal,
-			   VALENCE [ SUBJ mod_synsem,
-				     COMPS *olist* ],
+			   VALENCE.COMPS *olist*,
 			   ROOT bool ],
 		     CONT.MESSAGE message,
 		     CONJ cnil ],
@@ -242,8 +273,9 @@ decl := non_rel_clause &
 imp := non_rel_clause & head_valence_phrase &
   [ SYNSEM.LOCAL [ CAT [ HEAD [ INV -,
 				VFORM imp_vform ],
-			 VALENCE [ SUBJ none,
-				   COMPS < > ] ],
+			 VALENCE [ SUBJ < >,
+				   COMPS < > ],
+			 ROOT + ],
 		   CONT [ MESSAGE imp_rel,
 			  TOP-H #hand ] ],
     C-CONT.LISZT <! pron_rel & [ HANDEL #hand,
@@ -251,9 +283,9 @@ imp := non_rel_clause & head_valence_phrase &
 				      [ PRONTYPE std_pron ] ] !>,
     HEAD-DTR.SYNSEM.LOCAL [ CAT [ HEAD verb,
 				  ROOT na,
-				  VALENCE [ SUBJ unexpressed &
+				  VALENCE [ SUBJ < unexpressed &
 						 [ LOCAL.CONT.INDEX #inst &
-							    [ PNG 2per ] ],
+							    [ PNG.PN 2per ] ] >,
 					    COMPS *olist* ] ] ] ].
 
 ; ERB (05-10-97) There is no longer a subtype of interrog for polar questions,
@@ -272,9 +304,9 @@ interrog := non_rel_clause &
 ; determiner "whose" as filler in filler-head-wh rules.  Assume all
 ; wh-interrog phrases are [MOOD ind_or_mod_subj].
 
-wh_interrog := interrog &
+wh_interrog := interrog & 
   [ SYNSEM.LOCAL [ CAT [ HEAD verbal &
-			      [ MOOD ind_or_mod_subj ],
+			      [ MOOD ind_or_mod_subj & strict_mood ],
 			 MOD no-mod ],
 		   CONT.MESSAGE.PARAMS <! #que & handle !> ],
     NON-HEAD-DTR.SYNSEM [ LOCAL.CAT.HEAD subst,
@@ -286,17 +318,18 @@ wh_interrog := interrog &
 
 wh_interrog_fin := wh_interrog &
   [ SYNSEM.LOCAL.CAT [ HEAD.VFORM fin,
-		       VALENCE.SUBJ none ] ].
+		       VALENCE.SUBJ < > ] ].
 
 rel_cl := clause & nonroot & head_nexus_nonrel &
   [ SYNSEM [ LOCAL [ CAT [ HEAD [ VFORM fin_or_inf,
-				  MOOD indicative,
+				  MOOD ind_or_mod_subj & strict_mood,
 				  INV - ],
 			   MOD @nbar() &
-				[ CONT [ HANDEL #hand,
-					 INDEX #ind ] ] ],
+				[ CONT [ TOP #hand,
+					 INDEX #ind ] ] ,
+			   ROOT - ],
 		     CONT [ MESSAGE hypo_rel,
-			    MODCONT [ HANDEL #hand,
+			    MODCONT [ TOP #hand,
 				      INDEX #ind,
 				      LISZT <! !> ] ] ],
 	     NON-LOCAL.QUE <! !> ],
@@ -315,7 +348,7 @@ non_wh_rel_cl := head_only & rel_cl &
 			 POSTHEAD +,
 			 VALENCE #valence ],
 	     NON-LOCAL.SLASH <! !> ],
-    HEAD-DTR.SYNSEM [ LOCAL [ CAT.VALENCE #valence & [ SUBJ none ],
+    HEAD-DTR.SYNSEM [ LOCAL [ CAT.VALENCE #valence & [ SUBJ < > ],
 			      CONT.MESSAGE propositional_rel ],
 		      NON-LOCAL.SLASH <! [ CAT [ HEAD noun &
 						      [ PRD - ],   
@@ -369,7 +402,7 @@ head_filler_phrase := head_final & head_nexus_phrase &
 			  NON-LOCAL.SLASH <! !> ] ].
 
 head_filler_phrase_fin := head_filler_phrase &
-  [ SYNSEM.LOCAL.CAT.VALENCE.SUBJ none,
+  [ SYNSEM.LOCAL.CAT.VALENCE.SUBJ < >,
     HEAD-DTR.SYNSEM.LOCAL.CAT.HEAD verb ].
 
 head_filler_phrase_inf := head_filler_phrase &
@@ -398,21 +431,22 @@ head_valence_phrase := head_nexus_phrase &
 
 head_subj_phrase := head_valence_phrase & head_final &
   [ SYNSEM.LOCAL [ CAT [ HEAD verb & [ VFORM fin ],
-			 VALENCE [ SUBJ none,
+			 VALENCE [ SUBJ < >,
 				   COMPS < >,
 				   SPR < > ] ],
 		   CONT.MESSAGE prpstn_rel,
 		   CONJ cnil ],
-    HEAD-DTR.SYNSEM.LOCAL.CAT [ VALENCE [ SUBJ #synsem,
+    HEAD-DTR.SYNSEM.LOCAL.CAT [ VALENCE [ SUBJ < #synsem >,
 					  COMPS *olist* ],
 				ROOT na ],
     NON-HEAD-DTR.SYNSEM #synsem & synsem &
 		 [ LOCAL [ CAT [ HEAD subst,
-				 VALENCE [ SUBJ none,
+				 VALENCE [ SUBJ < >,
 					   COMPS *olist*,
 					   SPR *olist* ] ],
 			   CONT.MESSAGE no_rel ] ] ].
 
+ 
 ; A head/comps phrase is a phrase that combines a head with something selected
 ; for by the COMPS feature.  Head/comps phrases come in two denominations:
 ; head/comp phrases and head/marker phrases.  A head/comp phrases is like the
@@ -491,6 +525,9 @@ extracted_arg_phrase := head_only & head_compositional &
 ; avoid using an awkward disjunction this way.  We also block extraction of
 ; complements out of subjunctive-verb-headed phrases.
 
+; *** Right now, this only allows NPs to be extracted.  We also need to allow 
+; extraction of PPs or CPs. 
+
 extracted_comp_phrase := extracted_arg_phrase & non_clause &
   [ SYNSEM.LOCAL.CAT [ VALENCE [ SUBJ #subj,
 				 COMPS #comps ],
@@ -498,7 +535,7 @@ extracted_comp_phrase := extracted_arg_phrase & non_clause &
     HEAD-DTR.SYNSEM 
 	   [ LOCAL.CAT.VALENCE [ SUBJ #subj,
 				 COMPS < gap &
-					 [ LOCAL.CAT [ HEAD n_or_p & 
+					 [ LOCAL.CAT [ HEAD noun* & 
 							    [ CASE acc ] ] ]
 					 . #comps > ] ] ].
 
@@ -506,12 +543,12 @@ extracted_comp_phrase := extracted_arg_phrase & non_clause &
 ; restrict these to indicative verbs (not subjunctives). 
 
 extracted_subj_phrase := extracted_arg_phrase &
-  [ SYNSEM.LOCAL.CAT [ VALENCE [ SUBJ none,
+  [ SYNSEM.LOCAL.CAT [ VALENCE [ SUBJ < >,
 				 COMPS < > ],
 		       ROOT - ],
     HEAD-DTR.SYNSEM.LOCAL.CAT [ HEAD verb &
 				     [ VFORM fin ],
-				VALENCE [ SUBJ gap,
+				VALENCE [ SUBJ < gap >,
 					  COMPS *olist* ],
 				ROOT na ] ].    
 
@@ -531,11 +568,12 @@ head_spec_phrase := head_valence_phrase & head_final & non_clause &
 				  MOD #mod,
 				  POSTHEAD #ph,
 				  ROOT na ],
-			    CONT.H-STORE #hstore,
+			    CONT.MODCONT #mcont,
 			    CONJ cnil ],
     NON-HEAD-DTR.SYNSEM #synsem &
-		        [ LOCAL [ CAT.ROOT na,
-				  CONT.--HH-STORE #hstore ] ] ].
+		        [ LOCAL.CAT.ROOT na,
+			  NON-LOCAL.SLASH <! !> ], 
+    C-CONT.MODCONT #mcont ].
 
 ; The noncompositional head_spec is for making non-number phrases:
 ;  - determiner + noun NPs  "the book"
@@ -543,14 +581,13 @@ head_spec_phrase := head_valence_phrase & head_final & non_clause &
 ;  - adv + adj APs          "very tall"
 
 head_spec_noncompos := head_spec_phrase & nonhead_compositional &
-  [ NON-HEAD-DTR.SYNSEM.LOCAL.CONT [ HANDEL #hand,
-				     KEY non_number_rel,
-				     MODCONT #mcont ],
-    C-CONT [ HANDEL #hand,
-	     MODCONT #mcont,
+  [ NON-HEAD-DTR.SYNSEM.LOCAL.CONT [ TOP #hand,
+				     KEY non_number_rel ],
+    C-CONT [ TOP #hand,
 	     LISZT <! !>,
 	     H-CONS <! !>,
 	     H-STORE <! !> ] ].
+
 
 ; Among others, the compositional head_spec is used for number expressions 
 ; like "two hundred".
@@ -602,12 +639,12 @@ head_mod_phrase := head_nexus_nonmodcont &
 ;; not same as MCONT.H, which should be mother's CONT.H.
 
 ; head_mod_phrase_simple cannot inherit from nonhead_compositional, since some
-; adjuncts (e.g. relative clauses) specify a value for HANDEL and/or INDEX on
+; adjuncts (e.g. relative clauses) specify a value for TOP and/or INDEX on
 ; the mother which is distinct from their own (this is the purpose of the
 ; MODCONT attribute).  Thus it is true that the nonhead daughter determines
-; the HANDEL and INDEX of the mother, but they are not necessarily simply the
+; the TOP and INDEX of the mother, but they are not necessarily simply the
 ; nonhead's own.  It is assumed here that every adjunct (sign with non-empty
-; MOD value) will also specify in its MODCONT attribute values for HANDEL,
+; MOD value) will also specify in its MODCONT attribute values for TOP,
 ; INDEX, and LISZT.
 
 ; Also, head_mod phrases cannot identify the mother's MODCONT with the head
@@ -627,10 +664,8 @@ head_mod_phrase := head_nexus_nonmodcont &
 ; at least.  Should be handled independently by each modifier.
 
 head_mod_phrase_simple := head_mod_phrase &
-  [ SYNSEM [ LOCAL [ CONT [ HANDEL #hand,
-			    INDEX #ind,
-			    MODCONT [ HANDEL #mchand,
-				      INDEX #ind,
+  [ SYNSEM [ LOCAL [ CONT [ TOP #hand,
+			    MODCONT [ TOP #mchand,
 				      LISZT #hliszt,
 				      KEY.HANDEL #mchand ],
 			    MESSAGE #mes ] ],
@@ -640,25 +675,27 @@ head_mod_phrase_simple := head_mod_phrase &
 			 QUE <! !>,
 			 REL <! !> ] ],
     HEAD-DTR.SYNSEM [ LOCAL [ CAT #localcat,
-			      CONT [ MODCONT [ HANDEL #mchand,
+			      CONT [ MODCONT [ TOP #mchand,
 					       KEY.HANDEL #hdhand,
 					       INDEX #hmcind,
 					       LISZT #hliszt ],
 				     INDEX #hind,
+				     MESSAGE #hmsg,
 				     H-STORE #hstore ] ],
 		      NON-LOCAL.SLASH *diff-list* &
 	                              [ LIST #first,
 					LAST #middle ] ],
     NON-HEAD-DTR.SYNSEM [ LOCAL [ CAT [ MOD local & 
 					    [ CAT #localcat,
-					      CONT [ HANDEL #hdhand,
+					      CONT [ TOP #hdhand,
 						     INDEX #hind,
 						     H-STORE #hstore,
-						     MODCONT [HANDEL #mchand,
+						     MESSAGE #hmsg,
+						     MODCONT [TOP #mchand,
 							      INDEX #hmcind]]],
 					VALENCE.SPR *olist* ],
 				  CONT.MODCONT #mcont &
-				               [ HANDEL #hand,
+				               [ TOP #hand,
 						 KEY.HANDEL #hand,
 						 MESSAGE #mes ] ],
 			  NON-LOCAL [ SLASH *diff-list* &
@@ -694,32 +731,37 @@ head_adj_phrase := head_mod_phrase_simple & head_initial &
 ; stuff on head_mod_phrase.
 
 extracted_adj_phrase := head_mod_phrase & head_only & non_clause &
-  [ SYNSEM [ LOCAL.CONT.MESSAGE #mes,
-	     NON-LOCAL.SLASH <! local & [ CAT [ POSTHEAD +,
-						MOD #local,
-						VALENCE [ COMPS *olist*,
-							  SPR *olist* ] ],
-					  CONT.MODCONT #mcont & 
-					      [ MESSAGE #mes ] ] !> ],
+  [ SYNSEM [ LOCAL.CONT [ MESSAGE #mes,
+			  MODCONT.LISZT #hliszt ],
+	     NON-LOCAL.SLASH <! local &
+			      [ CAT [ POSTHEAD +,
+				      MOD #local,
+				      VALENCE [ COMPS *olist*,
+						SPR *olist* ] ],
+				CONT.MODCONT #mcont & 
+				    [ MESSAGE #mes ] ] !> ],
     C-CONT #mcont,
     HEAD-DTR.SYNSEM synsem & [ LOCAL #local & local &
 				     [ CAT [ HEAD verb &
-						  [ MOOD indicative ],
-					     VALENCE.SUBJ synsem ] ],
+						  [ MOOD ind_or_mod_subj & 
+							 strict_mood ],
+					     VALENCE.SUBJ < synsem > ],
+				       CONT.MODCONT.LISZT #hliszt ],
 			       NON-LOCAL.SLASH <! !> ] ].
+
 ;;
 ;; Bare plural and mass NPs, distinguished by the INDEX feature [ DIVISIBLE + ]
 ;;
 
 bare_np_phrase := head_only & non_clause & head_valence_phrase &
-  [ SYNSEM.LOCAL [ CAT [ VALENCE [ SUBJ none,
+  [ SYNSEM.LOCAL [ CAT [ VALENCE [ SUBJ < >,
 				   COMPS < >,
 				   SPR < > ],
 			 MOD #mod ],
 		   CONT.MESSAGE #mes ],
     HEAD-DTR.SYNSEM.LOCAL 
 	 [ CAT [ HEAD noun,
-		 VALENCE [ SUBJ none,
+		 VALENCE [ SUBJ < >,
 			   COMPS *olist*,
 			   SPR < unexpressed & 
 				 [ OPT -,
@@ -732,7 +774,7 @@ bare_np_phrase := head_only & non_clause & head_valence_phrase &
 		  KEY basic_nom_rel,
 		  MESSAGE #mes,
 		  MODCONT #mcont ] ],
-    C-CONT [ HANDEL #hand,
+    C-CONT [ TOP #hand,
 	     INDEX #index,
 	     LISZT <! udef_rel & #quant &
 		    [ HANDEL #hand,
@@ -760,7 +802,7 @@ n_n_cmpnd_phr := binary_phrase & word &
 			   MOD no-mod,
 			   ROOT #root ],
 		     CONJ cnil,
-		     CONT mrs & [ HANDEL #hand,
+		     CONT mrs & [ TOP #hand,
 				  MESSAGE #mes,
 				  INDEX #hind,
 				  KEY #key ] ],
@@ -768,12 +810,12 @@ n_n_cmpnd_phr := binary_phrase & word &
 	     NON-LOCAL [ SLASH #slash,
 			 QUE <! !>,
 			 REL <! !> ] ],
-    HEAD-DTR #head-dtr & word & 
+    HD-DTR #head-dtr & word & 
 	   [ SYNSEM common_noun_synsem &
 		    [ LOCAL [ CAT [ HEAD #head,
 				    VALENCE #valence,
 				    ROOT #root ],
-			      CONT [ HANDEL #hand,
+			      CONT [ TOP #hand,
 				     MESSAGE #mes,
 				     INDEX #hind,
 				     KEY #key,
@@ -782,17 +824,17 @@ n_n_cmpnd_phr := binary_phrase & word &
 		      NON-LOCAL [ SLASH #slash,
 				  QUE <! !>,
 				  REL <! !> ] ] ],
-    NON-HEAD-DTR word & #non-head-dtr & 
+    NON-HD-DTR word & #non-head-dtr & 
 	   [ SYNSEM noun_synsem &
-		    [ LOCAL [ CAT [ VALENCE.COMPS *olist*,
-				    AGR.PNG 3sg ],
+		    [ LOCAL [ CAT.VALENCE.COMPS *olist*,
+                              AGR.PNG.PN 3sg,
 			      CONT [ INDEX #modind,
 				     KEY reg_nom_rel ],
 			      CONJ cnil ],
 		      NON-LOCAL [ SLASH <! !>,
 				  QUE <! !>,
 				  REL <! !> ] ] ],
-    C-CONT [ HANDEL #hand,
+    C-CONT [ TOP #hand,
 	     INDEX #hind,
 	     LISZT <! unspec_rel & [ HANDEL #hand,
 				     HINST #hind,
@@ -805,55 +847,122 @@ n_n_cmpnd_phr := binary_phrase & word &
 ;;
 ;; Coordinate structures
 ;;
-
-; Ideally, the CAT value of the mother should be the least upper bound of the
-; CAT values of the daughters.  The TDL formalism doesn't make this easy to
-; say, so we used to just identify them.  But, that means we can't parse
-; ordinary examples like "Kim eats and can walk."  So we've adopted an uneasy
-; compromise which specifies each of the attributes in CAT which must be
-; unified on mother and both daughters, and leaves the others underspecified.
-; Unfortunately, since not all of the features in HEAD unify, we can't unify
-; HEAD itself on mother and daughters, so we can't ensure that both daughters
-; have the same HEAD type, short of inferring the type from the appropriate
-; features (not doable in TDL).  So we unify the HEAD value of the mother with
-; that of the right conjunct - not a great solution, but better than none.
-
+; To enable coordination of categories that are similar but not identical, we
+; introduce intermediate types for some attribute values, including those for
+; HEAD, AUX, and AGR.  Lexical items and the phrases they project will have
+; these intermediate types as values, while signs that select for a given
+; type will usually specify values for the above features using their most
+; specific types.  For example, a preposition will be [ HEAD prep* ] but a
+; verb which subcategorizes for a PP will specify that its complement must be
+; [ HEAD prep ], assuming that HEAD values are of type 'head' organized in a
+; type hierarchy as follows (simplified for exposition):
+; 	
+; 		head
+;            /   |   \
+; 	verb*  prep*  noun*
+;         /  \  /  |  \  /  \
+;      verb  v+p  prep p+n   noun
+; 
+; Most heads will select for a specific value for HEAD, but the copula "be"
+; leaves the HEAD value underspecified, requiring only that its complement be
+; [ PRD + ], so it will happily take as complement the conjoined phrase
+; "in Paris and shopping", where the value of HEAD for this phrase is the
+; unification of 'verb*' and 'prep*", namely 'v+p'.  This assumes that the
+; constituent coordination schema simply requires that the CAT values of both
+; conjuncts unify.
+; 
+; In a similar manner, the conjunction of two verb phrases, one headed by a
+; main verb and one by an auxiliary, will work as long as no other constraints
+; are imposed on the attribute AUX for this conjoined phrase.  Here the feature
+; AUX is boolean-valued, with the following sort hierarchy for this value type:
+; 
+; 		bool
+; 	 	/   \
+;             +*     -*
+; 	     /  \   /  \
+;  	    +  +_and_-  -
+; 
+; Then in the sentence "Kim sings and has danced" the VP is [ AUX +_and_- ],
+; and since declarative clauses impose no constraint on the value for AUX, the
+; sentence is correctly admitted. In contrast, the auxiliary verb "do" requires
+; its complement to be [ AUX - ], and since the sort '-' does not unify with
+; the sort '+_and_-', the following example is correctly ruled out: 
+; "*Kim did sing and have danced".
+; 
+; Elaborations:
+; 
+; 1. Since some heads only partially constrain their complements, as with
+; "consider" which accepts either an AP or an NP complement, we enrich the
+; above hierarchies to include a notion of 'strict' or most specific values,
+; so "consider" can restrict its complement to be [ HEAD a_or_n & strict_head ]
+; assuming the following more elaborate (though again partial) hierarchy:
+; 
+;                        head
+;              	       /  |   \			    
+; 		      /   |    strict_head
+; 	             /  a_or_n/ /   | 
+;                   /     /  /\/    | 
+;                 prep*   adj*/ /noun*|
+;                 |  _\__/_|_/\/  /\  |
+;                 | /  \/  |  /\ /  \ |
+;                prep p+a  adj a+n  noun
+; 
+; Here the only consistent values for the complement of "consider" are 'adj'
+; or 'noun'.  Of course this isn't quite right, since we thereby exclude the
+; coordination "consider Kim a friend and reliable".  What we would need is a
+; way of specifying for the complement of "consider" all and only the most
+; specific values subsumed by 'a_or_n'.  But at present if a head needs to
+; impose partial constraint on an attribute, we cannot also get the kind of
+; non-identical coordination we showed for the copula.  Leave for future work.
+; 
+; 2. We also undergenerate coordination of non-identical phrases in those cases
+; where more than one sign imposes constraints on a single attribute.  For
+; example, both determiners and verbs can constrain the AGR value of a noun
+; phrase, but as soon as one of them does, we are left with a "strict" value,
+; which precludes coordination with a non-identical value.  Thus we currently
+; get the following incorrect pattern of grammaticality assignments:
+; 
+; 	a.  Abrams and the consultant
+; 	b.  Abrams and the consultants
+; 	c.  Abrams and this consultant
+; 	d. *Abrams and these consultants
+; 
+; Example (b) is okay because the determiner "the" does not constrain the AGR
+; value of the noun it specifies, so the NP "the consultants" will still be
+; (nonstrict) [AGR 3pl*], and hence the conjoined "Abrams and the consultants"
+; unifies [AGR 3sg*] and [AGR 3pl*] to give [AGR 3sg+3pl] (assuming a hierarchy
+; for AGR analogous to those above for 'head' and 'bool').  Example (d) fails
+; because "these" constrains its noun to be (strict) [AGR 3pl], and thus the NP
+; "these consultants" will also be [AGR 3pl], and will not coordinate with
+; "Abrams" because their CAT values will not unify.
 
 coord_phr := binary_phrase & non_headed_phrase & 
-  [ SYNSEM [ LOCAL [ CAT [ HEAD #head,
-			   VALENCE #val,
-			   POSTHEAD #ph,
-			   MOD #mod,
-			   ROOT #root ],
-		     CONT [ HANDEL #hand,
-			    INDEX #ind,
-			    MODCONT [ HANDEL #hand,
-				      INDEX #ind,
-				      LISZT <! !> ] ] ],
-	     NON-LOCAL #non-local ],
+  [ SYNSEM [ LOCAL [ CAT #cat,
+ 		     CONT [ TOP #hand,
+ 			    INDEX #ind,
+ 			    MESSAGE #msg,
+ 			    MODCONT [ TOP #hand,
+ 				      INDEX #ind,
+				      LISZT *diff-list* &
+                                          [ LIST #first,
+                                            LAST #last ] ] ],
+                     AGR #agr ],
+             NON-LOCAL #non-local ],
     LCONJ-DTR sign & #left &
-		[ SYNSEM [ LOCAL.CAT [ HEAD [ VFORM #vf,
-					      POSS #poss,
-					      PRD #prd,
-					      CASE #case,
-					      MOOD #mood ],
-				       VALENCE #val,
-				       POSTHEAD #ph,
-				       MOD #mod,
-				       ROOT #root ],
-			   NON-LOCAL #non-local ] ],
+		[ SYNSEM [ LOCAL [ CAT #cat,
+				   CONT [ MODCONT.LISZT *diff-list* &
+                                                        [ LIST #first,
+                                                          LAST #middle ],
+                                          MESSAGE #msg ] ],
+                           NON-LOCAL #non-local ] ],
     RCONJ-DTR sign & #right &
 		[ SYNSEM phr_synsem &
-			 [ LOCAL.CAT [ HEAD #head &
-					    [ VFORM #vf,
-					      POSS #poss,
-					      PRD #prd,
-					      CASE #case,
-					      MOOD #mood ],
-				       VALENCE #val,
-				       POSTHEAD #ph,
-				       MOD #mod,
-				       ROOT #root ],
+			 [ LOCAL [ CAT #cat,
+				   CONT [ MODCONT.LISZT *diff-list* &
+                                                        [ LIST #middle,
+                                                          LAST #last ],
+                                          MESSAGE #msg ],
+                                   AGR #agr ],
 			   NON-LOCAL #non-local ] ],
     C-CONT [ H-CONS <! !>,
 	     H-STORE <! !> ],
@@ -881,7 +990,7 @@ hspec_c_rule := binary_rule_right_to_left & head_spec_compos.
 
 hadj_rule := binary_rule_right_to_left & head_adj_phrase.
 
-adjh_rule := rule & adj_head_phrase.
+adjh_rule := binary_rule_left_to_right & adj_head_phrase.
 
 extradj_rule := rule & extracted_adj_phrase.
 
@@ -906,13 +1015,13 @@ filler_head_rule_wh_root := binary_rule_right_to_left &
 			    head_filler_phrase_fin & wh_interrog_fin & 
                             root_phrase & 
   [ SYNSEM.LOCAL.CAT.HEAD.INV +,
-    HEAD-DTR.SYNSEM.LOCAL.CAT.VALENCE.SUBJ none ].
+    HEAD-DTR.SYNSEM.LOCAL.CAT.VALENCE.SUBJ < > ].
 
 filler_head_rule_wh_subj := binary_rule_right_to_left & 
 			    head_filler_phrase_fin & wh_interrog_fin & 
                             root_phrase & 
   [ SYNSEM.LOCAL.CAT.HEAD.INV -,
-    HEAD-DTR.SYNSEM.LOCAL.CAT.VALENCE.SUBJ none ].
+    HEAD-DTR.SYNSEM.LOCAL.CAT.VALENCE.SUBJ < > ].
 
 filler_head_rule_wh_nr_fin := binary_rule_right_to_left & 
 			      head_filler_phrase_fin & wh_interrog_fin &
@@ -923,16 +1032,21 @@ filler_head_rule_wh_nr_fin := binary_rule_right_to_left &
 filler_head_rule_wh_nr_inf := binary_rule_right_to_left & 
 			      head_filler_phrase_inf & wh_interrog & nonroot & 
   [ SYNSEM.LOCAL.CAT [ HEAD.INV -,
-		       VALENCE.SUBJ synsem ],
-    HEAD-DTR.LOCAL.CAT.ROOT - ].
+		       VALENCE.SUBJ < synsem >,
+		       ROOT - ] ].
 
 filler_head_rule_rel := binary_rule_right_to_left & rel_cl & 
 			head_filler_phrase_fin &
   [ SYNSEM.LOCAL.CAT [ MOD.CONT.INDEX #ind,
-		       VALENCE.SUBJ none ],
+		       VALENCE.SUBJ < > ],
     HEAD-DTR.SYNSEM.LOCAL [ CAT.HEAD.VFORM fin,
 			    CONT.MESSAGE propositional_rel ], 
-    NON-HEAD-DTR.SYNSEM.NON-LOCAL.REL <! #ind !> ].
+    NON-HEAD-DTR.SYNSEM.NON-LOCAL.REL *diff-list* &
+	                              [ LIST *cons* & 
+					     [ FIRST #ind,
+					       REST #last & *null* ],
+					LAST #last ],
+    C-CONT.H-CONS <! !> ].
 
 ; ERB (05-10-96) This no longer inherits from root_phrase because it also
 ; serve to make nonroot phrases, such as the braketed phrase in: "On Tuesday
@@ -953,19 +1067,19 @@ imperative_rule := rule & head_only & imp.
 ;       						  
 ;       						  
 ;      coord_phrase					  
-;             +-			        -+	  
-;             | conj_rel		         |	  
-;      LISZT  | HANDELS  [h1], [h2], ..., [hn]   |	  
-;             | INDICES  [i1], [i2], ..., [in]   |	  
-;             +-    		                -+	  
+;             +-			          -+	  
+;             | conj_rel  		           |	  
+;      LISZT  | C-HANDELS  [h1], [h2], ..., [hn]   |	  
+;             | C-INDICES  [i1], [i2], ..., [in]   |	  
+;             +-    		                  -+	  
 ;             /             /                \ 	 	  
 ;            /  	   /    	      \  	  
 ;           /   	  /     	       \ 	  
 ;          /    	 /      		\ 	  
 ;         /     	/       		 \ 	  
 ;      phrase        phrase    	       	       phrase	  
-;      HANDEL [h1]   HANDEL [h2] ...           HANDEL [hn]
-;      INDEX  [i1]   INDEX  [i2]               INDEX  [in]
+;      TOP   [h1]    TOP   [h2] ...            TOP   [hn]
+;      INDEX [i1]    INDEX [i2]                INDEX [in]
 ;        |             |                	 |  
 ;        |             |                         |  
 ;       Kim          Sandy       ...            Lee 
@@ -978,26 +1092,22 @@ imperative_rule := rule & head_only & imp.
 ; conjunct in a mid_coord_phrase.  For example, a LEFT value of < either, or >
 ; permits a coordinate structure like "either Kim or Sandy or Chris or Lee".
                                   
-; For now, stamp [AGR non1sg] on mother, to avoid singular verb agreement with
-; conjoined subject NPs.
-
 top_coord_rule := binary_rule_right_to_left & coord_phr &
-  [ SYNSEM.LOCAL [ CAT.AGR.PNG non1sg,
-		   CONJ cnil ],
-    C-CONT [ HANDEL #hand,
+  [ SYNSEM.LOCAL.CONJ cnil,
+    C-CONT [ TOP #hand,
 	     INDEX #ind,
 	     LISZT <! #rel & 
 		      [ HANDEL #hand,
 			C-ARG #ind,
-			HANDELS *diff-list* &
+			C-HANDELS *diff-list* &
 			       [ LIST < #lhand . #hands >,
 				  LAST #hlast ],
-			INDICES *diff-list* &
+			C-INDICES *diff-list* &
 			       [ LIST < #lind . #inds >,
 				 LAST #ilast ] ] !> ],
     LCONJ-DTR.SYNSEM.LOCAL local &
 		      [ CONJ conj & #left,
-			     CONT [ HANDEL #lhand,
+			     CONT [ TOP #lhand,
 				    INDEX #lind ] ],
     RCONJ-DTR.SYNSEM.LOCAL local &
 		      [ CONJ complex-conj &
@@ -1019,10 +1129,10 @@ mid_coord_rule := binary_rule_right_to_left & coord_phr &
 			INDICES *diff-list* &
 			        [ LIST < #lind . #inds >,
 				  LAST #ilast ] ],
-    C-CONT [ INDEX.PNG non1sg,
+    C-CONT [ INDEX.PNG.PN non1sg,
 	     LISZT <! !> ],
     LCONJ-DTR.SYNSEM.LOCAL [ CONJ conj & #left,
-			     CONT [ HANDEL #lhand,
+			     CONT [ TOP #lhand,
 				    INDEX #lind ] ],
     RCONJ-DTR.SYNSEM.LOCAL [ CONJ complex-conj &
 				  [ CHEAD #chead & 
@@ -1033,199 +1143,3 @@ mid_coord_rule := binary_rule_right_to_left & coord_phr &
 				    INDICES *diff-list* &
 					    [ LIST #inds,
 					      LAST #ilast ] ] ] ].
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;
-;;  Constructions
-
-:begin :instance.
-
-; The instances ROOT and FRAG are needed by the parser to know which phrase 
-; types to accept as successful parses of the full input string.  They should 
-; be the only instances of phrase that fail to assign some other status 
-; (e.g. 'rule or 'lex-entry), so they alone get to be of status 'root-node 
-; (assigned on type sign), which is what the parser requires.  This is obscure,
-; but seems to work.
-
-; ERB (13-11-96) Nifty trick: all clauses have a MESSAGE value, but only those
-; that are actually functioning as the root of the sentence get to put that
-; MESSAGE into the semantics.  All root clauses will therefore have an RLISZT
-; consisting of their MESSAGE appended to their C-CONT.LISZT.  Similarly, 
-; ROOT also introduces an RH-CONS which adds the relevant scope constraint to 
-; the H-CONS attribute of the clause itself.
-
-root := phrase & 
-  [ SYNSEM [ LOCAL [ CAT [ ROOT +,
-			   HEAD.MOOD ind_or_mod_subj,
-			   VALENCE [ SUBJ none,
-				     SPR *olist*,
-				     COMPS *olist* ] ],
-		     CONT [ MESSAGE message & #mes & 
-				    [ HANDEL #mhand,
-				      SOA #soa ],
-			    LISZT *diff-list* &
-				    [ LIST #list,
-				      LAST #last ],
-			    H-CONS *diff-list* &
-				    [ LIST #sclist,
-				      LAST #sclast ],
-			    H-STORE *diff-list* &
-				    [ LIST #hslist ],
-			    TOP-H #mhand,
-			    RLISZT *diff-list* &
-				    [ LIST < #mes . #list >,
-				      LAST #last ],
-			    RH-CONS *diff-list* &
-				    [ LIST 
-				    < is-one-of &
-				    [ SC-ARG #soa,
-				      CANDS < #hand . #hslist > ] . #sclist >,
-				     LAST #sclast ] ],
-		     CONJ cnil ],
-	     NON-LOCAL [ SLASH <! !>,
-			 REL <! !>,
-			 QUE <! !> ] ],
-    C-CONT.HANDEL #hand ].
-
-;; MODCONT's HANDEL cannot be identified with C-CONT's HANDEL, given examples
-;; like "perhaps in Berlin", where the MODCONT.HANDEL is that of "in", but
-;; the C-CONT.HANDEL must be that of "perhaps" which takes scope over "in".
-
-frag := sign &
-  [ SYNSEM [ LOCAL [ CAT [ HEAD [ PRD +,
-				  INV -,
-				  VFORM non_fin],
-			   ROOT na,
-			   VALENCE [ SPR *olist*,
-				     COMPS *olist* ] ],
-		     CONT [ RLISZT *diff-list* &
-				    [ LIST < message &
-					     [ HANDEL #mhand,
-					       SOA #soa ]
-					     . < abstr_rel &
-						 [ HANDEL #hand,
-						   EVENT event ] . #first > >,
-				      LAST #last ],
-			    LISZT [ LIST #middle,
-				    LAST #last ],
-			    TOP-H #mhand,
-			    RH-CONS *diff-list* &
-				   [ LIST < is-one-of &
-					    [ SC-ARG #soa,
-					      CANDS < #hand . #hslist > ] 
-					    . #hconslist >,
-				     LAST #hconslast ],
-			    H-CONS [ LIST #hconslist,
-				     LAST #hconslast ],
-			    H-STORE *diff-list* &
-				    [ LIST #hslist ],
-			    MODCONT.LISZT [ LIST #first,
-					    LASt #middle ],
-			    MESSAGE no_rel ] ],
-	     NON-LOCAL [ REL <! !>,
-			 SLASH <! !> ] ] ].
-
-frag-msg := sign &
-  [ SYNSEM [ LOCAL [ CAT [ ROOT na,
-			   VALENCE [ SPR *olist*,
-				     COMPS *olist* ] ],
-		     CONT [ MESSAGE relation & #msg &
-				    [ HANDEL #mhand,
-				      RESTR #hand ],
-			    TOP-H #mhand,
-			    RLISZT *diff-list* &
-				    [ LIST < #msg . < abstr_rel &
-					              [ HANDEL #hand,
-							ARG #arg & individual] 
-						      . < abstr_rel &
-							  [ HANDEL handle,
-							    INST #index,
-							    ARG3 #arg ]
-							  . #first > > >,
-				      LAST #last ],
-			    LISZT *diff-list* &
-				    [ LIST #middle,
-				      LAST #last ],
-			    RH-CONS #hclist,
-			    H-CONS #hclist,
-			    MODCONT [ HANDEL #hand,
-				      INDEX #index,
-				      LISZT [ LIST #first,
-					      LASt #middle ] ] ] ],
-	     NON-LOCAL [ REL <! !>,
-			 SLASH <! !> ] ],
-    C-CONT.HANDEL #mhand ].
-
-subjh_d := subjh_rule_decl &
-  [ RULE-NAME 'subjh_d ].
-
-hcomp := hcomp_rule &
-  [ RULE-NAME 'hcomp_nc ].
-
-hoptcomp := hoptcomp_rule &
-  [ RULE-NAME 'hoptcomp ].
-
-hmark := hmark_rule &
-  [ RULE-NAME 'hmark ].
-
-extracomp := extracomp_rule &
-  [ RULE-NAME 'extracomp ].
-
-extrasubj := extrasubj_rule &
-  [ RULE-NAME 'extrasubj ].
-
-hspec_nc := hspec_nc_rule &
-  [ RULE-NAME 'hspec_nc ].
-
-hspec_c := hspec_c_rule &
-  [ RULE-NAME 'hspec_c ].
-
-hadj := hadj_rule &
-  [ RULE-NAME 'hadj ].
-
-adjh := adjh_rule &
-  [ RULE-NAME 'adjh ].
-
-extradj := extradj_rule &
-  [ RULE-NAME 'extradj ].
-
-fin_non_wh_rel := fin_non_wh_rel_rule &
-  [ RULE-NAME 'fin_non_wh_rel ].
-
-inf_non_wh_rel := inf_non_wh_rel_rule &
-  [ RULE-NAME 'inf_non_wh_rel ].
-
-bare_np := bare_np_rule &
-  [ RULE-NAME 'bare_np ].
-
-n_n_cmpnd := n_n_cmpnd_rule &
-  [ RULE-NAME 'n_n_cmpnd ].
-
-fillhead_non_wh := filler_head_rule_non_wh &
-  [ RULE-NAME 'fillhead_non_wh ].
-
-fillhead_wh_r := filler_head_rule_wh_root &
-  [ RULE-NAME 'fillhead_wh_r ].
-
-fillhead_wh_subj_r := filler_head_rule_wh_subj &
-  [ RULE-NAME 'fillhead_wh_subj_r ].
-
-fillhead_wh_nr_f := filler_head_rule_wh_nr_fin &
-  [ RULE-NAME 'fillhead_wh_nr_f ].
-
-fillhead_wh_nr_i := filler_head_rule_wh_nr_inf &
-  [ RULE-NAME 'fillhead_wh_nr_i ].
-
-fillhead_rel := filler_head_rule_rel &
-  [ RULE-NAME 'fillhead_rel ].
-
-top_coord := top_coord_rule &
-       [ RULE-NAME 'top_coord ].
-
-mid_coord := mid_coord_rule &
-       [ RULE-NAME 'mid_coord ].
-
-imper := imperative_rule &
-       [ RULE-NAME 'imper_r ].
-
-:end :instance.

@@ -8,28 +8,34 @@
 ; the German Verbmobil project.
 ;
 ; Dan Flickinger, 3-Jan-95
-; Last revised:   30-Sept-97
+; Last revised:   20-Oct-97
 ;
 ; $Id$
 ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-30-Sept-97 Release Notes
-------------------------
+20-Oct-97 Release Notes
+-----------------------
 
-This release is for PAGE 2.0, incorporating improvements in semantics,
-significant efficiency enhancements, a change in the mechanism for on-the-fly
-lexical retrieval, and extensions to coverage.  The efficiency improvements
-are of two kinds: the first set of changes make minor but useful changes to
-the standard PAGE 2.0 modules, while the second set also employ a replacement
-unifier which exploits our grammar's lack of disjunctions.  Changes to the
-semantics principally involve improvements to the treatment of modifiers,
-especially for more complex modification and scope interactions.  Lexical
-retrieval is now supported within Lisp, instead of using Perl scripts, but
-otherwise preserves the previous design.  Coverage extensions include
-additional subcategorization frames, contracted auxiliaries, words with
-hyphens, more vocabulary, and numerous bug fixes.  Finally, the tsdb test
-suite machinery is now installed and working, as described below.
+This release is for PAGE 2.0, incorporating improvements in semantics, several
+efficiency enhancements, a change in the mechanism for on-the-fly lexical
+retrieval, improved consistency in type definitions and notation, and some
+extensions of coverage.  The efficiency improvements are of two kinds: the
+first set of changes make minor but useful changes to the standard PAGE 2.0
+modules, while the second set also employ a replacement unifier which exploits
+our grammar's lack of disjunctions.  Changes to the semantics principally
+involve improvements to the treatment of modifiers, especially for more complex
+modification and scope interactions.  Lexical retrieval is now supported within
+Lisp, instead of using Perl scripts, but otherwise preserves the previous
+design.  For most (perhaps all) attributes it is now the case that each is
+introduced on a single type, improving debugging capability and making the
+grammar less platform-specific.  The only significant change in notation has
+the SUBJ attribute now being list-valued like the other valence attributes,
+consistent with the standard notation of Pollard and Sag 1994.  Coverage
+extensions include additional subcategorization frames, contracted auxiliaries,
+words with hyphens, more vocabulary, and numerous bug fixes, most importantly
+for relative clauses and passives.
+
 
 Installing and setting up PAGE 2.0
 ----------------------------------
@@ -84,10 +90,10 @@ have put the English grammar files in your own directory <grammar-dir>:
 
 4. Determine whether you will use the standard PAGE 2.0 unifier with some 
    efficiency patches, or the more efficient but experimental unifier written 
-   by Rob Malouf, which does not support any disjunctions.  For the new
+   by Rob Malouf, which does not support any disjunctions.  For the new faster
    unifier, you need not make any changes to this release; for the standard
-   PAGE 2.0 unifier, change the following flag to NIL (default is T) in the 
-   file <grammar-dir>/english.tdl:
+   PAGE 2.0 unifier, change the following flag to NIL in the file 
+   <grammar-dir>/english.tdl:
 
        :leval (setf main::*pagelite* NIL).
    
@@ -99,9 +105,10 @@ have put the English grammar files in your own directory <grammar-dir>:
 
 Parsing
 -------
-Once the grammar is loaded, it should parse sentences like those in the 
-~/grammar/tests/ file "examples.good".  It should fail to parse sentences like
-those in "examples.bad".
+Once the grammar is loaded, it should parse sentences like those marked as
+well-formed in the test suite file "<grammardir>/tsdb/csli/item", and it
+should fail to parse sentences like those marked as ill-formed in the same
+file (see notes on TSDB below).
 
 To parse a sentence, give the PAGE command  
 
@@ -139,17 +146,8 @@ are just the spellings for the words, so you have to click on the node above a
 spelling to see its lexical entry.
 
 The X-window tree also has a button which will show you the MRS semantics for 
-the sentence in a separate pop-up window (and also has a "VIT" button for an 
-alternate semantic representation which you may ignore if you're not working
-with Verbmobil).
-
-For temporary backward compatibility, we also still support the old interaction
-where instead of the usual PAGE command to initiate a sentence, you can type
-
-  	tree <CR> 
-
-and then the desired sentence.  Instead of the parse chart, you'll get the 
-resulting feature structure, and a tree of the kind you've specified.
+the sentence in a separate pop-up window (and may also have a "VIT" button
+for an alternate semantic representation which you may ignore).
 
 
 Semantics
@@ -187,7 +185,7 @@ VIT (Verbmobil Interface Term) representations
 To produce a VIT from an MRS, set the following two globals:
 
 	(setf mrs::*mrs-to-vit* t)
-	(setf main::*VM-arg-roles-only-p* t)
+	(setf main::*VM-arg-roles-only-p* t).
 
 Then parse a sentence using the PAGE prompt command "mrsparse".  The parse 
 trees and resulting VIT expressions are printed to the Lisp output buffer.
@@ -215,8 +213,7 @@ This produces a window showing the VIT, with red, blue, and black lines.  The
 boxes for the predicates can be dragged about, and the image can be printed
 to PostScript.
 
-To generate a new lexical semantic database (ESEMDB) for Verbmobil, use the 
-awk script provided, e.g.:
+To generate a new ESEMDB, use the awk script provided, e.g.:
 
    awk -f /eo/e1/ergo/vm2/mrs2vit/semdb2lisp.awk ~/vm2/vmlex/ESEMDB.txt > /tmp/esemdb.lisp
 
@@ -225,28 +222,52 @@ Batch processing and test suites
 --------------------------------
 
 To batch-process a set of sentences, you can use the newly integrated TSDB
-facility under active development in Saarbruecken.  Before starting, you
-must perform two steps, one only once and one each time you run the test
-suite.  After installing the grammar, move file "<grammar-dir>/tsdb/bin/tsdb"
-to "$PAGEROOT/bin/solaris/" which is where it expects to be.  Then each time
-before executing the retrieve-and-process command (below), be sure to
-delete (or rename) the output files "result", "parse" and "run" in the
- ~/grammar/tsdb/csli/  directory, since these get read and written during
-each run.
+facility under active development in Saarbruecken (see Web page at the address
+http://cl-www.dfki.uni-sb.de//tsnlp and especially the user manual there).
 
-   At PAGE prompt,
+  To run the standard CSLI test suite (derived from the HP 1986 test suite):
+  1) Clear any previous data from the directory 
+	<grammardir>/tsdb/csli
+     This involves removing the three files "parse", "result", and "run".
+     (Copy this data to another directory if you wish to save it for later 
+     comparison.)
+  2) Start the test suite, reading from the item set in this directory,
+     and writing to the three files mentioned above:
 
-    To load and expand the necessary vocabulary
-        vocabulary nil "csli" t
-    To run the test suite and store results
         retrieve-and-process nil nil "csli"
-    To look at results, use tsql query facility.  e.g.
-      tsdb "select (parse-id i-input tree) from (item result)" "csli"
-      tsdb "select (parse-id readings i-input) from (item result parse)" "csli"
-      tsdb "select (parse-id i-wf i-input) from (item result parse)" "csli"
-    To print results in prettyprint format, execute Lisp function: (e.g.)
-        (expand-tsdb-results "~/grammar/tsdb/vm/result")
+    
+  3) To look at results, use the SQL-based query facility to extract data from
+     the data files built during the test run; e.g.
+      (show all well-formed sentences that parse, including unqique ID and
+      the sentence string for each:)
 
+  tsdb "select (parse-id i-input) from (item result parse) where i-wf=1" "csli"
+
+      (show all sentences that parse, including unqique ID, well-formedness,
+      and the sentence string for each:)
+
+	tsdb "select (parse-id i-wf i-input) from (item result parse)" "csli"
+
+      (show all sentences that parse, including unqique ID, the sentence
+      string, and the parse tree (labeled bracketing) for each:)
+
+	tsdb "select (parse-id i-input tree) from (item result)" "csli"
+
+      (show all sentences that parse, including unqique ID, number of readings
+      found, and the sentence string for each:)
+
+      tsdb "select (parse-id readings i-input) from (item result parse)" "csli"
+
+  To create your own test suite, you have two choices:
+  1) Do it the right way by following the methodology and using the tools
+     described on the TSNLP web page identified above; or
+  2) Employ the quick-and-dirty method of directly editing the file
+	<grammardir>/tsdb/csli/item
+     Each line in this file consists of 12 fields separated by the "@" sign. 
+     Starting with the first line in the file, modify each line to replace the
+     given sentence with one of your own, also specifying the intended
+     well-formedness value for that example (it's the 0 or 1 in the field 
+     immediately following the sentence field.  Delete any left over lines.
 
 EBL facility
 ------------
@@ -295,9 +316,9 @@ Larger lexicon
 We are in the process of adapting lexical information from COMLEX, and will
 have a release containing a much larger lexicon soon.
 
-
 Web access
 ----------
+
 A Web browser can let you parse sentences from any reasonable machine on the 
 Internet and get back parse trees and MRS semantics.  If you are on a machine 
 that also has the FeGramEd utility locally available, you can also get feature 
@@ -345,7 +366,7 @@ Center for the Study of Language and Information
 Ventura Hall, Stanford University
 Stanford, CA  94305
 USA
-telephone: 560 723-9320
+telephone: 650 723-9320
 email: dan@csli.stanford.edu
 
 
