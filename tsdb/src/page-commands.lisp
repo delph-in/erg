@@ -21,13 +21,13 @@
   '(:tsdb
     &nec query &optional language
     &doc "Forward QUERY to the test suite database (for LANGUAGE).")
-  'tsdb:tsdb)
+  #'tsdb:tsdb)
 
 (define-command
   '(:retrieve
     &optional condition language
     &doc "Retrieve TSDB test items (optionally matching CONDITION).")
-  'tsdb:retrieve)
+  #'tsdb:retrieve)
 
 (define-command
   '(:retrieve-and-process
@@ -36,7 +36,7 @@
     &doc 
     "Retrieve TSDB test items (optionally matching CONDITION), feed them into 
   the parser and store results in the `parse' relation (as RUN with COMMENT).")
-  'tsdb:retrieve-and-process)
+  #'tsdb:retrieve-and-process)
 
 (define-command
   '(:vocabulary
@@ -44,4 +44,4 @@
     &doc "Retrieve TSDB test suite vocabulary (optionally matching CONDITION);
   if LOAD is not null(), the necessary vocabulary is dynamically loaded;
   VERBOSE controls the tracing level (one of `:full', `:fair', or `:none').")
-  'tsdb:vocabulary)
+  #'tsdb:vocabulary)

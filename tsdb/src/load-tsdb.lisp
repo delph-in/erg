@@ -9,11 +9,11 @@
 		"server"
 		"statistics"
 		"page-commands"))
-  (load (concatenate 'string 
-	  (concatenate 'string tdl::*source-grammar* "tsdb/src/") file)))
+  (load (dir-and-name
+	  (dir-append tdl::*source-grammar* "tsdb/src/") file)))
 
 (setf tsdb::*tsdb-home* 
-  (concatenate 'string tdl::*source-grammar* "tsdb/"))
+  (dir-append tdl::*source-grammar* "tsdb/"))
 
 ; Don't gc for every item
 (setf tsdb::*tsdb-gc-p* nil)

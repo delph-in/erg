@@ -4,52 +4,35 @@
 ;;
 ;;    Created: Rob Malouf, 22-Aug-1994
 ;;    Last revised: Dan Flickinger, 24-Feb-97
+;;
+;;    $Id$
 
-(in-package "LEXICON")
+(in-package :lexicon)
 
-(if main::*pagelite*
-  (setf *result-rest*
-    '( T .    ;;; this is an inverse restrictor: delete the specified paths
-      (
-       ((:path (disco::args))
-	(:path (disco::head-dtr))
-	(:path (disco::lconj-dtr))
-	(:path (disco::rconj-dtr))
-	(:path (disco::non-head-dtr))
-	)
-       NIL
-       NIL)))
-  (setf *result-rest*
-    '( T .    ;;; this is an inverse restrictor: delete the specified paths
-      (
-       ((:path (disco::head-dtr))
-	(:path (disco::lconj-dtr))
-	(:path (disco::rconj-dtr))
-	(:path (disco::non-head-dtr))
-	)
-       NIL
-       NIL))))
+(load (dir-and-name tdl::*patches-dir* "tuneup-patches"))
 
-(unless main::*pagelite*
-  (load (concatenate 'string disco::*source-grammar*
-		     "cslipage/patches/tuneup-patches.ofasl")))
+;;; *** Still need to get the right restrictor from DFKI
+
+(setf *result-rest*
+  '( T .    ;;; this is an inverse restrictor: delete the specified paths
+    ((disco::args)
+     (disco::head-dtr)
+     (disco::lconj-dtr)
+     (disco::rconj-dtr)
+     (disco::non-head-dtr))))
 
 (unless lexicon::*rf-filter*
   (rule-filter :print nil)
 
-; Prevent the other adjunct rules from feeding extradj
-; Prevent adjh from feeding hadj, so first pick up post-head adjuncts,
-;   attaching them lower than pre-head adjuncts.  This assumes that scope will
-;   be handled by semantic means, not read directly off the syntactic tree.
+;; Prevent the other adjunct rules from feeding extradj
+;; Prevent adjh from feeding hadj, so first pick up post-head adjuncts,
+;;   attaching them lower than pre-head adjuncts.  This assumes that scope will
+;;   be handled by semantic means, not read directly off the syntactic tree.
 
   (lex::augment-filter 
    '((extradj (:forbid hadj))
      (extradj (:forbid adjh))
-     (hadj (:forbid adjh))
-     ))
-  )
+     (hadj (:forbid adjh)))))
 
-(in-package "MAIN")
-
-(get-grammar-from-tdl)
+(main::get-grammar-from-tdl)
 
