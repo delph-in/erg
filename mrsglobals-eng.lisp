@@ -7,6 +7,9 @@
 ;;   Language: Allegro Common Lisp
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; $Log$
+;; Revision 1.15  1999/06/05 00:03:15  aac
+;; giving-demo-p should be nil
+;;
 ;; Revision 1.14  1999/06/04 22:45:45  danf
 ;; Better scoping; moved KEY to LOCAL
 ;;
@@ -97,7 +100,7 @@
 
 (setf *MRS-FOR-LANGUAGE* 'english)
 
-(setf *MRS-SCOPING* t)
+(setf *MRS-SCOPING* nil)
 
 (setf *GIVING-DEMO-P* nil)
 

@@ -97,6 +97,10 @@ three_space_lex_entry3 three_space_lex_entry4)
 
 (defparameter *label-template-type* 'label)
 
+;;; for the compare function 
+
+(def-lkb-parameter *discriminant-path* '(synsem local keys key))
+
 ;;; Hide lexical rule nodes in parse tree
 ;;; (setf  *dont-show-lex-rules* t)
 ;;; this belongs in the user-prefs file, not here
