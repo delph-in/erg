@@ -8,9 +8,5 @@
 ;;; fix this later
   nil)
 
-#+:allegro(defun canonicalise-feature-order nil
-  ;;; also taking much too long
-  nil)
-
 ;;; end temporary hacks
 
