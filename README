@@ -1,0 +1,349 @@
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;
+; README
+;
+; Brief introduction to the English grammar (PAGE implementation)
+; being developed at CSLI, Stanford University, in collaboration with
+; member institutions of the ERGO consortium, and with colleagues of
+; the German Verbmobil project.
+;
+; Dan Flickinger, 3-Jan-95
+; Last revised:   30-Sept-97
+;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+30-Sept-97 Release Notes
+------------------------
+
+This release is for PAGE 2.0, incorporating improvements in semantics,
+significant efficiency enhancements, a change in the mechanism for on-the-fly
+lexical retrieval, and extensions to coverage.  The efficiency improvements
+are of two kinds: the first set of changes make minor but useful changes to
+the standard PAGE 2.0 modules, while the second set also employ a replacement
+unifier which exploits our grammar's lack of disjunctions.  Changes to the
+semantics principally involve improvements to the treatment of modifiers,
+especially for more complex modification and scope interactions.  Lexical
+retrieval is now supported within Lisp, instead of using Perl scripts, but
+otherwise preserves the previous design.  Coverage extensions include
+additional subcategorization frames, contracted auxiliaries, words with
+hyphens, more vocabulary, and numerous bug fixes.  Finally, the tsdb test
+suite machinery is now installed and working, as described below.
+
+Installing and setting up PAGE 2.0
+----------------------------------
+To obtain a Lisp image containing PAGE 2.0, which will serve as the platform 
+for loading the English grammar, do the following, presently verified only for
+Allegro Common Lisp running on Solaris.
+
+1. FTP a copy of the PAGE2.0 release from the DFKI in Saarbruecken at
+        page.dfki.uni-sb.de
+   Currently, the ftp site is pasword-protected; for help, send email to 
+	page@dfki.uni-sb.de
+
+2. FTP the INSTALL2.0 instructions file, and do what it says.
+
+3. For local setup, make the following modifications to your own files:
+
+   ~/.clinit.cl
+	Comment out the PAGE1.1 line loading the file ".../loadup.lisp"
+	If you have source code for PAGE, add the following line:
+	  (load "$PAGEROOT/src/general/loadup.lisp")
+   
+Loading the grammar 
+-------------------
+To load the grammar into PAGE 2.0, do the following, assuming that you 
+have put the English grammar files in your own directory <grammar-dir>:
+
+1. Modify the file "<grammar-dir>/english.tdl", changing the following line
+   to specify the location of the grammar directory (ending the string with a
+   slash):
+       
+        :set-switch *source-grammar* "<grammar-dir>".
+
+2. Assuming you have a connection between Emacs and Lisp, add the following
+   line to the end of your .emacs file (where "/usr/page" should actually
+   point to the root of your PAGE 2.0 directory, if in a nonstandard place):
+
+        (load "$PAGEROOT/page-emacs.el")
+
+   Then start Emacs, and execute the following Emacs commands to bring up a 
+   fresh PAGE Lisp image:
+        
+	M-X run-page
+
+   Notes: 1) If you don't have such a connection, you might seek assistance
+             from the PAGE support line, or you might get useful advice from
+             ERGO consortium members, including CSLI.
+	  2) At CSLI, the machines Eo, Eoan, and Eon currently support PAGE2.0.
+
+3. Start PAGE by executing this Lisp command at the Lisp prompt:
+
+       	(page)
+
+4. Determine whether you will use the standard PAGE 2.0 unifier with some 
+   efficiency patches, or the more efficient but experimental unifier written 
+   by Rob Malouf, which does not support any disjunctions.  For the new
+   unifier, you need not make any changes to this release; for the standard
+   PAGE 2.0 unifier, change the following flag to NIL (default is T) in the 
+   file <grammar-dir>/english.tdl:
+
+       :leval (setf main::*pagelite* NIL).
+   
+5. Load the grammar with the PAGE command
+
+       	load-grammar "<grammar-dir>/english" "tuneup"
+
+   This currently takes about 1 minute on an UltraSparc.
+
+Parsing
+-------
+Once the grammar is loaded, it should parse sentences like those in the 
+~/grammar/tests/ file "examples.good".  It should fail to parse sentences like
+those in "examples.bad".
+
+To parse a sentence, give the PAGE command  
+
+	one <CR>  
+
+and then type the desired sentence, using vocabulary contained in the lexicon
+file lexicon.tdl.
+
+To get more than one parse, use the PAGE command
+
+	sentence-parse-bw <CR>     
+        (or simply   sent <CR> )
+
+then type the sentence as usual.  If more than one parse is found, the system
+will present the first parse, then ask if you want another.
+
+
+Parse trees
+-----------
+To cause parse trees to be printed for the parse, you have two choices - either
+a simple ASCII tree printed in the output buffer (standard output), or a more
+elegant mousable tree in a separate window.  To determine whether you get a 
+tree after a parse, and which kind, use the PAGE switch
+
+	:draw-tree
+
+with three values:  
+
+	:off | :on | :fancy
+
+Then when you parse a sentence, if :draw-tree is :on, you get an ASCII tree,
+and if it's :fancy, you get an X-windows tree.  You can mouse any node of the
+fancy tree and get a FeGramEd display, but note that the leaves of these trees
+are just the spellings for the words, so you have to click on the node above a
+spelling to see its lexical entry.
+
+The X-window tree also has a button which will show you the MRS semantics for 
+the sentence in a separate pop-up window (and also has a "VIT" button for an 
+alternate semantic representation which you may ignore if you're not working
+with Verbmobil).
+
+For temporary backward compatibility, we also still support the old interaction
+where instead of the usual PAGE command to initiate a sentence, you can type
+
+  	tree <CR> 
+
+and then the desired sentence.  Instead of the parse chart, you'll get the 
+resulting feature structure, and a tree of the kind you've specified.
+
+
+Semantics
+---------
+To cause MRS semantics to be printed in the output buffer in addition to the 
+parse tree, type
+
+        mrsparse <CR>
+
+followed by the sentence.
+
+The resulting semantics for a parse can also be found in the top-level feature
+structure's SYNSEM.LOCAL.CONT attribute.  It will be an MRS structure
+consisting of a HANDEL attribute, an INDEX attribute, and a LISZT attribute
+containing a list of atomic relations.  See the Copestake et al. manuscript
+"Minimal Recursion Semantics: An Introduction" for details of this semantic
+representation; a current draft can be found at the following Web site:
+
+	http://hpsg.stanford.edu/hpsg/sag.html
+
+To get MRS semantics for more than one parse of a sentence, type
+  
+       ambig <CR>
+
+This will behave just like sentence-parse-bw (described above), but will
+print an Emacs-buffer parse tree and the MRS semantics after each parse.
+
+To get machine-readable semantics in addition to the pretty-printed version,
+change the setting of the variable mrs::*raw-mrs-output-p* (in the file 
+english.tdl) to T.
+
+
+VIT (Verbmobil Interface Term) representations
+----------------------------------------------
+To produce a VIT from an MRS, set the following two globals:
+
+	(setf mrs::*mrs-to-vit* t)
+	(setf main::*VM-arg-roles-only-p* t)
+
+Then parse a sentence using the PAGE prompt command "mrsparse".  The parse 
+trees and resulting VIT expressions are printed to the Lisp output buffer.
+
+To check the VIT for well-formedness, do the following (locally) on Eo:
+
+	cd /eo/e1/vm2/vitADT/lib/Vit_Adt
+	/opt/quintus/bin3.2/sun4-5/prolog
+	ensure_loaded(vitADT).
+        V = vit(...),vitCheck(V).          %% using cut-and-paste to insert the
+                                           %% relevant vit(...) after the "=")
+        ...
+        halt.				   %% End the session.
+
+If local at CSLI, you may view the VIT expressions graphically, using the tool
+provided by W.Finkler.  At the Unix prompt, execute
+
+    wish
+    source /eo/e1/ergo/vm2/vits.tcl
+    main
+
+Then cut and paste the text for a VIT term (as produced by mrs2vit converter) 
+from the Emacs buffer into the VITdraw tool's window, and click on "Draw".
+This produces a window showing the VIT, with red, blue, and black lines.  The
+boxes for the predicates can be dragged about, and the image can be printed
+to PostScript.
+
+To generate a new lexical semantic database (ESEMDB) for Verbmobil, use the 
+awk script provided, e.g.:
+
+   awk -f /eo/e1/ergo/vm2/mrs2vit/semdb2lisp.awk ~/vm2/vmlex/ESEMDB.txt > /tmp/esemdb.lisp
+
+
+Batch processing and test suites
+--------------------------------
+
+To batch-process a set of sentences, you can use the newly integrated TSDB
+facility under active development in Saarbruecken.  Before starting, you
+must perform two steps, one only once and one each time you run the test
+suite.  After installing the grammar, move file "<grammar-dir>/tsdb/bin/tsdb"
+to "$PAGEROOT/bin/solaris/" which is where it expects to be.  Then each time
+before executing the retrieve-and-process command (below), be sure to
+delete (or rename) the output files "result", "parse" and "run" in the
+ ~/grammar/tsdb/csli/  directory, since these get read and written during
+each run.
+
+   At PAGE prompt,
+
+    To load and expand the necessary vocabulary
+        vocabulary nil "csli" t
+    To run the test suite and store results
+        retrieve-and-process nil nil "csli"
+    To look at results, use tsql query facility.  e.g.
+      tsdb "select (parse-id i-input tree) from (item result)" "csli"
+      tsdb "select (parse-id readings i-input) from (item result parse)" "csli"
+      tsdb "select (parse-id i-wf i-input) from (item result parse)" "csli"
+    To print results in prettyprint format, execute Lisp function: (e.g.)
+        (expand-tsdb-results "~/grammar/tsdb/vm/result")
+
+
+EBL facility
+------------
+The Explanation-Based Learning facility under development by Guenter Neumann
+of the DFKI is available in experimental form (currently only at CSLI).  It 
+records phrases seen during parsing, and provides lexically-driven retrieval 
+of these stored templates or chunks, currently for parsing, but soon also for 
+generation.  At present, the EBL machinery is only available locally at CSLI.
+
+To load EBL, 
+ 	(load "/usr/local/page2.0/src/systems/dtree.system")
+	(load "/usr/local/page2.0/src/systems/pebl.system")
+	(load-system "dtree")
+	(load-system "pebl")
+To run EBL, at PAGE prompt, type
+	:use-ebl
+To get multiple parses one at a time, set the following flag:
+	:leval (setf main::*support-backtrack* t)
+To train interactively on a particular sentence
+	:tp-ebl <sentence-string>
+To use trained templates for a new sentence
+	:ap-ebl <sentence-string>
+To do incremental training (interleaved training and application), in Lisp
+	(ebl-ap <sentence> :proto chunk-ap-batch :exhaustive t :add-lex t)
+    For more examples, see EBL file call-chunk-corpus.lisp
+To do batch incremental training, e.g.
+        (ebl-from2file "~/grammar/ebl/csli-items.200" "~/tmp/ebl-test.out" 
+	 #'ebl-ap :trace NIL :draw-chart NIL :save-chunk T 
+        :proto chunk-ap-batch :exhaustive nil :add-lex t)
+To see EBL decision trees,
+	(ck::init-dtree)
+To see a particular template, whose number is at right of a boxed node,
+	(ck::show-dtree <index-integer>)
+To see the feature structures for a template and/or for terminals
+	(ck::show-dtree <index> :expand t :expand-terminals t)
+To dump all EBL data structures
+	(ck::save-chunk <filename-string>)
+To erase existing EBL data from memory
+	(ck::forget)
+To reload 
+	(ck::restore-chunk <filename>)
+
+
+Larger lexicon
+--------------
+We are in the process of adapting lexical information from COMLEX, and will
+have a release containing a much larger lexicon soon.
+
+
+Web access
+----------
+A Web browser can let you parse sentences from any reasonable machine on the 
+Internet and get back parse trees and MRS semantics.  If you are on a machine 
+that also has the FeGramEd utility locally available, you can also get feature 
+structures for parses, rule schemata, lexical rules, and lexical entries.  To
+experiment with this interactive demo, go the Stanford HPSG Web page at
+
+	http://hpsg.stanford.edu
+
+and click on the "demonstration system" link found there.
+
+Adding or redefining lexical entries in TDL
+-------------------------------------------
+After adding a new lexical entry, or making any other change to the grammar,
+type 
+        ldt. 
+
+as usual to the TDL prompt, and then at the PAGE prompt, type
+
+	load-grammar-from-tdl
+
+This command also takes care of re-caching any lexical entries that have been 
+added, deleted, or changed.
+
+After making permanent changes to the files lexicon.tdl or semrels.tdl, 
+rebuild the run-time lexical database by executing the following Lisp
+function:
+        (csli::tdltolex)
+
+This will replace the files lexicon.dat and semrels.dat in your <grammar-dir>.
+
+Exiting from PAGE
+-----------------
+To end a PAGE session, type the following to the PAGE prompt:
+
+	shutdown
+
+and confirm.  This will terminate all PAGE subprocesses, then terminate the 
+Lisp process.
+
+
+Contact
+-------
+Dan Flickinger
+Center for the Study of Language and Information
+Ventura Hall, Stanford University
+Stanford, CA  94305
+USA
+telephone: 560 723-9320
+email: dan@csli.stanford.edu
+
+
