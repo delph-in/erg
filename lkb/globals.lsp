@@ -42,19 +42,11 @@ three_space_lex_entry3 three_space_lex_entry4)
 
 (defparameter *chart-limit* 100)
 
-(defparameter *sign-type* 'sign
-   "a special type wrt parsing - rule indexing is checked for its
-   descendants")
-
 (defparameter *mother-feature* NIL
    "The feature giving the mother in a grammar rule")
 
 (defparameter *start-symbol* '(root)
    "specifing valid parses")
-
-(defparameter *morph-rule-type* 'lex_rule_infl
-    "morphology system checks for rules which are
-     of this type or a subtype of it")
 
 (defparameter *maximal-lex-rule-applications* 7
    "The number of lexical rule applications which may be made
