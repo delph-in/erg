@@ -73,6 +73,17 @@
 
 (setf *top-pred-type* (vsym "PREDSORT"))
 
+;;;
+;;; add these to ERG `mrsglobals.lisp' (although they correspond to initial MRS
+;;; defaults, so we can load the ERG on top of another grammar (and spare some
+;;; debugging effort the day some of the MRS defaults changes :-).
+
+(defparameter *event-type* (vsym "event"))
+(defparameter *event_or_index-type* (vsym "event_or_index"))
+(defparameter *non_expl-ind-type* (vsym "non_expl-ind"))
+(defparameter *handle-type* (vsym "handle"))
+(defparameter *ref-ind-type* (vsym "ref-ind"))
+
 ;;; the following are needed only for the detection of fragments
 ;;; indicated in the LinGO gramar by the value of ROOT
 
