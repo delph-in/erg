@@ -7,6 +7,9 @@
 ;;   Language: Allegro Common Lisp
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; $Log$
+;; Revision 1.9  1999/03/12 09:53:20  danf
+;; Further fixes to improve generation
+;;
 ;; Revision 1.8  1999/02/25 20:56:36  aac
 ;; adding message as a dummy relation
 ;;
@@ -152,6 +155,8 @@
 (setf *word-feature* (vsym "WG-WORD"))
 
 (setf *id-feature* (vsym "WG-ID"))
+
+(setf *scope-feat* (vsym "SCOPE"))
 
 (setf *do-not-convert-sort-list* nil)
                                   
@@ -310,7 +315,8 @@
     ))
 
 (setf *top-level-rel-types* 
-  `(,(vsym "pron_rel") ,(vsym "mofy_rel") ,(vsym "the_afternoon_rel")
+  `(,(vsym "pron_rel") ,(vsym "refl_pro_rel")
+    ,(vsym "mofy_rel") ,(vsym "the_afternoon_rel")
     ,(vsym "the_morning_rel") ,(vsym "the_evening_rel")
     ,(vsym "numbered_hour_rel") ,(vsym "minute_rel") ,(vsym "dofw_rel")
     ,(vsym "named_rel") ,(vsym "_vacation_rel") ,(vsym "holiday_rel")
