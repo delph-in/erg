@@ -77,7 +77,7 @@
 
 #+:packing
 (defparameter *packing-restrictor*
-  nil;'(CONT)
+  '(CONT)
   "restrictor used when parsing with ambiguity packing")
 
 ;;; Parse tree node labels
