@@ -177,19 +177,41 @@
     "_write_v_1_rel" "_figure_v_out_rel" "_find_v_out_rel"
     "_point_v_out_rel" "_relief_n_rel" "_pleasure_n_rel" ))
 
+;;;
+;;; _fix_me_
+;;; for some of the following, i think they should just not be here (e.g. --TPC
+;;; and possibly STATTIVE), since they are not part of the specified interface,
+;;; i.e. would presumably not be mentioned in the SEM-I.  for PN, on the other
+;;; hand, i would have to understand the range of values better to see whether
+;;; we can sustain the default below in LOGON transfer outputs.
+;;;                                                            (26-nov-04; oe)
 (defparameter %mrs-extras-defaults%
   (list
    (list (vsym "E") 
          ;; FIX - should not have to specify these in underspecified MRS in
          ;; order to get topicalization or passivization
-	(cons (vsym "--TPC") (vsym "-"))
-	(cons (vsym "--PSV") (vsym "-"))
-	(cons (vsym "E.ASPECT.PERF") (vsym "-"))
-	(cons (vsym "E.ASPECT.PROGR") (vsym "-"))
-	(cons (vsym "E.ASPECT.STATIVE") (vsym "-")))
+         #-:logon
+         (cons (vsym "--TPC") (vsym "-"))
+         #-:logon
+         (cons (vsym "--PSV") (vsym "-"))
+         (cons (vsym "E.ASPECT.PERF") (vsym "-"))
+         (cons (vsym "E.ASPECT.PROGR") (vsym "-"))
+         #-:logon
+         (cons (vsym "E.ASPECT.STATIVE") (vsym "-")))
+   #-:logon
    (list (vsym "X")
-	(cons (vsym "PNG.PN") (vsym "unsp_pernum")))
-   ))
+         (cons (vsym "PNG.PN") (vsym "unsp_pernum")))))
+
+;;;
+;;; _fix_me_
+;;; right now, the post-generation MRS comparison tends to take most of the
+;;; time and, in a few Rondane cases at least, appears to blow out; in LOGON,
+;;; at least, we are not using the test anyway, and given the summer 2004
+;;; improvements to the generator, there is not that much work left for it to
+;;; be done anyway.                                           (26-nov-04; oe)
+;;;
+#+:logon
+(setf lkb::*bypass-equality-check* t)
 
 (defparameter *var-extra-conversion-table*
 '(
