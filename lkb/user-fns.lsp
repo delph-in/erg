@@ -308,9 +308,3 @@
        (let ((fs-type (type-of-fs fs)))
          (eql fs-type '-))))
 
-;;;
-;;; preprocessing hook to package up the preprocessing chart in a form suitable
-;;; for PET (an input mode donated by YY Technologies; see `-yy' in cheap).
-;;;
-(defun cheapify (string)
-  (preprocess string :verbose nil))
