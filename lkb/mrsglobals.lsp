@@ -11,11 +11,15 @@
      ,(vsym "MARG") ,(vsym "CARG")))
                                  
 (setf *ignored-sem-features* 
-  (append *ignored-sem-features* 
-  `(,(vsym "PARAMS") ,(vsym "WLINK"))))
+  (append 
+   *ignored-sem-features* 
+   (list (vsym "IDIOMP") (vsym "PARAMS") (vsym "WLINK")
+         (vsym "CFROM") (vsym "CTO"))))
 
 (setf *ignored-extra-features* 
-  (cons (vsym "SORT") *ignored-extra-features*))
+  (append
+   *ignored-extra-features*
+   (list (vsym "SORT") (vsym "INSTLOC"))))
 
 (setf *top-level-rel-types*  nil)
 
