@@ -98,8 +98,8 @@
   (let ((types
          (for unif in unifs
               filter
-              (if (null (path-typed-feature-list (unification-lhs unif)))
-                  (car (u-value-types (unification-rhs unif)))))))
+              (when (null (path-typed-feature-list (unification-lhs unif)))
+		(car (u-value-types (unification-rhs unif)))))))
     (cond
      ((null types) 
       (format t 
@@ -114,21 +114,21 @@
       (let* ((type (car types))
 	     (res (assoc type *infl-pos-record*)))
 	(if res (cdr res)
-	  (let ((type-entry (get-type-entry type)))
-	    (cond (type-entry 
-		   (eval-possible-leaf-type type)
-		   (let ((pos
-			  (extract-infl-pos-from-fs 
-			   (tdfs-indef (type-tdfs type-entry)))))
-		     (unless (or pos (subtype-p type 'non_affix_bearing))
-		       (format t "~%No position identified for ~A" sense-id))
-		     (push (cons type pos) *infl-pos-record*)
-		     pos))
-		  (t
-		   (format t "~%Warning ~A specifies invalid type,~
- no affix position found"
-			   sense-id)
-		   nil)))))))))
+	  (progn
+	    (eval-possible-leaf-type *leaf-types* type)
+	    (let ((type-entry (get-type-entry type)))
+	      (cond (type-entry 
+		     (let ((pos
+			    (extract-infl-pos-from-fs 
+			     (tdfs-indef (type-tdfs type-entry)))))
+		       (unless (or pos (subtype-p type 'non_affix_bearing))
+			 (format t "~%No position identified for ~A" sense-id))
+		       (push (cons type pos) *infl-pos-record*)
+		       pos))
+		    (t
+		     (format t "~%Warning ~A specifies invalid type, no affix position found"
+			     sense-id)
+		     nil))))))))))
 
 
 (defun extract-infl-pos-from-fs (fs)  
@@ -195,6 +195,9 @@
                    :directory (pathname-directory (lkb-tmp-dir))))
   (setf *psorts-temp-index-file* 
     (make-pathname :name "biglex-index" 
+                   :directory (pathname-directory (lkb-tmp-dir))))
+  (setf *leaf-temp-file* 
+    (make-pathname :name "biglex-rels" 
                    :directory (pathname-directory (lkb-tmp-dir)))))
 
 
