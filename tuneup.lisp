@@ -9,6 +9,8 @@
 
 (in-package :lexicon)
 
+(excl:compile-file-if-needed 
+ (dir-and-name tdl::*patches-dir* "tuneup-patches"))
 (load (dir-and-name tdl::*patches-dir* "tuneup-patches"))
 
 ;;; *** Still need to get the right restrictor from DFKI

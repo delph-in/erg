@@ -9,8 +9,10 @@
 		"server"
 		"statistics"
 		"page-commands"))
+  (excl:compile-file-if-needed 
+   (dir-and-name (dir-append tdl::*source-grammar* "tsdb/src/") file))
   (load (dir-and-name
-	  (dir-append tdl::*source-grammar* "tsdb/src/") file)))
+	 (dir-append tdl::*source-grammar* "tsdb/src/") file)))
 
 (setf tsdb::*tsdb-home* 
   (dir-append tdl::*source-grammar* "tsdb/"))

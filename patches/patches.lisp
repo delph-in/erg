@@ -1,11 +1,8 @@
-;;; No patches!
-
 
 (load (dir-and-name tdl::*patches-dir* "mrsglobals-eng"))
-(load (dir-and-name tdl::*patches-dir* "time-convert"))
 
-(load-system "trees")
-(load-system "mrs2vit")
+(excl:compile-file-if-needed (dir-and-name *patches-dir* "time-convert"))
+(load (dir-and-name tdl::*patches-dir* "time-convert"))
 
 (in-package "MAIN")
 
