@@ -47,7 +47,7 @@
 (defparameter *psoa-rh-cons-path* `(,(vsym "HCONS") ,(vsym "LIST")))
 
 (defparameter *rel-handel-path*
-    `(,(vsym "HNDL"))
+    `(,(vsym "LBL"))
   "path to get the handel from a relation")
 
 (defparameter *sc-arg-feature* (vsym "HARG")
