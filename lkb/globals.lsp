@@ -99,8 +99,6 @@
 
 ;;; (setf *chart-packing-p* t)
 
-(setf *gen-packing-p* t)
-
 ;;;
 ;;; increase dag pool size
 ;;;
@@ -214,6 +212,18 @@
 
 (setf *semantics-index-path* '(SYNSEM LOCAL CONT HOOK INDEX))
 
+
+;;;
+;;; turn on packing in the generator, index accessibility filtering, and the
+;;; treatment of QEQs as equations while in the generator; the latter requires
+;;; that INSTLOC values in QEQs be re-entrant for it to work as intended.
+;;;                                                            (14-jul-04; oe)
+(setf *gen-packing-p* t)
+
+(setf *gen-filtering-p* t)
+
+(setf *gen-equate-qeqs-p* t)
+
 ; DPF 27-Nov-03 - Finally noticed that on the current clever approach to
 ; intersective modification, we can't generate np-adverbial modifiers as
 ; in "Kim arrived the day after Sandy" since "*Kim arrived the day" is not
@@ -232,11 +242,14 @@
 ;;; as of mid-december 2003, the generator allows specification of the non-foot
 ;;; daughters in adjunction rules; make this conditional on LKB source version,
 ;;; so the grammar still loads into older LKBs.                (18-dec-03; oe)
-;;; 
-(setf *intersective-rule-names* 
-  (if (find-symbol "%GENERATOR-LEXICAL-ITEMS%" :lkb)
-    '((adjh_i . (1)) (nadj_rr_nt . (2)))
-    '(adjh_i nadj_rr_nt)))
+;;;
+;;; index accessibility filtering is incompatible with two-phase generation,
+;;; and should also not be needed anymore.                     (14-jul-04; oe)
+;;;                          
+(setf *intersective-rule-names* nil
+  #+:null
+  '((adjh_i . (1)) (nadj_rr_nt . (2))))
+
 
 (defparameter *chart-dependencies*
   '((SYNSEM LKEYS --+COMPKEY) (SYNSEM LOCAL CAT HEAD KEYS KEY)
