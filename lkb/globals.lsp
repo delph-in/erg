@@ -96,14 +96,12 @@
 
 ;;;
 ;;; connection parameters for lexical database, an association list with fields
-;;; `:host', `:user', `:password', `:db', and `:table' (and maybe `:encoding',
-;;; one day).
-;;;
+;;; `:host', `:db', `:table', and `:user' (optional) 
+;;; if unset we fall back to .tdl lexicon files
 
-(defparameter *psql-lexicon-parameters* '((:db "lingo") 
-                                          (:user "danf")
-                                          (:host "localhost")
-                                          (:table "erg2")))
+;(defparameter *psql-lexicon-parameters* '((:db "lingo") 
+;                                          (:host "localhost")
+;                                          (:table "erg2")))
 
 ;;; Parse tree node labels
 
