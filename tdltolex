@@ -1,0 +1,295 @@
+#! /usr/local/bin/perl -w
+##
+## tdltolex
+##
+## $Id$
+##
+## Rob Malouf, 7-Nov-1996
+
+## malouf, 28-Jan-1998
+##   Merged with Lexicon.pm and Semrels.pm.
+
+## This script converts a single lexicon file and single semrels file
+## into database format.
+
+
+## This package provides a transparent interface to one or more lexical
+## databases.
+
+package Lexicon;
+
+use GDBM_File;
+use Carp;
+
+sub whowasi { (caller(1))[3] . '()' }
+
+## Create an instance variable linking a single lexicon hash to one or more
+## actual database files.  Right now, we're using a single gnu dbm file to
+## store the lexicon, so this is pretty easy. 
+
+sub TIEHASH {
+    my $type = shift; 
+    my $mode = shift;
+    my $path = shift;
+    
+    my $dbm_mode;
+    
+    croak "Usage: @{[&whowasi]} MODE PATH" if (!$mode || !$path || @_);
+
+    if ($mode =~ m/^create/) { 
+	$dbm_mode = GDBM_NEWDB|GDBM_FAST;
+    } elsif ($mode =~ m/^read/) { 
+	$dbm_mode = GDBM_READER;
+    } else {
+	croak "@{[&whowasi]}: Unknown mode $mode"; 
+    }
+
+    my $ref = GDBM_File->new("$path/lexicon.dat", $dbm_mode, 0644) 
+	or croak "@{[&whowasi]}: Can't open $path/lexicon.dat: $!"; 
+
+    return bless { DBM => $ref }, $type; 
+}
+
+## Look up an entry in the lexicon.  An entry is the TDL source for the
+## instance. Multiple entries for a single key are separated by @.  We break
+## that up and return a reference to a list of lists.  Each sub-list is a
+## pair, consisting of a code and an instance definition.
+
+sub FETCH {
+    my $self = shift;
+    my $key = shift;
+
+    my @entries;
+    
+    if ($raw = $self->{DBM}->FETCH($key)) {
+      @entries = split /@/, $raw;
+    }
+    return \@entries;
+}
+
+## Add entry to lexicon.  An entry is a reference to a list of lists.  Each
+## sub-list is a pair, consisting of a code and an instance definition.  We
+## convert that structure into a single value that can be stuffed into the DBM
+## file under the right key.  The value is the TDL source for the instance.
+## Multiple entries for a single key are separated by @.
+
+sub STORE {
+    my $self = shift;
+    my $key = shift;
+    my $list = shift;
+
+    my $record = "";
+
+    while ($entry = shift(@{$list})) {
+	$record = "$record$entry@";
+    }
+
+#    print $record;
+
+    $self->{DBM}->STORE($key, $record);
+}
+
+# sub DELETE {
+#     print "Delete!\n"
+# }
+
+# sub CLEAR {
+#     print "Clear!\n"
+# }
+
+# sub EXISTS {
+#     print "Exists!\n"
+# }
+
+## Since we're just using a single dbm file for the lexicon, these two are
+## easy.  The keys in the whole lexicon are just the keys int the dbm file.
+
+sub FIRSTKEY {
+    my $self = shift;
+
+    return $self->{DBM}->FIRSTKEY;
+}
+
+sub NEXTKEY {
+    my $self = shift;
+    my $last = shift;
+
+    return $self->{DBM}->NEXTKEY($last);
+}
+
+package Semrels;
+
+use GDBM_File;
+use Carp;
+
+# Open a GDBM file.
+
+sub TIEHASH {
+    my $type = shift; 
+    my $mode = shift;
+    my $path = shift;
+    
+    my $dbm_mode;
+    
+    croak "Usage: @{[&whowasi]} MODE PATH" if (!$mode || !$path || @_);
+
+    if ($mode =~ m/^create/) { 
+	$dbm_mode = GDBM_NEWDB|GDBM_FAST;
+    } elsif ($mode =~ m/^read/) { 
+	$dbm_mode = GDBM_READER;
+    } else {
+	croak "@{[&whowasi]}: Unknown mode: $_"; 
+    }
+
+    my $ref = GDBM_File->new("$path/semrels.dat", $dbm_mode, 0644) 
+	or croak "@{[&whowasi]}: Can't open $path/semrels.dat: $!"; 
+
+    return bless { DBM => $ref }, $type; 
+}
+
+# Look up an entry in the lexicon.
+
+sub FETCH {
+    my $self = shift;
+    my $key = shift;
+    
+    return $self->{DBM}->FETCH($key);
+}
+
+# Add entry to lexicon.
+
+sub STORE {
+    my $self = shift;
+    my $key = shift;
+    my $value = (shift) . "@";
+
+    $self->{DBM}->STORE($key, $value);
+}
+
+# sub DELETE {
+#     print "Delete!\n"
+# }
+
+# sub CLEAR {
+#     print "Clear!\n"
+# }
+
+# sub EXISTS {
+#     print "Exists!\n"
+# }
+
+sub FIRSTKEY {
+    my $self = shift;
+
+    return $self->{DBM}->FIRSTKEY;
+}
+
+sub NEXTKEY {
+    my $self = shift;
+    my $last = shift;
+
+    return $self->{DBM}->NEXTKEY($last);
+}
+
+
+$/="; <<>>\n"; # Weird paragraph separator
+
+die "Usage: $0\n" if (@ARGV);
+
+##
+## Filename constants
+##
+
+$lexicon_tdl = "lexicon.tdl";
+$semrels_tdl = "semrels.tdl";
+
+##
+## Build lexicon database
+##
+
+print STDERR "Building lexicon...";
+
+# Open files
+
+open LEXICON, $lexicon_tdl or 
+    die "Can't open $lexicon_tdl!\n";
+tie %LEXICON, "Lexicon", "create", "." or die "Can't open lexicon!\n";
+
+$count = 0;
+
+# Read lexical entries and add them to database
+
+while (<LEXICON>) {
+    s/\n; <<>>\n//;
+
+    /STEM < "([^\"]*)"/;
+    $key = $1;
+
+    if (!$key ) {
+	print STDERR "\nMalformed entry!\n$_\n";
+	print STDERR "Building lexicon...$count";
+	next;
+    }
+
+    @record = @{$LEXICON{$key}};
+
+    for $rec ( @record ) {
+      print $rec, "\n";
+    }
+      
+
+    push @record, $_; 
+    $LEXICON{$key} = \@record;
+
+    if (($count++ % 100) == 99) {
+	print STDERR "\rBuilding lexicon...$count";
+    }
+}
+
+# Close files
+
+close LEXICON;
+untie %LEXICON;
+
+print STDERR "\rFinished building lexicon.                 \n";
+
+##
+## Build semrels database
+##
+
+print STDERR "Building semrels...";
+
+# Open files
+
+open SEMRELS, $semrels_tdl or 
+    die "Can't open $semrels_tdl!\n";
+tie %SEMRELS, "Semrels", "create", "." or die "Can't open semrels!\n";
+
+$count = 0;
+
+# Read lexical entries and add them to database
+
+while (<SEMRELS>) {
+    s/\n; <<>>\n//;
+
+    /\s+([^ :]*)\s*:(<|=)/;
+    $key = $1;
+
+    if (!$key ) {
+	print STDERR "\nMalformed entry!\n$_\n";
+	print STDERR "Building semrels...$count";
+	next;
+    }
+
+    $SEMRELS{$key} = $_;
+
+    print STDERR "\rBuilding semrels...$count" 
+	if (($count++ % 100) == 99);
+}
+
+# Close files
+
+close SEMRELS;
+untie %SEMRELS;
+
+print STDERR "\rFinished building semrels.                 \n";
