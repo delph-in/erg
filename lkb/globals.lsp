@@ -180,7 +180,7 @@
     would_aux_pos_cx_2 had_better_cx had_better_cx_2
     not_really not_quite still_not rather_not
     u_pro you_guys you_people yall yall_2 yall_3 you_all
-    and_conj_slash and_then_1 and_conj_2 and_or_conj_1 and_or_conj_2
+    and_conj_slash and_then_1 and_or_conj_1 and_or_conj_2
     and_or_conj_3 and_conj_amp and_conj_2_amp then_conj_1
     apostrophe_s_lex apostrophe_s_phr apostrophe_s_3_lex apostrophe_s_3_phr
     mister missus mr_title_2 doctor_ttl dr_ttl_2 prof_title mrs_title_2
