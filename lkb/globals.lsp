@@ -99,9 +99,11 @@
 ;;; `:host', `:db', `:table', and `:user' (optional) 
 ;;; if unset we fall back to .tdl lexicon files
 
-#+:psql
 (defparameter *psql-lexicon-parameters* 
-  '((:db "lingo") (:host "localhost") (:table "erg2")))
+  #+:psql
+  '((:db "lingo") (:host "localhost") (:table "erg2"))
+  #-:psql
+  nil)
 
 ;;; Parse tree node labels
 
