@@ -1,3 +1,4 @@
+(in-package :lkb)
 ;;; LinGO big grammar specific functions
 
 
@@ -20,13 +21,13 @@
          (daughter2 (get-value-at-end-of rule-fs '(ARGS REST FIRST)))
          (daughter3 (get-value-at-end-of rule-fs '(ARGS REST REST FIRST))))
     (declare (ignore mother))
-    (unless (and daughter1 (not (eql daughter1 'no-way-through)))
+    (unless daughter1 
       (cerror "Ignore it" "Rule without daughter"))
     (append (list nil '(ARGS FIRST))
-            (if (and daughter2 (not (eql daughter2 'no-way-through)))
+            (if daughter2 
                 (list '(ARGS REST FIRST)))
-            (if (and daughter3 (not (eql daughter3 'no-way-through)))
-                (if (and daughter2 (not (eql daughter2 'no-way-through)))
+            (if daughter3 
+                (if daughter2 
                     (list '(ARGS REST REST FIRST)))))))
 
 (defun spelling-change-rule-p (rule)
@@ -36,11 +37,11 @@
 ;;; system.  
 ;;; Old test was for something which was a subtype of
 ;;; *morph-rule-type* - this tests for 
-;;; < NEEDS-AFFIX > = +
+;;; < NEEDS-AFFIX > = + (assuming bool-value-true is default value)
 ;;; in the rule
   (let ((affix (get-dag-value (tdfs-indef 
                                (rule-full-fs rule)) 'needs-affix)))
-    (and affix (equal (type-of-fs affix) '(+)))))
+    (and affix (bool-value-true affix))))
 
 (defun redundancy-rule-p (rule)
 ;;; a function which is used to prevent the parser 
@@ -51,7 +52,7 @@
 ;;; in the rule
   (let ((affix (get-dag-value 
                 (tdfs-indef (rule-full-fs rule)) 'productive)))
-    (and affix (equal (type-of-fs affix) '(-)))))
+    (and affix (bool-value-false affix))))
              
 
 ;;; return true for types that shouldn't be displayed in type hierarchy
@@ -249,10 +250,8 @@
 ;;; counting of `words'.
 ;;;
 (defun dag-inflected-p (dag)           
-  (let* ((key (existing-dag-at-end-of dag '(inflected)))
-         (type (and (dag-p key) (dag-type key))))
-    (when type
-      (or (eq type '+) (and (consp type) (eq (first type) '+))))))
+  (let* ((key (existing-dag-at-end-of dag '(inflected))))
+    (and key (bool-value-true key))))
 
 
 ;;; Function to run when batch checking the lexicon
@@ -269,9 +268,19 @@
           (type (and (dag-p inflbool) (dag-type inflbool))))
       (when type
         (when
-            (or (eq type 'bool)
-                (and (consp type) (eq (first type) 'bool)))
+            (eq type 'bool)
           (format *lkb-background-stream* "~%INFLECTED unset on ~A" id))))))
 
 
 (setf *grammar-specific-batch-check-fn* #'lex-check-lingo)
+
+
+(defun bool-value-true (fs)
+  (and fs
+       (let ((fs-type (type-of-fs fs)))
+         (eql fs-type '+))))
+  
+(defun bool-value-false (fs)
+  (and fs
+       (let ((fs-type (type-of-fs fs)))
+         (eql fs-type '-))))
