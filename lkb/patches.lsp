@@ -17,8 +17,8 @@
   ;; for PRED or any of the roles: while this should not happen for the input
   ;; MRS, allow null() values in the munging rule to be considered compatible.
   ;;                                                          (3-nov-03; oe)
-  (unless (or (not (eq val1 (vsym "NEVER_UNIFY_REL")))
-              (not (eq val2 (vsym "NEVER_UNIFY_REL"))))
+  (unless (or (eq val1 (vsym "NEVER_UNIFY_REL"))
+              (eq val2 (vsym "NEVER_UNIFY_REL")))
     (or (is-top-type val1) (is-top-type val2)
         (null val1)
         (and (is-valid-type val1) (is-valid-type val2) 
