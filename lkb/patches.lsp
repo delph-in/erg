@@ -86,31 +86,5 @@
       ))
     (nreverse res)))
 
+(in-package :cl-user)
 
-(in-package :lkb)
-
-; In lkb/src/lexdb/psql-lex-database.lsp
-; Got error that record-id wanted two args, but only got one
-; So modified by analogy with cache-all-lex-records()
-#+:psql
-(defmethod cache-all-lex-records-orth ((lexicon psql-lex-database))
-  (let* ((table (retrieve-all-records lexicon 
-				      (grammar-fields lexicon)))
-	 (recs (recs table))
-	 (cols (cols table)))
-   (with-slots (record-cache lexical-entries) lexicon
-    (clrhash lexical-entries)
-    (mapc 
-     #'(lambda (record) 
-	 (let* ((id (record-id record cols))
-		(orth (record-orth record)))
-	   (mapc 
-	    #'(lambda (y)
-		(setf (gethash y lexical-entries) 
-		  (cons id 
-			(gethash y lexical-entries))))
-	    (split-into-words orth))
-	   (setf (gethash (record-id record cols) 
-			  record-cache) 
-	     record) ))
-     recs))))
