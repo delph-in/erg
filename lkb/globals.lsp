@@ -34,6 +34,10 @@ three_space_lex_entry3 three_space_lex_entry4)
  "creates the inflectional rule name from the information
    in irregs.tab - for PAGE compatability")
 
+;;;
+
+(defparameter *display-type-hierarchy-on-load* nil)
+
 ;;; Parsing
 
 (defparameter *chart-limit* 100)
