@@ -85,3 +85,19 @@
 ; e.g. free relatives.  Maybe should make this generic rel more specific.
 (setf *maximum-genindex-relations* 500)
 
+;;;
+;;; interim solution for MRS `unfilling' until we construct a proper SEMI
+;;;
+(defparameter %mrs-extras-filter%
+  ;;
+  ;; _fix_me_
+  ;; even without the full SEMI, we should compute these.  (21-nov-03; oe)
+  ;;
+  (list
+   (cons (mrs::vsym "E.TENSE") (mrs::vsym "BASIC_TENSE"))
+   (cons (mrs::vsym "E.ASPECT.PROGR") (mrs::vsym "LUK"))
+   (cons (mrs::vsym "E.ASPECT.PERF") (mrs::vsym "LUK"))
+   (cons (mrs::vsym "E.MOOD") (mrs::vsym "MOOD"))
+   (cons (mrs::vsym "PNG.GEN") (mrs::vsym "REAL_GENDER"))
+   (cons (mrs::vsym "DIVISIBLE") (mrs::vsym "BOOL"))
+   (cons (mrs::vsym "PRONTYPE") (mrs::vsym "PRONTYPE"))))
