@@ -31,8 +31,8 @@ lex-entries-can-fail.
 ;;
 ;; names of attributes not to pass from daughter to mother in parsing
 ;;
-deleted-daughters := ARGS HEAD-DTR NON-HEAD-DTR LCONJ-DTR RCONJ-DTR DTR1 DTR2
-                     DTRA DTRB.
+deleted-daughters := ARGS HEAD-DTR NON-HEAD-DTR LCONJ-DTR 
+                     RCONJ-DTR DTR1 DTR2 DTRA DTRB.
 
 ;;
 ;; names of attributes to filter for packing parser
@@ -56,27 +56,19 @@ label-path-tail := "LABEL".
 qc-structure := $qc_paths.
 
 ;;;
-;;; generic lexical entries for unknown words: for each unknown word in the
-;;; input all generic entries are postulated.  those that require a certain
-;;; suffix (`generic-le-suffixes') only fire if the input form has the suffix.
-;;; scoring for generic items is based on the default priority (typically 
-;;; fairly low) and (optionally) adjusted on the basis of POS information that
-;;; may be available for the unknown word.  if the input word has one more more
-;;; POS tags associated to it, these are looked up in the `posmapping' table:
-;;; this table is a list of triples (tag, score, gle) where `gle' is the name
-;;; of one of the generic items in `generic-les'.  for each generic item, the
-;;; score is adjusted to the first match of one of the tags associated with the
-;;; unknown word in the mapping table.
+;;; generic lexical entries for unknown words: basically, for each unknown
+;;; token in the input all generic entries are postulated.  optionally, there
+;;; are two devices to filter out generic entries: suffix-based and by virtue
+;;; of POS tag information.  generic entries that require a certain suffix
+;;; (`generic-le-suffixes') only fire if the input form has the suffix.  if
+;;; the input word has one more more POS tags associated to it, these are
+;;; looked up in the `posmapping' table: this table is a list of pairs (tag,
+;;; gle) where `gle' is the name of one of the generic items in `generic-les'.
+;;; a non-empty `posmapping' table will filter all generic entries that are not
+;;; explicitly licensed by a POS tag.
 ;;;
 
 generic-lexentry-status-values := generic-lex-entry.
-
-;;;
-;;; default initial priority assigned to generic lexical entries; this may be
-;;; re-adjusted by later steps in unknown word handling.  generic entries that
-;;; end up with a zero priority are dropped before parsing.
-;;;
-default-gen-le-priority := 0.
 
 ;;;
 ;;; some generic lexical entries require inflectional marking.  this mechanism
@@ -84,9 +76,8 @@ default-gen-le-priority := 0.
 ;;; generic entries listed here will only be postulated if the required suffix 
 ;;; can be matched against the input token.
 ;;;
-;;; when using only the generic entries licensed by a POS tag (i.e. a default
-;;; priority of 0 and a non-empty `posmapping'), the suffix filter really does
-;;; not make a lot of sense anymore.
+;;; when using only generic entries licensed by a POS tag, the suffix filter
+;;; really does not make a lot of sense anymore.
 ;;;
 generic-le-suffixes := 
 #|
@@ -99,49 +90,50 @@ generic-le-suffixes :=
 .
 
 posmapping := 
-  UpperAndLowerCase 800 $genericname
-  UpperAndLowerCaseInitial 200 $genericname
-  JJ 100 $generic_adj
-  JJR 100 $generic_adj_compar
-  JJS 100 $generic_adj_superl
-  NN 100 $generic_sg_noun
-  NN 100 $generic_mass_noun
-  NNS 100 $generic_pl_noun
-  NNPS 100 $generic_pl_noun
-  NNP 100 $genericname
-  FW 100 $generic_mass_noun
-  RB 100 $generic_adverb
-  VB 100 $generic_trans_verb_bse
-  VBD 100 $generic_trans_verb_past
-  VBG 100 $generic_trans_verb_prp
-  VBN 100 $generic_trans_verb_psp
-  VBP 100 $generic_trans_verb_presn3sg
-  VBZ 100 $generic_trans_verb_pres3sg
+  UpperAndLowerCase $genericname
+  UpperAndLowerCaseInitial $genericname
+  JJ $generic_adj
+  JJR $generic_adj_compar
+  JJS $generic_adj_superl
+  NN $generic_sg_noun
+  NN $generic_mass_noun
+  NNS $generic_pl_noun
+  NNPS $generic_pl_noun
+  NNP $genericname
+  FW $generic_mass_noun
+  RB $generic_adverb
+  VB $generic_trans_verb_bse
+  VBD $generic_trans_verb_past
+  VBG $generic_trans_verb_prp
+  VBN $generic_trans_verb_psp
+  VBP $generic_trans_verb_presn3sg
+  VBZ $generic_trans_verb_pres3sg
 . 
 
 ;;;
-;;; the setting `pos-completion' enables an additional mechanism:
-;;; whenever we receive POS information as part of the input, we check
-;;; to see whether the built-in lexical entries suffice to satisfy the
-;;; POS annotations: each lexical entry retrieved for an input token
-;;; <string, pos_1, pos_2, pos_3> is mapped to an application-specific
-;;; POS tag, using the `type-to-pos' map, and checking the type of each
-;;; lexical entry for subsumption against the left-hand side of each
-;;; `type-to-pos' rule.  some or all POS annotations from the input may
-;;; be `satisfied' under this mapping by built-in lexical entries,
-;;; e.g. for the example above, there may be lexical entries whose type
-;;; maps to `pos_1' and `pos_3'.  unless all POS annotations are
-;;; satisfied after all built-in lexical entries have been processed,
-;;; the remaining POS categories are processed by the regular
-;;; `posmapping' look-up.  however, the resulting generic lexical
-;;; entries will have their scores discounted by the value of
-;;; `discount-gen-le-priority', so as to distinguish them from
-;;; completely unknown words.  note that, as a side effect, an empty
-;;; `type-to-pos' map will always result in activating all generic
-;;; lexical entries, even for input tokens that were found in the
-;;; built-in lexicon.
+;;; the setting `pos-completion' enables an additional mechanism to do with
+;;; processing of generic lexical entrie: whenever we receive POS information
+;;; as part of the input, we check to see whether the built-in lexical entries
+;;; suffice to satisfy the POS annotations: each lexical entry retrieved for an
+;;; input token 
 ;;;
-;pos-completion.
+;;;   <string, pos_1, pos_2, pos_3> 
+;;;
+;;; is mapped to an application-specific POS tag, using the `type-to-pos' map,
+;;; and checking the type of each lexical entry for subsumption against the
+;;; left-hand side of each `type-to-pos' rule.  some or all POS annotations
+;;; from the input may be `satisfied' under this mapping by built-in lexical
+;;; entries, e.g. for the example above, there may be lexical entries whose
+;;; type maps to `pos_1' and `pos_3'; unless all POS annotations are satisfied
+;;; after all built-in lexical entries have been processed, the remaining POS
+;;; categories are processed by the regular `posmapping' look-up.  note that,
+;;; as a side effect, an empty `type-to-pos' map will always result in having
+;;; all generic lexical entries activated, even for input tokens that were
+;;; found in the built-in lexicon.
+;;;
+
+#|
+pos-completion.
 
 type-to-pos :=
   basic_noun_word NN
@@ -150,11 +142,8 @@ type-to-pos :=
   basic_pronoun_word NN
   basic_pronoun_word NNS
   basic_pronoun_word NNP
-;  basic_det_word UpperAndLowerCase
-;  basic_prep_word UpperAndLowerCase
 .
-
-discount-gen-le-priority := 10.
+|#
 
 ;;;
 ;;; the scoring model, either for on-line use in best-first parsing or off-line
