@@ -8,8 +8,6 @@
 
 ;;; Avoiding multiple inheritance on letypes
 
-(defparameter *active-parsing-p* t)
-
 ;;; Strings
 
 (defparameter *toptype* '*top*)
