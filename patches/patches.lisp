@@ -213,3 +213,132 @@
 
 (in-package "TDL")
 
+(in-package "MRS")
+
+; Changed output to be *standard-output* rather than "~/tmp/errorout" - don't
+; see why it used to work with the file for output.
+
+(defun check-vit (vit &optional (as-string nil) (stream *standard-output*))
+  #+allegro
+  (progn
+   (with-open-file (vit-out "~/tmp/vitcheck" :direction :output
+	                                    :if-exists :supersede)
+    (format vit-out "ensure_loaded(vitADT).~%V = ")
+    (if as-string 
+	(format vit-out "~A" vit)
+      (write-vit vit-out vit))
+    (format vit-out ",vitCheck(V).~%~%halt.~%"))
+   (excl::run-shell-command "cd /eo/e1/vm2/vitADT/lib/Vit_Adt;/opt/quintus/bin3.2/sun4-5/prolog < ~/tmp/vitcheck" :output "~/tmp/vitout" :if-output-exists :supersede :error-output "~/tmp/viterror" :if-error-output-exists :supersede)
+   (excl::run-shell-command "tail +65 ~/tmp/viterror | tail -r | tail +2 | tail -r" :output stream :error-output "~/tmp/realerrorout" :if-output-exists :supersede :if-error-output-exists :supersede)
+   (format stream "~%"))
+  #-allegro
+  (warn "function check-vit needs customising for this Lisp"))
+
+#|
+; In /usr/local/page2.3/src/tsdb/tsdb.lisp
+; Fixed WRITE-RESULTS to check the intended bindings for trees-hook
+
+(in-package "TSDB")
+
+(defun write-results (parse-id results 
+                      &optional (language *tsdb-data*)
+                      &key cache)
+  (let* ((items (main::output-stream main::*parser*))
+         (mrss 
+          (when (and *tsdb-semantix-hook* (stringp *tsdb-semantix-hook*))
+            (when (find-package "MRS")
+              (set (intern "*RAW-MRS-OUTPUT-P*" "MRS") nil)
+              (set (intern "*RAW-MRS-OUTPUT-P*" "MAIN") nil))
+            (ignore-errors
+             (funcall (symbol-function (read-from-string *tsdb-semantix-hook*))
+                      items))))
+         ;(mrss (remove nil mrss))
+         (trees 
+          (when (and *tsdb-trees-hook* (stringp *tsdb-trees-hook*))
+            (ignore-errors
+             (funcall (symbol-function (read-from-string  *tsdb-trees-hook*))
+                      items)))))
+    (if (or (= (length results) (length items) (length mrss) (length trees))
+            (and (not *tsdb-semantix-hook*) *tsdb-trees-hook*
+                 (= (length results) (length items) (length trees)))
+            (and *tsdb-semantix-hook* (not *tsdb-trees-hook*)
+                 (= (length results) (length items) (length mrss)))
+            (and (not *tsdb-semantix-hook*) (not *tsdb-trees-hook*)
+                 (= (length results) (length items))))
+      (do* ((results results (rest results))
+            (result (first results) (first results))
+            (trees (reverse trees) (rest trees))
+            (tree (first trees) (first trees))
+            (mrss (reverse mrss) (rest mrss))
+            (mrs (first mrss) (first mrss)))
+          ((null results))
+        (write-result parse-id result tree mrs language :cache cache))
+      (format 
+       *tsdb-io* 
+       "~&write-results(): mysterious mismatch [~d : ~d : ~d : ~d].~%"
+       (length results) (length items) (length trees) (length mrss)))))
+|#
+
+(in-package "MRS")
+
+; In mrsfns.lisp
+(defun expand-tsdb-results (result-file dest-file &optional (vitp nil))
+  (excl::run-shell-command (format nil "sort -n < ~A | sed -f ~A > ~A" 
+				   result-file
+				   "~/grammar/tsdb/tsnlpsed"
+				   (concatenate 'string result-file ".out")))
+  (let ((*raw-mrs-output-p* nil))
+    (with-open-file 
+	(istream (concatenate 'string result-file ".out") :direction :input)
+     (with-open-file 
+	(ostream dest-file :direction :output :if-exists :supersede)
+      (do ((sent-num (read istream nil 'eof))
+	   (sent (read istream nil 'eof))
+	   (sep1 (read-char istream nil 'eof))
+	   (tree (read istream nil 'eof))
+	   (sep2 (read-char istream nil 'eof))
+	   (mrs (read istream nil 'eof))
+	   )
+	  ((eql sent-num 'eof) nil)
+	(format t "~%~A" sent)
+	(format ostream "~%~A~%" sent)
+        (output-parse-tree tree ostream)
+	(if vitp
+	    #|
+	    (progn
+	      (multiple-value-bind 
+		  (vit binding-sets)
+		  (mrs-to-vit mrs))
+	      (write-vit-pretty t (horrible-hack-2 vit))
+	      (format ostream "~%")
+	      (check-vit vit))
+	      |#
+	    (progn
+	      (format ostream "~A~%~%" mrs)
+	      (finish-output ostream)
+	      (check-vit mrs t ostream)
+	      (format ostream "~%"))
+	  (format ostream "~%~A~%" mrs))
+	(setf sent-num (read istream nil 'eof)
+	      sent (read istream nil 'eof)
+	      sep (read-char istream nil 'eof)
+	      tree (read istream nil 'eof)
+	      sep (read-char istream nil 'eof)
+	      mrs (read istream nil 'eof)))))))
+
+; Also in mrsfns.lisp
+(defun get-vit-strings (parse-list)
+  (loop for parse in parse-list
+        collecting
+	(let* ((fs (get-parse-fs parse))
+               (sem-fs (path-value fs *initial-semantics-path*)))
+          (if (is-valid-fs sem-fs)
+              (let* ((mrs-struct1 (sort-mrs-struct (construct-mrs sem-fs)))
+		     (mrs-struct (if (boundp '*ordered-mrs-rule-list*)
+				     (munge-mrs-struct mrs-struct1
+						       *ordered-mrs-rule-list*)
+				   mrs-struct1)))
+		 (multiple-value-bind (vit binding-sets)
+		     (mrs-to-vit mrs-struct)
+		   (with-output-to-string (stream) 
+		     (format nil "~S" (write-vit stream vit)))))))))
