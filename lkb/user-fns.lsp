@@ -50,6 +50,7 @@
          (daughter1 (get-value-at-end-of rule-fs '(ARGS FIRST)))
          (daughter2 (get-value-at-end-of rule-fs '(ARGS REST FIRST)))
          (daughter3 (get-value-at-end-of rule-fs '(ARGS REST REST FIRST))))
+    (declare (ignore mother))
     (unless (and daughter1 (not (eql daughter1 'no-way-through)))
       (cerror "Ignore it" "Rule without daughter"))
     (append (list nil '(ARGS FIRST))
