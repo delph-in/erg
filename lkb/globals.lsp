@@ -99,7 +99,6 @@
 ;;; `:host', `:db', `:table', and `:user' (optional) 
 ;;; if unset we fall back to .tdl lexicon files
 
-
 #|
 (defparameter *psql-lexicon-parameters* '((:db "lingo") 
                                           (:host "localhost")
@@ -166,19 +165,19 @@
     not_really not_quite still_not rather_not
     u_pro you_guys you_people yall yall_2 yall_3 you_all
     and_conj_slash and_then_1 and_conj_2 and_or_conj_1 and_or_conj_2
-    and_or_conj_3 and_conj_amp and_conj_2_amp
+    and_or_conj_3 and_conj_amp and_conj_2_amp then_conj_1
     apostrophe_s_lex apostrophe_s_phr apostrophe_s_3_lex apostrophe_s_3_phr
     mister missus mr_title_2 doctor_ttl dr_ttl_2 prof_title mrs_title_2
     ms_title_2 mount_ttl_2 number_abb_title number_abb_title_2 
     number_abb2_title number_abb2_title_2 order_abb_ttl order_abb_ttl_2
     pound_sign_title pres_ttl pres_ttl_2 
-    gonna_v1 and_c_nonprop
+    gonna_v1 and_c_nonprop that_c_subj
    )
   "temporary expedient to avoid generating dual forms")
 
 (setf *semantics-index-path* '(synsem local cont hook index))
 
-(setf *intersective-rule-names* '(adjn_i adjh_i adjh_i_ques nadj_rc
+(setf *intersective-rule-names* '(adjn_i adjh_i nadj_rc fin_non_wh_rel
                                   nadj_rr_nt nadj_rr_t hadj_i_uns))
 
 (defparameter *chart-dependencies*
