@@ -170,5 +170,12 @@
 	  ((member lex-type *likely-le-types* :test #'eq) 800)
 	  (t 600))))
 	  
-      
-	   
+(defun set-temporary-lexicon-filenames nil
+  (setf *psorts-temp-file* 
+    (make-pathname :name "biglex" 
+                   :directory (pathname-directory (lkb-tmp-dir))))
+  (setf *psorts-temp-index-file* 
+    (make-pathname :name "biglex-index" 
+                   :directory (pathname-directory (lkb-tmp-dir)))))
+
+

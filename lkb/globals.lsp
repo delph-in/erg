@@ -34,17 +34,19 @@ three_space_lex_entry3 three_space_lex_entry4)
 
 (defparameter *empty-list-type* '*null*)
 
-(def-lkb-parameter *list-type* '*list*)
+(defparameter *list-type* '*list*)
 
-(def-lkb-parameter *diff-list-type* '*diff-list*)
+(defparameter *diff-list-type* '*diff-list*)
 
-(def-lkb-parameter *diff-list-list* 'list)
+(defparameter *diff-list-list* 'list)
 
-(def-lkb-parameter *diff-list-last* 'last)
+(defparameter *diff-list-last* 'last)
 
 (defparameter *lex-rule-suffix* "_INFL_RULE"
  "creates the inflectional rule name from the information
    in irregs.tab - for PAGE compatability")
+
+(defparameter *irregular-forms-only-p* t)
 
 ;;;
 
@@ -95,5 +97,6 @@ three_space_lex_entry3 three_space_lex_entry4)
 
 (defparameter *label-template-type* 'label)
 
-; Hide lexical rule nodes in parse tree
-(setf  *dont-show-lex-rules* t)
+;;; Hide lexical rule nodes in parse tree
+;;; (setf  *dont-show-lex-rules* t)
+;;; this belongs in the user-prefs file, not here
