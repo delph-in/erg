@@ -68,6 +68,15 @@
   "specifing valid parses including fragments")
 |#
 
+;;; Set to true for arboretum, enabling parsing with robust rules and lexicon
+;;; (this assumes that :arboretum was pushed onto *features* before compiling
+;;; the LKB and loading the grammar).  Then (after indexing lexicon for 
+;;; generator) test by calling e.g. (lkb::grammar-check "dog barks").  
+;;; Remember to touch letypes.tdl before loading ERG to flush the lexicon 
+;;; cache, ensuring that mal-letypes.tdl gets loaded.
+;
+;(defparameter *mal-active-p* t)
+
 (defparameter *maximal-lex-rule-applications* 7
    "The number of lexical rule applications which may be made
    before it is assumed that some rules are applying circularly")
