@@ -7,6 +7,9 @@
 ;;   Language: Allegro Common Lisp
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; $Log$
+;; Revision 1.11  1999/04/29 03:07:06  danf
+;; Bug fixes for new scoping
+;;
 ;; Revision 1.10  1999/04/24 20:20:45  aac
 ;; added refl_pro as top level rel, added scope feature
 ;;
@@ -393,4 +396,3 @@
 ;;; (setq main::*vm-arg-roles-only-p* nil)
 (setq mrs::*raw-mrs-output-p* nil)
 (setq mrs::%vit-indent% ",~%    ")
-(setq mrs::*giving-demo-p* t)
