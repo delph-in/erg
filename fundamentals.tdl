@@ -279,11 +279,11 @@ disc_frag :< event_or_index.
 
 cont :< *avm*.
 
-; LABEL attribute is for Verbmobil, to provide some kind of link between entries
-; in the speech recognizer's word lattice and relations in the final semantics.
+; LABEL attribute links semantic relation to orthography, more or less.
+
 mod_relation := cont &
   [ HANDEL handle,
-    LABEL handle ].
+    LABEL *top* ].
 
 relation :< mod_relation.
 
@@ -451,7 +451,9 @@ no-affix :< mod_local.
 non-local_min :< *avm*.
 
 synsem_min := *avm* &
-  [ OPT bool ].
+  [ OPT bool,
+    LOCAL mod_local,
+    NON-LOCAL non-local_min ].
 
 ; DPF (09-Jan-99) - Added boolean LEX feature to be used for determining the
 ; head-complement type of the projections of lexical heads - most produce 
@@ -460,9 +462,7 @@ synsem_min := *avm* &
 lex_or_phrase := synsem_min &
   [ LEX bool ].
 
-synsem := synsem_min &
-  [ LOCAL mod_local,
-    NON-LOCAL non-local_min ].
+synsem :< synsem_min.
 
 expressed_synsem :< synsem.
 
@@ -487,10 +487,12 @@ gap := non_canonical & expressed_synsem &
 		SLASH 1-dlist &
 		    [ LIST < #local > ] ] ].
 
-unexpressed := non_canonical &
+unexpressed := synsem_min &
   [ NON-LOCAL [ SLASH 0-dlist,
 		REL 0-dlist,
 		QUE 0-dlist ] ].
+
+unexpressed_reg := unexpressed & non_canonical.
 
 ; DPF 28-Aug-99 - Removed OPT + from anti_synsem since it blocked 
 ; "you can have anything you want"
@@ -535,18 +537,7 @@ non-local := non-local_min &
     QUE 0-1-dlist,
     REL 0-1-dlist ].
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; Type for Verbmobil word-hypothesis-graph data
-; - preserving data for later components
-; - makes use of the LABEL attribute in KEY relations, and accumulates these
-; whq-elems in WGLISZT attribute of MRSs, analogous to LISZT.
-
-whg-item := *avm* &
-  [ WG-WORD symbol,
-    WG-ID thing,
-    WG-HNDLS *list* ].
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Types for Sign, Word, Phrase, and Lex-Entry
 
 ;; DPF 03-Mar-99 - The -MORPHOLOGY feature was added to accommodate Verbmobil
@@ -555,7 +546,8 @@ whg-item := *avm* &
 
 ;; AAC - don't modify this without also changing lilpatch.tdl
 sign_min := *avm* &
-  [ STEM *list* ].
+  [ STEM *list*,
+    --FINAL-ARG *avm* ].
 
 basic_sign := sign_min &
   [ ACCENT bool,
@@ -579,8 +571,7 @@ phrase_or_lexrule := sign &
 		       INDEX #index ] ].
 
 word_or_lexrule_min := sign_min &
-  [ AFFIX mod_local,
-    --FINAL-ARG *avm* ].
+  [ AFFIX mod_local ].
 
 word_or_lexrule := word_or_lexrule_min & sign.
 
@@ -620,8 +611,6 @@ phrase :< lexroot,
 
 basic_lex_entry := sign &
   [ STEM < #stem >,
-    SYNSEM.LOCAL [ KEYS.KEY.LABEL #label,
-		   CONT.WGLISZT <! whg-item & [ WG-HNDLS < #label > ] !> ],
     ARGS < #morphology & 
 	   [ STEM < #stem > ] >,
     -MORPHOLOGY #morphology,
@@ -631,9 +620,11 @@ basic_lex_entry := sign &
 ;; see lkbpatches
 lex_entry := basic_lex_entry &
   [ SYNSEM.LOCAL.CONT.TOP-H handle ].
+
 infl_lex_entry := basic_lex_entry &
   [ INFLECTED +,
-    ARGS < [ AFFIX no-affix ] > ].
+    --FINAL-ARG #arg,
+    ARGS < #arg & [ AFFIX no-affix ] > ].
 
 basic_multi_lex_entry := word &
   [ INFLECTED bool ],
@@ -648,9 +639,6 @@ standard_mle := basic_multi_lex_entry &
   [ SYNSEM.LOCAL.CONT.TOP-H handle ].
 multi_lex_entry := basic_multi_lex_entry &
   [ STEM < #stem1, #stem2 >,
-    SYNSEM.LOCAL [ KEYS.KEY.LABEL #label,
-		   CONT.WGLISZT <! whg-item & [ WG-HNDLS < #label > ],
-				   whg-item & [ WG-HNDLS < #label > ] !> ],
     ARGS < [ STEM < #stem1 >,
 	     AFFIX no-affix ],
 	   [ STEM < #stem2 >,
@@ -658,9 +646,6 @@ multi_lex_entry := basic_multi_lex_entry &
 
 multi_lex_entry_affixed := standard_mle &
   [ STEM < #stem1, #stem2 >,
-    SYNSEM.LOCAL [ KEYS.KEY.LABEL #label,
-		   CONT.WGLISZT <! whg-item & [ WG-HNDLS < #label > ],
-				   whg-item & [ WG-HNDLS < #label > ] !> ],
     ARGS < [ STEM < #stem1 >,
 	     AFFIX no-affix ],
 	   [ STEM < #stem2 >,
@@ -668,10 +653,6 @@ multi_lex_entry_affixed := standard_mle &
 
 two_space_lex_entry_affixed := standard_mle &
   [ STEM < #stem1, #stem2, #stem3 >,
-    SYNSEM.LOCAL [ KEYS.KEY.LABEL #label,
-		   CONT.WGLISZT <! whg-item & [ WG-HNDLS < #label > ],
-				   whg-item & [ WG-HNDLS < #label > ],
-				   whg-item & [ WG-HNDLS < #label > ] !> ],
     ARGS < [ STEM < #stem1 >,
 	     AFFIX no-affix ],
 	   [ STEM < #stem2 >,
@@ -681,11 +662,6 @@ two_space_lex_entry_affixed := standard_mle &
 
 three_space_lex_entry_affixed := standard_mle &
   [ STEM < #stem1, #stem2, #stem3, #stem4 >,
-    SYNSEM.LOCAL [ KEYS.KEY.LABEL #label,
-		   CONT.WGLISZT <! whg-item & [ WG-HNDLS < #label > ],
-				   whg-item & [ WG-HNDLS < #label > ],
-				   whg-item & [ WG-HNDLS < #label > ],
-				   whg-item & [ WG-HNDLS < #label > ] !> ],
     ARGS < [ STEM < #stem1 >,
 	     AFFIX no-affix ],
 	   [ STEM < #stem2 >,
@@ -713,10 +689,6 @@ multi_lex_entry2 := multi_lex_entry & key_second & standard_mle.
 
 two_space_lex_entry := standard_mle &
   [ STEM < #stem1, #stem2, #stem3 >,
-    SYNSEM.LOCAL [ KEYS.KEY.LABEL #label,
-		   CONT.WGLISZT <! whg-item & [ WG-HNDLS < #label > ],
-				   whg-item & [ WG-HNDLS < #label > ],
-				   whg-item & [ WG-HNDLS < #label > ] !> ],
     ARGS < [ STEM < #stem1 > ],
 	   [ STEM < #stem2 >, AFFIX no-affix ],
 	   [ STEM < #stem3 >, AFFIX no-affix ] > ].
@@ -728,11 +700,6 @@ two_space_lex_entry3 := two_space_lex_entry & key_third.
 
 three_space_lex_entry := standard_mle &
   [ STEM < #stem1, #stem2, #stem3, #stem4 >,
-    SYNSEM.LOCAL [ KEYS.KEY.LABEL #label,
-		   CONT.WGLISZT <! whg-item & [ WG-HNDLS < #label > ],
-				   whg-item & [ WG-HNDLS < #label > ],
-				   whg-item & [ WG-HNDLS < #label > ],
-				   whg-item & [ WG-HNDLS < #label > ] !> ],
     ARGS < [ STEM < #stem1 > ], 
 	   [ STEM < #stem2 >, AFFIX no-affix ], 
 	   [ STEM < #stem3 >, AFFIX no-affix ],
@@ -759,9 +726,11 @@ basic_affix_bearing := word &
                    CAT #cat,
 		   CONT [ TOP #hand,
 			  INDEX #index ],
-		   KEYS.KEY #key,
+		   KEYS.KEY #key &
+			    [ LABEL #stem ],
 		   CTXT #ctxt ],
-    --FINAL-ARG [ AFFIX local & [ STEMHEAD #stemhead,
+    --FINAL-ARG [ STEM.FIRST #stem,
+		  AFFIX local & [ STEMHEAD #stemhead,
 				  AGR #agr,
 				  CAT #cat,
 				  CONT [ TOP #hand,
@@ -786,7 +755,9 @@ affix_bearing_four := basic_affix_bearing &
     ARGS < *top*, *top*, *top*, #arg > ].
 
 non_affix_bearing := word_or_lexrule &
-  [ --FINAL-ARG #arg,
+  [ STEM.FIRST #stem,
+    SYNSEM.LOCAL.KEYS.KEY.LABEL #stem,
+    --FINAL-ARG #arg,
     ARGS < #arg & [ AFFIX no-affix ] , ... > ].
 
 affixed_lex_entry := affix_bearing & lex_entry.
@@ -854,6 +825,8 @@ tense_aspect :< *sort*.
 tense :< tense_aspect.
 aspect :< tense_aspect.
 
+gen_presnonperf :< tense_aspect.
+
 ; leaves
 present* :< tense.
 ; left
@@ -874,11 +847,11 @@ nonprf :< aspect.
 nonprg :< aspect.
 
 ; is leaving
-pres+progr* := present* & progr* & nonprf & nonprg.
+pres+progr* := present* & progr* & nonprf & nonprg & gen_presnonperf.
 ; has left
 pres+perf* := present* & perf* & nonprg.
 ; does leave
-pres+noasp* := present* & no_aspect*.
+pres+noasp* := present* & no_aspect* & gen_presnonperf.
 ; has been leaving
 pres+perf+progr* := present* & perf* & progr*.
 
@@ -958,7 +931,7 @@ subst := head &
 ; Adverbs modify adverbees.
 adverbee :< subst.
 
-v_or_g_or_a := subst & disc_adverbee.
+v_or_g_or_a :< subst.
 v_or_g := v_or_g_or_a &
   [ VFORM vform ].
 
@@ -967,7 +940,7 @@ nominal_or_verbal :< subst.
 nominal := nominal_or_verbal & poss-able &
   [ CASE case ].
 
-verbal := v_or_g & nominal_or_verbal & adverbee &
+verbal := v_or_g & nominal_or_verbal & adverbee & disc_adverbee &
   [ AUX bool ].
 
 ; mobile things can be extracted in the complement-extraction rule, from which
@@ -986,29 +959,29 @@ supnoun :< nominal.
 
 noun* := supnoun & n_or_v & n_or_p & n_or_a.
 
-gerund* := supnoun & adverbee & v_or_g & n_or_v.
+gerund* := supnoun & adverbee & v_or_g & n_or_v & disc_adverbee.
 
 verb* := verbal & v_or_p & n_or_v &
   [ VOICE voice ].
 
 comp* := nominal & verbal.
 
-basic_adv := func & disc_adverbee.
+basic_adv :< func.
 
 ; 'not' and closed class of other adverbs that can be added to aux COMPS list
 ; via 'adv_addition' lexical rule.
-basic_lexadv :< basic_adv.
+basic_lexadv := basic_adv & disc_adverbee.
 negadv :< basic_lexadv.
 lexadv :< basic_lexadv.
 
-adv := basic_adv & mobile.
-
+adv := basic_adv & mobile & disc_adverbee.
+deg_adv :< basic_adv.
 root-marker := v_or_g & adverbee & strict_type.
 
 detspec :< func.
 
 ; Hack used in blocking unwanted affixes
-no_head :< head.
+no_head := head & strict_type.
 
 ; Types for punctuation and string boundaries.
 punct := head & strict_type.
@@ -1238,7 +1211,8 @@ hcomp_nom_rel := nom_rel & arg3_rel &
 
 nominalize_rel :< diadic_nom_rel.
 
-gerund_rel :< reg_nom_rel.
+gerund_rel := reg_nom_rel &
+  [ INST ref-ind ].
 
 apposition_rel :< nonpro_rel.
 
@@ -1300,8 +1274,10 @@ numbered_hour_rel := hour_rel & abstr_named_rel &
 ; "ten" as minute.
 minute_or_ampm_rel :< nom_nondim_rel.
 
+#|
 minute_rel := minute_or_ampm_rel &
   [ MINUTE string ].
+|#
 
 modable_hour_rel := hour_rel & modable_rel.
 
@@ -1336,8 +1312,13 @@ mofy_mod_rel := abstr_mofy_rel & modable_rel.
 yofc_rel := non_day_rel &
   [ YEAR string ].
 
-season_rel := non_day_modable_rel & abstr_named_rel &
+abstr_season_rel := non_day_rel &
   [ SEASON symbol ].
+
+; "Summer is a bad time to travel"
+season_gen_rel :< abstr_season_rel.
+; "This summer will be better."
+season_rel := abstr_season_rel & modable_rel & abstr_named_rel.
 
 age_rel :< non_day_rel.
 
@@ -1439,6 +1420,9 @@ arg124_rel := arg12_rel & arg14_rel.
 arg134_rel := arg13_rel & arg14_rel.
 arg1234_rel := arg123_rel & arg14_rel.
 arg3_event_rel := arg3_rel & role_rel.
+arg4_event_rel := arg4_rel & v_event_rel.
+arg24_event_rel := arg2_rel & arg4_event_rel.
+
 
 ellipsis_rel := role_rel &
   [ ROLE thing ].
@@ -1447,27 +1431,11 @@ event_arg_rel := v_event_rel & arg_rel.
 
 irrealis_rel :< event_arg_rel.
 
-; Used for "how about"
-abstr_apply_v_rel :< arg13_rel.
-
 ; Used to ensure tag question agreement, but will not appear in LISZT.
-have_aux_rel :< event_arg_rel.
-
-support_abstr_rel :< v_event_rel.
-
-support_main_rel := support_abstr_rel & mod_role_rel.
-support_arg4_rel := support_main_rel & arg4_rel.
-support_arg24_rel := support_main_rel & arg24_rel.
-; Used in decomposed lexical semantics for entries with predicative arguments
-; which introduce a generic support_rel.
-support_gen_rel :< support_abstr_rel.
-; Used for predicative copula
-support_rel :< support_abstr_rel.
-; Used for modals
-aux_arg4_rel := support_abstr_rel & arg4_rel.
+have_aux_rel :< v_event_rel.
 
 ; Needed to allow filtering of the relations for "will" and "would" for VIT.
-will_would_rel :< aux_arg4_rel.
+will_would_rel :< arg4_event_rel.
 
 abstr_rel :< arg3_event_rel.
 
@@ -1488,6 +1456,9 @@ poss_rel := nondim_rel &
     POSSD non_expl-ind ].
 
 _got_poss_rel :< poss_rel.
+
+; For copula "be", only for external interface (not used in grammar)
+support_rel :< no_role_rel.
 
 ; Preposition relations
 
@@ -1514,6 +1485,8 @@ temp_loc_indep_rel := temp_loc_abstr_rel & independent_rel.
 temp_loc_rel :< temp_loc_indep_rel.
 
 part_of_rel :< reg_diadic_nom_rel.
+diadic_noprep_nom_rel :< reg_diadic_nom_rel.
+diadic_noarg_nom_rel :< reg_diadic_nom_rel.
 
 abstr_adv_rel := arg_rel & dim_rel & norm_relation.
 
@@ -1539,6 +1512,9 @@ deg_rel :< non_comp_degree_rel.
 
 ; For specifiers of positive adjectives
 very_deg_rel :< deg_rel.
+
+; For "how" degree specifier
+abstr_deg_rel :< very_deg_rel.
 
 ; For specifiers of comparative adjectives
 much_deg_rel :< deg_rel.
@@ -1576,7 +1552,8 @@ _compar_than_rel :< miscprep_ind_rel.
 comp_rel := miscprep_ind_rel &
   [ ARG3 event_or_index ].
 _more_adj_rel :< adj_rel.
-super_rel :< miscprep_ind_rel.
+superl_rel := miscprep_ind_rel &
+  [ ARG3 event_or_index ].
 
 ; Abstract relations, specialized below either to independent relations or to
 ; ones that appear in verb-particle constructions.
@@ -1597,6 +1574,7 @@ _equal_adj_rel :< adj_arg3_rel.
 unspec_adj_rel :< adj_rel.
 number_rel :< reg_nom_rel.
 quantity_rel :< reg_nom_rel.
+_be_prd_rel :< event_arg_rel.
 
 
 ; Used for underspecifying word sense.
@@ -1649,9 +1627,11 @@ probable_rel :< adj_rel.
 ; DPF 11-Jul-99 - Added C-INIT-H and C-INIT-I so the initial handle and index will be
 ; visible in the semantics even for a partial coordination phrase like "and Kim left"
 conj_rel := nondim_rel &
-  [ C-ARG individual,
-    C-HANDELS *diff-list*,
-    C-INDICES *diff-list* ].
+  [ C-ARG conj-ind,
+    L-HANDEL handle,
+    R-HANDEL handle,
+    L-INDEX non_expl,
+    R-INDEX non_expl ].
 
 ; For fragments
 
@@ -1692,6 +1672,8 @@ plus_rel := integer_rel & [ TERM1 handle,
 			    TERM2 handle].
 times_rel := integer_rel & [ FACTOR1 handle,
 			     FACTOR2 handle].
+
+minute_rel :< const_rel.
 
 ;; TYPES/SORTS
 ;; The ORDINAL feature determines whether its bearer is ordinal or not 
@@ -1926,7 +1908,7 @@ gappro := pro_ss & gap.
 
 ;; see lkbpatches
 *unexplist* := *list* &
-  [ FIRST unexpressed,
+  [ FIRST unexpressed_reg,
     REST  *null* ].
 
 *unexpcons* := *unexplist* & *cons*.
@@ -2136,3 +2118,7 @@ household :< reg_nom_rel.
 inside_n :< reg_nom_rel.
 radio :< reg_nom_rel.
 start_unspec :< arg13_rel.
+nearly_grad :< very_deg_rel.
+trace_n :< reg_nom_rel.
+
+:end :type.

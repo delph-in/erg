@@ -177,6 +177,7 @@
     (taglr 100)
     (vgering 100)
     (temp_np 300)
+    (numadj_np 200)
     (appos 200)
     (imper 300)
     (sailr 300)
@@ -231,6 +232,8 @@
                                   MV_EMPTY_PREP_INTRANS_LE
 				  TO_C_NONPROP_LE
 				  HOW_ABOUT_N_OR_P_MLE1
+				  AND_NUM_LE
+				  COMPLEMENTED_UNSPECIFIED_CARD_LE
 				  ))
 
 (defun lex-priority (mrec)
@@ -239,12 +242,10 @@
 		    (if (mrecord-history mrec)
 			(mhistory-fs (car (mrecord-history mrec)))
 		      (mrecord-fs mrec))))))
-;    (format t "~%~A" lex-type)
     (cond ((member lex-type *unlikely-le-types* :test #'eq)
 	   200)
 	  ((member lex-type *likely-le-types* :test #'eq) 
-	   (progn ; (format t ": 800") 
-                  800))
+	    800)
 	  (t 400))))
 
 (defun gen-lex-priority (fs)

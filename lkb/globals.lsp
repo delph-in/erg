@@ -107,3 +107,6 @@ three_space_lex_entry3 three_space_lex_entry4)
 ;;; Hide lexical rule nodes in parse tree
 ;;; (setf  *dont-show-lex-rules* t)
 ;;; this belongs in the user-prefs file, not here
+
+(defparameter *duplicate-lex-ids* '(AN will_aux_neg_1 would_aux_neg_1 do1_neg_1 hadnt_aux_1 hadnt_aux_subj_1 hasnt_aux_1 have_fin_aux_neg_1 be_c_is_neg_1  be_id_is_neg_1 be_th_cop_is_neg_1 might_aux_neg_1 must_aux_neg_1 need_aux_neg_1 ought_aux_neg_1 should_aux_neg_1 be_id_was_neg_1 be_th_cop_was_neg_1 be_c_was_neg_1 be_c_were_neg_1 be_id_were_neg_1 be_th_cop_were_neg_1 will_aux_neg_1 would_aux_neg_1)
+  "temporary expedient to avoid generating dual forms")
