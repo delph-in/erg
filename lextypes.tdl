@@ -85,6 +85,7 @@ nonhcons := word &
 ; norm_word's have all the defaults
 norm_word := nonque & nonconj & nonslash & nonrel & nonmsg & nonhstore &
 	     nonhcons & rootna.
+	     
 
 norm_no_affix_word := norm_word & non_affix_bearing.
 
@@ -158,8 +159,8 @@ amalg_word := rootna &
             nonhcons &
 	    nonconj &
 	    nonmsg &
-	    nonhstore &
-	    non_affix_bearing.
+	    nonhstore & 
+            non_affix_bearing.
 
 ; hstore_no_affix_word's have all the defaults EXCEPT nonhstore.
 hstore_no_affix_word := nonque &
@@ -290,15 +291,6 @@ four_arg := synsem &
 ; SUBCATEGORIZATIONS -- synsems for verbs, adjectives, prepositions, nouns
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;; Type for verbs, adjectives, prepositions -- not nouns
-
-subst_synsem := lex_synsem &
-  [ LOCAL [ CAT.VALENCE [ SUBJ < #subj & synsem & [ LOCAL local ] >,
-			  COMPS #comps & *list*,
-			  SPR *list* ],
-	    CONT mrs,
-	    ARG-S < #subj . #comps > ] ].
-
 ;; Type for synsems of words that take handle-args as complement or modifiee.
 ;; Use junk slot --H-CONS since adverbs put these constraints in their
 ;; MODCONT.H-CONS rather than directly in CONT.H-CONS, since they can be
@@ -370,7 +362,7 @@ nomod_synsem := lex_synsem &
 ;; Linking types specify the relationship between valence positions and 
 ;; semantic roles.
 
-linking_type :< subst_synsem.
+linking_type :< lex_synsem.
 
 atrans_lt := linking_type &
   [ LOCAL [ CAT.VALENCE.SUBJ < [ LOCAL local &
@@ -844,7 +836,7 @@ NP_particle_lt := act_subj_lt &
 ;;
 ;; Valence types specify the number and type of subcategorized complements.
   
-valence_type :< subst_synsem.
+valence_type :< lex_synsem.
 
 unsat_subst := valence_type &
   [ LOCAL.CAT.VALENCE.SUBJ < @nomp( ) > ].
@@ -1103,20 +1095,23 @@ np_np_cp_subst := unsat_four_arg_subst & trans_subst & four_arg &
 ;;   Added VIT links for the moment, to satisfy VIT requirements for visibility
 ;; of AGR, TENSE, and MOOD information.
 
-verb_synsem := subst_synsem &
+verb_synsem := lex_synsem &
   [ LOCAL [ STEMHEAD vstem,
             AGR #agr,
             CAT [ HEAD verb* &
 		       [ TENSE #vittense,
 			 MOOD #vitmood ],
-		  VALENCE [ SUBJ < [ LOCAL local &
-				       [ AGR #agr ] ] >,
-			    SPR < synsem & [ LOCAL no-mod ] > ] ],
+		  VALENCE [ SUBJ < synsem & #subj &
+				   [ LOCAL local &
+					   [ AGR #agr ] ] >,
+			    SPR < synsem & [ LOCAL no-mod ] >,
+			    COMPS #comps ] ],
 	    CONT psoa &
 		[ INDEX.VIT [ VITAGR #agr,
                               VITTENSE #vittense,
 			      VITMOOD #vitmood ],
-		  MODCONT.LISZT <! !> ] ] ].
+		  MODCONT.LISZT <! !> ],
+	    ARG-S < #subj . #comps > ] ].
 
 verb_nonhcons := verb_synsem &
   [ LOCAL.CONT.H-CONS <! !> ].
@@ -1237,9 +1232,9 @@ scoping_verb := verb_synsem & scopedarg_synsem.
 cp_prop+ques_verb := scoping_verb &
   [ LOCAL [ CAT [ VALENCE [ --KEYCOMP #comp &
 				      [ LOCAL local &
-                                        [ CAT [ HEAD verbal & strict_head,
-                                                ROOT - ],
-                                          CONT [ MESSAGE #msg & prop_ques_rel &
+                                        [ CAT [ HEAD verbal & strict_head &
+						     [ INV - ] ],
+					  CONT [ MESSAGE #msg & prop_ques_rel &
                                                          [ SOA #arg ] ] ] ] ],
                   --SCOPEDARG #comp & [ --ARG #arg ] ],
 	    CONT.--STEMLISZT.LIST < relation, #msg, ... > ] ].
@@ -1253,7 +1248,8 @@ cp_prop_intrans_verb := cp_intrans_verb &
   [ LOCAL.CAT.VALENCE.COMPS < [ LOCAL.CONT.MESSAGE propositional_rel ] > ].
 
 cp_ques_intrans_verb := cp_intrans_verb &
-  [ LOCAL.CAT.VALENCE.COMPS < [ LOCAL.CONT.MESSAGE int_rel ] > ].
+  [ LOCAL.CAT.VALENCE.COMPS < [ LOCAL [ CAT.ROOT -,
+					CONT.MESSAGE int_rel ] ] > ].
 
 cp_prop_raise_key_verb := fin_cp_prop+ques_verb & cp_intrans_subst &
 			  alt_act_und_h_lt &
@@ -1376,10 +1372,12 @@ aux_verb_word := hcons_amalg_word &
 
 bse_aux_verb_word := aux_verb_word & 
   [ SYNSEM.LOCAL local &
-		 [ CAT.VALENCE.COMPS < @vp($vform=bse) &
-				       [ LOCAL local &
-					       [ CAT.HEAD.PRD - ],
-					 OPT - ] >,
+		 [ CAT [ VALENCE.COMPS < @vp($vform=bse) &
+					 [ LOCAL local &
+						 [ CAT.HEAD.PRD - ],
+					   OPT - ] >,
+			 HEAD [ VFORM fin,
+				MOD @nbar() ] ],
 		   CONT [ KEY #key,
 			  MODCONT [ KEY #key,
 				    LISZT <! !> ] ] ] ].
@@ -1677,8 +1675,7 @@ temp_noun_ppcomp_synsem := common_noun_ppcomp_synsem & temp_mod_synsem &
 				    OPT + ] >,
 			  SPR < [ LOCAL.CONT [ TOP #hand,
 					       MODCONT.TOP #hand ] ] > ],
-	    CONT [ KEY temp_rel,
-		   --STEMLISZT <! relation !> ] ] ].
+	    CONT.KEY temp_rel ] ].
 
 ;; a way to meet
 ;; 09-09-97  This definition is temporarily replaced by the one following,
@@ -2137,8 +2134,9 @@ tag_synsem := lex_synsem &
 ; Assume that if adjectives have a specifier, it will be either a measure-NP,
 ; as in "two feet tall', 'a week later"; or a degree_adverb like "very".
 
-basic_adj_synsem := subst_synsem &
+basic_adj_synsem := lex_synsem &
   [ LOCAL [ STEMHEAD astem,
+	    ARG-S < #spr . < #subj . #comps > >,
             CAT [ HEAD adj* &
 		       [ MOD [ CAT [ HEAD noun &
 					  [ NSORT common,
@@ -2148,9 +2146,9 @@ basic_adj_synsem := subst_synsem &
 					       COMPS *olist* ] ],
 			       CONT [ TOP #nhand,
 				      INDEX #ind & individual ] ] ],
-		  VALENCE [ SUBJ < synsem & @nomp() &
+		  VALENCE [ SUBJ < unexpressed & #subj & @nomp() &
 				   [ LOCAL.THROLE arg1 ] >,
-			    SPR < synsem &
+			    SPR < synsem & #spr &
 				  [ LOCAL local &
 					  [ CAT [ VALENCE [ SPR *olist*,
 							    COMPS *olist* ],
@@ -2158,7 +2156,8 @@ basic_adj_synsem := subst_synsem &
 					    CONT [ KEY degree_rel &
 						       [ HANDEL #ahand,
 							 DARG #darg ] ] ],
-				    OPT + ] > ] ],
+				    OPT + ] >,
+			    COMPS #comps ] ],
 	    CONT [ INDEX #ind,
 		   --STEMLISZT.LIST < adj_rel & #key &
 					  [ HANDEL #ahand,
@@ -2180,7 +2179,7 @@ nonprd_synsem := modifier_synsem &
 prd_synsem := modifier_synsem &
   [ LOCAL.CAT.HEAD.PRD + ].
 
-intrans_adj_synsem := adj_synsem &
+intrans_adj_synsem := adj_synsem & two_arg &
   [ LOCAL.CAT [ VALENCE.COMPS < >,
 		POSTHEAD - ] ].
 
@@ -2192,7 +2191,7 @@ intrans_pred_adj_synsem := intrans_adj_synsem & prd_synsem.
 
 ;;; We should have a trans_adj_attr_synsem too, for 'easy' and the likes ...
 
-trans_adj_pred_synsem := pred_adj_synsem  &
+trans_adj_pred_synsem := pred_adj_synsem & three_arg &
   [ LOCAL.CAT.VALENCE.COMPS < @pp() > ].
 
 ; e.g. 'able' - Can't use equi_intrans_lt since it specifies a fig_gnd_rel, 
@@ -2232,7 +2231,7 @@ reg_adj_cp_synsem := scoping_adj_synsem & cp_intrans_subst.
 reg_adj_atrans_cp_synsem := reg_adj_cp_synsem &
   [ LOCAL.CAT.VALENCE.SUBJ < [ LOCAL.CONT.INDEX it-ind ] > ].
 
-adj_word := norm_word &
+adj_word := hcons_amalg_word & nonhcons &
  [ SYNSEM adj_synsem &
 	  [ LOCAL [ CAT.VALENCE.SUBJ < [ LOCAL.CONT.INDEX #ind ] >,
 		    CONT [ KEY.NARG #ind,
@@ -2242,7 +2241,7 @@ reg_adj_word := adj_word & affix_bearing.
 
 ; Make these [POSTHEAD -] to prevent them from being postnominal modifiers
 reg_intrans_adj := reg_adj_word & 
-  [ SYNSEM adj_synsem & modifier_synsem &
+  [ SYNSEM adj_synsem & modifier_synsem & two_arg &
 	   [ LOCAL.CAT [ VALENCE.COMPS < >,
 			 POSTHEAD - ] ] ].
 
@@ -2271,7 +2270,7 @@ compound_adj_word := intrans_adj_oddsem &
 ;; comparison_lr uses trans_adj_synsem and requires OPT -. Same for semantics.
 
 reg_trans_adj := reg_adj_word &
-  [ SYNSEM trans_adj_pred_synsem  &
+  [ SYNSEM trans_adj_pred_synsem &
 	   [ LOCAL [ CAT.VALENCE.COMPS < [ LOCAL.CONT.KEY.NARG #index ,
 					   OPT +] >, 
 		     CONT.--STEMLISZT <! [ PREPARG #index ] !> ] ] ].
@@ -2327,9 +2326,10 @@ ordinal_adj_word := reg_intrans_adj &
 ; relates the argument of the adj_rel to the restrictor of the WH operator.
 
 wh_adjective_word := que_word & 
-  [ SYNSEM basic_adj_synsem & 
+  [ SYNSEM basic_adj_synsem &
       [ LOCAL [ CAT [ POSTHEAD +,
 		      VALENCE [ SUBJ < [ LOCAL.CONT.INDEX #ind ] >,
+				SPR < unexpressed >,
 				COMPS < > ] ],
 		CONT [ TOP #hand,
 		       INDEX #propind,
@@ -2342,12 +2342,11 @@ wh_adjective_word := que_word &
 						    INST #ind,
 						    ARG3 #propind ] !>,
 		       MODCONT.TOP #hand,
-		       H-STORE <! #whhand !> ] ],
-	    NON-LOCAL.QUE <! #whhand !> ] ].
-
+		       H-STORE <! #whhand !> ] ] ],
+    NON-LOCAL.QUE <! #whhand !> ].
 
 ; two-hour meeting, two-foot tall
-measure_adj_attr_synsem := lex_synsem &
+measure_adj_attr_synsem := lex_synsem & one_arg &
   [ LOCAL [ CAT [ HEAD adj* &
 		       [ PRD -,
 			 MOD [ CAT [ HEAD noun &
@@ -2358,7 +2357,7 @@ measure_adj_attr_synsem := lex_synsem &
 			       CONT [ TOP #hand,
 				      INDEX #ind ] ] ],
 		  VALENCE [ SUBJ < >,
-			    SPR < synsem &
+			    SPR < synsem & #spr &
 				  [ LOCAL local &
 					  [ CAT [ VALENCE [ SPR *olist*,
 							    COMPS *olist* ],
@@ -2379,7 +2378,7 @@ measure_adj_attr_synsem := lex_synsem &
 			     INDEX #ind,
 			     KEY #key,
 			     LISZT  <! !> ] ],
-	    ARG-S < > ] ].
+	    ARG-S < #spr > ] ].
 
 meas_adj_word := norm_no_affix_word &
  [ SYNSEM measure_adj_attr_synsem ].
@@ -2477,14 +2476,16 @@ prep_synsem := prep_synsem_unspec_subj & unsat_two_arg_subst.
 
 ; For predicative Ps and PPs like "when", which have an NP subject:
 
-prep_p_synsem := basic_prep_synsem & subst_synsem &
-  [ LOCAL [ CAT.VALENCE.SUBJ < @nomp() &
-			       [ LOCAL [ CONT.INDEX #subjind,
-					 THROLE arg1 ],
-				 NON-LOCAL [ SLASH <! !>,
-					     REL <! !>,
-					     QUE <! !> ] ] >, 
-	    CONT.KEY [ ARG #subjind ] ] ].
+prep_p_synsem := basic_prep_synsem &
+  [ LOCAL [ CAT.VALENCE [ SUBJ < @nomp() & #subj &
+				 [ LOCAL [ CONT.INDEX #subjind,
+					   THROLE arg1 ],
+				   NON-LOCAL [ SLASH <! !>,
+					       REL <! !>,
+					       QUE <! !> ] ] >, 
+			  COMPS #comps ],
+	    CONT.KEY.ARG #subjind,
+	    ARG-S < #subj . #comps > ] ].
 
 ; Ps and PPs that can be modifiers.
 ; These are also assumed to allow modification by another PP.
@@ -3117,12 +3118,10 @@ subconj_synsem := nonprd_synsem &
 			    COMPS < synsem &
 				    [ LOCAL [ CAT [ HEAD verb &
 							 [ INV -,
-							   VFORM fin,
-							   MOD no-mod ],
+							   VFORM fin ],
 						    VALENCE [ SUBJ < >,
 							      COMPS *olist*,
-							      SPR *olist* ],
-						    ROOT - ],
+							      SPR *olist* ] ],
 					      CONT [ TOP #vhand,
 						     KEY #ckey, 
 						   MESSAGE propositional_rel]],
@@ -3677,7 +3676,7 @@ year_word := np_sing_word &
 
 ; 'the first', 'October first', 'the first of October'
 ; Need to find way to block '*October first of October'
-dom_synsem := noun_ppcomp_synsem &
+dom_synsem := temp_noun_ppcomp_synsem &
   [ LOCAL [ CAT.VALENCE [ SPR < [ LOCAL.CONT [ KEY quant_or_wh_rel,
 					       ALTKEY mofy_rel &
 						   [ INST #inst ] ] ] >,
