@@ -46,6 +46,8 @@
      ;(extradj_s (:forbid imper))
      (hadj_i (:forbid imper))
      (hadj_i (:forbid extrasubj))
+     (nadj_i (:forbid imper))
+     (nadj_i (:forbid extrasubj))
      (extracomp (:forbid extracomp))
      )))
 
