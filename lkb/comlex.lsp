@@ -1,4 +1,4 @@
-(in-package :user)
+(in-package :cl-user)
 
 ;; A simple interface to comlex for the lingo gramamr
 ;;
@@ -117,7 +117,7 @@
     (cdb:close-read (comlex-db lexicon))
     (setf (comlex-db lexicon) nil)))
 
-  (defmethod lookup-word ((lexicon comlex-database) orth &key (cache t))
+(defmethod lookup-word ((lexicon comlex-database) orth &key (cache t))
   (declare (ignore cache))
   (unless (comlex-db lexicon)
     (setf (comlex-db lexicon) 
