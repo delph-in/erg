@@ -49,6 +49,17 @@
   (declare (ignore val))
   t)
 
+;;;
+;;; since, for fragments at least, we use `geq' handle constraints, need to at
+;;; least enable construction of MRS objects; presumably, there is no way for
+;;; these to scope without work on the algorithm, but alas.     (5-jun-04; oe)
+;;;
+
+(defun create-hcons-relation (type)
+  (cond ((eql type *qeq-type*) "qeq")
+        ((eql type (vsym "geq")) "geq")
+        (t (error "Unknown relation type ~A"))))
+
 (in-package :lkb)
 
 (defun idiom-rel-p (rel)
