@@ -6,6 +6,8 @@
 ;;;
 ;;;  Created: Rob Malouf, 3-Nov-1994
 ;;;  Last revised: Dan Flickinger, 24-Feb-97
+;;;
+;;;  $Id$
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
@@ -176,19 +178,25 @@ est_super_adj := affix &
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-lex_rule := word &
+; ERB (05-10-97) Now that sai stamps MESSAGE int_rel on its output, that
+; default has to be taken out of lex_rule.  To avoid breaking anything else, I
+; am making a new type lex_rule_super that is just like the current lex_rule
+; except that it doesn't identify the messages, and then having lex_rule do
+; that identification.
+
+lex_rule_super := word &
   [ DTR #stem &
 	[ SYNSEM.LOCAL local &
-		       [ CONT [ MESSAGE #msg,
-				COMPKEY #ckey,
+		       [ CAT.ROOT #root,
+			 CONT [ COMPKEY #ckey,
 				OCOMPKEY #ockey,
 				H-STORE #hstore,
 				MODCONT #mcont ],
 			 CONJ cnil,
 			 CTXT.C-INDS #c-inds ] ],
     SYNSEM.LOCAL local &
-	[ CONT [ MESSAGE #msg,
-		 COMPKEY #ckey,
+	[ CAT.ROOT #root,
+	  CONT [ COMPKEY #ckey,
 		 OCOMPKEY #ockey,
 		 H-STORE #hstore,
 		 MODCONT #mcont ],
@@ -197,15 +205,33 @@ lex_rule := word &
     ARGS < #stem > ],
   status: lex-rule.
 
+lex_rule := lex_rule_super &
+   [ DTR.SYNSEM.LOCAL.CONT.MESSAGE #msg,
+     SYNSEM.LOCAL.CONT.MESSAGE #msg ].
+
 ;;
 ;;  Forms derived from inflected verbs
 ;;
 
-; Subject/AUX inversion lexical rule.
-; Test whether the input unifies with [ INV + ], since all auxiliaries
-; have this property, but main verbs are lexically marked as [ INV - ].
-
-sai := lex_rule &
+; ERB (05-10-97) Before we had a special rule hcomp_yn_root for matrix polar
+; questions.  Now, the unique head complement rule is taking over this job.
+; To do this, we must put the int_rel onto the inverted auxiliaries (see also
+; sai_synsem).  The original objection to this was that the inverted
+; auxiliaries are used for things other than matrix questions (i.e., negative
+; inversion).  However, a) we don't currently have an analysis of negative
+; inversion, and b) it's not clear that they are the same auxiliaries.  The
+; most obvious test -- 1st person aren't -- is not available since the
+; contracted auxiliaries are in general disallowed in negative inverstion
+; (polarity effect?).
+;
+; At the moment this is allowing "Will who sleep?" and "Will Kim see who?"
+; (actually two parses of the latter).  This is fine, except that this is not
+; producing the apropriate semantics.  In fact, all ynq (matrix and
+; subordinate) are not currently specified for PARAMS.  I think this will be
+; easier to fix once we have a) lexical threading and b) an implementation of
+; the analysis of echo questions, so I am leaving it for later.
+ 
+sai := lex_rule_super &
   [ STEM #orth,
     DTR [ STEM #orth,
 	  SYNSEM [ LOCAL [ CAT [ HEAD #head & verb &
@@ -216,7 +242,10 @@ sai := lex_rule &
 					   SPR #spr,
 					   --KEYCOMP #keycomp ],
 				 MOD #mod ],
-			   CONT #cont,
+			   CONT [ INDEX #ind,
+ 				  LISZT #liszt,
+ 				  KEY #key,
+				  H-CONS #hcons ],
 			   ARG-S #arg-s ],
 		   NON-LOCAL [ SLASH #slash,
 			       QUE #que ] ] ],
@@ -226,10 +255,30 @@ sai := lex_rule &
 				   SPR #spr,
 				   --KEYCOMP #keycomp ],
 			 MOD #mod ],
-		   CONT #cont,
+		   CONT [ INDEX #ind,
+			  LISZT #liszt,
+			  KEY #key,
+			  H-CONS #hcons ],
 		   ARG-S #arg-s ],
 	   NON-LOCAL [ SLASH #slash,
 		       QUE #que ] ] ].
+
+tag := lex_rule_super &
+  [ STEM #orth,
+    DTR [ STEM #orth,
+	  SYNSEM sai_synsem &
+	       [ LOCAL [ CAT [ HEAD [ TENSE #tense,
+				      MOOD indicative ],
+			       VALENCE [ SUBJ none,
+					 COMPS.FIRST #subj ] ],
+			 CONT.KEY #key ],
+		 NON-LOCAL.SLASH #slash ] ],
+		       
+    SYNSEM tag_synsem &
+	 [ LOCAL [ CAT [ HEAD [ TENSE #tense ],
+			 VALENCE.COMPS.FIRST #subj ],
+		   CONT.KEY #key ],
+	   NON-LOCAL.SLASH #slash ] ].
 
 neg_addition := lex_rule &
   [ STEM #orth,
@@ -392,7 +441,8 @@ verbal_gerund := lex_rule &
 	     NON-LOCAL #nonloc ] ].
 
 poss_ing := verbal_gerund &
-  [ DTR.SYNSEM.LOCAL.CAT.VALENCE.SUBJ.LOCAL.CONT.INDEX #subj,
+  [ DTR.SYNSEM [ LOCAL.CAT.VALENCE.SUBJ.LOCAL.CONT.INDEX #subj,
+		 NON-LOCAL.SLASH <! !> ],
     SYNSEM.LOCAL [ CAT.VALENCE [ SUBJ none,
 				 SPR < [ LOCAL local &
 					 [ CAT [ HEAD det & [ POSS + ],
@@ -638,6 +688,8 @@ dative_shift_lr := lex_rule &
 	    NON-LOCAL #nonlocal ] ].
 
 :begin :instance.
+
+taglr := tag.
 
 sailr := sai.
 

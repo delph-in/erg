@@ -30,8 +30,6 @@
        NIL
        NIL))))
 
-
-
 (unless main::*pagelite*
   (load (concatenate 'string disco::*source-grammar*
 		     "cslipage/patches/tuneup-patches.ofasl")))
