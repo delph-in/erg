@@ -44,15 +44,15 @@ word_or_lexrule := word_or_lexrule_min & sign &
   [ ALTS alts_min ].
 
 ; We use --TOPKEY rather than KEY because of negated auxiliaries, which have 
-; the neg_rel's HNDL as TOP, rather than the KEY's HNDL (where the KEY must 
+; the neg_rel's LBL as LTOP, rather than the KEY's LBL (where the KEY must 
 ; still be the same as for the positive auxiliary in order to get tag questions
 ; right). 
 ; Not all words have lex_synsem - e.g. lexical PPs like "tomorrow" are 
 ; phr_synsem since they can be post-nominal modifiers.
 
 word := word_or_lexrule &
-  [ SYNSEM.LOCAL.CONT [ HOOK.TOP #hand,
-			--TOPKEY.HNDL #hand ],
+  [ SYNSEM.LOCAL.CONT [ HOOK.LTOP #hand,
+			--TOPKEY.LBL #hand ],
     POSSCL -,
     ROOT - ].
 
@@ -646,6 +646,8 @@ individual := thing &
  [ DIVISIBLE bool,
    SORT *sort* ].
 
+event_or_deg-ind :< individual.
+
 eventtime :< thing.
 
 ; Needed for VITs
@@ -729,7 +731,7 @@ past_tam := past_or_subj_tam & ind_or_mod_subj_tam &
  [ TENSE past*,
    MOOD indicative* ].
 
-event := event_or_index &
+event := event_or_index & event_or_deg-ind &
   [ E tam ].
 
 ; Once used to distinguish discourse adverbs, for VIT purposes - now obsolete?
@@ -740,7 +742,7 @@ cont :< *avm*.
 ; WLINK links semantic relation to input string elements, more or less.
 
 basic_relation := cont &
-  [ HNDL handle,
+  [ LBL handle,
     WLINK *list*,
     PRED *top* ].
 
@@ -794,13 +796,13 @@ never_unify_event_rel :< event_rel.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; MRS type
 ;
-;   TOP handle,            ; Local top handle, linked by HCONS to other handles
+;   LTOP handle,            ; Local top handle, linked by HCONS to other handles
 ;   HCONS *diff-list*      ; Scope constraints: list of scp_pr's
-;   --TOPKEY basic_relation ; Pointer to relation with TOP handle.
+;   --TOPKEY basic_relation ; Pointer to relation with LTOP handle.
 ;   XARG                   ; External argument, for equi/raising
 
 hook := *top* &
-  [ TOP handle,
+  [ LTOP handle,
     INDEX individual,
     E-INDEX individual,
     XARG mod-thing ].
@@ -824,7 +826,7 @@ mrs := mrs_min1 &
 scp_pr := *top* &
   [ HARG handle ].       
 
-; Constrains KEY handle to be less than or equal to the TOP handle.
+; Constrains KEY handle to be less than or equal to the LTOP handle.
 qeq := scp_pr &
   [ LARG handle ].        
 
@@ -998,19 +1000,22 @@ psp_adj :< vform.
 ;; scope.  Indices are classified in the familiar HPSG way.
 
 expl-ind :< index.
-it-ind := expl-ind & full_index &
+full_expl-ind := expl-ind & full_index.
+it-ind := full_expl-ind &
   [ PNG [ PN 3sg*,
           GEN no_gend_it ] ].
 there-ind := expl-ind &
   [ PNG.GEN no_gend_there ].
 
-non_expl-ind := index & event_or_index &
+non_expl_or_conj-ind :< index.
+ind_or_event_or_conj := non_expl_or_conj-ind & event_or_index.
+non_expl-ind := ind_or_event_or_conj &
   [ PNG.GEN real_gender ].
 
 ref-ind :< non_expl-ind.
-deg-ind :< non_expl-ind.
+deg-ind := non_expl-ind & event_or_deg-ind.
 full_non_expl := full_index & non_expl-ind.
-full_there-ind := there-ind & full_index.
+full_there-ind := there-ind & full_expl-ind.
 full_ref-ind := ref-ind & full_non_expl.
 full_deg-ind := deg-ind & full_non_expl.
 
@@ -1021,7 +1026,7 @@ conj_full-ind := conj_non_expl-ind & full_non_expl.
 conj_ref-ind := conj_non_expl-ind & ref-ind.
 conj_full_ref-ind := conj_ref-ind & conj_full-ind & full_ref-ind.
 conj_deg-ind := conj_non_expl-ind & deg-ind.
-conj_full_deg-ind := conj_deg-ind & conj_full-ind.
+conj_full_deg-ind := conj_deg-ind & conj_full-ind & full_deg-ind.
 
 ; The basic semantic structure, a CONT, is just something with a handle.
 ; Conts are further classified into mrss (i.e., things with liszts) and
@@ -1052,6 +1057,8 @@ psoa_mrs := psoa_basicmrs & mrs.
 ; once we get more interesting temporal semantics for some nouns.
 ; DPF 29-Nov-02 - Can't have E-INDEX the same, since pre-nominal adjectives
 ; now unify their E-INDEX with that of the noun, and it's of type event.
+; Recall that adjectives must do this unification in order to propagate the
+; E-INDEX of the syntactic head, since the adjective is the semantic head.
 
 #|
 nom-obj := mrs_min &
@@ -1084,7 +1091,7 @@ nom-obj := mrs &
 ; ERB (12-05-96) Moved the ne_rel here.
 
 message := norm_relation &
-  [ SOA handle ].
+  [ MARG handle ].
 imp_rel :< message.
 ;for COMPS of e.g. 'know':
 prop_ques_rel := message &          
@@ -1093,7 +1100,6 @@ prop_ques_rel := message &
 prpstn_or_like_rel :< message.
 propositional_rel := prop_ques_rel & prpstn_or_like_rel.
 prpstn_rel :< propositional_rel.   ;top level propositions
-hypo_rel :< propositional_rel.     ;embedded props: hypotheticals (PRO to go)
 
 ; For interrogatives; PARAMS value is a set of handles.
 abstr_int_rel :< prop_ques_rel.
@@ -1261,12 +1267,12 @@ temp_abstr_rel := nonpro_rel & temp_abstr_or_conj_rel &
 temp_nondim_rel :< temp_abstr_rel.
 
 const_value_rel := relation &
-  [ CVAL *top* ].
+  [ CARG *top* ].
 
 ; Used in munging rules to make reversible the implicit quantifier
 abstr_named_rel :< relation.
 gen_named_rel := abstr_named_rel & const_value_rel &
-  [ CVAL atom ].
+  [ CARG atom ].
 named_np_or_num_rel :< gen_named_rel.
 abstr_named_np_rel :< named_np_or_num_rel.
 named_np_rel := abstr_named_np_rel & reg_nom_rel.
@@ -1300,7 +1306,7 @@ non_day_rel := temp_nondim_rel & non_day_or_deg_rel.
 
 ;; day_of_month_rel
 dofm_rel := diadic_day_rel & gen_named_rel &
-  [ CVAL string,
+  [ CARG string,
     ARG1 non_expl-ind ].
 
 ;; Need supertype of dofw_rel and pro_poss_rel for the specifier of the small
@@ -1309,10 +1315,10 @@ dofw_or_poss_rel :< norm_relation.
 
 ;; day_of_week_rel
 dofw_rel := named_day_rel & dofw_or_poss_rel &
-  [ CVAL symbol ].
+  [ CARG symbol ].
 
 holiday_rel := named_day_rel &
-  [ CVAL symbol ].
+  [ CARG symbol ].
 
 day_part_rel := diadic_day_rel &
   [ ARG0.DIVISIBLE -* ].
@@ -1332,7 +1338,7 @@ hour_prep_rel := hour_rel &
 numbered_hour_rel := hour_rel & abstr_named_rel & const_value_rel &
   [ ARG0.PNG png & [ PN 3sg*,
 		     GEN neut* ],
-    CVAL string,
+    CARG string,
     MIN non_expl-ind,
     AM-PM non_expl-ind ].
 
@@ -1371,7 +1377,7 @@ non_day_diadic_modable_rel := non_day_diadic_rel & modable_rel.
 ;; order to admit "Kim arrived last June".  Have to do something else to
 ;; allow the latter.
 mofy_rel := non_day_diadic_rel & abstr_named_np_rel &
-  [ CVAL symbol ].
+  [ CARG symbol ].
 
 yofc_rel := non_day_rel & abstr_named_np_rel.
 
@@ -1424,7 +1430,7 @@ independent_mod_rel := independent_rel & mod_rel.
 
 abstr_excl_rel := independent_mod_rel & const_value_rel & 
                   basic_arg1_rel &
-  [ CVAL symbol ].
+  [ CARG symbol ].
 
 greet_rel :< abstr_excl_rel.
 
@@ -1798,7 +1804,7 @@ reason_rel := reg_nom_rel & abstr_named_rel.
 abstr_sure_rel := adj_arg12_rel.
 
 title_rel := basic_nom_rel & const_value_rel &
-  [ CVAL atom ].
+  [ CARG atom ].
 
 ; 'Next week, last night, all day'
 _next_rel := next_prev_rel & dofw_or_poss_rel.
@@ -1832,7 +1838,7 @@ integer_rel := number_or_degree_rel & independent_mod_rel &
   [ ARG1 individual ].
 
 const_rel := integer_rel &
-  [ CVAL string].
+  [ CARG string].
 
 plus_rel := integer_rel & [ TERM1 handle,
 			    TERM2 handle].

@@ -1,12 +1,12 @@
 (in-package "MRS")
 
-(setf *value-feats* `(,(vsym "CVAL")))
+(setf *value-feats* `(,(vsym "CARG")))
 
 (setf *feat-priority-list*  
-  `( ,(vsym "TOP") ,(vsym "INDEX") ,(vsym "HNDL")
+  `( ,(vsym "LTOP") ,(vsym "INDEX") ,(vsym "LBL")
      ,(vsym "ARG0") ,(vsym "ARG1") ,(vsym "ARG2") ,(vsym "ARG3") 
      ,(vsym "RSTR") ,(vsym "BODY")
-     ,(vsym "SOA") ,(vsym "CVAL")))
+     ,(vsym "MARG") ,(vsym "CARG")))
                                  
 (setf *ignored-sem-features* `(,(vsym "PARAMS") ,(vsym "WLINK")))
 
@@ -36,7 +36,7 @@
   `(,(vsym "C-CONT") ,(vsym "RELS") ,(vsym "LIST")))
 
 (setf *psoa-top-h-path* 
-  `(,(vsym "HOOK") ,(vsym "TOP")))
+  `(,(vsym "HOOK") ,(vsym "LTOP")))
 
 (defparameter *psoa-index-path* 
   `(,(vsym "HOOK") ,(vsym "INDEX"))
