@@ -15,6 +15,8 @@ three_space_lex_entry1 three_space_lex_entry2
 three_space_lex_entry3 three_space_lex_entry4)
    "types which are treated as templates to avoid excessive glbs")
 
+(defparameter *hierarchy-only-p* nil)
+
 ;;; Strings
 
 (defparameter *toptype* '*top*)
@@ -29,6 +31,16 @@ three_space_lex_entry3 three_space_lex_entry4)
 (defparameter *list-tail* '(rest))
 
 (defparameter *list-head* '(first))
+
+(defparameter *empty-list-type* '*null*)
+
+(def-lkb-parameter *list-type* '*list*)
+
+(def-lkb-parameter *diff-list-type* '*diff-list*)
+
+(def-lkb-parameter *diff-list-list* 'list)
+
+(def-lkb-parameter *diff-list-last* 'last)
 
 (defparameter *lex-rule-suffix* "_INFL_RULE"
  "creates the inflectional rule name from the information

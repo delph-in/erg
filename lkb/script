@@ -1,194 +1,48 @@
 (defparameter *grammar-version* "LinGO (jul-98)")
 
-(time (let* ((data-dir2 
-              (make-pathname 
-               :directory (butlast (pathname-directory *load-truename*))))
-             (data-dir1 
-              (make-pathname :directory 
-                             (pathname-directory
-                              (dir-append data-dir2 '(:relative "lkb")))))
-             #+allegro (excl:*redefinition-warnings* nil)
-             #+mcl (*warn-if-redefine* nil)
-             #+mcl (ccl::*suppress-compiler-warnings* t)
-             (ok t))
-   (setf *grammar-directory* data-dir2)
-   (setf *psorts-temp-file* 
-          (make-pathname :name "biglex" 
-                         :directory (pathname-directory mk::tmp-dir)))
-   (setf *psorts-temp-index-file* 
-     (make-pathname :name "biglex-index" 
-                    :directory (pathname-directory mk::tmp-dir)))
-   (setf *lkb-system-version* :page)
-   (load (merge-pathnames
-         (make-pathname :name "globals.lsp")
-         data-dir1))
-   (load
-      (compile-file 
-         (merge-pathnames (make-pathname :name "user-fns" :type "lsp") data-dir1) 
-        :verbose nil :print nil))
-   (when (probe-file (merge-pathnames
-                        (make-pathname :name "lkb-code-patches" :type "lsp")
-                        data-dir1))
-         (load
-            (compile-file 
-               (merge-pathnames (make-pathname :name "lkb-code-patches" :type "lsp")
-               data-dir1)
-            :verbose nil :print nil)))
-   (load (merge-pathnames
-         (make-pathname :name "templates.lsp")
-         data-dir1))
-   (load (merge-pathnames
-         (make-pathname :name "checkpaths.lsp")
-         data-dir1))
-   (read-irreg-form-string 
-        (with-open-file (istream (merge-pathnames 
-                                   (make-pathname :name "irregs.tab")
-                                  data-dir2) :direction :input)
-                         (read istream)))
-   (setf ok
-      (read-tdl-type-files-aux
-        (list
-         (merge-pathnames
-            (make-pathname :name "extra.tdl")
-            data-dir1)
-         (merge-pathnames
-            (make-pathname :name "fundamentals.tdl")
-            data-dir2)
-         (merge-pathnames
-            (make-pathname :name "lextypes.tdl")
-            data-dir2)
-         (merge-pathnames
-            (make-pathname :name "syntax.tdl")
-            data-dir2)
-         (merge-pathnames
-            (make-pathname :name "lexrules.tdl")
-            data-dir2)
-         (merge-pathnames
-            (make-pathname :name "auxverbs.tdl")
-            data-dir2)
-         (merge-pathnames
-            (make-pathname :name "multiletypes.tdl")
-            data-dir2)
-         (merge-pathnames
-            (make-pathname :name "lkbpatches.tdl")
-            data-dir1)
-         (merge-pathnames
-            (make-pathname :name "mrsmunge.tdl")
-            data-dir1)         
-         )))
-   (unless ok (cerror "Continue loading script" 
-        "Problems in type file"))
-   (read-tdl-leaf-type-file-aux
-                 (merge-pathnames
-                    (make-pathname :name "letypes.tdl")
-                 data-dir2))
-   (read-tdl-leaf-type-file-aux
-         (merge-pathnames
-            (make-pathname :name "semrels.tdl")
-            data-dir2))
-   (setf *current-language* 'english)
-   (read-cached-lex-if-available 
-        (merge-pathnames
-             (make-pathname :name "lexicon.tdl")
-              data-dir2) t)
-#|
-   (read-tdl-lex-file-aux 
-                (merge-pathnames
-                 (make-pathname :name "lexicon.tdl")
-                  data-dir2) t))))
-|#
-   (read-tdl-grammar-file-aux (merge-pathnames 
-         (make-pathname :name "constructions.tdl")
-         data-dir2) t)
-;;; morph rule files have to be read in twice -
-;;; once as a morph file and again as a lexical rules file
-;;; sigh ...
-   (morph-file-read-aux (merge-pathnames 
-         (make-pathname :name "inflr.tdl")
-         data-dir1) t)
-   (read-tdl-lex-rule-file-aux (merge-pathnames 
-         (make-pathname :name "inflr.tdl")
-         data-dir1) t)
-   (read-tdl-psort-file-aux (merge-pathnames 
-         (make-pathname :name "roots.tdl")
-         data-dir2))
-   (read-tdl-lex-rule-file-aux (merge-pathnames 
-         (make-pathname :name "lexrinst.tdl")
-         data-dir2) nil)
-   (read-tdl-psort-file-aux (merge-pathnames 
-         (make-pathname :name "parse-nodes.tdl")
-         data-dir2) t)
-#+:mrs   (load (merge-pathnames
-            (make-pathname :name "mrsglobals-eng.lisp")
-                    data-dir2))
-   ;(when (fboundp 'index-for-generator)
-   ;   (index-for-generator))
-   (lkb-beep)
-   (format t "~%Grammar input complete~%")
-   nil
-   ))
-
-; (time (batch-check-lexicon))
-
-#|
-; For MRS to VIT
-
-#+:mrs
+(time
 (progn
-(setf mrs::*mrs-to-vit* t)
-(in-package "USER")
-(let* ((data-dir2 *grammar-directory*)
-       (data-dir1 
-              (make-pathname :directory 
-                             (pathname-directory
-                              (dir-append data-dir2 '(:relative "data")))))
-	(data-dir3
-              (make-pathname :directory 
-                             (pathname-directory
-                              (dir-append data-dir2 '(:relative "lkb"))))))
-  (load (merge-pathnames
-         (make-pathname :name "lkb-db-eng.lisp")
-          data-dir1))
-  (when (fboundp 'read-mrs-rule-file-aux)
-    (read-mrs-rule-file-aux 
-         (merge-pathnames
-            (make-pathname :name "new-rules.mrs")
-            data-dir1)))))
-
-; Use this version for VM, but not for generation.
-
-#+:mrs
-(in-package "MRS")
-#+:mrs
-(defun create-index-property-list (fs)
-  #-pagelite
-  (when (is-valid-fs fs)
-;    (if (is-disjunctive-fs fs)
-;        (setf fs (get-first-real-alter fs))
-    (setf fs (deref fs)))
-;    )
-  (if (is-valid-fs fs)
-      (let ((label-list (fs-arcs fs))
-            (feat-list nil))
-        (if (and label-list (consp label-list))
-            (loop for feat-val in label-list
-                do
-                  (cond ((member (car feat-val) *complex-extra-feats*)
-                         (setf feat-list 
-                           (append feat-list
-                                   (create-index-property-list 
-                                    (cdr feat-val)))))
-                        ((eq (car feat-val) *list-feature*)
-                         (push (make-fvpair :feature (car feat-val)
-                                            :value (create-coord-list 
-                                                    (cdr feat-val)))
-                               feat-list))
-                        (t (push (make-fvpair :feature (car feat-val)
-                                              :value (create-type 
-                                                      (fs-type (cdr feat-val))))
-                                 feat-list)))))
-        feat-list)))
+(setf *grammar-directory* (parent-directory)) ; needed for MRS
+(setf *psorts-temp-file* (temporary-file "biglex")) 
+(setf *psorts-temp-index-file* (temporary-file "biglex-index"))
+        ;; so doesn't conflict with another lexicon
+(lkb-load-lisp (this-directory) "globals.lsp")
+(lkb-load-lisp (this-directory) "user-fns.lsp")
+(load-lkb-preferences (this-directory) "user-prefs.lsp")
+(lkb-load-lisp (this-directory) "lkb-code-patches.lsp" t)
+(lkb-load-lisp (this-directory) "templates.lsp")
+(lkb-load-lisp (this-directory) "checkpaths.lsp" t)
+(load-irregular-spellings (parent-directory) "irregs.tab")
+(read-tdl-type-files-aux
+     (list (lkb-pathname (this-directory) "extra.tdl")
+           (lkb-pathname (parent-directory) "fundamentals.tdl")
+           (lkb-pathname (parent-directory) "lextypes.tdl")
+           (lkb-pathname (parent-directory) "syntax.tdl")
+           (lkb-pathname (parent-directory) "lexrules.tdl")
+           (lkb-pathname (parent-directory) "auxverbs.tdl")
+           (lkb-pathname (parent-directory) "multiletypes.tdl")
+           (lkb-pathname (this-directory) "lkbpatches.tdl")
+           (lkb-pathname (this-directory) "mrsmunge.tdl"))
+     (lkb-pathname (this-directory) "settings.lsp"))
+(read-tdl-leaf-type-file-aux
+           (lkb-pathname (parent-directory) "letypes.tdl"))
+(read-tdl-leaf-type-file-aux
+          (lkb-pathname (parent-directory) "semrels.tdl"))
+(read-cached-lex-if-available 
+          (lkb-pathname (parent-directory) "lexicon.tdl"))
+#|
+(read-tdl-lex-file-aux 
+          (lkb-pathname (parent-directory) "lexicon.tdl"))
 |#
-
-#+:mrs
-(in-package "USER")
+(read-tdl-grammar-file-aux 
+          (lkb-pathname (parent-directory) "constructions.tdl"))
+(read-morph-file-aux (lkb-pathname (this-directory) "inflr.tdl"))
+(read-tdl-psort-file-aux 
+          (lkb-pathname (parent-directory) "roots.tdl"))
+(read-tdl-lex-rule-file-aux 
+          (lkb-pathname (parent-directory) "lexrinst.tdl"))
+(read-tdl-parse-node-file-aux 
+          (lkb-pathname (parent-directory) "parse-nodes.tdl"))
+(lkb-load-lisp (this-directory) "mrs-initialization.lsp" t)
+)
+)
