@@ -13,7 +13,7 @@
 #+:mrs
 (progn
 (setf mrs::*mrs-to-vit* t)
-(in-package "USER")
+(in-package "CL-USER")
 (let* ((data-dir2 *grammar-directory*)
        (data-dir1 
               (make-pathname :directory 
@@ -68,4 +68,4 @@
 |#
 
 #+:mrs
-(in-package "USER")
+(in-package "CL-USER")
