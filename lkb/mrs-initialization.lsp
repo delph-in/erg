@@ -1,4 +1,5 @@
-#+mrs(load (merge-pathnames
+#+:mrs
+(load (merge-pathnames
             (make-pathname :name "mrsglobals-eng.lisp")
             (parent-directory)))
 

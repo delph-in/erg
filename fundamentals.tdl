@@ -304,13 +304,8 @@ no_rel :< independent_rel.
 ; MRS type
 ;
 ;   TOP handle,            ; Local top handle, linked by H-CONS to other handles
-;   ;;KEY mod_relation,    ; Pointer to main relation in LISZT - moved to LOCAL
-;   MESSAGE 0-1-dlist,     ; Message type for propositions
 ;   H-CONS *diff-list*     ; Scope constraints: list of scp_pr's
 ;   TOP-H handle,          ; Top handle of MRS expression
-;   ;;ALTKEY mod_relation,   ; Pointer to an alternate relation in LISZT
-;   ;;COMPKEY mod_relation,  ; Pointer to the complement's main relation
-;   ;;OCOMPKEY mod_relation, ; Pointer to the oblique complement's main relation
 ;   --TOPKEY mod_relation  ; Pointer to relation with TOP handle.
 
 mrs_min := cont &
@@ -324,8 +319,7 @@ mrs_min1 := mrs_min0 &
     --TOPKEY mod_relation ].
     
 mrs := mrs_min1 &
-  [ MESSAGE 0-1-dlist,  
-    H-CONS *diff-list*,
+  [ H-CONS *diff-list*,
     WGLISZT *diff-list*,
     TOP-H handle ].
 
@@ -406,13 +400,23 @@ astem :< stemhead.
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; KEY relations, for semantic selection
+;  KEY mod_relation         ; Pointer to main relation in LISZT
+;  ALTKEY mod_relation      ; Pointer to an alternate relation in LISZT
+;  --COMPKEY mod_relation   ; Pointer to the complement's main relation
+;  --OCOMPKEY mod_relation  ; Pointer to the oblique complement's main relation
+;
+;  MESSAGE 0-1-dlist,       ; Message type for propositions
+
 
 keys_min :< *avm*.
 
 keys_k := keys_min &
   [ KEY mod_relation ].
 
-keys := keys_k &
+keys_km := keys_k &
+  [ MESSAGE 0-1-dlist ].
+
+keys := keys_km &
   [ ALTKEY mod_relation,
     --COMPKEY mod_relation,
     --OCOMPKEY mod_relation ].
@@ -489,6 +493,10 @@ unexpressed := non_canonical &
 ; DPF 28-Aug-99 - Removed OPT + from anti_synsem since it blocked 
 ; "you can have anything you want"
 anti_synsem :< synsem_min.
+
+; DPF 25-Oct-99 - This annoying type prevents us from getting a failure
+; between synsem and anti_synsem, as we might like to do.  But it's needed
+; for something to do with PRO in infinitival relatives, I think.
 
 anti_synsem_unexp := anti_synsem & unexpressed.
 
@@ -735,7 +743,59 @@ three_space_lex_entry4 := three_space_lex_entry & key_fourth.
 
 ;;; AAC moved reg_lex_entry from letypes.tdl
 
-reg_lex_entry := lex_entry & word &
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Affixation
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; DPF (14-Oct-98) --FINAL-ARG points to the final element in a word with 
+;; spaces, since that element bears any inflection.
+;; AAC added --FINAL-ARG for non-affixed guys too
+
+basic_affix_bearing := word &
+  [ SYNSEM.LOCAL [ STEMHEAD #stemhead,
+                   AGR #agr,
+                   CAT #cat,
+		   CONT [ TOP #hand,
+			  INDEX #index ],
+		   KEYS.KEY #key,
+		   CTXT #ctxt ],
+    --FINAL-ARG [ AFFIX local & [ STEMHEAD #stemhead,
+				  AGR #agr,
+				  CAT #cat,
+				  CONT [ TOP #hand,
+					 INDEX #index ],
+				  KEYS.KEY #key,
+				  CTXT #ctxt ] ] ].
+
+affix_bearing := basic_affix_bearing &
+  [ --FINAL-ARG #arg,
+    ARGS < #arg > ].
+
+affix_bearing_two := basic_affix_bearing &
+  [ --FINAL-ARG #arg,
+    ARGS < *top*, #arg > ].
+
+affix_bearing_three := basic_affix_bearing &
+  [ --FINAL-ARG #arg,
+    ARGS < *top*, *top*, #arg > ].
+
+affix_bearing_four := basic_affix_bearing &
+  [ --FINAL-ARG #arg,
+    ARGS < *top*, *top*, *top*, #arg > ].
+
+non_affix_bearing := word_or_lexrule &
+  [ --FINAL-ARG #arg,
+    ARGS < #arg & [ AFFIX no-affix ] , ... > ].
+
+affixed_lex_entry := affix_bearing & lex_entry.
+affixed_two_lex_entry := affix_bearing_two & multi_lex_entry_affixed.
+affixed_three_lex_entry := affix_bearing_three & two_space_lex_entry_affixed.
+affixed_four_lex_entry := affix_bearing_four & three_space_lex_entry_affixed.
+
+reg_lex_entry := affixed_lex_entry &
+  [ SYNSEM.LOCAL.CONT.LISZT <! *top* !> ].
+
+reg_affixed_two_lex_entry := affixed_two_lex_entry &
   [ SYNSEM.LOCAL.CONT.LISZT <! *top* !> ].
 
 rule := sign &
@@ -788,35 +848,55 @@ inf_or_prp :< non_fin.
 inf := inf_or_prp & bse_or_inf & fin_or_inf.
 prp :< inf_or_prp.
 
+;; Reconsider (DPF 12-Nov-99):
 ; Since we've collapsed the entries for base and fin-non3rdsg verbs, we need to
 ; be able to unify e.g. the value PRESENT with the value BSE for examples like
 ; "Kim doesn't sleep", since the two verbs constrain a single event.  So we 
 ; adopt the hack of making the "tense" sort a subsort of BSE rather than 
 ; simply of *sort*.
 
-tense :< bse_only.
-present* :< tense.
+tense_aspect :< *sort*.
+tense :< tense_aspect.
+aspect :< tense_aspect.
+pres_or_none :< tense_aspect.
+present* := tense & pres_or_none.
 past* :< tense.
 future* :< tense.
-presperf* :< tense.
-pastperf* :< tense.
+presperf* :< aspect.
+pastperf* :< aspect.
+progr* :< aspect.
 
 present := present* & strict_sort.
 past := past* & strict_sort.
 future := future* & strict_sort.
 presperf := presperf* & strict_sort.
 pastperf := pastperf* & strict_sort.
+progr := progr* & strict_sort.
+non_tensed := aspect & pres_or_none & strict_sort.
 
+pres+fut := present* & future* & strict_sort.
+pres+progr := present* & progr* & strict_sort.
+past+progr := past* & progr* & strict_sort.
 pres+past := present* & past*.
-pres+fut := present* & future*.
 pres+prperf := present* & presperf*.
 pres+pperf := present* & pastperf*.
 past+fut := past* & future*.
 past+prperf := past* & presperf*.
 past+pperf := past* & pastperf*.
-fut+prperf := future* & presperf*.
-fut+pperf := future* & pastperf*.
 prperf+pperf := presperf* & pastperf*.
+fut+prperf := future* & presperf* & strict_sort.
+fut+pperf := future* & pastperf* & strict_sort.
+
+; Because of the artificial collapsing of base and non3rdsg forms (for
+; efficiency only), the TENSE value for the auxiliary "did" has to be distinct
+; from ordinary 'past' tense, since the "did" tense has to unify with 
+; pres_or_none and produce a valid strict_sort, in order to get tag questions
+; right (that is, allowing "Sara didn't leave, did she" while blocking
+; "*Sara leaves, didn't she" and "Sara didn't leave, does she".)
+
+do_aux_past :< tense_aspect.
+do_past* := tense & do_aux_past & pres_or_none.
+do_past := do_past* & past* & strict_sort.
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Head types
@@ -838,7 +918,8 @@ func := head & strict_type.
 det := func & poss-able.
 
 subst := head &
-  [ MOOD mood ].
+  [ TENSE tense_aspect,
+    MOOD mood ].
 
 ; Adverbs modify adverbees.
 adverbee :< subst.
@@ -847,10 +928,12 @@ v_or_g_or_a := subst & disc_adverbee.
 v_or_g := v_or_g_or_a &
   [ VFORM vform ].
 
-nominal := subst & poss-able &
+nominal_or_verbal :< subst.
+
+nominal := nominal_or_verbal & poss-able &
   [ CASE case ].
 
-verbal := v_or_g & adverbee &
+verbal := v_or_g & nominal_or_verbal & adverbee &
   [ AUX bool ].
 
 ; mobile things can be extracted in the complement-extraction rule, from which
@@ -872,8 +955,7 @@ noun* := supnoun & n_or_v & n_or_p & n_or_a.
 gerund* := supnoun & adverbee & v_or_g & n_or_v.
 
 verb* := verbal & v_or_p & n_or_v &
-  [ TENSE tense,
-    VOICE voice ].
+  [ VOICE voice ].
 
 comp* := nominal & verbal.
 
@@ -881,7 +963,9 @@ basic_adv := func & disc_adverbee.
 
 ; 'not' and closed class of other adverbs that can be added to aux COMPS list
 ; via 'adv_addition' lexical rule.
-lexadv :< basic_adv.
+basic_lexadv :< basic_adv.
+negadv :< basic_lexadv.
+lexadv :< basic_lexadv.
 
 adv := basic_adv & mobile.
 
@@ -1038,7 +1122,7 @@ ne_rel :< abstr_int_rel.
 
 ; Subtype to distinguish complementizer "like" from "that", to block
 ; '*Kim said like Sandy left' and '*it looks that Sandy left"
-_like_c_rel :< prpstn_or_like_rel.
+_like_mood_rel :< prpstn_or_like_rel.
 
 dim_rel := relation &
   [ DIM non_expl-ind ].
@@ -1058,7 +1142,7 @@ def_np_rel :< def_rel.
 demonstrative_rel :< quant_rel.
 demon_near_rel :< demonstrative_rel.
 demon_far_rel :< demonstrative_rel.
-free_ever_rel :< quant_rel.
+free_relative_ever_rel :< quant_rel.
 
 ;which_rel should not have a scope, but given for the moment to satisfy VIT
 ;which_rel :< quant_or_wh_rel.
@@ -1224,9 +1308,9 @@ _morning_rel :< day_part_rel.
 _afternoon_rel :< day_part_rel.
 _evening_rel :< day_part_rel.
 _night_rel :< day_part_rel.
-_weekday_rel :< dofw_rel.
-_weekend_rel :< dofw_rel.
-_workday_rel :< dofw_rel.
+_weekday_rel :< day_rel.
+_weekend_rel :< day_rel.
+_workday_rel :< day_rel.
 
 _week_rel :< non_day_diadic_modable_rel.
 _fortnight_rel :< non_day_modable_rel.
@@ -1261,12 +1345,6 @@ excl_rel :< abstr_excl_rel.
 ; Pronouns
 pron_rel := non_temp_nom_rel &
   [ INST ref-ind ].
-
-refl_pro_rel := pron_rel &
-  [ INST.PRONTYPE refl ].
-
-recip_pro_rel := reg_nom_rel &
-  [ INST.PRONTYPE recip ].
 
 basic_adj_rel :< dim_rel.
 
@@ -1342,9 +1420,11 @@ support_arg24_rel := support_main_rel & arg24_rel.
 support_gen_rel :< support_abstr_rel.
 ; Used for predicative copula
 support_rel :< support_abstr_rel.
+; Used for modals
+aux_arg4_rel := support_abstr_rel & arg4_rel.
 
 ; Needed to allow filtering of the relations for "will" and "would" for VIT.
-will_would_rel :< support_arg4_rel.
+will_would_rel :< aux_arg4_rel.
 
 abstr_rel :< arg3_event_rel.
 
@@ -1422,9 +1502,6 @@ very_deg_rel :< deg_rel.
 ; For specifiers of comparative adjectives
 much_deg_rel :< deg_rel.
 
-; For specifiers of either pos or compar adjs (e.g. 'a little')
-very_or_much_deg_rel := very_deg_rel & much_deg_rel.
-
 ; For e.g. 'eightish'
 approx_grad_rel :< deg_rel.
 
@@ -1454,7 +1531,8 @@ prpstn_to_prop_rel := prop_rel &
 _by_pass_rel :< miscprep_ind_rel.
 _from_time_on :< miscprep_ind_rel.
 _compar_than_rel :< miscprep_ind_rel.
-comp_rel :< miscprep_ind_rel.
+comp_rel := miscprep_ind_rel &
+  [ ARG3 event_or_index ].
 _more_adj_rel :< adj_rel.
 super_rel :< miscprep_ind_rel.
 
@@ -1486,6 +1564,8 @@ abstr_apply := prop_rel & arg_rel.
 
 _get_somewhere_rel :< arg1_rel.
 _get_together_rel :< arg1_rel.
+_get_in_rel :< arg1_rel.
+_get_lost_rel :< arg1_rel.
 _enough_isect_rel :< adv_rel.
 
 ; Discourse functions
@@ -1543,7 +1623,8 @@ reason_rel :< reg_nom_rel.
 ord_rel := abstr_adj_rel & independent_rel &
   [ ORD string ].
 
-title_rel :< basic_nom_rel.
+title_rel := basic_nom_rel &
+  [ TITLE atom ].
 
 _there_cop_rel := event_rel & arg3_rel &
   [ ARG3 non_expl-ind ].
@@ -1681,13 +1762,13 @@ intadj1  := intadj2- & digit1.
 ; This will unify with the indices introduced by (appropriate) controllers,
 ; and (hopefully) be identifiable if it is not controlled.
 
-; DPF 27-May-99 - Removed OPT - constraint from pro_ss (see ERB (19-01-98) above)
-; since head_mod type now constrained via PRD rather than by requiring SUBJ
-; to be empty (cf. note DPF 27-May-99 with n_adj_int_phrase in syntax.tdl).
-; This change means the template for satp can again simply require SUBJ to be
-; *olist* rather than *null*, which e.g. allows verbal gerunds to have optional
-; but non-empty SUBJ value and still themselves appear as subjects or
-; complements without discharging that SUBJ value.
+; DPF 27-May-99 - Removed OPT - constraint from pro_ss (see ERB (19-01-98) 
+; above) since head_mod type now constrained via PRD rather than by requiring 
+; SUBJ to be empty (cf note DPF 27-May-99 with n_adj_int_phrase in syntax.tdl).
+; This change means the types for saturated subcats can again simply require 
+; SUBJ to be *olist* rather than *null*, which e.g. allows verbal gerunds to 
+; have optional but non-empty SUBJ value and still themselves appear as 
+; subjects or complements without discharging that SUBJ value.
 
 pro_ss := non_canonical &
   [ LOCAL.CAT.HEAD.CASE acc,
@@ -1945,3 +2026,64 @@ _to_until_rel := _to_until_rel_a & _until_rel.
 _through_rel_a :< _until_rel_a.
 _through_rel_s := _through_rel_a & _until_rel_s.
 _through_rel := _through_rel_a & _until_rel.
+_towards_rel_a :< dir_rel.
+_towards_rel_s := _towards_rel_a & selected_rel.
+_towards_rel := _towards_rel_a & independent_rel.
+_like_prepx_rel_a :< miscprep_rel.
+_like_prepx_rel_s := _like_prepx_rel_a & selected_rel.
+_like_prepx_rel := _like_prepx_rel_a & independent_rel.
+
+
+;;; these sorts are just used in the mrs-to-vit machinery
+
+
+vmsort_anything :< *sort*.
+vmsort_abstract :< vmsort_anything.
+vmsort_property :< vmsort_abstract.
+vmsort_field :< vmsort_abstract.
+vmsort_info_content :< vmsort_abstract.
+vmsort_institution :< vmsort_abstract.
+vmsort_symbol :< vmsort_abstract.
+vmsort_space_time :< vmsort_anything.
+vmsort_temporal :< vmsort_space_time.
+vmsort_situation :< vmsort_temporal.
+vmsort_meeting_sit :< vmsort_situation.
+vmsort_communication_sit :< vmsort_situation.
+vmsort_action_sit :< vmsort_situation.
+vmsort_move_sit :< vmsort_situation.
+vmsort_position_sit :< vmsort_situation.
+vmsort_temp_sit :< vmsort_situation.
+vmsort_mental_sit :< vmsort_situation.
+vmsort_time :< vmsort_temporal.
+vmsort_entity :< vmsort_space_time.
+vmsort_object :< vmsort_entity.
+vmsort_agentive :< vmsort_object.
+vmsort_human :< vmsort_agentive.
+vmsort_animal :< vmsort_agentive. 
+vmsort_thing :< vmsort_object.
+vmsort_instrument :< vmsort_thing.
+vmsort_info_bearer :< vmsort_thing.
+vmsort_food :< vmsort_thing.
+vmsort_vehicle :< vmsort_thing.
+vmsort_substance :< vmsort_object.
+vmsort_location :< vmsort_entity.
+vmsort_geo_location :< vmsort_location.
+vmsort_nongeo_location :< vmsort_location.
+
+; Needed for underspecified "work" of "Kim works" and "Monday works"
+work_unspec :< arg1_rel.
+
+; Needed for idiosyncratic decomposition of "why"
+cause :< miscprep_rel.
+
+; Hack 13-Oct-99
+; The following types in the ESEMDB don't follow the typographical 
+; conventions for rel names, so can't be in the semrels.tdl file.
+bring_down :< arg13_rel.
+clarinet :< reg_nom_rel.
+controller :< reg_nom_rel.
+eco_friendly :< adj_rel.
+household :< reg_nom_rel.
+inside_n :< reg_nom_rel.
+radio :< reg_nom_rel.
+start_unspec :< arg13_rel.

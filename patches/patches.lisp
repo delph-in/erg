@@ -80,9 +80,9 @@
 (setf %eng-special-chars% 
     '(#\. #\, #\; #\! #\? #\: #\( #\) #\{ #\} #\[ #\] #\ ))
 
-
-; In page/src/parser/gdbm-lex-access.lisp
-; Avoid NFS delay in writing .dat files
+#|
+;; In page/src/parser/gdbm-lex-access.lisp
+;; Avoid NFS delay in writing .dat files
 (in-package "PARSING")
 (defun grammar-file (name)
   (if (member name '("lexicon.dat" "semrels.dat" "relkeys.dat") :test #'equal)
@@ -92,3 +92,4 @@
                    :name name)))
 
 (in-package "MAIN")
+|#

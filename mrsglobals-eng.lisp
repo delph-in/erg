@@ -7,6 +7,9 @@
 ;;   Language: Allegro Common Lisp
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; $Log$
+;; Revision 1.22  1999/09/15 02:58:33  danf
+;; Reduced number of spurious parses and trimmed overgeneration
+;;
 ;; Revision 1.18  1999/09/02 13:43:13  discosys
 ;; 1999/09/02 13:43:10 mrs2vit-eng          6.014    kasper
 ;;
@@ -120,7 +123,7 @@
 
 (setf *MRS-SCOPING* nil)
 
-(setf *GIVING-DEMO-P* nil)
+(setf *GIVING-DEMO-P* t)
 
 (setf *initial-semantics-path* 
   `(,(vsym "SYNSEM") ,(vsym "LOCAL") ,(vsym "CONT")))
@@ -142,6 +145,7 @@
                                                ,(vsym "ORD") 
                                                ,(vsym "CONST_VALUE") 
                                                ,(vsym "NAMED") 
+                                               ,(vsym "TITLE") 
                                                ,(vsym "EXCL")))
 
 
@@ -307,14 +311,12 @@
      (,(vsym "PRESPERF*") (vit_tense pres) (vit_perf perf))
      (,(vsym "PASTPERF") (vit_tense past) (vit_perf perf))
      (,(vsym "PASTPERF*") (vit_tense past) (vit_perf perf))
+     (,(vsym "PRES+PROGR") (vit_tense present) (vit_aspect progr))
      (,(vsym "*SORT*") (vit_perf nonperf))
      (,(vsym "TENSE") (vit_perf nonperf))
-     (,(vsym "BSE") (vit_perf nonperf))
-     (,(vsym "BSE_ONLY") (vit_perf nonperf))
-     (,(vsym "IMP_VFORM") (vit_perf nonperf))
-     (,(vsym "FIN") (vit_tense pres) (vit_perf nonperf))
-     (,(vsym "FIN_OR_BSE") (vit_tense pres) (vit_perf nonperf)))
-
+     (,(vsym "NON_TENSED") (vit_perf nonperf))
+     (,(vsym "DO_PAST") (vit_tense past) (vit_perf nonperf))
+     (,(vsym "DO_PAST*") (vit_tense past) (vit_perf nonperf)))
     (,(vsym "VITMOOD") vit-tenseandaspect
      ((:AND ,(vsym "INDICATIVE*") ,(vsym "STRICT_SORT")) (vit_mood ind))
      ((:AND ,(vsym "MODAL_SUBJ*") ,(vsym "STRICT_SORT")) (vit_mood ind))
@@ -397,6 +399,9 @@
 
 (setf *vm-special-label-hack-list* nil)
 
+(setf *special-type-treatment*
+  `((,(vsym "UNK_REL") . convert-unknown-name2vit)))
+
 ;;; display of extra features in an MRS
 
 (setf *mrs-extra-display* 
@@ -444,6 +449,8 @@
 (defparameter *letter-difference-list-type* (vsym "*letter-diff-list*"))
 
 ;;; don't unstring these:
-(setf *string-valued-features*
+(setf *vit-string-valued-features*
   `(,(vsym "NAMED")))
 
+#+page
+(setf *vm-ignored-sort-list* (list *vm-top-sort-symbol* MAIN::ANYTHING))
