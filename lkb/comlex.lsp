@@ -150,6 +150,8 @@
     instances))
 
 (defun add-relation (rel supertype)
+  (unless (get-type-entry supertype)
+    (error "Attempt to add entry with invalid relation type ~A" supertype))
   (let ((entry (make-leaf-type :name rel 
 			       :parents (list supertype)
 			       :real-parents (list supertype)
