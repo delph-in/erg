@@ -1,13 +1,6 @@
 (in-package :lkb)
+
 ;;; LinGO big grammar specific functions
-
-
-(defun alphanumeric-or-extended-p (char)
-  (and (graphic-char-p char)
-       (not (member char '(#\space #\! #\" #\& #\' #\(
-                           #\) #\* #\+ #\, #\. #\/ #\;
-                           #\< #\= #\> #\? #\@ #\[ #\\ #\] #\^
-                           #\_ #\` #\{ #\| #\} #\~)))))
 
 (defun establish-linear-precedence (rule-fs)
    ;;;    A function which will order the features of a rule
