@@ -1,0 +1,158 @@
+;;; -*- Mode: TDL; Package: DISCO -*-
+;;;
+;;;  Copyright Emily M. Bender 2003
+;;;  All Rights Reserved.
+;;;  No use or redistribution without permission.
+;;;
+;;;  mal-types.tdl
+;;;
+;;;  mal-types for Arboretum project.
+;;;
+
+;; Type for bare_np_sg rule.  I want this to be different
+;; from the one already in the grammar, because I want to
+;; give it a distinguished quant rel that we can generate
+;; from.
+
+mal_bare_np_sg_phrase := generic_bare_np_phrase &
+  [ SYNSEM [ LOCAL [ AGR.DIVISIBLE -,
+                     CAT.HEAD.KEYS.ALTKEY implicit_q_rel ],
+             MODIFIED #modif ],
+    ARGS < [ SYNSEM [ LOCAL [ AGR.DIVISIBLE -,
+                              CAT [ VAL.SPR < [ LOCAL.CAT.HEAD.KEYS.KEY udef_q_rel ] >,
+                                    HEAD.KEYS [ KEY non_temp_nom_rel ] ] ],
+                      MODIFIED #modif ],
+             POSSCL - ] >,
+    C-CONT.RELS <! [ PRED mal_bare_div_q_rel ] !>,
+    ROBUST + ].
+
+mal_bare_np_sg_rule := rule & mal_bare_np_sg_phrase.
+
+;; Type for quant-rel:
+
+mal_bare_div_q_rel := implicit_q_rel & some_q_rel.
+
+;; Mal NI (but not CE) rules, for lack of do support:
+
+mal_adv_addition := basic_adv_addition &
+  [ DTR.SYNSEM.LOCAL.CAT.HEAD.AUX - ].
+
+mal_sai_synsem := basic_sai_synsem & 
+  [ LOCAL.CAT.HEAD.AUX - ].
+
+; (ERB 2003-08-15) sai seems to be constraining its input
+; to be INV +, rather than AUX +.  So, moving that constraint down
+; to sai, and putting the opposite thing on mal_sai.
+
+; (ERB 2003-08-15) Adding AUX - to DTR to keep auxiliaries out
+; of this mal-rule.
+
+mal_sai := basic_sai &
+  [ SYNSEM mal_sai_synsem,
+    DTR.SYNSEM.LOCAL.CAT.HEAD [ AUX -,
+				INV - ] ].
+
+; (ERB 2003-10-17) For verbs like "allow" taking a CP[to]
+; complement with the PRO bound to arbitrary reference.  Regenerate
+; with gerunds instead.  (Might need another class where we
+; regenerate with an inserted pronoun "one", if there are verbs
+; that show up in this pattern but can't take gerund complements.)
+
+; (ERB 2003-10-17) This is going to be a fairly strange verb type.  I
+; can't think of any true English verbs off hand that take an
+; infinitival CP complement and allow arbitrary control of the subject
+; of that complement.  Furthermore, this type is also putting in some
+; extra semantics, in order to allow the right string to come back
+; from the generator.  So, we're not inheriting from the usual places
+; in the hierarchy.  For example, main_verb is constrained to have a
+; single element RELSs list.  main_verb_mliszt will do, though,
+; although this isn't what it was intended for. Likewise, I don't
+; think any of the linking types lower in the hierarchy will do what
+; we want.  Took some constraints from subj_equi_inf_lt to try to
+; restrict what can show up as the complement.
+
+; (ERB 2003-10-23) Can't currently generate with these entries,
+; and I don't know why.  Can generate from the produced MRS at all,
+; in fact.  The MRS produced isn't the same as the MRS for the target,
+; because of gerunds are built from progressives and therefore have
+; a different value for PROGR.  (There are some other mismatches,
+; but they are compatible, so maybe it would work otherwise.)
+; While we might consider changing the analysis of gerunds, I
+; think the main conclusion to draw is that we will need some kind
+; of a transfer component.  Maybe put everything there rather than
+; trying to map from mal-formed syntax to well-formed semantics in
+; the grammar itself?  If not everything, how to decide when to do
+; which?
+
+mal_v_inf_cp_comp_verb := inf_intrans_subst & arg1_subj_lt & basic_two_arg & basic_verb_synsem &
+   [ LOCAL [ CAT.VAL.COMPS < [ LOCAL [ CAT.VAL.SUBJ < unexpressed >,
+				       CONT [ HOOK [ INDEX #ind,
+						     LTOP #larg ],
+					      MSG no_msg ] ] ] >,
+	     CONT [ RELS <! relation , 
+			  quant_or_wh_relation &
+			  [ PRED udef_q_rel,
+			    ARG0 #ger,
+			    RSTR #harg ],
+			  gerund_relation &
+			  [ PRED gerund_rel,
+			    ARG0 #ger,
+			    ARG1 #ind,
+			    LBL #larg ] !>,
+		    HCONS <! qeq &
+			     [ HARG #harg,
+			       LARG #larg ] !> ] ],
+     LKEYS.KEYREL arg12_relation &
+	          [ ARG2 #ger ] ].
+	   
+mal_v_inf_from_cp_comp_verb := inf_intrans_subst & arg1_subj_lt & basic_two_arg & basic_verb_synsem &
+   [ LOCAL [ CAT.VAL.COMPS < [ LOCAL [ CAT.VAL.SUBJ < unexpressed >,
+				       CONT [ HOOK [ INDEX #ind,
+						     LTOP #larg ],
+					      MSG no_msg ] ] ] >,
+	     CONT [ RELS <! relation , 
+			  quant_or_wh_relation &
+			  [ PRED udef_q_rel,
+			    ARG0 #ger,
+			    RSTR #harg ],
+			  gerund_relation &
+			  [ PRED gerund_rel,
+			    ARG0 #ger,
+			    ARG1 #ind,
+			    LBL #larg ] !>,
+		    HCONS <! qeq &
+			     [ HARG #harg,
+			       LARG #larg ] !> ] ],
+     LKEYS.KEYREL arg12_relation &
+	          [ ARG2 #ger ] ].
+
+mal_finvp_rule := unary_phrase & rule &
+  [ INFLECTED +,
+    ROBUST +,
+    SYNSEM [ LOCAL [ CAT [ HEAD #head,
+                           VAL [ SUBJ < >,
+                                 SPR < >,
+                                 COMPS < > ],
+                           MC + ],
+                     CONJ cnil,
+                     CONT.MSG #msg ] ],
+    ARGS < [ SYNSEM [ LOCAL [ CAT [ HEAD #head & 
+                                         verb & [ VFORM fin,
+                                                  INV - ],
+                                    VAL [ SUBJ < unexpressed_reg >,
+                                          COMPS *olist* ] ],
+                              CONT.HOOK [ LTOP #ltop,
+                                          INDEX #event ] ],
+                      NON-LOCAL [ SLASH 0-dlist & [ LIST < > ],
+                                  REL 0-dlist,
+                                  QUE 0-dlist ] ] ] >,
+    C-CONT [ HOOK [ LTOP #lbl,
+                    INDEX #event ],
+             RELS <! #msg &
+                   [ LBL #lbl,
+                     PRED prpstn_m_rel,
+                     MARG #marg ] !>,
+             HCONS <! qeq & [ HARG #marg,
+                              LARG #ltop ] !> ] ].
+
+             
