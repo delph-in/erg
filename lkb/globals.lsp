@@ -59,6 +59,7 @@
 (defparameter *start-symbol* 
   #-:arboretum
   '(root_strict)
+  ;'(root_strict root_frag)
   #+:arboretum
   '(root_strict root_strict_robust)
    "specifing valid parses")
@@ -83,7 +84,7 @@
    before it is assumed that some rules are applying circularly")
 
 (defparameter *deleted-daughter-features* 
-  '(ARGS HD-DTR NH-DTR LCONJ-DTR RCONJ-DTR DTR)
+  '(ARGS HD-DTR NH-DTR LCONJ-DTR RCONJ-DTR DTR DTR1 DTR2 DTRA DTRB)
   "features pointing to daughters deleted on building a constituent")
 
 ;;;
@@ -94,7 +95,7 @@
 (defparameter *chart-packing-p* t)
 
 (defparameter *packing-restrictor*
-  '(STEM RELS HCONS RNAME)
+  '(STEM RELS HCONS RNAME RPUNCT)
   "restrictor used when parsing with ambiguity packing")
 
 ;;; (setf *chart-packing-p* t)
@@ -116,9 +117,12 @@
 
 ;; This is a USER-SPECIFIC PARAMETER (Options->Set options)
 ;; for example:
-;(def-lkb-parameter *psql-lexicon-parameters* 
-;    '((:db "erg") (:semi t))
-;  :user)
+(def-lkb-parameter *psql-lexicon-parameters* 
+    #+:psql
+    '((:db "erg") (:semi t))
+    #-:psql
+    nil
+  :user)
 ;; optionally also: :host, :user, :port
 
 ;;; Parse tree node labels
