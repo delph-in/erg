@@ -250,15 +250,21 @@
          (prefix
           (if version
             (remove-if-not #'alphanumericp (symbol-value version))
-            "biglex")))
+            "ERG")))
     (setf *psorts-temp-file* 
-      (make-pathname :name prefix 
+      (make-pathname :name (concatenate 'string prefix ".lex") 
+		     :host (pathname-host (lkb-tmp-dir))
+		     :device (pathname-device (lkb-tmp-dir))
                      :directory (pathname-directory (lkb-tmp-dir))))
     (setf *psorts-temp-index-file* 
-      (make-pathname :name (concatenate 'string prefix "-index") 
+      (make-pathname :name (concatenate 'string prefix ".idx") 
+		     :host (pathname-host (lkb-tmp-dir))
+		     :device (pathname-device (lkb-tmp-dir))
                      :directory (pathname-directory (lkb-tmp-dir))))
     (setf *leaf-temp-file* 
-      (make-pathname :name (concatenate 'string prefix "-rels")
+      (make-pathname :name (concatenate 'string prefix ".lts")
+		     :host (pathname-host (lkb-tmp-dir))
+		     :device (pathname-device (lkb-tmp-dir))
                      :directory (pathname-directory (lkb-tmp-dir))))))
 
 ;;;

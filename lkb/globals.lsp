@@ -94,6 +94,13 @@
     (create-pool *dag-pool-size* #'(lambda () (make-safe-dag-x nil nil)))
     *dag-pool*))
 
+;;;
+;;; connection parameters for lexical database, an association list with fields
+;;; `:host', `:user', `:password', `:db', and `:table' (and maybe `:encoding',
+;;; one day).
+;;;
+(defparameter *psql-lexicon-parameters* nil)
+
 ;;; Parse tree node labels
 
 ;;; the path where the name string is stored
