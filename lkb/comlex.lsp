@@ -102,7 +102,14 @@
     (make-pathname :name "comlex" 
 		   :directory (pathname-directory (lkb-tmp-dir))))
 
-(defmethod lookup-word ((lexicon comlex-database) orth &key (cache t))
+(defmethod clear-lex ((lexicon comlex-database) &optional no-delete)
+  (declare (ignore no-delete))
+  ;; Close temporary lexicon files
+  (when (comlex-db lexicon)
+    (cdb:close-read (comlex-db lexicon))
+    (setf (comlex-db lexicon) nil)))
+
+  (defmethod lookup-word ((lexicon comlex-database) orth &key (cache t))
   (declare (ignore cache))
   (unless (comlex-db lexicon)
     (setf (comlex-db lexicon) 
@@ -139,7 +146,6 @@
 			       :constraint-spec nil
 			       :default-spec nil
 			       :enumerated-p nil)))
-    (print (list rel supertype))
     (pushnew rel *type-names* :test #'eq)
     (pushnew rel (slot-value *leaf-types* 'leaf-types) :test #'eq)
     (set-type-entry rel entry)
