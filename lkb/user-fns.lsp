@@ -206,14 +206,21 @@
 
 
 (defun set-temporary-lexicon-filenames nil
-  (setf *psorts-temp-file* 
-    (make-pathname :name "biglex" 
-                   :directory (pathname-directory (lkb-tmp-dir))))
-  (setf *psorts-temp-index-file* 
-    (make-pathname :name "biglex-index" 
-                   :directory (pathname-directory (lkb-tmp-dir))))
-  (setf *leaf-temp-file* 
-    (make-pathname :name "biglex-rels" 
-                   :directory (pathname-directory (lkb-tmp-dir)))))
+  (let ((prefix
+         (if (and (boundp '*grammar-version*) 
+                  (stringp (eval '*grammar-version*)))
+             ;; avoid warnings due to unbound variable on compilation
+             (remove-if-not #'alphanumericp 
+                            (eval '*grammar-version*))
+           "biglex")))
+    (setf *psorts-temp-file* 
+      (make-pathname :name prefix 
+                     :directory (pathname-directory (lkb-tmp-dir))))
+    (setf *psorts-temp-index-file* 
+      (make-pathname :name (concatenate 'string prefix "-index") 
+                     :directory (pathname-directory (lkb-tmp-dir))))
+    (setf *leaf-temp-file* 
+      (make-pathname :name (concatenate 'string prefix "-rels")
+                     :directory (pathname-directory (lkb-tmp-dir))))))
 
 
