@@ -62,7 +62,7 @@
 
 (load (make-pathname :name "mrsglobals-eng.lisp"
                      :directory 
-                     '(:absolute "eo" "e1" "users" "dan" "grammar")))
+                     (append (pathname-directory *load-pathname*) '(".."))))
 
 #|
 ;;; loading vitrification rules
@@ -74,7 +74,7 @@
 
 (load (make-pathname :name "pagemrspatches.lisp"
                      :directory 
-                     '(:absolute "eo" "e1" "users" "dan" "grammar" "patches")))
+                     (pathname-directory *load-pathname*)))
 
 (in-package :cl-user)
 
