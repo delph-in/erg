@@ -7,6 +7,9 @@
 ;;   Language: Allegro Common Lisp
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; $Log$
+;; Revision 1.13  1999/05/06 16:56:29  danf
+;; Improved treatment of scope
+;;
 ;; Revision 1.12  1999/05/03 01:22:06  danf
 ;; More bug fixes in new MRS scoping
 ;;
@@ -93,7 +96,7 @@
 
 (setf *MRS-SCOPING* t)
 
-(setf *GIVING-DEMO-P* nil)
+(setf *GIVING-DEMO-P* t)
 
 (setf *initial-semantics-path* 
   `(,(vsym "SYNSEM") ,(vsym "LOCAL") ,(vsym "CONT")))

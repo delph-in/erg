@@ -11,9 +11,9 @@
 
 (in-package :lexicon)
 
-(excl:compile-file-if-needed 
- (dir-and-name tdl::*patches-dir* "tuneup-patches"))
-(load (dir-and-name tdl::*patches-dir* "tuneup-patches"))
+; (excl:compile-file-if-needed 
+;  (dir-and-name tdl::*patches-dir* "tuneup-patches"))
+; (load (dir-and-name tdl::*patches-dir* "tuneup-patches"))
 
 ;;; *** Still need to get the right restrictor from DFKI
 
@@ -28,8 +28,7 @@
      (disco::nonmod-dtr)
      )))
 
-(unless lexicon::*rf-filter*
-  (rule-filter :print nil)
+
 
 ;; 1. Prevent the other adjunct rules from feeding extradj
 ;; 2. Prevent adjh from feeding hadj, so first pick up post-head adjuncts,
@@ -55,9 +54,11 @@
      (extracomp (:forbid extracomp))
      ))
 |#
-)
 
-(main::get-grammar-from-tdl)
 
-(setf main::*source-grammar* 
-  (namestring (make-pathname :directory (pathname-directory *load-truename*))))
+(pg::initialize-lex-parser :priority-fn #'pg::csli-determine-task-priority)
+(pg::initialize-syn-parser :priority-fn #'pg::csli-determine-task-priority
+                           :result-restrictor lex::*result-rest*)
+
+; (setf main::*source-grammar* 
+;   (namestring (make-pathname :directory (pathname-directory *load-truename*))))

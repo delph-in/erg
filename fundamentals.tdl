@@ -295,37 +295,30 @@ no_rel :< independent_rel.
 ; MRS type
 ;
 ;   TOP handle,            ; Local top handle, linked by H-CONS to other handles
-;   KEY mod_relation,      ; Pointer to the main relation in LISZT
+;   ;;KEY mod_relation,    ; Pointer to main relation in LISZT - moved to LOCAL
 ;   MESSAGE 0-1-dlist,     ; Message type for propositions
 ;   H-CONS *diff-list*     ; Scope constraints: list of scp_pr's
 ;   TOP-H handle,          ; Top handle of MRS expression
-;   ALTKEY mod_relation,   ; Pointer to an alternate relation in LISZT
-;   COMPKEY mod_relation,  ; Pointer to the complement's main relation
-;   OCOMPKEY mod_relation, ; Pointer to the oblique complement's main relation
+;   ;;ALTKEY mod_relation,   ; Pointer to an alternate relation in LISZT
+;   ;;COMPKEY mod_relation,  ; Pointer to the complement's main relation
+;   ;;OCOMPKEY mod_relation, ; Pointer to the oblique complement's main relation
+;   --TOPKEY mod_relation  ; Pointer to relation with TOP handle.
 
 mrs_min := cont &
-  [ TOP handle,
-    INDEX individual ].
+  [ INDEX individual ].
 
-mrs_min1 := mrs_min &
-  [ LISZT *diff-list* ].
+mrs_min0 := mrs_min &
+  [ TOP handle ].
+
+mrs_min1 := mrs_min0 &
+  [ LISZT *diff-list*,
+    --TOPKEY mod_relation ].
     
-basicmrs := mrs_min1 &
-  [ KEY mod_relation,
-    TOP-H handle ].
-    
-basicmrs1 := basicmrs &
+mrs := mrs_min1 &
   [ MESSAGE 0-1-dlist,  
     H-CONS *diff-list*,
     WGLISZT *diff-list*,
-    --TOPKEY mod_relation ].
-
-basicmrs2 := basicmrs1 &
-  [ COMPKEY mod_relation ].
-
-mrs := basicmrs2 &
-  [ ALTKEY mod_relation,
-    OCOMPKEY mod_relation ].
+    TOP-H handle ].
 
 ; Constrains handle of scopable argument SC-ARG relative to one or more 
 ; handles
@@ -403,6 +396,17 @@ nstem :< stemhead.
 astem :< stemhead.
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; KEY relations, for semantic selection
+
+keys_min :< *avm*.
+
+keys := keys_min &
+  [ KEY mod_relation,
+    ALTKEY mod_relation,
+    --COMPKEY mod_relation,
+    --OCOMPKEY mod_relation ].
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Synsem values
 
 ; The feature AGR is introduced on LOCAL rather than on CAT (or on HEAD) since
@@ -410,7 +414,9 @@ astem :< stemhead.
 ; mother, but need to be able to change AGR on the mother (to get plural 
 ; agreement on verb when subject is a coordinated NP with "and" vs. "or").  
 
-cat := *avm* &
+cat_min :< *avm*.
+
+cat := cat_min &
   [ HEAD head_min,
     VAL valence_min,
     MC luk,
@@ -418,7 +424,9 @@ cat := *avm* &
     HC-LEX bool ].
 
 local_min := mod_local &
-  [ CAT cat ].
+  [ CAT cat_min,
+    CONT cont,
+    KEYS keys_min ].
 
 no-affix :< mod_local.
 
@@ -469,14 +477,6 @@ unexpressed := non_canonical &
 anti_synsem := synsem_min &
   [ OPT + ].
 
-; DPF 2-Apr-99 The presence of [KEY no_rel] prevents unification of SPR for 
-; coordination of PP and VP as in 'Abrams is in Berlin and interviewing an 
-; applicant.' 
-; Why was it added?
-#|
-anti_synsem_unexp := anti_synsem & unexpressed &
-  [ LOCAL.CONT.KEY no_rel ].
-|#
 anti_synsem_unexp := anti_synsem & unexpressed.
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -499,8 +499,7 @@ anti_synsem_unexp := anti_synsem & unexpressed.
 ;; only types that introduce the feature LEX, namely lex_synsem and phr_synsem.
 
 local_basic := local_min &
-  [ CONT cont,
-    CONJ conj,
+  [ CONJ conj,
     AGR index ].
 
 local := local_basic &
@@ -592,8 +591,8 @@ phrase :< lexroot,
 
 basic_lex_entry := sign &
   [ STEM < #stem >,
-    SYNSEM.LOCAL.CONT [ KEY.LABEL #label,
-			WGLISZT <! whg-item & [ WG-HNDLS < #label > ] !> ],
+    SYNSEM.LOCAL [ KEYS.KEY.LABEL #label,
+		   CONT.WGLISZT <! whg-item & [ WG-HNDLS < #label > ] !> ],
     ARGS < #morphology & 
 	   [ STEM < #stem > ] >,
     -MORPHOLOGY #morphology,
@@ -616,8 +615,8 @@ standard_mle :< basic_multi_lex_entry.
 
 multi_lex_entry := basic_multi_lex_entry &
   [ STEM < #stem1, #stem2 >,
-    SYNSEM.LOCAL.CONT [ KEY.LABEL #label,
-			WGLISZT <! whg-item & [ WG-HNDLS < #label > ],
+    SYNSEM.LOCAL [ KEYS.KEY.LABEL #label,
+		   CONT.WGLISZT <! whg-item & [ WG-HNDLS < #label > ],
 				   whg-item & [ WG-HNDLS < #label > ] !> ],
     ARGS < [ STEM < #stem1 >,
 	     AFFIX no-affix ],
@@ -626,8 +625,8 @@ multi_lex_entry := basic_multi_lex_entry &
 
 multi_lex_entry_affixed := basic_multi_lex_entry &
   [ STEM < #stem1, #stem2 >,
-    SYNSEM.LOCAL.CONT [ KEY.LABEL #label,
-			WGLISZT <! whg-item & [ WG-HNDLS < #label > ],
+    SYNSEM.LOCAL [ KEYS.KEY.LABEL #label,
+		   CONT.WGLISZT <! whg-item & [ WG-HNDLS < #label > ],
 				   whg-item & [ WG-HNDLS < #label > ] !> ],
     ARGS < [ STEM < #stem1 >,
 	     AFFIX no-affix ],
@@ -652,8 +651,8 @@ multi_lex_entry2 := multi_lex_entry & key_second & standard_mle.
 
 two_space_lex_entry := standard_mle &
   [ STEM < #stem1, #stem2, #stem3 >,
-    SYNSEM.LOCAL.CONT [ KEY.LABEL #label,
-			WGLISZT <! whg-item & [ WG-HNDLS < #label > ],
+    SYNSEM.LOCAL [ KEYS.KEY.LABEL #label,
+		   CONT.WGLISZT <! whg-item & [ WG-HNDLS < #label > ],
 				   whg-item & [ WG-HNDLS < #label > ],
 				   whg-item & [ WG-HNDLS < #label > ] !> ],
     ARGS < [ STEM < #stem1 > ],
@@ -667,8 +666,8 @@ two_space_lex_entry3 := two_space_lex_entry & key_third.
 
 three_space_lex_entry := standard_mle &
   [ STEM < #stem1, #stem2, #stem3, #stem4 >,
-    SYNSEM.LOCAL.CONT [ KEY.LABEL #label,
-			WGLISZT <! whg-item & [ WG-HNDLS < #label > ],
+    SYNSEM.LOCAL [ KEYS.KEY.LABEL #label,
+		   CONT.WGLISZT <! whg-item & [ WG-HNDLS < #label > ],
 				   whg-item & [ WG-HNDLS < #label > ],
 				   whg-item & [ WG-HNDLS < #label > ],
 				   whg-item & [ WG-HNDLS < #label > ] !> ],
@@ -775,8 +774,6 @@ n_or_a :< head.
 a_or_p :< head.
 v_or_p :< head.
 n_or_v :< head.
-v_or_g_or_a :< head.
-v_or_g :< v_or_g_or_a.
 
 strict_type :< head_min.
 
@@ -787,13 +784,16 @@ det := func & poss-able.
 subst := head &
   [ MOOD mood ].
 
+v_or_g_or_a :< subst.
+v_or_g := v_or_g_or_a &
+  [ VFORM vform,
+    INV bool ].
+
 nominal := subst & poss-able &
   [ CASE case ].
 
-verbal := subst &
-  [ VFORM vform,
-    AUX bool,
-    INV bool ].
+verbal := v_or_g &
+  [ AUX bool ].
 
 ; mobile things can be extracted in the complement-extraction rule, from which
 ; we exclude nominative-case NPs by not making all nouns mobile.
@@ -813,13 +813,9 @@ supnoun :< nominal.
 
 noun* := supnoun & n_or_v & n_or_p & n_or_a.
 
-gerund* := supnoun & adverbee & v_or_g.
+gerund* := supnoun & adverbee & v_or_g & n_or_v.
 
-; The following is only used in parse-nodes.tdl to distinguish lexical
-; conjunctions from conjoined phrases.
-conjh :< subst.
-
-verb* := verbal & adverbee & v_or_p & v_or_g & n_or_v &
+verb* := verbal & adverbee & v_or_p & n_or_v &
   [ TENSE tense,
     VOICE voice ].
 
@@ -829,7 +825,7 @@ neg :< func.
 
 adv := func & mobile.
 
-root-marker := subst & v_or_g & strict_type.
+root-marker := v_or_g & strict_type.
 
 detspec :< func.
 
@@ -926,14 +922,14 @@ full_deg-ind := deg-ind & full_index.
 psoa := mrs_min &
   [ INDEX event ].
 
-psoa_basicmrs := psoa & basicmrs.
+psoa_basicmrs := psoa & mrs_min0.
 
 psoa_mrs := psoa_basicmrs & mrs.
 
 nom-obj := mrs_min &
   [ INDEX index ].
 
-nom-obj_basicmrs := nom-obj & basicmrs.
+nom-obj_basicmrs := nom-obj & mrs_min0.
 
 nom-obj_mrs := nom-obj_basicmrs & mrs.
 
@@ -1392,7 +1388,7 @@ abstr_apply := prop_rel & event_rel.
 
 _get_somewhere_rel :< arg1_rel.
 _get_together_rel :< arg1_rel.
-_enough_isect_rel :< adj_rel.
+_enough_isect_rel :< adv_rel.
 
 ; Discourse functions
 
@@ -1584,11 +1580,18 @@ intadj1  := intadj2- & digit1.
 ; This will unify with the indices introduced by (appropriate) controllers,
 ; and (hopefully) be identifiable if it is not controlled.
 
+; DPF 27-May-99 - Removed OPT - constraint from pro_ss (see ERB (19-01-98) above)
+; since head_mod type now constrained via PRD rather than by requiring SUBJ
+; to be empty (cf. note DPF 27-May-99 with n_adj_int_phrase in syntax.tdl).
+; This change means the template for satp can again simply require SUBJ to be
+; *olist* rather than *null*, which e.g. allows verbal gerunds to have optional
+; but non-empty SUBJ value and still themselves appear as subjects or
+; complements without discharging that SUBJ value.
+
 pro_ss := non_canonical &
   [ LOCAL.CAT.HEAD.CASE acc,
     NON-LOCAL [ REL 0-dlist,
-		QUE 0-dlist ],
-    OPT - ].
+		QUE 0-dlist ] ].
 
 ; ERB (19-01-98) We need a subtype of pro and gap so that to_c_prop
 ; can undergo subject extraction.  See the notes near non_wh_rel in
@@ -1781,9 +1784,9 @@ _down_rel := dir_rel & selected_rel.
 _across_rel_a :< dir_or_state_rel.
 _across_rel_s := _across_rel_a & selected_rel.
 _across_rel := _across_rel_a & independent_rel.
-_around_adv_rel_a :< abstr_adv_rel.
-_around_adv_rel_s := _around_adv_rel_a & selected_rel.
-_around_adv_rel := _around_adv_rel_a & independent_rel.
+_around_loc_rel_a :< abstr_adv_rel.
+_around_loc_rel_s := _around_loc_rel_a & selected_rel.
+_around_loc_rel := _around_loc_rel_a & independent_rel.
 _together_rel_a :< abstr_adv_rel.
 _together_rel_s := _together_rel_a & selected_rel.
 _together_rel := _together_rel_a & independent_rel.
@@ -1822,9 +1825,9 @@ _into_rel := to_dir_rel & selected_rel.
 _upon_rel_a :< state_loc_rel.
 _upon_rel_s := _upon_rel_a & selected_rel.
 _upon_rel := _upon_rel_a & independent_rel.
-_apart_rel_a :< abstr_adj_rel.
-_apart_rel_s := _apart_rel_a & selected_rel.
-_apart_rel := _apart_rel_a & independent_rel.
+_apart_isect_rel_a :< abstr_adj_rel.
+_apart_isect_rel_s := _apart_isect_rel_a & selected_rel.
+_apart_isect_rel := _apart_isect_rel_a & independent_rel.
 _open_rel_a :< abstr_adj_rel.
 _open_rel_s := _open_rel_a & selected_rel.
 _open_rel := _open_rel_a & independent_rel.
