@@ -202,17 +202,6 @@
    (list (vsym "X")
          (cons (vsym "PNG.PN") (vsym "unsp_pernum")))))
 
-;;;
-;;; _fix_me_
-;;; right now, the post-generation MRS comparison tends to take most of the
-;;; time and, in a few Rondane cases at least, appears to blow out; in LOGON,
-;;; at least, we are not using the test anyway, and given the summer 2004
-;;; improvements to the generator, there is not that much work left for it to
-;;; be done anyway.                                           (26-nov-04; oe)
-;;;
-#+:logon
-(setf lkb::*bypass-equality-check* t)
-
 (defparameter *var-extra-conversion-table*
 '(
   ((png.gen fem) . (gender f))
