@@ -12,7 +12,7 @@ Check paths from
                               ((SYNSEM LOCAL CONJ) . 31829)
                               ((SYNSEM LOCAL CAT HEAD MOD) . 26569)
                               ((SYNSEM NON-LOCAL QUE LAST) . 24852)
-                              ((SYNSEM LOCAL CAT ROOT) . 23150)
+                              ((SYNSEM LOCAL CAT MC) . 23150)
                               ((SYNSEM LOCAL CAT VAL SUBJ) . 16453)
                               ((SYNSEM LOCAL CAT HEAD MOD CAT HEAD) . 11074)
                               ((SYNSEM NON-LOCAL QUE LIST) . 10372)
@@ -57,7 +57,7 @@ Check paths from
                                 PRD)
                                . 343)
                               ((SYNSEM LOCAL CAT VAL COMPS FIRST LOCAL CAT
-                                ROOT)
+                                MC)
                                . 290)
                               ((SYNSEM LOCAL CAT HEAD MOOD) . 233)
                               ((SYNSEM LOCAL CAT VAL COMPS REST FIRST OPT)

@@ -24,7 +24,7 @@ cp ($vform=vform) := synsem & @satp($head=verbal) &
   [ LOCAL.CAT [ HEAD [ VFORM $vform,
 		       MOOD ind_or_mod_subj,
 		       INV -  ],
-	          ROOT bool ] ].
+	          MC bool ] ].
 
 
 |#
@@ -41,14 +41,14 @@ cp ($vform=vform) := synsem & @satp($head=verbal) &
                      ((local cat head vform) vform)
                      ((local cat head mood) ind_or_mod_subj)
                      ((local cat head inv) -)
-                     ((local cat root) -)))
+                     ((local cat mc) -)))
 
 #|
 
 nomp ($case=case,$cont=mrs) := @satp($head=nominal) &
   [ LOCAL [ CAT [ HEAD strict_head &
 		       [ CASE $case ],
-		  ROOT na ],
+		  MC na ],
 	    CONT $cont ] ].
 
 
@@ -64,7 +64,7 @@ nomp ($case=case,$cont=mrs) := @satp($head=nominal) &
                      ((local cat val comps) *olist*)
                      ((local cat val spr) *olist*)
                      ((local cat head case) case)
-                     ((local cat root) na)
+                     ((local cat mc) na)
                      ((local cont) mrs)))
 #|
 
@@ -96,7 +96,7 @@ nbar ($cont=nom-obj) := local &
 		    COMPS *olist*,
 		    SPR < synsem > ]],
     CONT $cont,
-    ROOT na ].
+    MC na ].
 
 
 |#
@@ -110,7 +110,7 @@ nbar ($cont=nom-obj) := local &
                      ((cat val comps) *olist*)
                      ((cat val spr first) synsem)
                      ((cat val spr rest) *null*)
-                     ((cat root) na)))
+                     ((cat mc) na)))
 
 #|
 third-sg-np ( ) := @nomp ( ) & 
@@ -129,7 +129,7 @@ third-sg-np ( ) := @nomp ( ) &
                      ((local cat val comps) *olist*)
                      ((local cat val spr) *olist*)
                      ((local cat head case) case)
-                     ((local cat root) na)
+                     ((local cat mc) na)
                      ((local cont) mrs)
                      ((local cont index png) 3sg)))
 
@@ -141,7 +141,7 @@ prd ($subj=synsem) :=
 		  VAL [ SUBJ < $subj >,
 			    SPR *olist*,
 			    COMPS *olist* ],
-		  ROOT na ] ] ].
+		  MC na ] ] ].
 
 |#
 
@@ -151,7 +151,7 @@ prd ($subj=synsem) :=
                      ((local cat head prd) +)
                      ((local cat val spr) *olist*)
                      ((local cat val comps) *olist*)
-                     ((local cat root) na)))
+                     ((local cat mc) na)))
 
 #|
 
@@ -182,7 +182,7 @@ pp () := synsem &
 	  [ CAT [ HEAD prep & [ PRD - ],
 		  VAL [ SPR *olist*,
 			    COMPS *olist* ],
-		  ROOT na ] ] ].
+		  MC na ] ] ].
 
 |#
 
@@ -193,6 +193,6 @@ pp () := synsem &
                      ((local cat head prd) -)
                      ((local cat val spr) *olist*)
                      ((local cat val comps) *olist*)
-                     ((local cat root) na)))
+                     ((local cat mc) na)))
 
 nil

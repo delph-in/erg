@@ -7,6 +7,9 @@
 ;;   Language: Allegro Common Lisp
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; $Log$
+;; Revision 1.8  1998/06/22 21:19:21  danf
+;; LKB-consistent grammar with coverage equivalent to PAGE 2.1 version
+;;
 ;; Revision 1.7  1998/05/01 07:47:21  dan
 ;; Grand release with all parses for test suite
 ;;
@@ -68,10 +71,10 @@
   `(,(vsym "INDEX")))
 
 (setf *psoa-liszt-path* 
-    `(,(vsym "RLISZT") ,(vsym "LIST")))
+    `(,(vsym "LISZT") ,(vsym "LIST")))
 
 (setf *psoa-rh-cons-path*
-    `(,(vsym "RH-CONS") ,(vsym "LIST")))
+    `(,(vsym "H-CONS") ,(vsym "LIST")))
 
 (setf *psoa-h-cons-path*
     `(,(vsym "H-CONS") ,(vsym "LIST")))

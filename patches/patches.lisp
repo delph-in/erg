@@ -511,5 +511,26 @@ Output:
           cands-list))
     cands-list))
 
+;; In /usr/local/page2.1/licensed/src/nutshell/protocols/call-eng-scanner
+;; Added special sentence boundary characters, to help with root types.
+
+(in-package "MAIN")
+
+(defmethod call-component ((cpu controller)
+			   (target eng-scanner)
+			   &key direction)
+  (declare (ignore direction))
+  (let ((in (input-stream target)))
+    (setf (direction cpu)
+      (if (setf (output-stream target)
+	    (strings-to-typed-items 
+	     (cons "<s" (nreverse 
+			 (cons "s>" 
+			       (nreverse
+				(eng-scan-input in t nil)))))))
+	  :forward
+	:backward)))
+  nil)
+
 (in-package "TDL")
 

@@ -49,10 +49,8 @@ three_space_lex_entry3 three_space_lex_entry4)
 (defparameter *mother-feature* NIL
    "The feature giving the mother in a grammar rule")
 
-(defparameter *start-symbol* '(root frag frag-msg fin_frag)
+(defparameter *start-symbol* '(root)
    "specifing valid parses")
-;;; needs to be changed to allow for roots.tdl
-
 
 (defparameter *morph-rule-type* 'lex_rule_infl
     "morphology system checks for rules which are
