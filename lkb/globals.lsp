@@ -7,13 +7,10 @@
 
 ;;; Temporary hacks
 
+#+clim
 (defun create-type-hierarchy-tree nil
 ;;; takes far too long and looks silly with ERG -
 ;;; fix this later
-  nil)
-
-(defun canonicalise-feature-order nil
-  ;;; also taking much too long
   nil)
 
 ;;; end temporay hacks
@@ -107,6 +104,10 @@ three_space_lex_entry3 three_space_lex_entry4))
                 (list '(ARGS REST FIRST))))))
 
 
+(defparameter *head-marking-path* '(synsem local cont key)
+   "a feature path - a head daughter in a rule may be identified by
+    having the same value for this path as the mother")
+
   
 (defparameter *start-symbol* '(root frag frag-msg fin_frag)
    "specifing valid parses")
@@ -144,6 +145,16 @@ three_space_lex_entry3 three_space_lex_entry4))
 (defparameter *maximal-lex-rule-applications* 7
    "The number of lexical rule applications which may be made
    before it is assumed that some rules are applying circularly")
+
+(defparameter *deleted-daughter-features* '(args head-dtr non-head-dtr)
+  "These features will not be passed from daughter to mother
+   when parsing")
+
+(defparameter *check-paths* nil
+   ;; set to the correct value in checkpaths.lsp
+   "an alist in which the keys are feature paths that often fail -
+    these are checked first before attempting unification")
+
 
 ;;; Display 
 
