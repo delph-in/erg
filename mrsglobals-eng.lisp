@@ -7,6 +7,9 @@
 ;;   Language: Allegro Common Lisp
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; $Log$
+;; Revision 1.2  1998/09/29 19:45:16  danf
+;; More VM semantics and bug fixes
+;;
 ;; Revision 1.1  1998/09/09 01:18:50  danf
 ;; Added files for newer MRS
 ;;
@@ -119,6 +122,15 @@
 
 (setf *liszt-rest-path* 
   `(,(vsym "REST")))
+
+(setf *psoa-wgliszt-path*
+  `(,(vsym "WGLISZT") ,(vsym "LIST")))
+
+(setf *handels-feature* (vsym "WG-HNDLS"))
+
+(setf *word-feature* (vsym "WG-WORD"))
+
+(setf *id-feature* (vsym "WG-ID"))
 
 ;;; WK: I copy the *VM-arg-roles ... parameters from main-package into MRS
 ;; they appear to work without PAGE then
@@ -242,7 +254,8 @@
      (,(vsym "BSE") (vit_perf nonperf))
      (,(vsym "BSE_ONLY") (vit_perf nonperf))
      (,(vsym "IMP_VFORM") (vit_perf nonperf))
-     (,(vsym "FIN") (vit_tense pres) (vit_perf nonperf)))
+     (,(vsym "FIN") (vit_tense pres) (vit_perf nonperf))
+     (,(vsym "FIN_OR_BSE") (vit_tense pres) (vit_perf nonperf)))
 
     (,(vsym "VITMOOD") vit-tenseandaspect
      ((:AND ,(vsym "INDICATIVE*") ,(vsym "STRICT_MOOD")) (vit_mood ind))
@@ -254,6 +267,7 @@
      ((:AND ,(vsym "IND_OR_MOD_SUBJ") ,(vsym "STRICT_MOOD")) (vit_mood imp))
      ((:AND ,(vsym "STRICT_MOOD") ,(vsym "WOULD_SUBJ*")) (vit_mood conj))
      (,(vsym "INDICATIVE") (vit_mood ind))
+     (,(vsym "INDICATIVE*") (vit_mood ind))
      (,(vsym "MODAL_SUBJ") (vit_mood ind))
      (,(vsym "WOULD_SUBJ") (vit_mood conj))
      (,(vsym "SUBJUNCTIVE") (vit_mood conj))
@@ -353,3 +367,10 @@
 
 (setf *non-expl-ind-type* (vsym "non_expl-ind"))
 (setf *non-expl-type* (vsym "non_expl"))
+
+;;; from english.tdl
+(setq *mrs-to-vit* t)
+(setq main::*vm-arg-roles-only-p* nil)
+(setq mrs::*raw-mrs-output-p* nil)
+(setq mrs::%vit-indent% ",~%    ")
+(setq mrs::*giving-demo-p* t)
