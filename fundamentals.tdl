@@ -24,11 +24,14 @@ basic_sign := sign_min &
 
 ;; ROBUST used to enable ungrammatical phrases such as missing det for sg-noun
 ;; POSSCL marks whether sign contains a possessive clitic.
+;; --SEMIND is re-entrant with HOOK.INDEX, to help modularize path specs,
+;; and to delay expansion of subcategorizations until necessary.
 sign := basic_sign &
-  [ SYNSEM synsem,
+  [ SYNSEM synsem &
+           [ LOCAL.CONT.HOOK.INDEX #index,
+             --SEMIND #index ],
     ARGS *list*,
     INFLECTED bool,
-    ROOT bool,
     ROBUST bool,
     POSSCL bool ].
 
@@ -51,10 +54,9 @@ word_or_lexrule := word_or_lexrule_min & sign &
 ; phr_synsem since they can be post-nominal modifiers.
 
 word := word_or_lexrule &
-  [ SYNSEM.LOCAL.CONT [ HOOK.LTOP #hand,
-			--TOPKEY.LBL #hand ],
-    POSSCL -,
-    ROOT - ].
+  [ SYNSEM [ LOCAL.CONT.HOOK.LTOP #hand,
+             LKEYS.--TOPKEY.LBL #hand ],
+    POSSCL - ].
 
 ; Not all phrases have SYNSEM phr_synsem, since we need to allow the head-comp
 ; rules to build signs which are still [ SYNSEM lex_synsem ], for constructions
@@ -65,22 +67,28 @@ word := word_or_lexrule &
 ; somethings.
 
 phrase := phrase_or_lexrule &
-  [ SYNSEM.LOCAL.ARG-S < >,
-    ROOT bool ].
+  [ SYNSEM.LOCAL.ARG-S < > ].
+
 
 ; DPF (09-Jan-99) - Added boolean LEX feature to be used for determining the
 ; head-complement type of the projections of lexical heads - most produce 
 ; phrases, but see discussion of HC-LEX feature below.
 
-synsem_min := *avm* &
+synsem_min := *avm*.
+
+synsem_min0 := synsem_min &
+  [ LOCAL mod_local ].
+
+synsem_min1 := synsem_min0 &
   [ OPT bool,
     LEX bool,
-    LOCAL mod_local,
-    NON-LOCAL non-local_min ].
+    ROOT bool,
+    NON-LOCAL non-local_min,
+    --SEMIND individual_min ].
 
-lex_or_phrase :< synsem_min.
+lex_or_phrase :< synsem_min1.
 
-synsem :< synsem_min.
+synsem := synsem_min1.
 
 expressed_synsem :< synsem.
 
@@ -93,8 +101,10 @@ canonical_lex_or_phrase_synsem := canonical_synsem & lex_or_phrase &
 phr_synsem := canonical_lex_or_phrase_synsem &
   [ LEX -* ].
 
+; LKEYS provide shortcuts to KEY values of a lex-entry's complements
 abstr_lex_synsem := canonical_lex_or_phrase_synsem &
-  [ LEX +* ].
+  [ LEX +*,
+    LKEYS lexkeys ].
 
 lex_synsem :< abstr_lex_synsem.
 
@@ -118,7 +128,8 @@ gap := expressed_non_canonical &
 		SLASH 1-dlist &
 		    [ LIST < #local > ] ] ].
 
-unexpressed := synsem_min &
+unexpressed_min := synsem_min.
+unexpressed := unexpressed_min & synsem_min1 &
   [ NON-LOCAL [ SLASH 0-dlist,
 		REL 0-dlist,
 		QUE 0-dlist ] ].
@@ -127,7 +138,8 @@ unexpressed_reg := unexpressed & non_canonical.
 
 ; DPF 28-Aug-99 - Removed OPT + from anti_synsem since it blocked 
 ; "you can have anything you want"
-anti_synsem :< unexpressed.
+anti_synsem_min :< unexpressed_min.
+anti_synsem := anti_synsem_min & unexpressed.
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; CAT type
@@ -208,7 +220,7 @@ cat := cat_min &
 local_min := mod_local &
   [ CAT cat_min,
     CONT cont,
-    AGR individual ].
+    AGR individual_min ].
 
 ; no-affix :< mod_local.
 
@@ -364,8 +376,7 @@ no_head := head & strict_type.
 
 ; Types for punctuation and string boundaries.
 punct := head & strict_type.
-left_edge :< punct.
-right_edge :< punct.
+clause-punct :< punct.
 
 ; The idea is that any two heads (for now only major categories) can be
 ; unified in a conjunction, but the resulting type is a specific type that
@@ -424,6 +435,8 @@ gerund := gerund* & strict_supnoun.
 gerund_acc := gerund & mobile_nom & [ CASE acc ].
 gerund_nom := gerund & [ CASE nom ].
 modnp := modnp* & strict_type.
+; For tag questions, which can't be verbal in order to avoid being root S's.
+tagaux := head & strict_type.
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;  Sorts for atomic values
@@ -642,7 +655,8 @@ thing := mod-thing &
   [ INSTLOC instloc ].
 
 handle :< thing.
-individual := thing &
+individual_min := thing.
+individual := individual_min &
  [ DIVISIBLE bool,
    SORT *sort* ].
 
@@ -798,21 +812,19 @@ never_unify_event_rel :< event_rel.
 ;
 ;   LTOP handle,            ; Local top handle, linked by HCONS to other handles
 ;   HCONS *diff-list*      ; Scope constraints: list of scp_pr's
-;   --TOPKEY basic_relation ; Pointer to relation with LTOP handle.
 ;   XARG                   ; External argument, for equi/raising
 
 hook := *top* &
   [ LTOP handle,
-    INDEX individual,
-    E-INDEX individual,
+    INDEX individual_min,
+    E-INDEX individual_min,
     XARG mod-thing ].
 
 mrs_min := cont &
   [ HOOK hook ].
 
 mrs_min1 := mrs_min &
-  [ RELS *diff-list*,
-    --TOPKEY basic_relation ].
+  [ RELS *diff-list* ].
     
 ;; DPF 10-Oct-00 - Added ARG0 attribute for predicative phrases, as in
 ;; "Kim kept calm" where the INDEX of "calm" is "Kim"'s INDEX and the first
@@ -898,11 +910,13 @@ astem :< stemhead.
 ;  KEY basic_relation         ; Pointer to main relation in RELS
 ;  ALTKEY basic_relation      ; Pointer to an alternate relation in RELS
 ;  ALT2KEY basic_relation     ; Pointer to a second alternate relation in RELS
-;  --COMPKEY basic_relation   ; Pointer to the complement's main relation
-;  --OCOMPKEY basic_relation  ; Pointer to the oblique complement's main relation
-;  --+COMPKEY basic_relation  ; Pointer to obligatory complement
-;
 ;  MESSAGE 0-1-dlist,       ; Message type for propositions
+; LKEY relations (shortcuts to KEYS of complements)
+;  --TOPKEY basic_relation    ; Pointer to relation with LTOP handle.
+;  --COMPKEY basic_relation   ; Pointer to the complement's main relation
+;  --OCOMPKEY basic_relation  ; Pointer to the oblique complement's main rel
+;  --+COMPKEY basic_relation  ; Pointer to obligatory complement
+;  --+OCOMPKEY basic_relation ; Pointer to obligatory oblique complement
 
 
 keys_min :< *avm*.
@@ -913,13 +927,18 @@ keys_k := keys_min &
 keys_km := keys_k &
   [ MESSAGE 0-1-dlist ].
 
-keys := keys_km &
-  [ ALTKEY basic_relation,
-    ALT2KEY basic_relation,
-    --COMPKEY basic_relation,
+keys_kma := keys_km &
+  [ ALTKEY basic_relation ].
+
+keys := keys_kma &
+  [ ALT2KEY basic_relation ].
+
+lexkeys := *avm* &
+  [ --COMPKEY basic_relation,
     --OCOMPKEY basic_relation,
     --+COMPKEY basic_relation,
-    --+OCOMPKEY basic_relation ].
+    --+OCOMPKEY basic_relation,
+    --TOPKEY basic_relation ].
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Affixation
@@ -1211,7 +1230,7 @@ nontemp_rel :< nontemp_or_conj_rel.
 ; Nominal relations
 
 instance_rel := independent_rel & arg0_rel &
-  [ ARG0 individual ].
+  [ ARG0 individual_min ].
 
 basic_nom_rel := non_event_rel & instance_rel.
 
@@ -1332,8 +1351,8 @@ hour_rel := temp_abstr_rel & norm_dim_rel & hour_or_time_rel.
 
 ; a quarter till three  ("till" is head - cf "come at a quarter till.")
 hour_prep_rel := hour_rel &
-  [ HOUR-IND individual,
-    MINUTE-IND individual ].
+  [ HOUR-IND individual_min,
+    MINUTE-IND individual_min ].
 
 numbered_hour_rel := hour_rel & abstr_named_rel & const_value_rel &
   [ ARG0.PNG png & [ PN 3sg*,
@@ -1616,7 +1635,7 @@ unspec_manner_rel :< miscprep_ind_rel.
 degree_rel := number_or_degree_rel & independent_rel & i_or_e_quant_or_deg_rel
               & event_or_degree_rel & non_day_or_deg_rel & arg0_rel &
   [ DARG *top*,
-    ARG0 individual ].
+    ARG0 individual_min ].
 
 comp_degree_rel :< degree_rel.
 non_comp_degree_rel :< degree_rel.
@@ -1830,12 +1849,12 @@ _account_n_rel :< diadic_noarg_nom_rel.
 #|
 integer_rel := number_or_degree_rel & independent_mod_rel &
                gen_named_rel & event_rel &
-  [ ARG1 individual ].
+  [ ARG1 individual_min ].
 |#
 
 integer_rel := number_or_degree_rel & independent_mod_rel &
                gen_named_rel & arg0_rel & basic_arg1_rel &
-  [ ARG1 individual ].
+  [ ARG1 individual_min ].
 
 const_rel := integer_rel &
   [ CARG string].
