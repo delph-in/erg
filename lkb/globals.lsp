@@ -83,7 +83,7 @@
    before it is assumed that some rules are applying circularly")
 
 (defparameter *deleted-daughter-features* 
-  '(ARGS HEAD-DTR NON-HEAD-DTR LCONJ-DTR RCONJ-DTR DTR MOD-DTR NONMOD-DTR)
+  '(ARGS HD-DTR NH-DTR LCONJ-DTR RCONJ-DTR DTR)
   "features pointing to daughters deleted on building a constituent")
 
 ;;;
@@ -94,7 +94,7 @@
 (defparameter *chart-packing-p* t)
 
 (defparameter *packing-restrictor*
-  '(STEM RELS HCONS RULE-NAME)
+  '(STEM RELS HCONS RNAME)
   "restrictor used when parsing with ambiguity packing")
 
 ;;; (setf *chart-packing-p* t)
@@ -116,15 +116,15 @@
 
 ;; This is a USER-SPECIFIC PARAMETER (Options->Set options)
 ;; for example:
-;(def-lkb-parameter *psql-lexicon-parameters* 
-;    '((:db "erg") (:semi t))
-;  :user)
+(def-lkb-parameter *psql-lexicon-parameters* 
+    '((:db "erg") (:semi t))
+  :user)
 ;; optionally also: :host, :user, :port
 
 ;;; Parse tree node labels
 
 ;;; the path where the name string is stored
-(defparameter *label-path* '(LABEL-NAME))
+(defparameter *label-path* '(LNAME))
 
 ;;; the path for the meta prefix symbol
 (defparameter *prefix-path* '(META-PREFIX))
@@ -133,7 +133,7 @@
 (defparameter *suffix-path* '(META-SUFFIX))
 
 ;;; the path for the recursive category
-(defparameter *recursive-path* '(SYNSEM NON-LOCAL SLASH LIST FIRST))
+(defparameter *recursive-path* '(SYNSEM NONLOC SLASH LIST FIRST))
 
 ;;; the path inside the node to be unified with the recursive node
 (defparameter *local-path* '(SYNSEM LOCAL))
@@ -152,27 +152,27 @@
 ;;; this belongs in the user-prefs file, not here
 
 (defparameter *duplicate-lex-ids* 
-  '(an_det will_aux_neg_2 would_aux_neg_2 do1_neg_2 hadnt_aux_1 hadnt_aux_2
+  '(will_aux_neg_2 would_aux_neg_2 do1_neg_2 hadnt_aux_1 hadnt_aux_2
     hadnt_aux_subj_1 hadnt_aux_subj_2 hasnt_aux_1 hasnt_aux_2 be_c_is_neg_2
-    aint_sg_have_aux_1 aint_sg_have_aux_2 have_fin_aux_neg_2 be_c_is_neg_1  
-    aint_be_c_is_neg_1 aint_be_c_is_neg_2 be_id_is_neg_1 be_id_is_neg_2
-    aint_be_id_is_neg_1 aint_be_id_is_neg_2 be_th_cop_is_neg_1 
+    aint_sg_have_aux_1 aint_sg_have_aux_2 have_fin_aux_neg_2 
+    aint_be_c_is_neg_1 aint_be_c_is_neg_2 be_id_is_neg_2
+    aint_be_id_is_neg_1 aint_be_id_is_neg_2 
     be_th_cop_is_neg_2 aint_be_th_cop_is_neg_1 aint_be_th_cop_is_neg_2 
     might_aux_neg_1 might_aux_neg_2 must_aux_neg_1 must_aux_neg_2
     need_aux_neg_1 need_aux_neg_2 ought_aux_neg_1 ought_aux_neg_2
-    should_aux_neg_2 could_aux_neg_2 be_id_was_neg_1 be_id_was_neg_2 
-    be_th_cop_was_neg_1 be_th_cop_was_neg_2 be_c_was_neg_1 be_c_was_neg_2 
+    should_aux_neg_2 could_aux_neg_2 be_id_was_neg_2 
+    be_th_cop_was_neg_2 be_c_was_neg_2 
     be_id_was_neg_subj_1 be_id_was_neg_subj_2 be_th_cop_was_neg_subj_1 
     be_th_cop_was_neg_subj_2 be_c_was_neg_subj_1 be_c_was_neg_subj_2 
-    be_c_were_neg_1 be_c_were_neg_2 be_id_were_neg_1 be_id_were_neg_2 
-    be_th_cop_were_neg_1 be_th_cop_were_neg_2 be_c_were_neg_subj_1 
+    be_c_were_neg_2  be_id_were_neg_2 
+    be_th_cop_were_neg_2 be_c_were_neg_subj_1 
     be_c_were_neg_subj_2 be_id_were_neg_subj_1 be_id_were_neg_subj_2 
     be_th_cop_were_neg_subj_1 be_th_cop_were_neg_subj_2 
-    be_c_am_cx be_c_am_cx_2 be_id_am_cx be_id_am_cx_2 be_c_are_cx be_c_are_cx_2
+    be_c_am_cx be_id_am_cx be_id_am_cx_2 be_c_are_cx be_c_are_cx_2
     be_id_are_cx be_id_are_cx_2 had_aux_cx had_aux_cx_2 has_aux_cx has_aux_cx_2
     have_fin_aux_cx have_fin_aux_cx_2 have_bse_aux_cx_1 have_bse_aux_cx_2 
-    be_c_is_cx be_c_is_cx_2 be_id_is_cx be_id_is_cx_2 be_th_cop_is_cx 
-    be_th_cop_is_cx_2 will_aux_pos_cx will_aux_pos_cx_2 would_aux_pos_cx 
+    be_c_is_cx be_id_is_cx be_th_cop_is_cx 
+    will_aux_pos_cx will_aux_pos_cx_2 would_aux_pos_cx 
     would_aux_pos_cx_2 had_better_cx had_better_cx_2
     not_really not_quite still_not rather_not
     u_pro you_guys you_people yall yall_2 yall_3 you_all
@@ -186,7 +186,7 @@
     aint_be_c_are_neg_2 aint_be_c_is_neg_2 aint_be_id_am_neg_2
     aint_be_id_are_neg_2 aint_be_id_is_neg_2 aint_be_th_cop_are_neg_2
     aint_be_th_cop_is_neg_2 aint_pl_have_aux_2 aint_sg_have_aux_2
-    be_c_am_neg_2 be_c_are_neg_2 be_c_is_neg_2 be_c_was_neg_2
+    be_c_am_neg_2 be_c_are_neg_2 be_c_was_neg_2 
     be_c_was_neg_subj_2 be_c_were_neg_2 be_c_were_neg_subj_2
     be_id_am_neg_2 be_id_are_neg_2 be_id_is_neg_2 be_id_was_neg_2
     be_id_was_neg_subj_2 be_id_were_neg_2 be_id_were_neg_subj_2
@@ -205,10 +205,22 @@
     be_it_cop_were_neg_subj_2 shall_aux_pos
     sunday_n2 monday_n2 tuesday_n2 wednesday_n2 thursday_n2 friday_n2
     saturday_n2 slash_punct_adv1 or_else_1
-    whom2 yours_truly_pn1 
+    whom2 yours_truly_pn1 hour_n2 couple_adj
     numvaldet one_day_num_ersatz one_num_determiner
+    april_abb_n1 april_abb_n2 august_abb_n1 august_abb_n22 customer_abb_n1
+    customer_abb_n2 customer_abb_n3 december_abb_n1 december_abb_n2
+    february_abb_n1 february_abb_n2 january_abb_n1 january_abb_n2 july_abb_n1
+    july_abb_n2 june_abb_n1 june_abb_n2 km_abb_n1 km_abb_n2 march_abb_n1
+    march_abb_n2 november_abb_n1 november_abb_n2 number_abb_n1 number_abb_n2
+    number_abb_n3 number_abb_n4 number_abb_title number_abb_title_2
+    october_abb_n1 october_abb_n2 order_abb_n1 order_abb_ttl september_abb_n1
+    september_abb_n2 september_abb_n3 september_abb_n4
+    lets_2 lets_3 a_det_2 i_2 
+    whether_or_not_c_fin whether_or_not_c_inf
    )
   "temporary expedient to avoid generating dual forms")
+
+;; be_th_cop_is_cx_2 be_id_is_cx_2 be_c_is_cx_2 be_c_am_cx_2 
 
 (setf *semantics-index-path* '(SYNSEM LOCAL CONT HOOK INDEX))
 
@@ -242,6 +254,7 @@
 ;;; as of mid-december 2003, the generator allows specification of the non-foot
 ;;; daughters in adjunction rules; make this conditional on LKB source version,
 ;;; so the grammar still loads into older LKBs.                (18-dec-03; oe)
+
 ;;;
 ;;; index accessibility filtering is incompatible with two-phase generation,
 ;;; and should also not be needed anymore.                     (14-jul-04; oe)
@@ -250,11 +263,10 @@
   #+:null
   '((adjh_i . (1)) (nadj_rr_nt . (2))))
 
-
 (defparameter *chart-dependencies*
   '((SYNSEM LKEYS --+COMPKEY) (SYNSEM LOCAL CAT HEAD KEYS KEY)
     (SYNSEM LKEYS --+OCOMPKEY) (SYNSEM LOCAL CAT HEAD KEYS KEY)
-    (SYNSEM LKEYS --+SUBJIND) (SYNSEM --SEMIND)))
+    (SYNSEM LKEYS --+SUBJIND) (SYNSEM --SIND)))
 
 ;;; AAC - Dec 2003
 ;;; *unknown-word-types*
@@ -266,3 +278,6 @@
 (defparameter *non-idiom-root*
     'root_non_idiom )
 
+; For LUI
+(defparameter *lsp-debug-p*
+    nil)

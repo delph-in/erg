@@ -24,8 +24,8 @@
 (setf *top-level-rel-types*  nil)
 
 ;;; features for extracting semantics from expanded lexical entries
-
-(setf *dummy-relations* `(,(vsym "NO_REL") ,(vsym "MESSAGE")))
+; DPF 10-jul-04 - No longer used?
+;(setf *dummy-relations* `(,(vsym "NO_REL") ,(vsym "MESSAGE")))
 
 (defparameter *mrs-to-vit* nil)
 
@@ -135,28 +135,28 @@
 (defparameter *munge-expl-preds* 
   '("_rain_v_rel" "_drizzle_v_rel" "_hail_v_rel" "_snow_v_rel"
     "_sprinkle_v_rel" "_annoy_v_2_rel" "_appear_v_rel" "_arrange_v_expl_rel"
-    "_bother_v_expl_rel" "_breezy_j_expl_rel" "_blustery_j_expl_rel"
-    "_chilly_j_expl_rel" "_cloudy_j_expl_rel" "_cold_j_eexpl_rel"
-    "_cool_j_expl_rel" "_cost_v_x_rel" "_damp_j_expl_rel" "_dry_j_expl_rel"
-    "_exist_v_expl_rel" "_feel_v_seem_rel" "_foggy_j_expl_rel"
-    "_frigid_j_expl_rel" "_gusty_j_expl_rel" "_hot_j_expl_rel"
-    "_leave_v_to_rel" "_look_v_seem_rel" "_make_v_1_rel" "_mild_j_expl_rel"
-    "_prefer_v_expl_rel" "_rainy_j_expl_rel" "_seem_v_rel" "_sound_v_seem_rel"
-    "_sunny_j_expl_rel" "_take_v_expl_rel" "_time_j_expl_rel" "_turn_v_out_rel"
-    "_warm_j_expl_rel" "_wet_j_expl_rel" "_windy_j_expl_rel"
-    "_be_v_itcleft_rel" "_acceptable_j_rel" "_available_j_rel" "_clear_j_rel"
-    "_complicated_j_rel" "_crucial_j_rel" "_difficult_j_rel" "_dreadful_j_rel"
-    "_easier_j_rel" "_easiest_j_rel" "_easy_j_rel" "_emphasized_j_rel"
-    "_encouraging_j_rel" "_good_j_rel" "_hard_j_rel" "_horrendous_j_rel"
-    "_horrible_j_rel" "_imperative_j_rel" "_important_j_rel"
-    "_impossible_j_rel" "_incredible_j_rel" "_interesting_j_rel"
-    "_liberating_j_rel" "_likely_j_rel" "_lucky_j_rel" "_necessary_j_rel"
-    "_nice_j_rel" "_obvious_j_rel" "_okay_j_accept_rel" "_optional_j_rel"
-    "_possible_j_rel" "_profitable_j_rel" "_promising_j_rel"
-    "_reasonable_j_rel" "_relieving_j_rel" "_remarkable_j_rel"
-    "_satisfactory_j_rel" "_stupendous_j_rel" "_suffice_v_rel" "_tough_j_rel"
-    "_true_j_rel" "_unlikely_j_rel" "_unnecessary_j_rel"
-    "_unsatisfactory_j_rel" "_urgent_j_rel" "_vital_j_rel" "_check_v_1_rel"
+    "_bother_v_expl_rel" "_breezy_a_expl_rel" "_blustery_a_expl_rel"
+    "_chilly_a_expl_rel" "_cloudy_a_expl_rel" "_cold_a_eexpl_rel"
+    "_cool_a_expl_rel" "_cost_v_x_rel" "_damp_a_expl_rel" "_dry_a_expl_rel"
+    "_exist_v_expl_rel" "_feel_v_seem_rel" "_foggy_a_expl_rel"
+    "_frigid_a_expl_rel" "_gusty_a_expl_rel" "_hot_a_expl_rel"
+    "_leave_v_to_rel" "_look_v_seem_rel" "_make_v_1_rel" "_mild_a_expl_rel"
+    "_prefer_v_expl_rel" "_rainy_a_expl_rel" "_seem_v_rel" "_sound_v_seem_rel"
+    "_sunny_a_expl_rel" "_take_v_expl_rel" "_time_a_expl_rel" "_turn_v_out_rel"
+    "_warm_a_expl_rel" "_wet_a_expl_rel" "_windy_a_expl_rel"
+    "_be_v_itcleft_rel" "_acceptable_a_rel" "_available_a_rel" "_clear_a_rel"
+    "_complicated_a_rel" "_crucial_a_rel" "_difficult_a_rel" "_dreadful_a_rel"
+    "_easier_a_rel" "_easiest_a_rel" "_easy_a_rel" "_emphasized_a_rel"
+    "_encouraging_a_rel" "_good_a_rel" "_hard_a_rel" "_horrendous_a_rel"
+    "_horrible_a_rel" "_imperative_a_rel" "_important_a_rel"
+    "_impossible_a_rel" "_incredible_a_rel" "_interesting_a_rel"
+    "_liberating_a_rel" "_likely_a_rel" "_lucky_a_rel" "_necessary_a_rel"
+    "_nice_a_rel" "_obvious_a_rel" "_okay_a_accept_rel" "_optional_a_rel"
+    "_possible_a_rel" "_profitable_a_rel" "_promising_a_rel"
+    "_reasonable_a_rel" "_relieving_a_rel" "_remarkable_a_rel"
+    "_satisfactory_a_rel" "_stupendous_a_rel" "_suffice_v_rel" "_tough_a_rel"
+    "_true_a_rel" "_unlikely_a_rel" "_unnecessary_a_rel"
+    "_unsatisfactory_a_rel" "_urgent_a_rel" "_vital_a_rel" "_check_v_1_rel"
     "_decide_v_1_rel" "_determine_v_rel" "_discover_v_rel" "_forget_v_1_rel"
     "_guarantee_v_rel" "_guess_v_rel" "_imagine_v_rel" "_investigate_v_rel"
     "_know_v_1_rel" "_learn_v_rel" "_recall_v_rel" "_remember_v_rel"
@@ -175,7 +175,7 @@
     "_confirm_v_rel" "_explain_v_rel" "_reconfirm_v_rel" "_reply_v_rel"
     "_say_v_1_rel" "_suggest_v_rel" "_swear_v_rel" "_understand_v_by_rel"
     "_write_v_1_rel" "_figure_v_out_rel" "_find_v_out_rel"
-    "_point_v_out_rel"))
+    "_point_v_out_rel" "_relief_n_rel" "_pleasure_n_rel" ))
 
 (defparameter %mrs-extras-defaults%
   (list
@@ -188,8 +188,6 @@
 	(cons (vsym "E.ASPECT.PROGR") (vsym "-"))
 	(cons (vsym "E.ASPECT.STATIVE") (vsym "-")))
    (list (vsym "X")
-	(cons (vsym "PNG.PN") (vsym "unsp_pernum")))
-   (list (vsym "I")
 	(cons (vsym "PNG.PN") (vsym "unsp_pernum")))
    ))
 

@@ -29,11 +29,11 @@
 ;;; which should therefore only be applied by the morphology
 ;;; system.  
 ;;; Old test was for something which was a subtype of
-;;; *morph-rule-type* - this tests for 
-;;; < NEEDS-AFFIX > = + (assuming bool-value-true is default value)
+;;; *morph-rule-type* - this tests for whether needs affix:
+;;; < ND-AFF > = + (assuming bool-value-true is default value)
 ;;; in the rule
   (let ((affix (get-dag-value (tdfs-indef 
-                               (rule-full-fs rule)) 'needs-affix)))
+                               (rule-full-fs rule)) 'nd-aff)))
     (and affix (bool-value-true affix))))
 
 (defun redundancy-rule-p (rule)
@@ -293,7 +293,7 @@
 ;;; modifier "ten".
 
 (defun dag-inflected-p (dag)           
-  (let* ((key (existing-dag-at-end-of dag '(inflected))))
+  (let* ((key (existing-dag-at-end-of dag '(inflectd))))
     (and key (not (bool-value-false key)))))
 
 ;;; Function to run when batch checking the lexicon
@@ -306,12 +306,12 @@
   (when new-fs
     (let* ((inflbool 
            (existing-dag-at-end-of (tdfs-indef new-fs)
-                                   '(inflected)))
+                                   '(inflectd)))
           (type (and (dag-p inflbool) (dag-type inflbool))))
       (when type
         (when
             (eq type 'bool)
-          (format *lkb-background-stream* "~%INFLECTED unset on ~A" id))))))
+          (format *lkb-background-stream* "~%INFLECTD unset on ~A" id))))))
 
 
 (setf *grammar-specific-batch-check-fn* #'lex-check-lingo)

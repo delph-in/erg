@@ -5,4 +5,4 @@
 ;;; assignments in either `lkb/script' or `english.tdl'.  (2-feb-99  -  oe@eo)
 ;;;
 
-(defparameter *grammar-version* "LinGO (9-Jul-04)")
+(defparameter *grammar-version* "LinGO (19-Jul-04)")
