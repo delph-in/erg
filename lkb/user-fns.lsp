@@ -174,6 +174,9 @@
 	 400
        500))))
 
+(defun gen-rule-priority (rule)
+  (rule-priority rule))
+
 (defparameter *unlikely-le-types* '(DISC_ADV_MLE1 LETTER_NAME_LE
 			    MEALTIME_WORD_LE NUMADJ_NOUN_WORD_LE
 			    NP_ADV_LE SUBCONJ_LE 
@@ -194,7 +197,14 @@
     (cond ((member lex-type *unlikely-le-types* :test #'eq) -200)
 	  ((member lex-type *likely-le-types* :test #'eq) 800)
 	  (t 600))))
-	  
+
+(defun gen-lex-priority (fs)
+  (let ((lex-type (dag-type (tdfs-indef fs)))) 
+    (cond ((member lex-type *unlikely-le-types* :test #'eq) -200)
+	  ((member lex-type *likely-le-types* :test #'eq) 800)
+	  (t 600))))
+
+
 (defun set-temporary-lexicon-filenames nil
   (setf *psorts-temp-file* 
     (make-pathname :name "biglex" 
