@@ -58,7 +58,7 @@ three_space_lex_entry3 three_space_lex_entry4)
    "The number of lexical rule applications which may be made
    before it is assumed that some rules are applying circularly")
 
-(defparameter *deleted-daughter-features* '(ARGS HEAD-DTR NON-HEAD-DTR)
+(defparameter *deleted-daughter-features* '(ARGS HEAD-DTR NON-HEAD-DTR LCONJ-DTR RCONJ-DTR)
    "features pointing to daughters deleted on building a constituent")
 
 (defparameter *head-marking-path* '(SYNSEM LOCAL CONT KEY)
