@@ -118,8 +118,9 @@
 
 ;; This is a USER-SPECIFIC PARAMETER (Options->Set options)
 ;; for example:
-;;(def-lkb-parameter *psql-lexicon-parameters* 
-;;  '((:db "erg") (:semi t)))
+;(def-lkb-parameter *psql-lexicon-parameters* 
+;    '((:db "erg") (:semi t))
+;  :user)
 ;; optionally also: :host, :user, :port
 
 ;;; Parse tree node labels
