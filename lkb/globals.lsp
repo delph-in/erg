@@ -75,10 +75,6 @@
   '(CONT)
   "restrictor used when parsing with ambiguity packing")
 
-(defparameter *chart-dependencies*
-  '((SYNSEM LOCAL KEYS --+COMPKEY) (SYNSEM LOCAL KEYS KEY)
-    (SYNSEM LOCAL KEYS --+OCOMPKEY) (SYNSEM LOCAL KEYS KEY)))
-
 ;;;
 ;;; increase dag pool size
 ;;;
@@ -128,3 +124,8 @@
     be_c_was_neg_1 be_c_were_neg_1 be_id_were_neg_1 be_th_cop_were_neg_1
     will_aux_neg_1 would_aux_neg_1)
   "temporary expedient to avoid generating dual forms")
+
+(setf *semantics-index-path* '(synsem local cont hook index))
+
+(setf *intersective-rule-names* '(adjh_i adjn_i nadj_i adjh_i_ques nadj_rc
+                                  nadj_rr_nt nadj_rr_t hadj_i_uns))

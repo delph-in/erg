@@ -13,37 +13,417 @@
 ;;;  $Id$
 
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Types for Sign, Word, Phrase, and Lex-Entry
+
+sign_min := *avm* &
+  [ STEM *list* ].
+
+basic_sign := sign_min &
+  [ KEY-ARG bool ].
+
+;; ROBUST used to enable ungrammatical phrases such as missing det for sg-noun
+;; POSSCL marks whether sign contains a possessive clitic.
+sign := basic_sign &
+  [ SYNSEM synsem,
+    ARGS *list*,
+    INFLECTED bool,
+    ROOT bool,
+    ROBUST bool,
+    POSSCL bool ].
+
+phrase_or_lexrule := sign &
+  [ SYNSEM canonical_synsem &
+	   [ LOCAL.CONT.HOOK #hook ],
+    C-CONT mrs_min & [ HOOK #hook ] ].
+
+word_or_lexrule_min := sign_min.
+
+; ALTS allow lexical entries to block lexical rule application
+word_or_lexrule := word_or_lexrule_min & sign &
+  [ ALTS alts_min ].
+
+; We use --TOPKEY rather than KEY because of negated auxiliaries, which have 
+; the neg_rel's HNDL as TOP, rather than the KEY's HNDL (where the KEY must 
+; still be the same as for the positive auxiliary in order to get tag questions
+; right). 
+; Not all words have lex_synsem - e.g. lexical PPs like "tomorrow" are 
+; phr_synsem since they can be post-nominal modifiers.
+
+word := word_or_lexrule &
+  [ SYNSEM.LOCAL.CONT [ HOOK.TOP #hand,
+			--TOPKEY.HNDL #hand ],
+    POSSCL -,
+    ROOT - ].
+
+; Not all phrases have SYNSEM phr_synsem, since we need to allow the head-comp
+; rules to build signs which are still [ SYNSEM lex_synsem ], for constructions
+; like "twenty-two" and "five fifteen p.m.".  So most phrases will assign the
+; type phr_synsem to the value of SYNSEM, but not all.
+
+; DPF 02-Sept-00 - Removed [ HC-LEX - ] because it blocks conjoined lexical
+; somethings.
+
+phrase := phrase_or_lexrule &
+  [ SYNSEM.LOCAL.ARG-S < >,
+    ROOT bool ].
+
+; DPF (09-Jan-99) - Added boolean LEX feature to be used for determining the
+; head-complement type of the projections of lexical heads - most produce 
+; phrases, but see discussion of HC-LEX feature below.
+
+synsem_min := *avm* &
+  [ OPT bool,
+    LEX bool,
+    LOCAL mod_local,
+    NON-LOCAL non-local_min ].
+
+lex_or_phrase :< synsem_min.
+
+synsem :< synsem_min.
+
+expressed_synsem :< synsem.
+
+canonical_synsem := expressed_synsem &
+  [ MODIFIED xmod ].
+
+canonical_lex_or_phrase_synsem := canonical_synsem & lex_or_phrase &
+  [ LOCAL local_min ].
+    
+phr_synsem := canonical_lex_or_phrase_synsem &
+  [ LEX -* ].
+
+abstr_lex_synsem := canonical_lex_or_phrase_synsem &
+  [ LEX +* ].
+
+lex_synsem :< abstr_lex_synsem.
+
+; For signs that are constructed by syntactic rule but have similar
+; (though not identical) distribution to lexical items - e.g. n_n_cmpnds.
+lex_phr_synsem :< abstr_lex_synsem.
+
+; DPF 29-Nov-02 - Removed [INDEX non_expl] to allow "There was known to be a
+; problem" where pred "was" requires complement to be SUBJ *olist*.
+#|
+non_canonical := synsem &
+  [ LOCAL.CONT.HOOK.INDEX non_expl ].
+|#
+non_canonical := synsem.
+expressed_non_canonical := non_canonical & expressed_synsem.
+
+gap := expressed_non_canonical &
+  [ LOCAL #local,
+    NON-LOCAL [ REL 0-dlist,
+		QUE 0-dlist,
+		SLASH 1-dlist &
+		    [ LIST < #local > ] ] ].
+
+unexpressed := synsem_min &
+  [ NON-LOCAL [ SLASH 0-dlist,
+		REL 0-dlist,
+		QUE 0-dlist ] ].
+
+unexpressed_reg := unexpressed & non_canonical.
+
+; DPF 28-Aug-99 - Removed OPT + from anti_synsem since it blocked 
+; "you can have anything you want"
+anti_synsem :< unexpressed.
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; CAT type
+
+;; The feature MC has three possible values: +, -, and na.  Non-clauses are
+;; always MC na, since they can't really be said to be root or non-root.
+;; All clauses are MC bool, and if they have a restricted distribution then
+;; they are MC + or MC -.
+
+local_basic := local_min &
+  [ KEYS keys_min,
+    CONJ conj ].
+
+local := local_basic &
+  [ CTXT ctxt_min,
+    ARG-S *list*,
+    STEMHEAD stemhead ].
+
+non-local := non-local_min &
+  [ SLASH 0-1-dlist,
+    QUE 0-1-dlist,
+    REL 0-1-dlist ].
+
+non-local_norel := non-local &
+  [ QUE 0-dlist,
+    REL 0-dlist ].
+
+non-local_none := non-local_norel &
+  [ SLASH 0-dlist & [ LIST < > ] ].
+
+;; For unrealized extracted adjuncts needed in relative clauses, as in 
+;; "the day he arrived"
+unexpr_local :< local_basic.
+
+;; For exceptions to lexical rules
+alts_min :< *avm*.
+alts := alts_min &
+  [ PASSIVE bool,
+    VPELLIP bool ].
+no_alts :< alts_min.
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;  Basic types
+; Synsem values
 
-*sort* :< *top*.
+; The feature AGR is introduced on LOCAL rather than on CAT (or on HEAD) since
+; coordination schema unify the CAT value of the daughters with that of then
+; mother, but need to be able to change AGR on the mother (to get plural 
+; agreement on verb when subject is a coordinated NP with "and" vs. "or").  
 
-atom :< *sort*.
+cat_min :< *avm*.
 
-*avm* :< *top*.
+;; DPF (22-Oct-98) Added feature HC-LEX ("is head-complement type lexical?")
+;; on CAT, to identify the type of synsem that results from combining the word 
+;; with its complements.  We recognize at least the head-complement 
+;; structures  "thirty-two" and "two o'clock" as still being lexical signs, not
+;; phrasal ones, since they can appear as prenominal adjectives and in noun-
+;; noun compound constructions, respectively.  The head-complement rule 
+;; determines its SYNSEM type by unifying its LEX value with the HC-LEX of
+;; its head dtr - this works because the HCOMP rule requires its SYNSEM value to
+;; be of type canonical_synsem, and the subtypes of canonical_synsem are the
+;; only types that introduce the feature LEX, namely lex_synsem and phr_synsem.
 
-*list* :< *avm*.
+; DPF 2-Jun-02 - Similarly, words differ in whether the head-specifier
+; construction they head is lexical or phrasal: det+noun is phrasal to avoid
+; allowing e.g. "*my the sony laptop arrived" but deg+adj is still lexical to
+; avoid "*the children very small arrived" (given other constraints for each
+; of these two constructions).  So introduce HS-LEX value.
 
-*cons* := *list* &
-  [ FIRST *top*,
-    REST *top* ].
 
-0-1-list :< *list*.
-1-list := 0-1-list & *cons* &
-  [ REST *null* ].
-*null* :< 0-1-list.
-1-plus-list := *cons* &
-  [ REST *cons* ].
+cat := cat_min &
+  [ HEAD head_min,
+    VAL valence_min,
+    MC luk,
+    POSTHEAD bool,
+    HC-LEX bool,
+    HS-LEX bool].
 
-*diff-list* := *avm* &
-[ LIST *list*,
-  LAST *list* ].
+local_min := mod_local &
+  [ CAT cat_min,
+    CONT cont,
+    AGR individual ].
 
-symbol :< atom.
+; no-affix :< mod_local.
 
-integer :< atom.
+non-local_min :< *avm*.
 
-string := symbol.
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
+;;
+;;  Head and valence
+;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+mod_local :< *avm*.
+
+; The MOD value specifies the type of phrase that a sign can modify, and the
+; POSTHEAD value stipulates the relative position of the modifier with
+; respect to the head.  (An earlier approach employing a generalization about
+; a head being final in its phrase or not might still be considered as an
+; alternate to this stipulative one.)
+; The POSTHEAD feature should stay with MOD, since only relevant when MOD is
+; non-empty.
+
+; DPF 09-Jan-99 - Changed value of MOD to be of type synsem rather than type
+; local, since some modifiers (like vocative NPs) only modify SLASH-empty
+; phrases, which means they have to have access to the NON-LOCAL feature of
+; the phrase they modify.
+
+head_min :< *avm*.
+
+; DPF 16-Aug-99 - Added INV to head type, since need to distinguish root
+; from non-root phrases as output from parser, and since inverted S's now have
+; MESSAGE empty, we have to require all non-root fragments to be INV -.
+
+head := head_min &
+  [ MOD *list*,
+    PRD bool,
+    INV bool,
+    AUX luk,
+    TAM tam].
+
+valence_min :< *avm*.
+
+valence := valence_min &
+  [ SUBJ *list*,
+    SPR *list*,
+    COMPS *list*,
+    SPEC *list*,
+    --KEYCOMP *avm* ].
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Head types
+
+poss-able := head_min &
+  [ POSS bool ].
+
+disc_adverbee :< head.
+
+strict_type :< head_min.
+
+func := head & strict_type.
+
+det := func & poss-able.
+
+n_or_p_or_adv :< head.
+
+subst :< head.
+
+v_or_g_or_p :< subst.
+
+a_or_p_or_adv :< head.
+
+n_or_p :< subst.
+n_or_a :< subst.
+a_or_p := subst & a_or_p_or_adv.
+v_or_p :< subst.
+n_or_v :< subst.
+
+; Adverbs modify adverbees.
+adverbee :< subst.
+
+v_or_g_or_a :< subst.
+v_or_g := v_or_g_or_a & v_or_g_or_p &
+  [ VFORM vform ].
+
+nominal_or_verbal :< subst.
+
+nominal := nominal_or_verbal & poss-able &
+  [ CASE case ].
+
+verbal := v_or_g & nominal_or_verbal & adverbee & disc_adverbee.
+
+; mobile things can be extracted in the complement-extraction rule, from which
+; we exclude nominative-case NPs by not making all nouns mobile.
+
+mobile :< head.
+adj_or_intadj :< head.
+
+adj* := a_or_p & v_or_g_or_a & n_or_a & adverbee & mobile.
+
+prep_or_modnp :< head.
+
+; DPF 26-Jul-99 - Made prep* not inherit from adverbee, since in general
+; don't want adverbs modifying PPs.
+; DPF 17-Dec-01 - But need to have at least some adverbs modifying PPs: "The books currently
+; available include ..."
+
+prep* := a_or_p & v_or_p & n_or_p & mobile & prep_or_modnp & v_or_g_or_p &
+         n_or_p_or_adv & adverbee.
+
+; For result of temp_mod non-branching rule
+; Need mobile for "where did i put it"
+; DPF 13-Oct-02 - Changed parent a_or_p_or_adv to just a_or_p so these guys
+; can take meaure_np degree specifiers.
+
+modnp* := n_or_p & nominal & prep_or_modnp & a_or_p & mobile &
+          n_or_p_or_adv.
+
+supnoun :< nominal.
+
+noun* := supnoun & n_or_v & n_or_p & n_or_a.
+
+; DPF 10-Apr-02 - Added n_or_p since want to allow gerunds to undergo noptcomp
+; rule, to get e.g."way of saying that Kim arrives"
+gerund* := supnoun & adverbee & v_or_g & n_or_v & n_or_p & disc_adverbee.
+
+verb* := verbal & v_or_p & n_or_v &
+  [ VOICE voice ].
+
+comp* := nominal & verbal.
+
+; For measure_nps
+adv_or_partn :< head.
+
+basic_adv :< func.
+
+; 'not' and closed class of other adverbs that can be added to aux COMPS list
+; via 'adv_addition' lexical rule.
+basic_lexadv := basic_adv & disc_adverbee.
+negadv :< basic_lexadv.
+lexadv :< basic_lexadv.
+
+reg_adv := basic_adv & disc_adverbee & adv_or_partn & n_or_p_or_adv &
+           a_or_p_or_adv.
+adv := reg_adv & mobile.
+adv_nonmob :< reg_adv.
+deg_adv :< basic_adv.
+root-marker := v_or_g & adverbee & a_or_p_or_adv & strict_type.
+wh_adv :< func.
+
+detspec :< func.
+
+; Hack used in blocking unwanted affixes
+no_head := head & strict_type.
+
+; Types for punctuation and string boundaries.
+punct := head & strict_type.
+left_edge :< punct.
+right_edge :< punct.
+
+; The idea is that any two heads (for now only major categories) can be
+; unified in a conjunction, but the resulting type is a specific type that
+; will not be subcategorized for, so the only way conjuncts of distinct
+; types will satisfy a subcat is when the head does not mention the type.
+; An example is the copula "be", as in "Kim is in Paris and happy."
+
+v_and_n := verb* & noun*. 
+v_and_a := verb* & adj*.
+v_and_p := verb* & prep*.
+v_and_g := verb* & gerund*.
+n_and_a := noun* & adj*.
+n_and_p := noun* & prep*.
+;;n_and_g := noun* & gerund*.
+a_and_p := adj* & prep*.
+a_and_g := adj* & gerund*.
+mod_and_n := modnp* & noun*.
+mod_and_a := modnp* & adj*.
+mod_and_p := modnp* & prep*.
+
+; AAC - verb_or_comp introduced because the template vp has verbal &
+; strict_type which must be specified as a single type in the LKB
+
+verb_or_comp := strict_type & verbal.
+
+; AAC - similarly for strict_nominal and strict_supnoun
+
+strict_nominal := strict_type & nominal.
+
+strict_supnoun := strict_nominal & supnoun.
+
+mobile_nom := mobile & nominal.
+
+noun_or_nomger := noun* & strict_supnoun.
+; Nominal gerunds
+nomger :< noun_or_nomger.
+nomger_acc := nomger & mobile_nom & [ CASE acc ].
+
+; The following types are used to enable strict subcategorization (the usual 
+; case)
+
+verb := verb* & verb_or_comp.
+noun := noun_or_nomger & n_or_p_or_adv.
+noun_acc := noun & mobile_nom & [ CASE acc ].
+noun_nom := noun & [ CASE nom ].
+partn :< noun.
+partn_mobile := partn & mobile.
+
+
+;partn_acc := partn & adv_or_partn & noun_acc.
+partn_acc := partn & adv_or_partn & [ CASE acc ].
+prep := prep* & strict_type.
+adj := adj* & strict_type & adj_or_intadj.
+comp := comp* & verb_or_comp.
+gerund := gerund* & strict_supnoun.
+gerund_acc := gerund & mobile_nom & [ CASE acc ].
+gerund_nom := gerund & [ CASE nom ].
+modnp := modnp* & strict_type.
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;  Sorts for atomic values
@@ -201,16 +581,17 @@ subjunctive := subjunctive* & strict_sort.
 ind+modsubj := indicative* & modal_subj*.
 
 prontype :< *sort*.
-std_pron :< prontype.
+real_pron :< prontype.
+std_pron :< real_pron.
 std_1sg :< std_pron.
 std_1pl :< std_pron.
 std_2 :< std_pron.
 std_3 :< std_pron.
-recip :< prontype.
-refl :< prontype.
-impers :< prontype.
-demon :< prontype.
-zero_pron :< prontype.
+recip :< real_pron.
+refl :< real_pron.
+impers :< real_pron.
+demon :< real_pron.
+zero_pron :< real_pron.
 not_pron :< prontype.
 
 ; Three-valued sort evoking Polish logician Jan Lukasiewicz
@@ -249,73 +630,6 @@ rmod* := hasmod & notmod_or_rmod.
 
 lmod := lmod* & strict_sort.
 rmod := rmod* & strict_sort.
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; Subtypes of *diff-list*
-
-;; Experimental use of subtypes of *diff-list* to enforce constraint of at
-;; most one element in SLASH (for efficiency, "violin/sonnet" examples
-;; notwithstanding).  Will only have effect in LKB version which does the
-;; necessary type inference.
-
-0-1-dlist := *diff-list* &
-  [ LIST 0-1-list ].
-; DPF 10-Oct-02 - Just a reminder that we cannot make the LIST value of 0-dlist
-; be < >, much as we might like to, since we're doing lexical threading of
-; SLASH (at least), and if we make all 0-dlists have LIST < >, then if the
-; first of two complements is a proper name with SLASH 0-dlist, then the
-; appended diff-list also has LIST <>, which prevents the second complement
-; (or the subject) from being slashed, so we would even block "Who hired Kim".
-0-dlist := 0-1-dlist &
-  [ LIST #list,
-    LAST #list ].
-1-dlist := 0-1-dlist &
-  [ LIST 1-list &
-	 [ REST #rest & *null* ],
-    LAST #rest ].
-    
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
-;;
-;;  Top-level feature geometry
-;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-mod_local :< *avm*.
-
-; The MOD value specifies the type of phrase that a sign can modify, and the
-; POSTHEAD value stipulates the relative position of the modifier with
-; respect to the head.  (An earlier approach employing a generalization about
-; a head being final in its phrase or not might still be considered as an
-; alternate to this stipulative one.)
-; The POSTHEAD feature should stay with MOD, since only relevant when MOD is
-; non-empty.
-
-; DPF 09-Jan-99 - Changed value of MOD to be of type synsem rather than type
-; local, since some modifiers (like vocative NPs) only modify SLASH-empty
-; phrases, which means they have to have access to the NON-LOCAL feature of
-; the phrase they modify.
-
-head_min :< *avm*.
-
-; DPF 16-Aug-99 - Added INV to head type, since need to distinguish root
-; from non-root phrases as output from parser, and since inverted S's now have
-; MESSAGE empty, we have to require all non-root fragments to be INV -.
-
-head := head_min &
-  [ MOD *list*,
-    PRD bool,
-    INV bool,
-    AUX luk,
-    TAM tam].
-
-valence_min :< *avm*.
-
-valence := valence_min &
-  [ SUBJ *list*,
-    SPR *list*,
-    COMPS *list*,
-    SPEC *list*,
-    --KEYCOMP *avm* ].
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; CONT type
@@ -423,13 +737,14 @@ disc_frag :< event_or_index.
 
 cont :< *avm*.
 
-; LABEL links semantic relation to input string elements, more or less.
+; WLINK links semantic relation to input string elements, more or less.
 
-mod_relation := cont &
-  [ HANDEL handle,
-    LABEL *list* ].
+basic_relation := cont &
+  [ HNDL handle,
+    WLINK *list*,
+    PRED *top* ].
 
-relation :< mod_relation.
+relation :< basic_relation.
 
 number_or_degree_rel :< relation.
 
@@ -437,33 +752,36 @@ non_number_rel :< relation.
 
 norm_relation :< non_number_rel.
 
-event_or_degree_or_no_rel :< mod_relation.
+event_or_degree_or_no_rel :< basic_relation.
 ; Needed for coordination of everything but nominals.
-non_conj_rel :< mod_relation.
+non_conj_rel :< basic_relation.
 norm_non_conj_rel := non_conj_rel & norm_relation.
 event_or_degree_rel := norm_non_conj_rel & event_or_degree_or_no_rel.
 
-event_rel := event_or_degree_rel &
-  [ EVENT event ].
+arg0_rel := basic_relation &
+  [ ARG0 event_or_index ].
+
+event_rel := event_or_degree_rel & arg0_rel &
+  [ ARG0 event ].
 
 ; Subtypes of this relation are the types for particle semantics in
 ; verb-particle constructions like _together_rel in "get together"
 ; DPF 15-Apr-01 - Removed ASPECT no_aspect, since want to let "of" be progr*
 ; to block e.g. "as of NP"
 
-selected_rel := event_rel & [ EVENT.E.TENSE no_tense ].
+selected_rel := event_rel & [ ARG0.E.TENSE no_tense ].
 
 ; Subtypes of this relation contrast with those of the above, in that they
 ; supply an "independent" relation.
-independent_rel :< mod_relation.
+independent_rel :< basic_relation.
 
 non_event_rel :< norm_non_conj_rel.
 
 aux_event_rel :< event_rel.
 
-; DPF 23-Nov-01 - Was relation, but should be mod_relation since no_rel should
+; DPF 23-Nov-01 - Was relation, but should be basic_relation since no_rel should
 ; not be subtype of relation.
-nonaux_event_rel :< mod_relation.
+nonaux_event_rel :< basic_relation.
 
 non_freerel_rel :< independent_rel.
 
@@ -476,36 +794,39 @@ never_unify_event_rel :< event_rel.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; MRS type
 ;
-;   TOP handle,            ; Local top handle, linked by H-CONS to other handles
-;   H-CONS *diff-list*     ; Scope constraints: list of scp_pr's
-;   --TOPKEY mod_relation  ; Pointer to relation with TOP handle.
+;   TOP handle,            ; Local top handle, linked by HCONS to other handles
+;   HCONS *diff-list*      ; Scope constraints: list of scp_pr's
+;   --TOPKEY basic_relation ; Pointer to relation with TOP handle.
+;   XARG                   ; External argument, for equi/raising
+
+hook := *top* &
+  [ TOP handle,
+    INDEX individual,
+    E-INDEX individual,
+    XARG mod-thing ].
 
 mrs_min := cont &
-  [ INDEX individual,
-    E-INDEX individual ].
+  [ HOOK hook ].
 
-mrs_min0 := mrs_min &
-  [ TOP handle ].
-
-mrs_min1 := mrs_min0 &
-  [ LISZT *diff-list*,
-    --TOPKEY mod_relation ].
+mrs_min1 := mrs_min &
+  [ RELS *diff-list*,
+    --TOPKEY basic_relation ].
     
-;; DPF 10-Oct-00 - Added EVENT attribute for predicative phrases, as in
+;; DPF 10-Oct-00 - Added ARG0 attribute for predicative phrases, as in
 ;; "Kim kept calm" where the INDEX of "calm" is "Kim"'s INDEX and the first
-;; argument of _keep_rel, while "calm"'s EVENT is second argument of _keep_rel.
+;; argument of _keep_rel, while "calm"'s ARG0 is second argument of _keep_rel.
 
 mrs := mrs_min1 &
-  [ H-CONS *diff-list* ].
+  [ HCONS *diff-list* ].
 
-; Constrains handle of scopable argument SC-ARG relative to one or more 
+; Constrains handle of scopable argument HARG relative to one or more 
 ; handles
 scp_pr := *top* &
-  [ SC-ARG handle ].       
+  [ HARG handle ].       
 
 ; Constrains KEY handle to be less than or equal to the TOP handle.
 qeq := scp_pr &
-  [ OUTSCPD handle ].        
+  [ LARG handle ].        
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; CONJ type -
@@ -572,12 +893,12 @@ astem :< stemhead.
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; KEY relations, for semantic selection
-;  KEY mod_relation         ; Pointer to main relation in LISZT
-;  ALTKEY mod_relation      ; Pointer to an alternate relation in LISZT
-;  ALT2KEY mod_relation     ; Pointer to a second alternate relation in LISZT
-;  --COMPKEY mod_relation   ; Pointer to the complement's main relation
-;  --OCOMPKEY mod_relation  ; Pointer to the oblique complement's main relation
-;  --+COMPKEY mod_relation  ; Pointer to obligatory complement
+;  KEY basic_relation         ; Pointer to main relation in RELS
+;  ALTKEY basic_relation      ; Pointer to an alternate relation in RELS
+;  ALT2KEY basic_relation     ; Pointer to a second alternate relation in RELS
+;  --COMPKEY basic_relation   ; Pointer to the complement's main relation
+;  --OCOMPKEY basic_relation  ; Pointer to the oblique complement's main relation
+;  --+COMPKEY basic_relation  ; Pointer to obligatory complement
 ;
 ;  MESSAGE 0-1-dlist,       ; Message type for propositions
 
@@ -585,219 +906,18 @@ astem :< stemhead.
 keys_min :< *avm*.
 
 keys_k := keys_min &
-  [ KEY mod_relation ].
+  [ KEY basic_relation ].
 
 keys_km := keys_k &
   [ MESSAGE 0-1-dlist ].
 
 keys := keys_km &
-  [ ALTKEY mod_relation,
-    ALT2KEY mod_relation,
-    --COMPKEY mod_relation,
-    --OCOMPKEY mod_relation,
-    --+COMPKEY mod_relation,
-    --+OCOMPKEY mod_relation ].
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; Synsem values
-
-; The feature AGR is introduced on LOCAL rather than on CAT (or on HEAD) since
-; coordination schema unify the CAT value of the daughters with that of then
-; mother, but need to be able to change AGR on the mother (to get plural 
-; agreement on verb when subject is a coordinated NP with "and" vs. "or").  
-
-cat_min :< *avm*.
-
-;; DPF (22-Oct-98) Added feature HC-LEX ("is head-complement type lexical?")
-;; on CAT, to identify the type of synsem that results from combining the word 
-;; with its complements.  We recognize at least the head-complement 
-;; structures  "thirty-two" and "two o'clock" as still being lexical signs, not
-;; phrasal ones, since they can appear as prenominal adjectives and in noun-
-;; noun compound constructions, respectively.  The head-complement rule 
-;; determines its SYNSEM type by unifying its LEX value with the HC-LEX of
-;; its head dtr - this works because the HCOMP rule requires its SYNSEM value to
-;; be of type canonical_synsem, and the subtypes of canonical_synsem are the
-;; only types that introduce the feature LEX, namely lex_synsem and phr_synsem.
-
-; DPF 2-Jun-02 - Similarly, words differ in whether the head-specifier
-; construction they head is lexical or phrasal: det+noun is phrasal to avoid
-; allowing e.g. "*my the sony laptop arrived" but deg+adj is still lexical to
-; avoid "*the children very small arrived" (given other constraints for each
-; of these two constructions).  So introduce HS-LEX value.
-
-
-cat := cat_min &
-  [ HEAD head_min,
-    VAL valence_min,
-    MC luk,
-    POSTHEAD bool,
-    HC-LEX bool,
-    HS-LEX bool].
-
-local_min := mod_local &
-  [ CAT cat_min,
-    CONT cont,
-    AGR individual ].
-
-; no-affix :< mod_local.
-
-non-local_min :< *avm*.
-
-; DPF (09-Jan-99) - Added boolean LEX feature to be used for determining the
-; head-complement type of the projections of lexical heads - most produce 
-; phrases, but see discussion of HC-LEX feature below.
-
-synsem_min := *avm* &
-  [ OPT bool,
-    LEX bool,
-    LOCAL mod_local,
-    NON-LOCAL non-local_min ].
-
-lex_or_phrase :< synsem_min.
-
-synsem :< synsem_min.
-
-expressed_synsem :< synsem.
-
-canonical_synsem := expressed_synsem &
-  [ MODIFIED xmod ].
-
-canonical_lex_or_phrase_synsem := canonical_synsem & lex_or_phrase &
-  [ LOCAL local_min ].
-    
-phr_synsem := canonical_lex_or_phrase_synsem &
-  [ LEX -* ].
-
-abstr_lex_synsem := canonical_lex_or_phrase_synsem &
-  [ LEX +* ].
-
-lex_synsem :< abstr_lex_synsem.
-
-; For signs that are constructed by syntactic rule but have similar
-; (though not identical) distribution to lexical items - e.g. n_n_cmpnds.
-lex_phr_synsem :< abstr_lex_synsem.
-
-non_canonical := synsem &
-  [ LOCAL.CONT.INDEX non_expl ].
-
-expressed_non_canonical := non_canonical & expressed_synsem.
-
-gap := expressed_non_canonical &
-  [ LOCAL #local,
-    NON-LOCAL [ REL 0-dlist,
-		QUE 0-dlist,
-		SLASH 1-dlist &
-		    [ LIST < #local > ] ] ].
-
-unexpressed := synsem_min &
-  [ NON-LOCAL [ SLASH 0-dlist,
-		REL 0-dlist,
-		QUE 0-dlist ] ].
-
-unexpressed_reg := unexpressed & non_canonical.
-
-; DPF 28-Aug-99 - Removed OPT + from anti_synsem since it blocked 
-; "you can have anything you want"
-anti_synsem :< unexpressed.
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; CAT type
-
-;; The feature MC has three possible values: +, -, and na.  Non-clauses are
-;; always MC na, since they can't really be said to be root or non-root.
-;; All clauses are MC bool, and if they have a restricted distribution then
-;; they are MC + or MC -.
-
-local_basic := local_min &
-  [ KEYS keys_min,
-    CONJ conj ].
-
-local := local_basic &
-  [ CTXT ctxt_min,
-    ARG-S *list*,
-    STEMHEAD stemhead ].
-
-non-local := non-local_min &
-  [ SLASH 0-1-dlist,
-    QUE 0-1-dlist,
-    REL 0-1-dlist ].
-
-non-local_norel := non-local &
-  [ QUE 0-dlist,
-    REL 0-dlist ].
-
-non-local_none := non-local_norel &
-  [ SLASH 0-dlist & [ LIST < > ] ].
-
-;; For unrealized extracted adjuncts needed in relative clauses, as in 
-;; "the day he arrived"
-unexpr_local :< local_basic.
-
-;; For exceptions to lexical rules
-alts_min :< *avm*.
-alts := alts_min &
-  [ PASSIVE bool,
-    VPELLIP bool ].
-no_alts :< alts_min.
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; Types for Sign, Word, Phrase, and Lex-Entry
-
-sign_min := *avm* &
-  [ STEM *list* ].
-
-basic_sign := sign_min &
-  [ KEY-ARG bool ].
-
-;; ROBUST used to enable ungrammatical phrases such as missing det for sg-noun
-;; POSSCL marks whether sign contains a possessive clitic.
-sign := basic_sign &
-  [ SYNSEM synsem,
-    ARGS *list*,
-    INFLECTED bool,
-    ROOT bool,
-    ROBUST bool,
-    POSSCL bool ].
-
-phrase_or_lexrule := sign &
-  [ SYNSEM canonical_synsem &
-	   [ LOCAL.CONT [ TOP #hand,
-			  INDEX #index,
-                          E-INDEX #event ] ],
-    C-CONT mrs_min & [ TOP #hand,
-		       INDEX #index,
-                       E-INDEX #event ] ].
-
-word_or_lexrule_min := sign_min.
-
-; ALTS allow lexical entries to block lexical rule application
-word_or_lexrule := word_or_lexrule_min & sign &
-  [ ALTS alts_min ].
-
-; We use --TOPKEY rather than KEY because of negated auxiliaries, which have the
-; neg_rel's HANDEL as TOP, rather than the KEY's HANDEL (where the KEY must still
-; be the same as for the positive auxiliary in order to get tag questions right).
-;
-; Not all words have lex_synsem - e.g. lexical PPs like "tomorrow" are phr_synsem
-; since they can be post-nominal modifiers.
-
-word := word_or_lexrule &
-  [ SYNSEM.LOCAL.CONT [ TOP #hand,
-			--TOPKEY.HANDEL #hand ],
-    POSSCL -,
-    ROOT - ].
-
-;; Not all phrases have SYNSEM phr_synsem, since we need to allow the head-comp
-;; rules to build signs which are still [ SYNSEM lex_synsem ], for constructions
-;; like "twenty-two" and "five fifteen p.m.".  So most phrases will assign the
-;; type phr_synsem to the value of SYNSEM, but not all.
-
-; DPF 02-Sept-00 - Removed [ HC-LEX - ] because it blocks conjoined lexical
-; somethings.
-
-phrase := phrase_or_lexrule &
-  [ SYNSEM.LOCAL.ARG-S < >,
-    ROOT bool ].
+  [ ALTKEY basic_relation,
+    ALT2KEY basic_relation,
+    --COMPKEY basic_relation,
+    --OCOMPKEY basic_relation,
+    --+COMPKEY basic_relation,
+    --+OCOMPKEY basic_relation ].
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Affixation
@@ -811,7 +931,7 @@ phrase := phrase_or_lexrule &
 
 non_affix_bearing := word_or_lexrule &
 [ INFLECTED +,
-  SYNSEM.LOCAL.KEYS.KEY.LABEL *cons* ].
+  SYNSEM.LOCAL.KEYS.KEY.WLINK *cons* ].
 
 ; Rule
 
@@ -832,7 +952,7 @@ meta := sign &
     META-SUFFIX string ]. 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;  CAT values
+; CASE and VFORM
 
 case :< *sort*.
 nom :< case.
@@ -867,171 +987,6 @@ prp :< inf_or_prp.
 fin+imp := fin* & imp_vform*.
 inf_and :< vform.
 psp_adj :< vform.
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; Head types
-
-poss-able := head_min &
-  [ POSS bool ].
-
-disc_adverbee :< head.
-
-strict_type :< head_min.
-
-func := head & strict_type.
-
-det := func & poss-able.
-
-n_or_p_or_adv :< head.
-
-subst :< head.
-
-v_or_g_or_p :< subst.
-
-a_or_p_or_adv :< head.
-
-n_or_p :< subst.
-n_or_a :< subst.
-a_or_p := subst & a_or_p_or_adv.
-v_or_p :< subst.
-n_or_v :< subst.
-
-; Adverbs modify adverbees.
-adverbee :< subst.
-
-v_or_g_or_a :< subst.
-v_or_g := v_or_g_or_a & v_or_g_or_p &
-  [ VFORM vform ].
-
-nominal_or_verbal :< subst.
-
-nominal := nominal_or_verbal & poss-able &
-  [ CASE case ].
-
-verbal := v_or_g & nominal_or_verbal & adverbee & disc_adverbee.
-
-; mobile things can be extracted in the complement-extraction rule, from which
-; we exclude nominative-case NPs by not making all nouns mobile.
-
-mobile :< head.
-adj_or_intadj :< head.
-
-adj* := a_or_p & v_or_g_or_a & n_or_a & adverbee & mobile.
-
-prep_or_modnp :< head.
-
-; DPF 26-Jul-99 - Made prep* not inherit from adverbee, since in general
-; don't want adverbs modifying PPs.
-; DPF 17-Dec-01 - But need to have at least some adverbs modifying PPs: "The books currently
-; available include ..."
-
-prep* := a_or_p & v_or_p & n_or_p & mobile & prep_or_modnp & v_or_g_or_p &
-         n_or_p_or_adv & adverbee.
-
-; For result of temp_mod non-branching rule
-; Need mobile for "where did i put it"
-modnp* := n_or_p & nominal & prep_or_modnp & a_or_p_or_adv & mobile &
-          n_or_p_or_adv.
-
-supnoun :< nominal.
-
-noun* := supnoun & n_or_v & n_or_p & n_or_a.
-
-; DPF 10-Apr-02 - Added n_or_p since want to allow gerunds to undergo noptcomp
-; rule, to get e.g."way of saying that Kim arrives"
-gerund* := supnoun & adverbee & v_or_g & n_or_v & n_or_p & disc_adverbee.
-
-verb* := verbal & v_or_p & n_or_v &
-  [ VOICE voice ].
-
-comp* := nominal & verbal.
-
-; For measure_nps
-adv_or_partn :< head.
-
-basic_adv :< func.
-
-; 'not' and closed class of other adverbs that can be added to aux COMPS list
-; via 'adv_addition' lexical rule.
-basic_lexadv := basic_adv & disc_adverbee.
-negadv :< basic_lexadv.
-lexadv :< basic_lexadv.
-
-reg_adv := basic_adv & disc_adverbee & adv_or_partn & n_or_p_or_adv &
-           a_or_p_or_adv.
-adv := reg_adv & mobile.
-adv_nonmob :< reg_adv.
-deg_adv :< basic_adv.
-root-marker := v_or_g & adverbee & a_or_p_or_adv & strict_type.
-wh_adv :< func.
-
-detspec :< func.
-
-; Hack used in blocking unwanted affixes
-no_head := head & strict_type.
-
-; Types for punctuation and string boundaries.
-punct := head & strict_type.
-left_edge :< punct.
-right_edge :< punct.
-
-; The idea is that any two heads (for now only major categories) can be
-; unified in a conjunction, but the resulting type is a specific type that
-; will not be subcategorized for, so the only way conjuncts of distinct
-; types will satisfy a subcat is when the head does not mention the type.
-; An example is the copula "be", as in "Kim is in Paris and happy."
-
-v_and_n := verb* & noun*. 
-v_and_a := verb* & adj*.
-v_and_p := verb* & prep*.
-v_and_g := verb* & gerund*.
-n_and_a := noun* & adj*.
-n_and_p := noun* & prep*.
-;;n_and_g := noun* & gerund*.
-a_and_p := adj* & prep*.
-a_and_g := adj* & gerund*.
-mod_and_p := modnp* & prep*.
-mod_and_n := modnp* & noun*.
-mod_and_a := modnp* & adj*.
-
-; AAC - verb_or_comp introduced because the template vp has verbal &
-; strict_type which must be specified as a single type in the LKB
-
-verb_or_comp := strict_type & verbal.
-
-; AAC - similarly for strict_nominal and strict_supnoun
-
-strict_nominal := strict_type & nominal.
-
-strict_supnoun := strict_nominal & supnoun.
-
-mobile_nom := mobile & nominal.
-
-noun_or_nomger := noun* & strict_supnoun.
-; Nominal gerunds
-nomger :< noun_or_nomger.
-nomger_acc := nomger & mobile_nom & [ CASE acc ].
-
-; The following types are used to enable strict subcategorization (the usual 
-; case)
-
-verb := verb* & verb_or_comp.
-noun := noun_or_nomger & n_or_p_or_adv.
-noun_acc := noun & mobile_nom & [ CASE acc ].
-noun_nom := noun & [ CASE nom ].
-partn :< noun.
-partn_mobile := partn & mobile.
-
-
-;partn_acc := partn & adv_or_partn & noun_acc.
-partn_acc := partn & adv_or_partn & [ CASE acc ].
-prep := prep* & strict_type.
-adj := adj* & strict_type & adj_or_intadj.
-comp := comp* & verb_or_comp.
-gerund := gerund* & strict_supnoun.
-gerund_acc := gerund & mobile_nom & [ CASE acc ].
-gerund_nom := gerund & [ CASE nom ].
-modnp := modnp* & strict_type.
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;  CONT values (MRS semantics)
@@ -1074,7 +1029,7 @@ conj_full_deg-ind := conj_deg-ind & conj_full-ind.
 ; (with a distinguished event) and nom-objs (with a distinguished index).
 ; We use a polymorphic attribute name INDEX for both of these, to simplify
 ; manipulation of these objects; for example, modifying PPs assign as their
-; ARG's value the INDEX of the phrase they modify, whether it's an N-bar
+; ARG1's value the INDEX of the phrase they modify, whether it's an N-bar
 ; (with a ref-ind value) or a VP (with an event value).  Similarly useful
 ; for coordination.
 
@@ -1085,9 +1040,9 @@ conj_full_deg-ind := conj_deg-ind & conj_full-ind.
 ; forthcoming analysis of tags on imperatives, respectively.
 
 psoa := mrs_min &
-  [ INDEX event ].
+  [ HOOK.INDEX event ].
 
-psoa_basicmrs := psoa & mrs_min0.
+psoa_basicmrs :< psoa.
 
 psoa_mrs := psoa_basicmrs & mrs.
 
@@ -1095,14 +1050,22 @@ psoa_mrs := psoa_basicmrs & mrs.
 ; to keep coordination working now that we want to treat coordination of 
 ; predicative phrases via their E-INDEX.  Probably will have to adjust this
 ; once we get more interesting temporal semantics for some nouns.
+; DPF 29-Nov-02 - Can't have E-INDEX the same, since pre-nominal adjectives
+; now unify their E-INDEX with that of the noun, and it's of type event.
 
+#|
 nom-obj := mrs_min &
-  [ INDEX index & #ind,
-    E-INDEX #ind ].
+  [ HOOK [ INDEX index & #ind,
+           E-INDEX #ind ] ].
+|#
 
-nom-obj_basicmrs := nom-obj & mrs_min0.
+; DPF 4-Dec-02 - For now, make all nouns not expose an external argument, so
+; they won't appear as controlled complements.  Will perhaps want to treat
+; indefinite NPs in copular constructions by relaxing this constraint for e.g.
+; "Kim is a consultant"
 
-nom-obj_mrs := nom-obj_basicmrs & mrs.
+nom-obj := mrs &
+  [ HOOK.XARG nothing ].
 
 ; Relations are classified according to the types of arguments they take.  All
 ; relations have a handle.  In addition, quantifier relations have a bound
@@ -1111,10 +1074,10 @@ nom-obj_mrs := nom-obj_basicmrs & mrs.
 ; can have additional roles, depending on their meaning.
 
 ; Since some temporal nouns can be either arguments or VP modifiers, their 
-; rel's INST value (coindexed with INDEX of the containing MRS) must remain 
+; rel's ARG0 value (coindexed with INDEX of the containing MRS) must remain 
 ; unspecified for type.  Consider "Kim arrived Tuesday" vs. "Tuesday comes
-; after Monday"; in the first, Tuesday must have an EVENT index, while in the
-; second, it must have a REF-IND index.
+; after Monday"; in the first, Tuesday must have an event ARG0, while in the
+; second, it must have a ref-ind ARG0.
 
 ; ERB (24-10-96) Here is the series of relations that will be used for
 ; questions, etc.  Cf. Gizburg & Sag.
@@ -1150,22 +1113,19 @@ wh_the_hell_rel :< relation.
 ; '*Kim said like Sandy left' and '*it looks that Sandy left"
 _like_mood_rel :< prpstn_or_like_rel.
 
-dim_rel := relation &
-  [ DIM non_expl-ind ].
-
-norm_dim_rel := norm_non_conj_rel & dim_rel.
+norm_dim_rel :< norm_non_conj_rel.
 
 basic_event_dim_rel := norm_dim_rel & event_rel.
 non_event_dim_rel := non_event_rel & norm_dim_rel.
 quant_or_deg_rel :< non_event_dim_rel.
 i_or_e_quant_or_deg_rel :< quant_or_deg_rel.
 
-quant_or_wh_rel := quant_or_deg_rel &
-  [ BV ref-ind,
-    RESTR handle ].
+quant_or_wh_rel := quant_or_deg_rel & arg0_rel &
+  [ ARG0 ref-ind,
+    RSTR handle ].
 
 quant_rel := quant_or_wh_rel &
-  [ SCOPE handle ].
+  [ BODY handle ].
 
 impl_or_expl_quant_rel := quant_rel & i_or_e_quant_or_deg_rel &
                           non_freerel_rel.
@@ -1181,18 +1141,28 @@ explicit_quant_or_udef_noagr_rel :< impl_or_expl_quant_rel.
 explicit_quant_noagr_rel := explicit_quant_rel & 
                             explicit_quant_or_udef_noagr_rel.
 
+explicit_quant_noagr_def_rel := explicit_quant_noagr_rel & abstr_def_rel.
+
 much_many_rel := explicit_quant_noagr_rel & this_that_rel.
 
-udef_rel := implicit_quant_rel & explicit_quant_or_udef_noagr_rel.
+; DPF 19-Oct-02 - This is to allow not only ordinary bare plurals, but also
+; for "afternoons" which must be the one that takes an optional PP-of and
+; usually requires a definite determiner (unless it's a bare plural)
+
+abstr_def_rel_or_udef_rel :< quant_rel.
+udef_rel := implicit_quant_rel & explicit_quant_or_udef_noagr_rel &
+            abstr_def_rel_or_udef_rel.
 some_rel :< explicit_quant_agr_rel.
-abstr_def_rel :< quant_rel.
+abstr_def_rel :< abstr_def_rel_or_udef_rel.
 def_rel := abstr_def_rel & implicit_quant_rel.
 def_explicit_rel := abstr_def_rel & explicit_quant_noagr_rel.
 
 ; Used for lexical NPs including proper names
 ; It is distinct from i_or_e_quant_or_deg_rel to prevent relative clauses
 ; from attaching to proper names with no specifier.
-def_np_rel :< quant_rel.
+proper_q_rel :< quant_rel.
+pronoun_q_rel :< quant_rel.
+number_q_rel :< quant_rel.
 
 demonstrative_rel :< explicit_quant_rel.
 demon_near_rel :< demonstrative_rel.
@@ -1222,17 +1192,11 @@ nongeo_location :< location.
 meeting_sit :< nominal-sort.
 inst_loc_coll_poly :< nominal-sort.
 
-; nondim_rel is used to determine whether the specifier that combines with its
-; head provides the semantics (nonhead-compositional) or whether the head does:
-; nondim_rel entries are head-compositional.
-
-nondim_rel :< norm_relation.
-
 ; modable_rel distinguishes those relations whose nominal lexical entries can 
 ; undergo a syntactic rule to produce a modifier phrase, as in "we'll meet
 ; next week" or "I'll do it my way".
 
-modable_rel :< norm_relation.
+modable_rel :< basic_nom_rel.
 
 ; nontemp_rel used to distinguish temporal nominal phrases from all others
 nontemp_or_conj_rel :< norm_relation.
@@ -1240,16 +1204,16 @@ nontemp_rel :< nontemp_or_conj_rel.
 
 ; Nominal relations
 
-instance_rel := independent_rel &
-  [ INST individual ].
+instance_rel := independent_rel & arg0_rel &
+  [ ARG0 individual ].
 
 basic_nom_rel := non_event_rel & instance_rel.
 
 nom_rel := basic_nom_rel &
-  [ INST non_expl-ind ].
+  [ ARG0 non_expl-ind ].
 
 nonpro_rel :< nom_rel.
-nom_nondim_rel := nom_rel & nondim_rel.
+nom_nondim_rel :< nom_rel.
 
 ; DPF 25-Sep-01 - Added [SORT entity] contrasted with [SORT time] to enable
 ; blocking of e.g. "the book that kim arrived" but allow "the day that Kim
@@ -1257,21 +1221,21 @@ nom_nondim_rel := nom_rel & nondim_rel.
 
 non_temp_nom_rel := nom_nondim_rel & nontemp_rel.
 non_temp_nonpro_rel := non_temp_nom_rel & nonpro_rel &
-  [ INST.SORT entity ].
+  [ ARG0.SORT entity ].
 reg_nom_rel :< non_temp_nonpro_rel.
 modable_nom_rel := non_temp_nonpro_rel & modable_rel.
 
 arg3_rel := relation &
   [ ARG3 thing ].
 
-diadic_nom_rel := basic_nom_rel & arg3_rel.
+diadic_nom_rel := basic_nom_rel & basic_arg1_rel.
 
 reg_diadic_nom_rel := diadic_nom_rel & reg_nom_rel.
 basic_diadic_modable_nom_rel := diadic_nom_rel & modable_rel.
 diadic_modable_nom_rel := basic_diadic_modable_nom_rel & modable_nom_rel.
 
-basic_hcomp_nom_rel := reg_nom_rel & arg4_rel &
-  [ ARG4 handle ].
+basic_hcomp_nom_rel := reg_nom_rel & basic_arg1_rel &
+  [ ARG1 handle ].
 
 hcomp_nom_rel :< basic_hcomp_nom_rel.
 
@@ -1286,23 +1250,23 @@ nom_or_ger_rel :< relation.
 nominalize_rel := hcomp_nom_rel & nom_or_ger_rel.
 
 gerund_rel := non_temp_nom_rel & nom_or_ger_rel &
-  [ INST ref-ind ].
+  [ ARG0 ref-ind ].
 
 apposition_rel :< nonpro_rel.
 
 temp_abstr_or_conj_rel :< relation.
 temp_abstr_rel := nonpro_rel & temp_abstr_or_conj_rel &
-  [ INST.SORT time ].
+  [ ARG0.SORT time ].
 
-temp_nondim_rel := temp_abstr_rel & nondim_rel.
+temp_nondim_rel :< temp_abstr_rel.
 
 const_value_rel := relation &
-  [ CONST_VALUE *top* ].
+  [ CVAL *top* ].
 
 ; Used in munging rules to make reversible the implicit quantifier
 abstr_named_rel :< relation.
 gen_named_rel := abstr_named_rel & const_value_rel &
-  [ CONST_VALUE atom ].
+  [ CVAL atom ].
 named_np_or_num_rel :< gen_named_rel.
 abstr_named_np_rel :< named_np_or_num_rel.
 named_np_rel := abstr_named_np_rel & reg_nom_rel.
@@ -1336,8 +1300,8 @@ non_day_rel := temp_nondim_rel & non_day_or_deg_rel.
 
 ;; day_of_month_rel
 dofm_rel := diadic_day_rel & gen_named_rel &
-  [ CONST_VALUE string,
-    ARG3 non_expl-ind ].
+  [ CVAL string,
+    ARG1 non_expl-ind ].
 
 ;; Need supertype of dofw_rel and pro_poss_rel for the specifier of the small
 ;; class of words like "morning" as in "my mornings" or "Tuesday mornings"
@@ -1345,13 +1309,13 @@ dofw_or_poss_rel :< norm_relation.
 
 ;; day_of_week_rel
 dofw_rel := named_day_rel & dofw_or_poss_rel &
-  [ CONST_VALUE symbol ].
+  [ CVAL symbol ].
 
 holiday_rel := named_day_rel &
-  [ CONST_VALUE symbol ].
+  [ CVAL symbol ].
 
 day_part_rel := diadic_day_rel &
-  [ INST.DIVISIBLE -* ].
+  [ ARG0.DIVISIBLE -* ].
 
 ; dim_rel: 'almost three o'clock'
 ; DPF 2-Apr-02 - Added type for hour_rel and _time_rel, to get both "at three"
@@ -1366,9 +1330,9 @@ hour_prep_rel := hour_rel &
     MINUTE-IND individual ].
 
 numbered_hour_rel := hour_rel & abstr_named_rel & const_value_rel &
-  [ INST.PNG png & [ PN 3sg*,
+  [ ARG0.PNG png & [ PN 3sg*,
 		     GEN neut* ],
-    CONST_VALUE string,
+    CVAL string,
     MIN non_expl-ind,
     AM-PM non_expl-ind ].
 
@@ -1378,11 +1342,6 @@ numbered_hour_rel := hour_rel & abstr_named_rel & const_value_rel &
 ; "ten" as minute.
 minute_or_ampm_rel :< nom_nondim_rel.
 
-#|
-minute_rel := minute_or_ampm_rel &
-  [ MINUTE string ].
-|#
-
 modable_hour_rel :< non_day_diadic_modable_rel.
 
 ; 'Kim sleeps three times each day'
@@ -1390,6 +1349,7 @@ _time_rel := modable_hour_rel & hour_or_time_rel.
 ; 'How many hours did Kim work?'
 _hour_rel :< modable_hour_rel.
 _minute_rel :< non_day_diadic_modable_rel.
+_second_n_rel :< non_day_diadic_modable_rel.
 
 am_pm_rel :< minute_or_ampm_rel.
 am_rel :< am_pm_rel.
@@ -1411,7 +1371,7 @@ non_day_diadic_modable_rel := non_day_diadic_rel & modable_rel.
 ;; order to admit "Kim arrived last June".  Have to do something else to
 ;; allow the latter.
 mofy_rel := non_day_diadic_rel & abstr_named_np_rel &
-  [ CONST_VALUE symbol ].
+  [ CVAL symbol ].
 
 yofc_rel := non_day_rel & abstr_named_np_rel.
 
@@ -1425,7 +1385,7 @@ _afternoon_rel :< day_part_rel.
 _evening_rel :< day_part_rel.
 _night_rel :< day_part_rel.
 _weekday_rel :< day_rel.
-_weekend_rel :< day_rel.
+_weekend_rel :< diadic_day_rel.
 _workday_rel :< day_rel.
 
 _week_rel :< non_day_diadic_modable_rel.
@@ -1449,22 +1409,22 @@ gen_currency_rel :< reg_nom_rel.
 ; For X to Y constructions
 interval_rel :< diadic_modable_nom_rel.
 
-;; The relation event_or_arg_rel is designed to distinguish non-nominal signs, 
+;; The relation event_or_mod_rel is designed to distinguish non-nominal signs, 
 ;; including verbs, adjectives, prepositions, and adverbs.  One use of this 
 ;; distinction is for the conjuncts accepted by "but": "*Kim but Sandy left."
 
-event_or_arg_rel :< relation.
+event_or_mod_rel :< relation.
 
-arg_rel := event_or_arg_rel &
-  [ ARG thing ].
+mod_rel :< event_or_mod_rel.
 
-event_arg_rel := event_rel & arg_rel.
-event_arg_dim_rel := event_arg_rel & basic_event_dim_rel.
+event_mod_rel := event_rel & mod_rel.
+event_arg_dim_rel := event_mod_rel & basic_event_dim_rel.
 event_dim_rel := basic_event_dim_rel & nonaux_event_rel.
-independent_arg_rel := independent_rel & arg_rel.
+independent_mod_rel := independent_rel & mod_rel.
 
-abstr_excl_rel := nondim_rel & independent_arg_rel & const_value_rel &
-  [ CONST_VALUE symbol ].
+abstr_excl_rel := independent_mod_rel & const_value_rel & 
+                  basic_arg1_rel &
+  [ CVAL symbol ].
 
 greet_rel :< abstr_excl_rel.
 
@@ -1472,52 +1432,41 @@ excl_rel :< abstr_excl_rel.
 
 ; Pronouns
 pron_rel := non_temp_nom_rel & abstr_named_rel &
-  [ INST ref-ind & [ DIVISIBLE -*,
+  [ ARG0 ref-ind & [ DIVISIBLE -*,
                      SORT entity ] ].
 
 recip_pro_rel := non_temp_nonpro_rel &
-  [ INST ref-ind & [ DIVISIBLE -* ] ].
+  [ ARG0 ref-ind & [ DIVISIBLE -* ] ].
 
 ; For deictic pronouns
 ; DPF 12-Apr-02 - Added nonpro_rel parent, to allow deictic complements for
 ; e.g. there-copula
 generic_nom_rel := non_temp_nonpro_rel &
-  [ INST ref-ind ].
+  [ ARG0 ref-ind ].
 
 ; For partitives
 generic_nonpro_rel := nonpro_rel &
-  [ INST ref-ind ].
+  [ ARG0 ref-ind ].
 
 basic_adj_rel := event_dim_rel & nontemp_rel.
 
-abstr_adj_rel := basic_adj_rel & event_arg_dim_rel &
-  [ ARG non_expl ].
+abstr_adj_rel := basic_adj_rel & event_arg_dim_rel & basic_arg1_rel &
+  [ ARG1 non_expl ].
 
-adj_rel := abstr_adj_rel & independent_arg_rel & this_that_rel.
+adj_rel := abstr_adj_rel & independent_mod_rel & this_that_rel.
 
 expl_adj_rel := basic_adj_rel & independent_rel.
-
-arg2_rel := relation &
-  [ ARG2 thing ].
-
-arg4_rel := relation &
-  [ ARG4 thing ].
 
 ; For generator to know when to introduce expletive "it"
 expl_rel :< relation.
 
-basic_adj_arg4_rel := basic_adj_rel & arg4_rel.
-adj_arg4_rel := basic_adj_arg4_rel & adj_rel.
-adj_arg2_rel := adj_rel & arg2_rel.
-;;it_adj_arg24_rel := basic_adj_arg4_rel & adj_arg2_rel & expl_rel.
-;;it_adj_arg4_rel := adj_arg4_rel & expl_rel.
-it_adj_arg4_rel := adj_arg4_rel & expl_rel.
-it_adj_arg24_rel := it_adj_arg4_rel & adj_arg2_rel.
-adj_arg24_rel := adj_arg4_rel & adj_arg2_rel.
-adj_arg3_rel := adj_rel & arg3_rel.
+adj_arg1_rel := adj_rel & arg1_rel.
+adj_arg12_rel := adj_arg1_rel & arg2_rel.
+adj_arg123_rel := adj_arg12_rel & arg3_rel.
+it_adj_arg123_rel := adj_arg123_rel & expl_rel.
 
-meas_adj_rel := adj_arg3_rel &
-  [ ARG3 ref-ind ].
+meas_adj_rel := adj_arg12_rel &
+  [ ARG2 ref-ind ].
 
 adj_personal_rel :< adj_rel.
 adj_abstract_rel :< adj_rel.
@@ -1536,51 +1485,53 @@ weather_v_rel := expl_rel & no_role_rel.
 
 role_rel := mod_role_rel & nontemp_rel & nonaux_event_rel.
 
-arg1_rel := role_rel &
+basic_arg1_rel := relation &
   [ ARG1 thing ].
 
-arg12_rel := arg1_rel & arg2_rel.
-arg13_rel := arg1_rel & arg3_rel.
-arg14_rel := arg1_rel & arg4_rel &
-  [ ARG1 non_expl-ind,
-    ARG4 thing ].
-arg24_rel := arg2_rel & arg4_rel.
-arg123_rel := arg12_rel & arg13_rel.
-arg124_rel := arg12_rel & arg14_rel & expl_rel.
-arg134_rel := arg13_rel & arg14_rel.
-arg1234_rel := arg123_rel & arg134_rel.
-arg3_event_rel := arg3_rel & role_rel.
-basic_arg4_event_rel := arg4_rel & v_event_rel.
-arg4_event_rel := basic_arg4_event_rel & nonaux_event_rel.
-arg24_event_rel := arg2_rel & arg4_event_rel & expl_rel.
-arg34_event_rel := arg3_rel & arg4_event_rel & expl_rel.
-arg14_expl_rel := arg14_rel & expl_rel.
-arg4_expl_event_rel := arg4_event_rel & expl_rel.
+arg1_rel := basic_arg1_rel & role_rel.
 
-aux_arg4_event_rel := basic_arg4_event_rel & aux_event_rel.
-modal_rel :< aux_arg4_event_rel.
+arg2_rel := relation &
+  [ ARG2 thing ].
+
+arg4_rel := relation &
+  [ ARG4 thing ].
+
+
+arg12_rel := arg1_rel & arg2_rel.
+arg123_rel := arg12_rel & arg3_rel.
+arg1234_rel := arg123_rel & arg4_rel.
+basic_arg1_event_rel := basic_arg1_rel & event_rel.
+arg1_event_rel := basic_arg1_event_rel & v_event_rel.
+arg2_event_rel := arg2_rel & v_event_rel & nonaux_event_rel.
+arg12_event_rel := basic_arg1_rel & arg2_rel & v_event_rel &
+                   expl_rel.
+arg12_expl_rel := arg12_rel & expl_rel.
+arg1_expl_event_rel := arg1_event_rel & expl_rel.
+
+aux_arg1_event_rel := basic_arg1_event_rel & aux_event_rel & v_event_rel.
+modal_rel :< aux_arg1_event_rel.
 
 ellipsis_rel := role_rel &
   [ ROLE thing ].
 
-; Used to ensure tag question agreement, but will not appear in LISZT.
+; Used to ensure tag question agreement, but will not appear in RELS.
 have_aux_rel := v_event_rel & aux_event_rel.
 
 ; Needed to allow filtering of the relations for "will" and "would" for VIT.
-will_would_rel :< aux_arg4_event_rel.
+will_would_rel :< aux_arg1_event_rel.
 
-abstr_rel :< arg3_event_rel.
+abstr_rel :< arg2_event_rel.
 
-would_like_rel :< arg134_rel.
+would_like_rel :< arg123_rel.
 
 ; AAC - added for frag-msg
-abstr_3_rel := basic_nom_rel & arg3_rel.
+abstr_1_rel := basic_nom_rel & basic_arg1_rel.
 
 ; AAC - added for wh_adjective_word
-abstr_nom_rel := event_arg_rel & basic_nom_rel.
+abstr_nom_rel := event_mod_rel & basic_nom_rel.
 
 ; Needed for generation from German VITs
-abstr_suit_rel :< arg13_rel.
+abstr_suit_rel :< arg12_rel.
 
 prop_rel := event_rel &
 	   [ PROP non_expl ].
@@ -1590,13 +1541,13 @@ support_rel :< no_role_rel.
 
 ; Preposition relations
 
-prep_rel := arg3_rel & event_dim_rel &
-  [ ARG3 non_expl ].	    
+prep_rel := basic_arg1_rel & arg2_rel & event_dim_rel &
+  [ ARG2 non_expl ].	    
 
 basic_prep_mod_rel := prep_rel & event_arg_dim_rel.
 
 prep_mod_rel :< basic_prep_mod_rel.
-basic_poss_rel := basic_prep_mod_rel & [ EVENT.E.TENSE no_tense ].
+basic_poss_rel := basic_prep_mod_rel & [ ARG0.E.TENSE no_tense ].
 poss_rel := basic_poss_rel & prep_mod_rel.
 pro_poss_rel := basic_poss_rel & dofw_or_poss_rel.
 _got_poss_rel :< poss_rel.
@@ -1609,18 +1560,18 @@ dir_rel :< dir_or_state_rel.
 state_loc_rel :< dir_or_state_rel.
 generic_loc_rel :< loc_abstr_rel.
 
-; DPF 13-May-02 - Removed ARG3.SORT time since this blocked e.g. "after the
+; DPF 13-May-02 - Removed ARG2.SORT time since this blocked e.g. "after the
 ; party" or "after Kim"
 temp_loc_abstr_rel :< loc_abstr_rel.
 unspec_temp_loc_abstr_rel := temp_loc_abstr_rel & unspec_loc_rel.
 
 miscprep_rel :< nontemp_prep_rel.
 
-dir_indep_rel := dir_rel & independent_arg_rel.
-miscprep_ind_rel := miscprep_rel & independent_arg_rel.
-prep_mod_ind_rel := prep_mod_rel & independent_arg_rel.
-dir_or_state_ind_rel := dir_or_state_rel & independent_arg_rel.
-temp_loc_indep_rel := temp_loc_abstr_rel & independent_arg_rel.
+dir_indep_rel := dir_rel & independent_mod_rel.
+miscprep_ind_rel := miscprep_rel & independent_mod_rel.
+prep_mod_ind_rel := prep_mod_rel & independent_mod_rel.
+dir_or_state_ind_rel := dir_or_state_rel & independent_mod_rel.
+temp_loc_indep_rel := temp_loc_abstr_rel & independent_mod_rel.
 temp_loc_rel :< temp_loc_indep_rel.
 
 ; DPF 25-Nov-01 - Added parent this_that_rel to allow "how much" partitive
@@ -1630,12 +1581,12 @@ diadic_noarg_nom_rel :< reg_diadic_nom_rel.
 ;diadic_noarg_modable_nom_rel :< diadic_modable_nom_rel.
 diadic_noarg_nom_appos_rel := reg_diadic_nom_rel & apposition_rel.
 
-abstr_adv_rel := arg_rel & non_event_rel.
+abstr_adv_rel := mod_rel & non_event_rel & basic_arg1_rel.
 
-adv_rel := abstr_adv_rel & non_event_dim_rel & independent_arg_rel &
+adv_rel := abstr_adv_rel & non_event_dim_rel & independent_mod_rel &
            this_that_rel.
 
-neg_rel := abstr_adv_rel & independent_arg_rel.
+neg_rel := abstr_adv_rel & independent_mod_rel.
 
 basic_neg_polar_rel := abstr_adv_rel & non_event_dim_rel.
 neg_polar_rel := basic_neg_polar_rel & independent_rel.
@@ -1657,8 +1608,9 @@ unspec_manner_rel :< miscprep_ind_rel.
 ; Degree relations
 
 degree_rel := number_or_degree_rel & independent_rel & i_or_e_quant_or_deg_rel
-              & event_or_degree_rel & non_day_or_deg_rel & 
-  [ DARG thing ].
+              & event_or_degree_rel & non_day_or_deg_rel & arg0_rel &
+  [ DARG *top*,
+    ARG0 individual ].
 
 comp_degree_rel :< degree_rel.
 non_comp_degree_rel :< degree_rel.
@@ -1668,7 +1620,7 @@ deg_rel :< non_comp_degree_rel.
 
 ; For specifiers of positive adjectives
 very_deg_rel :< deg_rel.
-eq_degree_rel := very_deg_rel & arg_rel & arg3_rel.
+eq_degree_rel := very_deg_rel & arg2_rel & basic_arg1_rel.
 
 ; For specifiers of "the", including "only" and "just"
 just_only_degree_rel :< degree_rel.
@@ -1696,7 +1648,7 @@ gen_deg_rel :< deg_rel.
 
 comparative_rel := comp_degree_rel &
   [ ARG-1 index,
-    C-INST index ].
+    C-ARG0 index ].
 
 comp_more_less_rel := comparative_rel &
   [ ARG-2 index ].
@@ -1722,13 +1674,13 @@ _by_pass_rel_cm := _by_pass_rel_a & selected_rel.
 _from_time_on :< miscprep_ind_rel.
 _compar_than_rel :< miscprep_ind_rel.
 comp_rel := miscprep_ind_rel &
-  [ ARG3 event_or_index,
-    EVENT.E.TENSE no_tense ].
+  [ ARG2 event_or_index,
+    ARG0.E.TENSE no_tense ].
 more_less_adj_rel :< adj_rel.
 _more_adj_rel :< more_less_adj_rel.
 _less_adj_rel :< more_less_adj_rel.
 superl_rel := miscprep_ind_rel &
-  [ ARG3 event_or_index ].
+  [ ARG2 event_or_index ].
 most_least_adj_rel :< adj_rel.
 _most_adj_rel :< most_least_adj_rel.
 _least_adj_rel :< most_least_adj_rel.
@@ -1745,16 +1697,16 @@ of_or_about_rel := prep_rel.
 _of_rel_a := of_or_about_rel & nontemp_prep_rel.
 _in_rel_a :< dir_or_state_rel.
 
-subord_rel := nondim_rel & independent_rel &
+subord_rel := independent_rel & norm_relation &
   [ MAIN handle,
     SUBORD handle ].
 
-cop_id_rel :< arg13_rel.
+cop_id_rel :< arg12_rel.
 _cop_id_rel :< cop_id_rel.
-title_id_rel := cop_id_rel & [ EVENT.E.TENSE no_tense ].
-person_name_rel := cop_id_rel & [ EVENT.E.TENSE no_tense ].
+title_id_rel := cop_id_rel & [ ARG0.E.TENSE no_tense ].
+person_name_rel := cop_id_rel & [ ARG0.E.TENSE no_tense ].
 temp_span_rel :< meas_adj_rel.
-_equal_adj_rel :< adj_arg3_rel.
+_equal_adj_rel :< adj_arg12_rel.
 unspec_adj_rel :< adj_rel.
 number_rel :< reg_diadic_nom_rel.
 quantity_rel :< reg_diadic_nom_rel.
@@ -1775,17 +1727,19 @@ _dollar_rel :< reg_nom_rel.
 ; a request_ans_rel, whether will contribute a polar_q_rel, and
 ; matrix wh questions will contribute a request_ans_rel.
 
-polar_q_rel :< arg_rel.
-request_ans_rel :< arg_rel.
+#|
+polar_q_rel :< mod_rel.
+request_ans_rel :< mod_rel.
 
-polite_rel :< arg_rel.
+polite_rel :< mod_rel.
+|#
 
 ; Phrasally introduced relations
 
-unspec_rel := nondim_rel & event_rel &
-  [ HINST index,
-    NHINST index,
-    EVENT.E.TENSE no_tense ].
+unspec_rel := event_rel & basic_arg1_rel & arg2_rel &
+  [ ARG1 index,
+    ARG2 index,
+    ARG0.E.TENSE no_tense ].
 
 ; Used for vocatives.
 unspec_mod_rel :< prep_mod_ind_rel.
@@ -1796,15 +1750,15 @@ probable_rel :< adj_rel.
 
 ; DPF 24-Oct-01 - Added nontemp_rel and temp_abstr_rel so restrictions on the
 ; two reduced relative rules don't exclude conjoined phrases
-basic_conj_rel := nondim_rel & non_freerel_rel & nontemp_or_conj_rel & 
+basic_conj_rel := non_freerel_rel & nontemp_or_conj_rel & 
             temp_abstr_or_conj_rel &
   [ C-ARG conj-ind,
     L-INDEX non_expl,
     R-INDEX non_expl ].
 
 conj_rel := basic_conj_rel &
-  [ L-HANDEL mod-thing,
-    R-HANDEL mod-thing ].
+  [ L-HNDL mod-thing,
+    R-HNDL mod-thing ].
 
 _and_rel :< conj_rel.
 _and_or_rel :< conj_rel.
@@ -1819,6 +1773,7 @@ _plus_rel :< conj_rel.
 _rather_than_rel :< conj_rel.
 _so_conj_rel :< conj_rel.
 _versus_rel :< conj_rel.
+_except_that_rel :< conj_rel.
 
 ; For fragments
 
@@ -1831,7 +1786,7 @@ num_seq_rel :< conj_rel.
 ; Abstract relations specified by more than one lexical entry
 
 abstr_place_rel := basic_diadic_modable_nom_rel & non_temp_nonpro_rel & 
-  [ INST.SORT entity ].
+  [ ARG0.SORT entity ].
 place_rel := abstr_place_rel & abstr_named_rel.
 time_rel := modable_rel & temp_abstr_rel.
 telephone_rel :< reg_nom_rel.
@@ -1840,20 +1795,22 @@ thing_rel :< reg_nom_rel.
 next_prev_rel :< adj_rel.
 manner_rel :< reg_nom_rel.
 reason_rel := reg_nom_rel & abstr_named_rel.
-abstr_sure_rel := adj_arg4_rel.
+abstr_sure_rel := adj_arg12_rel.
 
 title_rel := basic_nom_rel & const_value_rel &
-  [ CONST_VALUE atom ].
+  [ CVAL atom ].
 
-; 'Next week, last night'
+; 'Next week, last night, all day'
 _next_rel := next_prev_rel & dofw_or_poss_rel.
 _last_adj_rel := adj_rel & dofw_or_poss_rel.
+_all_adj_rel := adj_rel & dofw_or_poss_rel.
+_late_next_last_rel := adj_rel & dofw_or_poss_rel.
 
-v_event_arg3_rel := v_event_rel & arg3_rel & aux_event_rel &
-  [ ARG3 non_expl-ind ].
+v_event_arg1_rel := basic_arg1_rel & aux_event_rel & v_event_rel &
+  [ ARG1 non_expl-ind ].
 
-_there_cop_rel :< v_event_arg3_rel.
-_there_exist_rel :< v_event_arg3_rel.
+_there_cop_rel :< v_event_arg1_rel.
+_there_exist_rel :< v_event_arg1_rel.
 
 ; take into account
 _account_n_rel :< diadic_noarg_nom_rel.
@@ -1861,14 +1818,21 @@ _account_n_rel :< diadic_noarg_nom_rel.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Number relations
 
-integer_rel := dim_rel & number_or_degree_rel & independent_arg_rel &
-               gen_named_rel & event_rel &
-  [ ARG individual ].
-
-; DPF 10-Feb-02 - Highly experimental addition of EVENT attribute to get 
+; DPF 10-Feb-02 - Highly experimental addition of ARG0 attribute to get 
 ; segregation of numerical adjectives
+; DPF 9-Jul-02
+#|
+integer_rel := number_or_degree_rel & independent_mod_rel &
+               gen_named_rel & event_rel &
+  [ ARG1 individual ].
+|#
+
+integer_rel := number_or_degree_rel & independent_mod_rel &
+               gen_named_rel & arg0_rel & basic_arg1_rel &
+  [ ARG1 individual ].
+
 const_rel := integer_rel &
-  [ CONST_VALUE string].
+  [ CVAL string].
 
 plus_rel := integer_rel & [ TERM1 handle,
 			    TERM2 handle].
@@ -1950,151 +1914,6 @@ intadj3  := intadj3- & digit3.
 intadj2- :< intadj3-.
 intadj2  := intadj2- & digit2.
 intadj1  := intadj2- & digit1.
-
-;;;;;;;;Extra stuff
-
-; ERB (13-12-97) This type is meant as a PRO -- i.e., what can show
-; up in such things as the 'way' construction and embedded infinitival
-; wh questions.  It should eventually receive some binding properties,
-; but I don't know what to put there yet, and since we don't have
-; a binding theory...
-
-; ERB (14-12-97) I am adding the pron_rel to pro_ss, so that in the
-; types like common_noun_vpcomp_synsem I don't have to put it in.  I
-; can just take the KEY.
-
-; ERB (14-12-97) No pron_rel for pro_ss.
-
-; ERB (14-12-97) ... and pro_ss is accusative, to block (once I get
-; infinitival relatives working) *A person left came in.
-
-; ERB (14-12-97) This is moved here so as to be after acc, which is a 
-; *sort* and thus can't handle being referenced before it is defined.
-
-; ERB (19-01-98) PRO is obligatorially OPT -.  This keeps to_c_prop
-; from serving as a modifier without first building a non_wh_rel,
-; because hadj requires SUBJ *olist*.
-
-; ERB (21-01-98) In order for PRO to be extractable, it can't be
-; SLASH 0-dlist, and thus can't be a subtype of unexpressed.  With
-; PRO underspecified for SLASH, something will always have to fill
-; in that value.  In the case of subject non_wh_rels (e.g., 
-; "Kim found a person to fix the sink") it is extracted, i.e., resolved
-; to gappro by extrasubj.  In the cases where the PRO is the subject of
-; a selected complement, the selector will impose SLASH 0-dlist on the
-; PRO (this case includes equi constructions, embedded infinitival
-; wh questions, and the complement of 'way' as in "Kim found a way
-; to leave early").  In the case of the (as yet unimplemented) CP[to]
-; subjects, the NP -> CP rule will probably do the work.  Alternatively,
-; the selecting category could do it.  Finally, in the case of
-; non-subject non_wh_rels (e.g., "Kim found a cheeseburger to devour"),
-; the PRO must be SLASH 0-dlist because the non_wh_rel_rule limits
-; the SLASH list to length one.
-;
-; On a related note, we want the distribution of gappro (i.e., of
-; extracted PRO) to be quite constrained, and perhaps even limited
-; to the subject non_wh_rels.  In general, we are relying on the
-; restriction of SLASH to lists of length one stated in several places
-; in the grammar, in addition to certain selecting categories' specifying
-; an empty value for SLASH on the PROs in their complements' subjects
-; to keep us from getting in trouble on this one.
-;
-; Finally, rather than make a subtype of pro_ss that says SLASH 0-dlist,
-; I have opted to include that information on the type *prolist*.
-
-; ERB (03-23-98) We need a way to identify indices introduced by a PRO
-; that are "discourse bound".  We were using PRONTYPE for this, but
-; of course that doesn't work when the controller of the PRO is an overt
-; pronoun.  So the new strategy is to make the INDEX a non_expl.
-; This will unify with the indices introduced by (appropriate) controllers,
-; and (hopefully) be identifiable if it is not controlled.
-
-; DPF 27-May-99 - Removed OPT - constraint from pro_ss (see ERB (19-01-98) 
-; above) since head_mod type now constrained via PRD rather than by requiring 
-; SUBJ to be empty (cf note DPF 27-May-99 with n_adj_int_phrase in syntax.tdl).
-; This change means the types for saturated subcats can again simply require 
-; SUBJ to be *olist* rather than *null*, which e.g. allows verbal gerunds to 
-; have optional but non-empty SUBJ value and still themselves appear as 
-; subjects or complements without discharging that SUBJ value.
-
-pro_ss := expressed_non_canonical &
-  [ LOCAL.CAT.HEAD noun & [ CASE acc ],
-    NON-LOCAL [ REL 0-dlist,
-		QUE 0-dlist ] ].
-
-; ERB (19-01-98) We need a subtype of pro and gap so that to_c_prop
-; can undergo subject extraction.  See the notes near non_wh_rel in
-; syntax.tdl for the details of the analysis.
-; I am positive that this will break something, but I could not
-; guess what.
-
-gappro := pro_ss & gap.
-
-*olist* :< *list*.
-
-*ocons* := *olist* & *cons* &
-  [ FIRST unexpressed & [ OPT + ],
-    REST  *olist* ].
-
-*onull* := *olist* & *null*.
-
-
-*gaplist* :< *list*.
-
-*gapcons* := *gaplist* & *cons* &
-  [ FIRST gap,
-    REST  *null* ].
-
-*gapnull* := *gaplist* & *null*.
-*prolist* := *list*.
-
-*procons* := *prolist* & *cons* &
-  [ FIRST pro_ss &
-	  [ NON-LOCAL.SLASH <! !> ],
-    REST *null* ].
-
-*pronull* := *prolist* & *onull*.
-
-;; *unexplist* is used for common nouns whose specifier is possibly obligatory,
-;; but unexpressed, as in noun-noun compounds.  As usual, we use the same hack
-;; as for *olist*, to get around the lack of recursive types in TDL.
-
-*unexplist* := *list*.
-
-*unexpcons* := *unexplist* & *cons* &
-  [ FIRST unexpressed,
-    REST  *null* ].
-
-;*unexpnull* := *unexplist* & *olist* & *null*.
-*unexpnull* := *unexplist* & *onull*.
-
-;; *substlist* is used in the adv_addition lexical rule, to prevent spurious
-;; re-application of the rule to its own output by requiring the input to
-;; be a (possibly empty) list of substantive synsems.
-*substlist* :< *list*.
-
-*substcons* := *substlist* & *cons* &
-  [ FIRST.LOCAL.CAT.HEAD subst,
-    REST  *substlist* ].
-
-; For there-copula
-*substocons* := *substcons* & *ocons*.
-
-;*substnull* := *substlist* & *olist* & *null*.
-*substnull* := *substlist* & *onull*.
-
-;; *handlelist* is used in the treatment of free relatives, to disntinguish
-;; the usual value of QUE from its use in free relatives, where QUE is instead
-;; a list of referential indices.
-
-*handlelist* := *list*.
-
-*handlecons* := *handlelist* & 1-list &
-  [ FIRST handle,
-    REST  *null* ].
-
-*handlenull* := *handlelist* & *onull*.
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Selected-for relations in verb-particle constructions
@@ -2305,7 +2124,7 @@ cause :< miscprep_rel.
 
 ; Used for unknown word lexical entries
 
-generic_verb_rel :< arg134_rel.
+generic_verb_rel :< arg123_rel.
 generic_noun_rel :< diadic_noarg_nom_rel.
 generic_adj_rel :< adj_rel.
 generic_adv_rel :< adv_rel.
@@ -2316,7 +2135,7 @@ _ehkeywordersatz_rel :< reg_nom_rel.
 _ehmodifierersatz_rel :< abstr_adv_rel.
 
 ; For verb spelled ":"
-_colon_v_rel :< arg134_rel.
+_colon_v_rel :< arg123_rel.
 
 ; For new lexical types
 
@@ -2328,20 +2147,213 @@ _tomorrow_rel := adv_rel & dofw_or_poss_rel.
 _yesterday_rel := adv_rel & dofw_or_poss_rel.
 _tonight_rel := adv_rel & dofw_or_poss_rel.
 
-; IQT-specific relations
-iqt_abstr_adj_rel :< abstr_adj_rel.
-iqt_adj_arg3_rel :< adj_arg3_rel.
-iqt_adj_arg4_rel :< adj_arg4_rel.
-iqt_it_adj_arg24_rel :< it_adj_arg24_rel.
-iqt_degree_rel :< degree_rel.
-iqt_eq_degree_rel :< eq_degree_rel.
-iqt_quant_or_wh_rel :< quant_or_wh_rel.
-iqt_adv_rel :< adv_rel.
-iqt_reg_diadic_nom_rel :< reg_diadic_nom_rel.
-iqt_diadic_nom_rel :< diadic_nom_rel.
-iqt_basic_prep_mod_rel :< basic_prep_mod_rel.
-iqt_neg_rel :< neg_rel.
-iqt_arg13_rel :< arg13_rel.
-iqt_card_rel :< card_rel.
-iqt_named_rel :< named_rel.
-iqt_basic_hcomp_nom_rel :< basic_hcomp_nom_rel.
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;  Basic types
+
+*sort* :< *top*.
+
+atom :< *sort*.
+
+*avm* :< *top*.
+
+*list* :< *avm*.
+
+*cons* := *list* &
+  [ FIRST *top*,
+    REST *top* ].
+
+0-1-list :< *list*.
+1-list := 0-1-list & *cons* &
+  [ REST *null* ].
+*null* :< 0-1-list.
+1-plus-list := *cons* &
+  [ REST *cons* ].
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Basic types
+
+symbol :< atom.
+
+integer :< atom.
+
+string := symbol.
+
+; Lists
+
+; ERB (13-12-97) This type is meant as a PRO -- i.e., what can show
+; up in such things as the 'way' construction and embedded infinitival
+; wh questions.  It should eventually receive some binding properties,
+; but I don't know what to put there yet, and since we don't have
+; a binding theory...
+
+; ERB (14-12-97) I am adding the pron_rel to pro_ss, so that in the
+; types like common_noun_vpcomp_synsem I don't have to put it in.  I
+; can just take the KEY.
+
+; ERB (14-12-97) No pron_rel for pro_ss.
+
+; ERB (14-12-97) ... and pro_ss is accusative, to block (once I get
+; infinitival relatives working) *A person left came in.
+
+; ERB (14-12-97) This is moved here so as to be after acc, which is a 
+; *sort* and thus can't handle being referenced before it is defined.
+
+; ERB (19-01-98) PRO is obligatorially OPT -.  This keeps to_c_prop
+; from serving as a modifier without first building a non_wh_rel,
+; because hadj requires SUBJ *olist*.
+
+; ERB (21-01-98) In order for PRO to be extractable, it can't be
+; SLASH 0-dlist, and thus can't be a subtype of unexpressed.  With
+; PRO underspecified for SLASH, something will always have to fill
+; in that value.  In the case of subject non_wh_rels (e.g., 
+; "Kim found a person to fix the sink") it is extracted, i.e., resolved
+; to gappro by extrasubj.  In the cases where the PRO is the subject of
+; a selected complement, the selector will impose SLASH 0-dlist on the
+; PRO (this case includes equi constructions, embedded infinitival
+; wh questions, and the complement of 'way' as in "Kim found a way
+; to leave early").  In the case of the (as yet unimplemented) CP[to]
+; subjects, the NP -> CP rule will probably do the work.  Alternatively,
+; the selecting category could do it.  Finally, in the case of
+; non-subject non_wh_rels (e.g., "Kim found a cheeseburger to devour"),
+; the PRO must be SLASH 0-dlist because the non_wh_rel_rule limits
+; the SLASH list to length one.
+;
+; On a related note, we want the distribution of gappro (i.e., of
+; extracted PRO) to be quite constrained, and perhaps even limited
+; to the subject non_wh_rels.  In general, we are relying on the
+; restriction of SLASH to lists of length one stated in several places
+; in the grammar, in addition to certain selecting categories' specifying
+; an empty value for SLASH on the PROs in their complements' subjects
+; to keep us from getting in trouble on this one.
+;
+; Finally, rather than make a subtype of pro_ss that says SLASH 0-dlist,
+; I have opted to include that information on the type *prolist*.
+
+; ERB (03-23-98) We need a way to identify indices introduced by a PRO
+; that are "discourse bound".  We were using PRONTYPE for this, but
+; of course that doesn't work when the controller of the PRO is an overt
+; pronoun.  So the new strategy is to make the INDEX a non_expl.
+; This will unify with the indices introduced by (appropriate) controllers,
+; and (hopefully) be identifiable if it is not controlled.
+
+; DPF 27-May-99 - Removed OPT - constraint from pro_ss (see ERB (19-01-98) 
+; above) since head_mod type now constrained via PRD rather than by requiring 
+; SUBJ to be empty (cf note DPF 27-May-99 with n_adj_int_phrase in syntax.tdl).
+; This change means the types for saturated subcats can again simply require 
+; SUBJ to be *olist* rather than *null*, which e.g. allows verbal gerunds to 
+; have optional but non-empty SUBJ value and still themselves appear as 
+; subjects or complements without discharging that SUBJ value.
+
+pro_ss := expressed_non_canonical &
+  [ LOCAL.CAT.HEAD noun & [ CASE acc ],
+    NON-LOCAL [ REL 0-dlist,
+		QUE 0-dlist ] ].
+
+; ERB (19-01-98) We need a subtype of pro and gap so that to_c_prop
+; can undergo subject extraction.  See the notes near non_wh_rel in
+; syntax.tdl for the details of the analysis.
+; I am positive that this will break something, but I could not
+; guess what.
+
+gappro := pro_ss & gap.
+
+*olist* :< *list*.
+
+*ocons* := *olist* & *cons* &
+  [ FIRST unexpressed & [ OPT + ],
+    REST  *olist* ].
+
+*onull* := *olist* & *null*.
+
+
+*gaplist* :< *list*.
+
+*gapcons* := *gaplist* & *cons* &
+  [ FIRST gap,
+    REST  *null* ].
+
+*gapnull* := *gaplist* & *null*.
+*prolist* := *list*.
+
+*procons* := *prolist* & *cons* &
+  [ FIRST pro_ss &
+	  [ NON-LOCAL.SLASH <! !> ],
+    REST *null* ].
+
+*pronull* := *prolist* & *onull*.
+
+;; *unexplist* is used for common nouns whose specifier is possibly obligatory,
+;; but unexpressed, as in noun-noun compounds.  As usual, we use the same hack
+;; as for *olist*, to get around the lack of recursive types in TDL.
+
+*unexplist* := *list*.
+
+*unexpcons* := *unexplist* & *cons* &
+  [ FIRST unexpressed,
+    REST  *null* ].
+
+;*unexpnull* := *unexplist* & *olist* & *null*.
+*unexpnull* := *unexplist* & *onull*.
+
+;; *substlist* is used in the adv_addition lexical rule, to prevent spurious
+;; re-application of the rule to its own output by requiring the input to
+;; be a (possibly empty) list of substantive synsems.
+*substlist* :< *list*.
+
+*substcons* := *substlist* & *cons* &
+  [ FIRST.LOCAL.CAT.HEAD subst,
+    REST  *substlist* ].
+
+; For there-copula
+*substocons* := *substcons* & *ocons*.
+
+;*substnull* := *substlist* & *olist* & *null*.
+*substnull* := *substlist* & *onull*.
+
+;; *handlelist* is used in the treatment of free relatives, to disntinguish
+;; the usual value of QUE from its use in free relatives, where QUE is instead
+;; a list of referential indices.
+
+*handlelist* := *list*.
+
+*handlecons* := *handlelist* & 1-list &
+  [ FIRST handle,
+    REST  *null* ].
+
+*handlenull* := *handlelist* & *onull*.
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Subtypes of *diff-list*
+
+;; Experimental use of subtypes of *diff-list* to enforce constraint of at
+;; most one element in SLASH (for efficiency, "violin/sonnet" examples
+;; notwithstanding).  Will only have effect in LKB version which does the
+;; necessary type inference.
+
+*diff-list* := *avm* &
+[ LIST *list*,
+  LAST *list* ].
+
+0-1-dlist := *diff-list* &
+  [ LIST 0-1-list ].
+
+; DPF 10-Oct-02 - Just a reminder that we cannot make the LIST value of 0-dlist
+; be < >, much as we might like to, since we're doing lexical threading of
+; SLASH (at least), and if we make all 0-dlists have LIST < >, then if the
+; first of two complements is a proper name with SLASH 0-dlist, then the
+; appended diff-list also has LIST <>, which prevents the second complement
+; (or the subject) from being slashed, so we would even block "Who hired Kim".
+
+0-dlist := 0-1-dlist &
+  [ LIST #list,
+    LAST #list ].
+1-dlist := 0-1-dlist &
+  [ LIST 1-list &
+	 [ REST #rest & *null* ],
+    LAST #rest ].
+
+;; Quantifier relations, until we do full replacement of rel types with preds
+
+_every_rel := explicit_quant_rel &
+  [ PRED 'every_rel ].
