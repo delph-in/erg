@@ -778,7 +778,7 @@
         (setf csli::*verbose-expansion* nil)
         (setf tdl::*verbose-reader-p* nil)
         (setf tdl::*verbose-definition-p* nil)
-        (scanning::init-scanner)
+        ;(scanning::init-scanner)
         #+:allegro
         (unless *tsdb-gc-message-p*
           (setf excl:*global-gc-behavior* :auto))

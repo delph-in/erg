@@ -7,8 +7,8 @@
 ;;   Language: Allegro Common Lisp
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; $Log$
-;; Revision 1.1.2.1  1997/12/16 03:13:05  malouf
-;; Convert grammar to use page 2.1
+;; Revision 1.3  1997/12/16 01:16:36  dan
+;; Returned MOD to its rightful status as HEAD feature
 ;;
 ;; Revision 1.2  1997/12/11 05:41:23  malouf
 ;; Fix amalgamation bugs.
@@ -82,8 +82,8 @@
 (setf *do-not-convert-sort-list* '(DISCO::temp_prec_rel 
                                    DISCO::temp_over_rel))
 
-;; WK guesses
 (setf *relation-extra-feats* '(DISCO::PNG
+			       DISCO::PN
                                DISCO::VITTENSE
                                DISCO::VITMOOD
                                DISCO::VIT
@@ -92,6 +92,8 @@
                                DISCO::VREF DISCO::VTYPE 
                                DISCO::FUN))
 
+(setf *complex-extra-feats* '(DISCO::VIT DISCO::PNG))
+
 (setf *vit-sort-feature* 'DISCO::SORT)
 
 (setf *index-feature-transform-table*
@@ -99,22 +101,12 @@
                  (DISCO::*SORT*)
                  (DISCO::*TOP*)
                  (t vit_sort))
-    (DISCO::PNG vit-syntax 
-     (DISCO::3SG_M 
-      (vit_gender masc)
+    (DISCO::PN vit-syntax 
+     (DISCO::2PER 
+      (vit_person 2))
+     (DISCO::3SG 
       (vit_number sg)
       (vit_person 3))
-     (DISCO::3SG_F 
-      (vit_gender fem)
-      (vit_number sg)
-      (vit_person 3))
-     (DISCO::3SG_N  
-      (vit_gender neut)
-      (vit_number sg)
-      (vit_person 3))
-      (DISCO::3SG
-      (vit_number sg)
-       (vit_person 3))
      (DISCO::2SG
       (vit_number sg)
       (vit_person 2))
@@ -129,7 +121,50 @@
       (vit_person 2))
      (DISCO::1PL
       (vit_number pl)
+      (vit_person 1))
+     (DISCO::3SG*
+      (vit_number sg)
+      (vit_person 3))
+     (DISCO::2SG*
+      (vit_number sg)
+      (vit_person 2))
+     (DISCO::1SG*
+      (vit_number sg)
+      (vit_person 1))
+     (DISCO::3PL*
+      (vit_number pl)
+      (vit_person 3))
+     (DISCO::2PL*
+      (vit_number pl)
+      (vit_person 2))
+     (DISCO::1PL*
+      (vit_number pl)
+      (vit_person 1))
+     ((:AND DISCO::3SG* DISCO::STRICT_PN)
+      (vit_number sg)
+      (vit_person 3))
+     ((:AND DISCO::2SG* DISCO::STRICT_PN)
+      (vit_number sg)
+      (vit_person 2))
+     ((:AND DISCO::1SG* DISCO::STRICT_PN)
+      (vit_number sg)
+      (vit_person 1))
+     ((:AND DISCO::3PL* DISCO::STRICT_PN)
+      (vit_number pl)
+      (vit_person 3))
+     ((:AND DISCO::2PL* DISCO::STRICT_PN)
+      (vit_number pl)
+      (vit_person 2))
+     ((:AND DISCO::1PL* DISCO::STRICT_PN)
+      (vit_number pl)
       (vit_person 1)))
+    (DISCO::GEN vit-syntax
+      (DISCO::MASC (vit_gender masc))
+      (DISCO::FEM (vit_gender fem))
+      (DISCO::NEUT (vit_gender neut))
+      (DISCO::MASC* (vit_gender masc))
+      (DISCO::FEM* (vit_gender fem))
+      (DISCO::NEUT* (vit_gender neut)))
     (DISCO::PRONTYPE vit-discourse
      (DISCO::STD_1SG (vit_prontype sp std))
      (DISCO::STD_1PL (vit_prontype sp_he std))
@@ -142,12 +177,19 @@
      (DISCO::ZERO_PRON (vit_prontype top zero)))
     (DISCO::VITTENSE vit-tenseandaspect
      (DISCO::PRESENT (vit_tense pres) (vit_perf nonperf))
+     (DISCO::PRESENT* (vit_tense pres) (vit_perf nonperf))
      (DISCO::PAST (vit_tense past) (vit_perf nonperf))
+     (DISCO::PAST* (vit_tense past) (vit_perf nonperf))
      (DISCO::FUTURE (vit_tense future) (vit_perf nonperf))
+     (DISCO::FUTURE* (vit_tense future) (vit_perf nonperf))
      (DISCO::PRESPERF (vit_tense pres) (vit_perf perf))
+     (DISCO::PRESPERF* (vit_tense pres) (vit_perf perf))
      (DISCO::PASTPERF (vit_tense past) (vit_perf perf))
+     (DISCO::PASTPERF* (vit_tense past) (vit_perf perf))
      (DISCO::TENSE (vit_perf nonperf)))
     (DISCO::VITMOOD vit-tenseandaspect
+     ((:AND DISCO::INDICATIVE* DISCO::STRICT_MOOD) (vit_mood ind))
+     ((:AND DISCO::MODAL_SUBJ* DISCO::STRICT_MOOD) (vit_mood ind))
      (DISCO::INDICATIVE (vit_mood ind))
      (DISCO::MODAL_SUBJ (vit_mood ind))
      (DISCO::SUBJUNCTIVE (vit_mood conj))
@@ -180,3 +222,114 @@
 (setf *vm-special-label-hack-list*
   '((DISCO::support_rel . 1)
     (DISCO::nominalize_rel . 1)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Add access function used by TSDB machinery
+
+(defun get-mrs-strings (parse-list)
+  (loop for parse in parse-list
+        collecting
+        (let* ((fs (get-parse-fs parse))
+               (sem-fs (path-value fs *initial-semantics-path*)))
+          (if (is-valid-fs sem-fs)
+              (let ((mrs-struct (sort-mrs-struct (construct-mrs sem-fs))))
+                (with-output-to-string (stream) 
+		  (format stream "~%~S" mrs-struct)
+                  ;(output-mrs1 mrs-struct 'simple stream)
+		  ))))))
+
+(defun get-parse-fs (parse)
+  (if (string-equal "1" (subseq user::*page-version* 0 1))
+      (lexicon::cfs-fs (pg::u-item-cfs parse))
+  (lexicon::cfs-fs (car (lex::typed-item-args parse)))))
+
+(defun get-vit-strings (parse-list)
+  (loop for parse in parse-list
+        collecting
+	(let* ((fs (get-parse-fs parse))
+               (sem-fs (path-value fs *initial-semantics-path*)))
+          (if (is-valid-fs sem-fs)
+              (let ((mrs-struct (sort-mrs-struct (construct-mrs sem-fs))))
+		 (multiple-value-bind (vit binding-sets)
+		     (mrs-to-vit mrs-struct)
+		   (with-output-to-string (stream) 
+		     (format nil "~S" (write-vit stream vit)))))))))
+
+(defun expand-tsdb-results (result-file dest-file &optional (vitp nil))
+  (let ((old-raw-mrs main::*raw-mrs-output-p*))
+    (setf main::*raw-mrs-output-p* nil)
+    (with-open-file 
+	(istream result-file :direction :input)
+     (with-open-file 
+	(ostream dest-file :direction :output :if-exists :supersede)
+      (do ((sent-num (read istream nil 'eof))
+	   (sent (read istream nil 'eof))
+	   (tree (read istream nil 'eof))
+	   (sep (read-char istream nil 'eof))
+	   (mrs (read istream nil 'eof)))
+	  ((eql sent-num 'eof) nil)
+	(format t "~%~A" sent)
+	(format ostream "~%~A~%" sent)
+	(trees::kh-parse-tree tree :stream ostream)
+	(if vitp
+	    #|
+	    (progn
+	      (multiple-value-bind 
+		  (vit binding-sets)
+		  (mrs-to-vit mrs))
+	      (write-vit-pretty t (horrible-hack-2 vit))
+	      (format ostream "~%")
+	      (check-vit vit))
+	      |#
+	    (progn
+	      (format ostream "~A~%~%" mrs)
+	      (finish-output ostream)
+	      (check-vit mrs t ostream)
+	      (format ostream "~%"))
+	  (format ostream "~%~S" mrs))
+	(setf sent-num (read istream nil 'eof)
+	      sent (read istream nil 'eof)
+	      tree (read istream nil 'eof)
+	      sep (read-char istream nil 'eof)
+	      mrs (read istream nil 'eof)))))
+    (setf main::*raw-mrs-output-p* old-raw-mrs)))
+
+(defun extract-and-output (parse-list)
+ (let ((*print-circle* nil))
+  (loop for parse in parse-list
+        do
+        (let* ((fs (get-parse-fs parse))
+               (sem-fs (path-value fs *initial-semantics-path*)))
+          (if (is-valid-fs sem-fs)
+              (let 
+                  ((mrs-struct (construct-mrs sem-fs)))
+		(unless *mrs-to-vit*
+		  (output-mrs mrs-struct 'simple))
+                (if *mrs-to-vit*
+                    (mrs-to-vit-convert mrs-struct)
+                  (if *mrs-scoping-p*
+                      (scope-mrs-struct mrs-struct)))
+                (when *mrs-results-check*
+                    (let ((sorted-mrs-struct (sort-mrs-struct mrs-struct))
+			  (previous-result
+                           (gethash (remove-trailing-periods
+                                     main::*last-sentence*)
+                                    *mrs-results-table*)))
+                      (if previous-result
+                         (unless (mrs-equalp sorted-mrs-struct previous-result)
+                                  (when 
+                                   (y-or-n-p "Differs from previous result.
+                                       Replace?")
+                                   (setf 
+                                    (gethash
+                                     (remove-trailing-periods
+                                     main::*last-sentence*)
+                                     *mrs-results-table*)
+                                    sorted-mrs-struct)))
+                        (when (y-or-n-p "No previous result.
+                                       Add?")
+                              (setf 
+                               (gethash
+                                (remove-trailing-periods
+                                main::*last-sentence*) *mrs-results-table*)
+                               sorted-mrs-struct)))))))))))
