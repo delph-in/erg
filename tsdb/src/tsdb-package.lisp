@@ -23,7 +23,7 @@
   (:export
    "*TSDB-HOME*" "*TSDB-DATA*" "*TSDB-IO*" 
    "*TSDB-TREES-HOOK*" "*TSDB-SEMANTIX-HOOK*"
-   "TSDB" "RETRIEVE" "RETRIEVE-AND-PROCESS" "VOCABULARY"))
+   "TSDB" "RETRIEVE" "RETRIEVE-AND-PROCESS" "VOCABULARY"))                
 
 (eval-when #+:ansi-eval-when (:load-toplevel :compile-toplevel :execute)
 	   #-:ansi-eval-when (load eval compile)

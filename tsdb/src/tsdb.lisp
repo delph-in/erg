@@ -45,6 +45,8 @@
 
 (defparameter *tsdb-write-output-p* nil)
 
+(defparameter *tsdb-cache-database-writes-p* t)
+
 (defparameter *tsdb-trees-hook* 
   (and (find-package "TREES") "trees::get-labeled-bracketings"))
 
@@ -64,7 +66,9 @@
 
 (defparameter *tsdb-maximal-number-of-tasks* 0)
 
-(defparameter *tsdb-derivation-oracle-p* nil)
+(defparameter *tsdb-lexical-oracle-p* nil)
+
+(defparameter *tsdb-phrasal-oracle-p* nil)
 
 (defparameter *tsdb-global-gcs* 0)
 
@@ -88,48 +92,123 @@
     *tsdb-home* 
     (namestring (dir-append (get-sources-dir "tsdb") '(:relative "tsdb")))))
 
-(defun call-tsdb (query &optional (language *tsdb-data*))
+(defun call-tsdb (query language
+                  &key redirection cache)
   (if *tsdb-server-mode-p*
     (call-tsdbd query language)
-    (let* ((user (current-user))
-           (file (format
-                  nil "/tmp/.tsdb.io.~a.~a"
-                  user (string-downcase (string (gensym)))))
-           (data (find-tsdb-directory language))
-           (command (format
-                     nil 
-                     "~a -home=~a ~
-                      -string-escape=lisp -pager=null -max-results=0"
-                     *tsdb-application* data))
-           (command (format
-                     nil "~a -query='do \"~a\"'"
-                     command file))
-           (query (string-trim '(#\Space #\Tab #\Newline) query))
-           (query (if (equal (elt query (- (length query) 1)) #\.)
-                    query
-                    (concatenate 'string query "."))))
-      (with-open-file (stream file :direction :output
-                       :if-exists :overwrite
-                       :if-does-not-exist :create)
-        (format stream "~a~%" query))
-      (multiple-value-bind (output foo pid)
-        (run-process
-          command :wait nil
-          :output :stream :input "/dev/null" :error-output nil)
-        (declare (ignore foo))
-        (let ((result (make-array
-                       4096
-                       :element-type 'character
-                       :adjustable t             
-                       :fill-pointer 0)))
-          (do ((c (read-char output nil :eof) (read-char output nil :eof)))
-              ((equal c :eof))
-            (vector-push-extend c result 1024))
-          (close output)
-          #+:allegro (sys:os-wait nil pid)
-          (unless *tsdb-debug-mode-p*
-            (delete-file file))
-          result)))))
+    (if cache
+      (cache-query query language cache)
+      (let* ((user (current-user))
+             (file (format
+                    nil "/tmp/.tsdb.io.~a.~a"
+                    user (string-downcase (string (gensym "")))))
+             (data (find-tsdb-directory language))
+             (command (format
+                       nil 
+                       "~a -home=~a ~
+                        -string-escape=lisp -pager=null -max-results=0"
+                       *tsdb-application* data))
+             (command (format
+                       nil "~a -query='do \"~a\"'"
+                       command file))
+             (query (string-trim '(#\Space #\Tab #\Newline) query))
+             (query (if (equal (elt query (- (length query) 1)) #\.)
+                      (subseq query 0 (- (length query) 1))
+                      query))
+             (output (when (eq redirection :output)
+                       (format
+                        nil "/tmp/.tsdb.data.~a.~a"
+                        user (string-downcase (string (gensym ""))))))
+             (redirection 
+              (if output (concatenate 'string " > \"" output "\"") ""))
+             (query (concatenate 'string query redirection ".")))
+        (with-open-file (stream file :direction :output
+                         :if-exists :overwrite
+                         :if-does-not-exist :create)
+          (format stream "~a~%" query))
+        (multiple-value-bind (stream foo pid)
+          (run-process
+            command :wait nil
+            :output :stream
+            :input "/dev/null" :error-output nil)
+          (declare (ignore foo))
+          (let ((result (make-array
+                         4096
+                         :element-type 'character
+                         :adjustable t             
+                         :fill-pointer 0)))
+            (do ((c (read-char stream nil :eof) (read-char stream nil :eof)))
+                ((equal c :eof))
+              (vector-push-extend c result 1024))
+            (close stream)
+            #+:allegro (sys:os-wait nil pid)
+            (when output
+              (let ((stream 
+                     (open output :direction :input :if-does-not-exist nil)))
+                (do ((c (read-char stream nil :eof) 
+                        (read-char stream nil :eof)))
+                    ((equal c :eof))
+                  (vector-push-extend c result 1024))
+                (close stream)))
+            (unless *tsdb-debug-mode-p*
+              (delete-file file)
+              (when output
+                (delete-file output)))
+            result))))))
+
+(defun create-cache (language &key (verbose t))
+  (let* ((user (current-user))
+         (file (format
+                nil "/tmp/.tsdb.cache.~a.~a"
+                user (string-downcase (string (gensym "")))))
+         (stream (open file 
+                       :direction :output 
+                       :if-exists :supersede :if-does-not-exist :create)))
+    (when stream
+      (format stream "set implicit-commit off.~%")
+      (when verbose
+        (format 
+         *tsdb-io*
+         "~&create-cache(): tsdb(1) write cache in `~a'.~%"
+         file)
+        (force-output *tsdb-io*)))
+    (pairlis (list :database :file :stream)
+             (list language file stream))))
+
+(defun cache-query (query language cache)
+  (let* ((database (get-field :database cache))
+         (stream (get-field :stream cache))
+         (query (string-trim '(#\Space #\Tab #\Newline) query))
+         (query (if (equal (elt query (- (length query) 1)) #\.)
+                  query
+                  (concatenate 'string query "."))))
+    (if (string-equal language database)
+      (when stream 
+        (format stream "~a~%" query)
+        (force-output stream))
+      (format
+       *tsdb-io*
+       "~&cache-query() ignoring query to `~a' (on `~a' cache).~%"
+       language database))))
+
+(defun flush-cache (cache
+                    &key (verbose t))
+  (let ((database (get-field :database cache))
+        (file (get-field :file cache))
+        (stream (get-field :stream cache)))
+    (format stream "~&commit.~%")
+    (force-output stream)
+    (close stream)
+    (let* ((query (format nil "do \"~a\"" file)))
+      (call-tsdb query database))
+    (when verbose
+      (format 
+       *tsdb-io*
+       "~&flush-cache(): tsdb(1) cache for `~a' flushed.~%"
+       database file)
+      (force-output *tsdb-io*))
+    (unless *tsdb-debug-mode-p*
+      (delete-file file))))
 
 (defun largest-result-key (&optional (language *tsdb-data*)
                            &key (verbose t))
@@ -144,7 +223,8 @@
              (format
               *tsdb-io* 
               "~&largest-result-key(): largest `c-id' is ~a.~%"
-              c-id))
+              c-id)
+             (force-output *tsdb-io*))
            c-id))
         (when (integerp c-id) (push c-id c-ids))))))
 
@@ -342,6 +422,10 @@
   (let* ((foo (open "/dev/null" :direction :output :if-exists :overwrite))
          (string (remove-and-insert-punctuation string))
          (exhaustive main::*exhaustive*)
+         (lexicon-task-priority-fn 
+          (pg::combo-parser-task-priority-fn (pg::get-parser :lexicon)))
+         (syntax-task-priority-fn 
+          (pg::combo-parser-task-priority-fn (pg::get-parser :syntax)))
          tcpu tgc treal conses symbols others)
     #+:allegro (when gc (excl:gc t))
     (setf main::*exhaustive* *tsdb-exhaustive-p*)
@@ -353,7 +437,10 @@
       (if (> tasks 0)
         #'pg::maximal-number-of-tasks-exceeded-p
         #'(lambda (parser) (declare (ignore parser)))))
-    (install-derivation-oracle derivations)
+    (when (and derivations *tsdb-lexical-oracle-p*)
+      (install-lexical-oracle derivations))
+    (when (and derivations *tsdb-phrasal-oracle-p*)
+      (install-phrasal-oracle derivations))
     (udine::reset-costs)
     (setf (main::input-stream main::*parser*) nil)
     (setf (main::output-stream main::*parser*) nil)
@@ -372,6 +459,10 @@
       (declare (ignore result))
       (close foo)
       (setf main::*exhaustive* exhaustive)
+      (setf (pg::combo-parser-task-priority-fn (pg::get-parser :lexicon))
+        lexicon-task-priority-fn)
+      (setf (pg::combo-parser-task-priority-fn (pg::get-parser :syntax))
+        syntax-task-priority-fn)
       (append 
        (pairlis (list :tgc :tcpu :treal :conses :symbols :others)
                 (list tgc tcpu treal conses symbols others))
@@ -380,7 +471,7 @@
          (pairlis
           (list :readings :condition :error)
           (list -1 condition (format nil "~a" condition))))
-        ((null (main::input-stream main::*parser*))
+        ((null (main::output-stream main::*lexicon*))
          (pairlis
           (list :readings :error)
           (list -1 "null parser input")))
@@ -433,19 +524,20 @@
                   etasks stasks ftasks
                   words edges results)))))))))
 
-(defun write-run (result &optional (language *tsdb-data*))
+(defun write-run (result language
+                  &key cache)
   (when *tsdb-write-run-p*
-    (let* ((run-id (get-field :run-id result))
+    (let* ((*print-circle* nil)
+           (run-id (get-field :run-id result))
            (comment (normalize-string (get-field :comment result)))
            (application (normalize-string (get-field :application result)))
            (grammar (normalize-string (get-field :grammar result)))
-           (avms (get-field :avms result))
-           (sorts (get-field :sorts result))
-           (templates (get-field :templates result))
+           (avms (or (get-field :avms result) -1))
+           (sorts (or (get-field :sorts result) -1))
+           (templates (or (get-field :templates result) -1))
            (user (normalize-string (get-field :user result)))
            (host (normalize-string (get-field :host result)))
            (start (get-field :start result))
-           (query "insert into run values")
            (query
             (format
              nil
@@ -454,11 +546,13 @@
              comment application grammar
              avms sorts templates
              user host start)))
-      (call-tsdb query language))))
+      (call-tsdb query language :cache cache))))
 
-(defun write-parse (result &optional (language *tsdb-data*))
+(defun write-parse (result language
+                    &key cache)
   (when *tsdb-write-parse-p*
-    (let* ((parse-id (get-field :parse-id result))
+    (let* ((*print-circle* nil)
+           (parse-id (get-field :parse-id result))
            (run-id (get-field :run-id result))
            (i-id (get-field :i-id result))
            (readings (or (get-field :readings result) -1))
@@ -508,15 +602,17 @@
              conses symbols others
              gcs initial-load average-load
              date error)))
-      (call-tsdb query language))))
+      (call-tsdb query language :cache cache))))
 
-(defun write-results (parse-id results &optional (language *tsdb-data*))
+(defun write-results (parse-id results 
+                      &optional (language *tsdb-data*)
+                      &key cache)
   (let* ((items (main::output-stream main::*parser*))
          (mrss 
           (when (and *tsdb-semantix-hook* (stringp *tsdb-semantix-hook*))
             (when (find-package "MRS")
-              (set (intern "*RAW-MRS-OUTPUT-P*" "MRS") t))
-            (setf main::*raw-mrs-output-p* t)
+              (set (intern "*RAW-MRS-OUTPUT-P*" "MRS") t)
+              (set (intern "*RAW-MRS-OUTPUT-P*" "MAIN") t))
             (ignore-errors
              (funcall (symbol-function (read-from-string *tsdb-semantix-hook*))
                       items))))
@@ -540,16 +636,17 @@
             (mrss (reverse mrss) (rest mrss))
             (mrs (first mrss) (first mrss)))
           ((null results))
-        (write-result parse-id result tree mrs language))
+        (write-result parse-id result tree mrs language :cache cache))
       (format 
        *tsdb-io* 
        "~&write-results(): mysterious mismatch [~d : ~d : ~d : ~d].~%"
        (length results) (length items) (length trees) (length mrss)))))
 
-(defun write-result (parse-id result tree mrs
-                     &optional (language *tsdb-data*))
+(defun write-result (parse-id result tree mrs language
+                     &key cache)
   (when *tsdb-write-result-p*
-    (let* ((result-id (get-field :result-id result))
+    (let* ((*print-circle* nil)
+           (result-id (get-field :result-id result))
            (time (round (* 10 (or (get-field :time result) -1))))
            (r-etasks (or (get-field :r-etasks result) -1))
            (r-stasks (or (get-field :r-stasks result) -1))
@@ -571,14 +668,16 @@
              (normalize-string derivation)
              (normalize-string (or tree "")) 
              (normalize-string (or mrs "")))))
-      (call-tsdb query language))))
+      (call-tsdb query language :cache cache))))
 
 (defun write-output (i-id application 
                      tree mrs tasks 
                      user date
-                     &optional (language *tsdb-data*))
+                     language
+                     &key cache)
   (when *tsdb-write-output-p*
-    (let* ((tree (shell-escape-quotes (remove #\@ (normalize-string tree))))
+    (let* ((*print-circle* nil)
+           (tree (shell-escape-quotes (remove #\@ (normalize-string tree))))
            (mrs (shell-escape-quotes (remove #\@ (normalize-string mrs))))
            (query
             (format
@@ -587,7 +686,7 @@
              i-id application
              tree mrs tasks
              user date)))
-      (call-tsdb query language)))) 
+      (call-tsdb query language :cache cache)))) 
 
 (defun current-user ()
   (or #+:allegro (system:getenv "USER")
@@ -651,6 +750,7 @@
                                        (language *tsdb-data*) 
                                        comment
                              &key (verbose t)
+                                  (cache *tsdb-cache-database-writes-p*)
                                   (gc *tsdb-gc-p*))
   (let ((run-id (or run-id (+ (largest-run-id language :verbose verbose) 1)))
         (data (retrieve condition language :verbose verbose)))
@@ -669,6 +769,7 @@
             (reader tdl::*verbose-reader-p*)
             (definition tdl::*verbose-definition-p*)
             #+:allegro (gc-behavior excl:*global-gc-behavior*)
+            (cache (when cache (create-cache language :verbose verbose)))
             gcs result)
         (setf main::*draw-chart-p* nil)
         (setf (pg::ebl-parser-name-rule-fn (current-parser))
@@ -700,7 +801,7 @@
                                   (list run-id comment application grammar
                                         user host start)))
                     (soth (size-of-type-hierarchy)))
-               (write-run (append run soth) language))
+               (write-run (append run soth) language :cache cache))
              (do* ((data data (rest data))
                    (item (first data) (first data))
                    (parse-id
@@ -722,13 +823,15 @@
                    (let* ((o-wf (item-o-wf item))
                           (o-wf (when (and o-wf (not (= o-wf -1))) o-wf))
                           (o-gc (item-o-gc item))
-                          (o-gc (when (and o-gc (not (= o-gc -1))) o-gc))
+                          (o-gc 
+                           (and o-gc (not (= o-gc -1)) (not (zerop o-gc))))
                           (gc (or o-gc gc))
                           (o-tasks (item-o-tasks item))
                           (o-tasks (if (and o-tasks (not (= o-tasks -1)))
                                      (floor (* *tsdb-item-factor* o-tasks))
                                      0))
-                          (o-derivations (when *tsdb-derivation-oracle-p*
+                          (o-derivations (when (or *tsdb-lexical-oracle-p*
+                                                   *tsdb-phrasal-oracle-p*)
                                            (select-derivations i-id language)))
                           (initial-load (first (load-average))))
                      (format
@@ -831,11 +934,13 @@
                          (push (cons :average-load average) result))
                        (when (and timeup (not (= readings -1)))
                          (push (cons :error "timeup") result))
-                       (write-parse result language)
+                       (write-parse result language :cache cache)
                        (unless (= (get-field :readings result) -1)
                          (write-results
                           parse-id 
-                          (get-field :results result) language)))))))))
+                          (get-field :results result) language
+                          :cache cache)))))))))
+          (when cache (flush-cache cache :verbose verbose))
           (setf pg::*maximal-number-of-tasks-exceeded-p* nil)
           (setf pg::*maximal-number-of-tasks* tasks)
           (setf (pg::ebl-parser-external-signal-fn (current-parser))
@@ -876,7 +981,8 @@
                     (n (gethash word frequencies)))
                (when (and word (> (length word) 0))
                  (setf (gethash word frequencies) (+ (or n 0) 1))
-                 (setf maximal-frequency (max maximal-frequency (+ (or n 0) 1)))
+                 (setf maximal-frequency 
+                   (max maximal-frequency (+ (or n 0) 1)))
                 (pushnew word words :test #'equal))))
           (when (and word (> (length word) 0))
             (setf (gethash word frequencies) (+ (or n 0) 1))

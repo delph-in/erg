@@ -20,7 +20,9 @@
 (defparameter
   *tsdb-morphology-protocol*
   '((main::*scanner* main::*morphology* :start-fw)
-    ((main::*morphology* :parse) main::*standalone* main::*scanner*)))
+    ((main::*morphology* :parse) main::*lexicon* main::*scanner*)
+    (main::*lexicon* main::*standalone* main::*morphology*)))
+  
 
 (defparameter
   *tsdb-parser-protocol*
@@ -29,7 +31,7 @@
     (main::*lexicon* main::*parser* main::*morphology*)
     (main::*parser* main::*standalone* main::*lexicon*)))
 
-(defparameter *page-controller* main::*paradice*)    
+(defparameter *page-controller* main::*controller*)    
 
 (defmacro current-parser ()
   (if (equal (elt make::*page-version* 0) #\2)
@@ -38,36 +40,39 @@
 
 (defun run-protocol (protocol input &key (trace nil))
   (let* ((foo (open "/dev/null" :direction :output :if-exists :overwrite))
-         (main::*standard-disco-output* 
-          (if trace main::*standard-disco-output* foo))
-         printers streams)
+         (shell (stream main::*page-shell*))
+         (controller (stream *page-controller*))
+         (blinker (stream main::*blinker*))
+         streams)
     (unless trace
+      (setf (stream main::*page-shell*) foo)
+      (setf (stream *page-controller*) foo)
+      (setf (stream main::*blinker*) foo)
       (dolist (component (main::internal-protocol-rep protocol))
-        (push (main::printer-status (main::p-caller component)) printers)
-        (setf (main::printer-status (main::p-caller component)) nil)
-        (push (stream (main::p-caller component)) streams)
-        (setf (stream (main::p-caller component)) foo)))
+        (push (stream (main::p-compo (main::p-caller component))) streams)
+        (setf (stream (main::p-compo (main::p-caller component))) foo)))
     (multiple-value-bind (result condition)
         (ignore-errors
          (catch 'main::stop
            (main::eval-proto *page-controller* protocol input)))
       (close foo)
       (unless trace
+        (setf (stream main::*page-shell*) shell)
+        (setf (stream *page-controller*) controller)
+        (setf (stream main::*blinker*) blinker)
         (do ((protocol (main::internal-protocol-rep protocol)
                        (rest protocol))
-             (printers printers (rest printers))
              (streams streams (rest streams)))
             ((null protocol))
-          (setf 
-            (main::printer-status (main::p-caller (first protocol)))
-            (first printers))
-          (setf (stream (main::p-caller (first protocol))) (first streams))))
+          (setf (stream (main::p-compo (main::p-caller (first protocol))))
+            (first streams))))
       (values result condition))))
 
 (defun morphologically-analyze-word (word &key (trace nil))
   (setf (main::output-stream main::*lexicon*) nil)
   (multiple-value-bind (result condition)
       (run-protocol *tsdb-morphology-protocol* word :trace trace)
+    (declare (ignore result))
     (unless condition
       (main::output-stream main::*lexicon*))))
 
@@ -108,7 +113,7 @@
 
 (defparameter *lexical-oracle* nil)
 
-(defun install-derivation-oracle (derivations)
+(defun install-lexical-oracle (derivations)
   (setf *lexical-oracle* nil)
   (when derivations
     (let* ((derivations (map 'list #'remove-terminals derivations))
@@ -124,7 +129,6 @@
         preterminals))
     (setf (pg::parser-task-priority-fn (pg::get-parser :lexicon))
       #'lexical-priority-oracle)))
-
 
 (defun lexical-priority-oracle (rule daughter tasktype parser)
   (declare (ignore parser))
@@ -147,6 +151,21 @@
           (type (get-item-type rule)))
       (when (member type (aref *lexical-oracle* start)) 600))
     600))
+
+;;;
+;;; this is rather awkward because most of the code resides in the :filter
+;;; package; maybe, it should eventually become part of core PAGE and assumed
+;;; to be there |:-{.                                     (15-dec-97  -  oe)
+;;;
+(defun install-phrasal-oracle (derivations)
+  (when (and (find-package "FILTER")
+             (boundp (intern "*UNIVERSE*" "FILTER")))
+    (set (intern "*LOCAL-TREES*" "FILTER") nil)
+    (funcall (intern "COLLECT-LOCAL-TREES" "FILTER") derivations)
+    (funcall (intern "COMPUTE-DERIVATION-ORACLE" "FILTER"))
+    (setf (pg::parser-task-priority-fn (pg::get-parser :syntax))
+      (symbol-function (intern "PHRASAL-PRIORITY-ORACLE" "FILTER")))))
+
 
 (in-package "PARSING")
 
@@ -186,6 +205,7 @@
 (defparameter *maximal-number-of-tasks-exceeded-p* nil)
 
 (defun maximal-number-of-tasks-exceeded-p (parser)
+  (declare (ignore parser))
   (setf *maximal-number-of-tasks-exceeded-p*
     (>= (incf *current-number-of-tasks*) *maximal-number-of-tasks*)))
 

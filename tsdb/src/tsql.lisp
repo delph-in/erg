@@ -53,7 +53,8 @@
       ")")))
 
 (defun select (attributes types relations condition
-               &optional (language *tsdb-data*))
+               &optional (language *tsdb-data*) 
+               &key redirection)
   (let ((attributes (if (listp attributes) attributes (list attributes)))
         (types (if (listp types) types (list types)))
         (relations (if (listp relations) relations (list relations))))
@@ -75,7 +76,7 @@
                nil
                "select ~a~@[from ~a~]~@[where ~a ~]report ~s"
                attributes relations condition report))
-             (result (call-tsdb query language))
+             (result (call-tsdb query language :redirection redirection))
              data)
         (with-input-from-string (stream result)
           (do ((line (read stream nil) (read stream nil)))
