@@ -114,14 +114,13 @@
 
 ;;;
 ;;; connection parameters for lexical database, an association list with fields
-;;; `:host', `:db', `:table', and `:user' (optional) 
 ;;; if unset we fall back to .tdl lexicon files
 
-(defparameter *psql-lexicon-parameters* 
-  #+:psql  
-  '((:db "erg") (:semi t))
-  #-:psql
-  nil)
+;; This is a USER-SPECIFIC PARAMETER (Options->Set options)
+;; for example:
+;;(def-lkb-parameter *psql-lexicon-parameters* 
+;;  '((:db "erg") (:semi t)))
+;; optionally also: :host, :user, :port
 
 ;;; Parse tree node labels
 
