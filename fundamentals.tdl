@@ -145,11 +145,13 @@ fem_and_andro := fem* & andro*.
 neut_and_andro := neut* & andro*.
 
 strict_gender := gender & strict_sort.
-masc := masc* & strict_gender.
-fem := fem* & strict_gender.
-neut := neut* & strict_gender.
-andro := andro* & strict_gender.
-andro1 := andro1* & strict_gender.
+strict_real_gender := real_gender & strict_gender.
+masc := masc* & strict_real_gender.
+fem := fem* & strict_real_gender.
+neut := neut* & strict_real_gender.
+andro := andro* & strict_real_gender.
+andro1 := andro1* & strict_real_gender.
+
 ; The following two are used in tag questions to block mismatched expletive
 ; pronouns in main clause and tag, since we can't block on unified index
 ; values, since in general tag questions introduce a pronoun which must have
@@ -600,12 +602,31 @@ keys := keys_km &
 
 cat_min :< *avm*.
 
+;; DPF (22-Oct-98) Added feature HC-LEX ("is head-complement type lexical?")
+;; on CAT, to identify the type of synsem that results from combining the word 
+;; with its complements.  We recognize at least the head-complement 
+;; structures  "thirty-two" and "two o'clock" as still being lexical signs, not
+;; phrasal ones, since they can appear as prenominal adjectives and in noun-
+;; noun compound constructions, respectively.  The head-complement rule 
+;; determines its SYNSEM type by unifying its LEX value with the HC-LEX of
+;; its head dtr - this works because the HCOMP rule requires its SYNSEM value to
+;; be of type canonical_synsem, and the subtypes of canonical_synsem are the
+;; only types that introduce the feature LEX, namely lex_synsem and phr_synsem.
+
+; DPF 2-Jun-02 - Similarly, words differ in whether the head-specifier
+; construction they head is lexical or phrasal: det+noun is phrasal to avoid
+; allowing e.g. "*my the sony laptop arrived" but deg+adj is still lexical to
+; avoid "*the children very small arrived" (given other constraints for each
+; of these two constructions).  So introduce HS-LEX value.
+
+
 cat := cat_min &
   [ HEAD head_min,
     VAL valence_min,
     MC luk,
     POSTHEAD bool,
-    HC-LEX bool ].
+    HC-LEX bool,
+    HS-LEX bool].
 
 local_min := mod_local &
   [ CAT cat_min,
@@ -635,13 +656,20 @@ expressed_synsem :< synsem.
 canonical_synsem := expressed_synsem &
   [ MODIFIED xmod ].
 
-lex_synsem := canonical_synsem & lex_or_phrase &
-  [ LOCAL local_min,
-    LEX +* ].
+canonical_lex_or_phrase_synsem := canonical_synsem & lex_or_phrase &
+  [ LOCAL local_min ].
+    
+phr_synsem := canonical_lex_or_phrase_synsem &
+  [ LEX -* ].
 
-phr_synsem := canonical_synsem & lex_or_phrase &
-  [ LOCAL local_min,
-    LEX -* ].
+abstr_lex_synsem := canonical_lex_or_phrase_synsem &
+  [ LEX +* ].
+
+lex_synsem :< abstr_lex_synsem.
+
+; For signs that are constructed by syntactic rule but have similar
+; (though not identical) distribution to lexical items - e.g. n_n_cmpnds.
+lex_phr_synsem :< abstr_lex_synsem.
 
 non_canonical := synsem &
   [ LOCAL.CONT.INDEX non_expl ].
@@ -673,17 +701,6 @@ anti_synsem :< unexpressed.
 ;; always MC na, since they can't really be said to be root or non-root.
 ;; All clauses are MC bool, and if they have a restricted distribution then
 ;; they are MC + or MC -.
-
-;; DPF (22-Oct-98) Added feature HC-LEX ("is head-complement type lexical?")
-;; on CAT, to identify the type of synsem that results from combining the word 
-;; with its complements.  We recognize at least the head-complement 
-;; structures  "thirty-two" and "two o'clock" as still being lexical signs, not
-;; phrasal ones, since they can appear as prenominal adjectives and in noun-
-;; noun compound constructions, respectively.  The head-complement rule 
-;; determines its SYNSEM type by unifying its LEX value with the HC-LEX of
-;; its head dtr - this works because the HCOMP rule requires its SYNSEM value to
-;; be of type canonical_synsem, and the subtypes of canonical_synsem are the
-;; only types that introduce the feature LEX, namely lex_synsem and phr_synsem.
 
 local_basic := local_min &
   [ KEYS keys_min,
@@ -1100,15 +1117,17 @@ nom-obj_mrs := nom-obj_basicmrs & mrs.
 message := norm_relation &
   [ SOA handle ].
 imp_rel :< message.
-prop_ques_rel :< message.          ;for COMPS of e.g. 'know'
-propositional_rel :< prop_ques_rel.
+;for COMPS of e.g. 'know':
+prop_ques_rel := message &          
+  [ PARAMS *diff-list* ].       
+
 prpstn_or_like_rel :< message.
-prpstn_rel := propositional_rel & prpstn_or_like_rel.   ;propositions
-;hypo_rel :< propositional_rel.     ;hypotheticals (PRO to go)
+propositional_rel := prop_ques_rel & prpstn_or_like_rel.
+prpstn_rel :< propositional_rel.   ;top level propositions
+hypo_rel :< propositional_rel.     ;embedded props: hypotheticals (PRO to go)
 
 ; For interrogatives; PARAMS value is a set of handles.
-abstr_int_rel := prop_ques_rel &
-  [ PARAMS *diff-list* ].       
+abstr_int_rel :< prop_ques_rel.
 
 int_rel :< abstr_int_rel.
 
@@ -1230,9 +1249,9 @@ nom_nondim_rel := nom_rel & nondim_rel.
 ; blocking of e.g. "the book that kim arrived" but allow "the day that Kim
 ; arrived"
 
-non_temp_nom_rel := nom_nondim_rel & nontemp_rel &
+non_temp_nom_rel := nom_nondim_rel & nontemp_rel.
+non_temp_nonpro_rel := non_temp_nom_rel & nonpro_rel &
   [ INST.SORT entity ].
-non_temp_nonpro_rel := non_temp_nom_rel & nonpro_rel.
 reg_nom_rel :< non_temp_nonpro_rel.
 modable_nom_rel := non_temp_nonpro_rel & modable_rel.
 
@@ -1278,10 +1297,14 @@ const_value_rel := relation &
 abstr_named_rel :< relation.
 gen_named_rel := abstr_named_rel & const_value_rel &
   [ CONST_VALUE atom ].
-abstr_named_np_rel :< gen_named_rel.
+named_np_or_num_rel :< gen_named_rel.
+abstr_named_np_rel :< named_np_or_num_rel.
 named_np_rel := abstr_named_np_rel & reg_nom_rel.
 ;named_num_rel := abstr_named_np_rel & reg_nom_rel & card_rel & apposition_rel.
-named_num_rel := abstr_named_np_rel & reg_nom_rel & apposition_rel.
+named_num_or_seq_rel :< nom_rel.
+named_num_rel := named_np_or_num_rel & reg_nom_rel & apposition_rel &
+                 named_num_or_seq_rel.
+num_seq_nom_rel := named_num_or_seq_rel & non_temp_nom_rel.
 named_card_rel := named_num_rel & card_rel.
 named_times_rel := named_num_rel & times_rel.
 named_plus_rel := named_num_rel & plus_rel.
@@ -1384,7 +1407,6 @@ mofy_rel := non_day_diadic_rel & abstr_named_np_rel &
 
 yofc_rel := non_day_rel & abstr_named_np_rel.
 
-;season_rel := non_day_diadic_modable_rel & abstr_named_np_rel.
 season_rel := non_day_diadic_modable_rel & gen_named_rel.
 
 age_rel :< non_day_rel.
@@ -1442,7 +1464,8 @@ excl_rel :< abstr_excl_rel.
 
 ; Pronouns
 pron_rel := non_temp_nom_rel & abstr_named_rel &
-  [ INST ref-ind & [ DIVISIBLE -* ] ].
+  [ INST ref-ind & [ DIVISIBLE -*,
+                     SORT entity ] ].
 
 recip_pro_rel := non_temp_nonpro_rel &
   [ INST ref-ind & [ DIVISIBLE -* ] ].
@@ -1578,6 +1601,8 @@ dir_rel :< dir_or_state_rel.
 state_loc_rel :< dir_or_state_rel.
 generic_loc_rel :< loc_abstr_rel.
 
+; DPF 13-May-02 - Removed ARG3.SORT time since this blocked e.g. "after the
+; party" or "after Kim"
 temp_loc_abstr_rel :< loc_abstr_rel.
 unspec_temp_loc_abstr_rel := temp_loc_abstr_rel & unspec_loc_rel.
 
@@ -1649,6 +1674,8 @@ abstr_deg_rel :< very_deg_rel.
 
 ; For specifiers of comparative adjectives
 much_deg_rel :< deg_rel.
+; To constrain adjectives to only take "much", as with modifiee of "than Sandy"
+much_deg_only_rel :< much_deg_rel.
 
 ; For conjoined spr-less adjectives as in "sunny and cooler"
 very_and_much_deg_rel := very_deg_rel & much_deg_rel.
@@ -1788,6 +1815,10 @@ _versus_rel :< conj_rel.
 ; For fragments
 
 discourse_rel :< conj_rel. 
+
+; For number sequences
+
+num_seq_rel :< conj_rel.
 
 ; Abstract relations specified by more than one lexical entry
 
