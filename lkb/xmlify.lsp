@@ -94,43 +94,23 @@
 
 ;;; note that the cfrom cto won't necessarily show up on the tree FSs
 
-(defun set-characterization (tdfs cfrom cto)
-  (when *within-unification-context-p*
-    (error "Why?"))
-  (when (and (tdfs-p tdfs) (integerp cfrom)
-	     (> cfrom -1) (integerp cto)
-	     (> cto -1)) 
-    (let* ((replace-alist (list (cons 'initial-cfrom-val  
-				      (format nil "~A" cfrom))
-				(cons 'initial-cto-val  
-				      (format nil "~A" cto))))
-	   (new-dag (copy-dag-completely (tdfs-indef tdfs)))
-	   (dag (existing-dag-at-end-of new-dag
-					mrs::*initial-semantics-path*)))
-      (destructively-replace-types dag replace-alist)
-      (setf (tdfs-indef tdfs) new-dag))))
-
-
-
-#|
-
-;;; not working - may just be that we need a setf on the path value
+(defparameter *characterize-p* t)
 
 (defun set-characterization (tdfs cfrom cto)
-  (when *within-unification-context-p*
-    (error "Why?"))
-  (when (and (tdfs-p tdfs) (integerp cfrom)
-	     (> cfrom -1) (integerp cto)
-	     (> cto -1)) 
-    (let* ((replace-alist (list (cons 'initial-cfrom-val  
-				      (format nil "~A" cfrom))
-				(cons 'initial-cto-val  
-				      (format nil "~A" cto))))
-	   (dag (existing-dag-at-end-of (tdfs-indef tdfs)
-					mrs::*initial-semantics-path*)))
-      (destructively-replace-types-top dag replace-alist))))
-
-|#
+  (let ((*safe-not-to-copy* nil))
+    (when (and (tdfs-p tdfs) (integerp cfrom)
+	       (> cfrom -1) (integerp cto)
+	       (> cto -1)) 
+      (let* ((replace-alist (list (cons 'initial-cfrom-val  
+					(format nil "~A" cfrom))
+				  (cons 'initial-cto-val  
+					(format nil "~A" cto))))
+	     (new-dag (tdfs-indef tdfs))
+	     (retyped-dag
+	      (replace-dag-types new-dag mrs::*initial-semantics-path*
+				 replace-alist)))
+	(when retyped-dag
+	  (setf (tdfs-indef tdfs) retyped-dag))))))
 
 (defparameter *active-parsing-p* nil)
 
