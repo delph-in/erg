@@ -15,6 +15,8 @@ three_space_lex_entry1 three_space_lex_entry2
 three_space_lex_entry3 three_space_lex_entry4)
    "types which are treated as templates to avoid excessive glbs")
 
+(defparameter *active-parsing-p* t)
+
 (defparameter *hierarchy-only-p* nil)
 
 ;;; Strings

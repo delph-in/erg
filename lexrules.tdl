@@ -1,11 +1,14 @@
 ;;; -*- Mode: TDL; Package: DISCO -*-
 ;;;
+;;;  Copyright Daniel Flickinger 1994-1999
+;;;  All Rights Reserved.
+;;;  No use or redistribution without permission.
+;;;
 ;;;  lexrules.tdl
 ;;;
 ;;;  Inflectional affixes and derivational lexical rules
 ;;;
 ;;;  Created: Rob Malouf, 3-Nov-1994
-;;;  Last revised: Dan Flickinger, 20-Oct-97
 ;;;
 ;;;  $Id$
 
@@ -148,10 +151,12 @@ pos_adj := local &
     CAT.VAL.SPR < [ LOCAL local &
 				[ KEYS.KEY very_deg_rel ] ] > ].
 
+
 er_comp_adj := local &
   [ STEMHEAD astem,
     CAT.VAL.SPR < [ LOCAL local &
 				[ KEYS.KEY much_deg_rel ] ] > ].
+
 
 est_super_adj := local &
   [ STEMHEAD astem,
@@ -193,6 +198,7 @@ lex_rule_supermost := phrase_or_lexrule & word_or_lexrule &
 lex_rule_supermost := phrase_or_lexrule & word_or_lexrule &
   [ DTR sign ].
 
+#|
 lex_rule_compos := lex_rule_supermost &
   [ DTR.SYNSEM.LOCAL.CONT.LISZT [ LIST #middle,
 				  LAST #last ],
@@ -200,6 +206,18 @@ lex_rule_compos := lex_rule_supermost &
 			      LAST #last ],
     C-CONT.LISZT [ LIST #first,
 		   LAST #middle ] ].
+
+|#
+; DPF 14-Aug-99 - Reorder appending of LISZT from above since treatment of fragments
+; looks for the first scope hole from left to right in LISZT, and above gives different
+; results for "October first" and "the first of October".
+lex_rule_compos := lex_rule_supermost &
+  [ DTR.SYNSEM.LOCAL.CONT.LISZT [ LIST #first,
+                                  LAST #middle ],
+    SYNSEM.LOCAL.CONT.LISZT [ LIST #first,
+			      LAST #last ],
+    C-CONT.LISZT [ LIST #middle,
+                   LAST #last ] ].
 
 lex_rule_infl := lex_rule_compos &
   [ NEEDS-AFFIX bool,
@@ -282,6 +300,7 @@ lex_rule := lex_rule_super_compos &
 ; over modifiability, in particular blocking spurious modification of 
 ; auxiliary "do", both in noninverted and inverted clauses.
 
+#|
 sai := lex_rule_super_compos &
   [ STEM #orth,
     DTR #stem &
@@ -323,8 +342,48 @@ sai := lex_rule_super_compos &
 	   NON-LOCAL #nonloc ],
     ARGS < #stem >,
     C-CONT.LISZT <! #msg !> ].
+|#
 
-
+sai := lex_rule_super_compos &
+  [ STEM #orth,
+    DTR #stem &
+	 [ STEM #orth,
+	   SYNSEM [ LOCAL [ CAT [ HEAD verb &
+				       [ INV +,
+					 VFORM fin,
+                                         MOOD #mood,
+                                         TENSE #tense,
+                                         VOICE #voice ],
+				  VAL [ SUBJ < #subj >,
+					COMPS #comps,
+					SPR #spr,
+					--KEYCOMP #keycomp ] ],
+			    CONT [ TOP #dtrhand,
+				   INDEX #ind,
+				   H-CONS #hcons ],
+                            AGR #agr,
+			    ARG-S #arg-s,
+			    KEYS #keys ],
+		    NON-LOCAL #nonloc ] ],
+    SYNSEM sai_synsem &
+	 [ LOCAL [ CAT [ HEAD [ MOOD #mood,
+                                TENSE #tense,
+                                VOICE #voice ],
+                         VAL [ COMPS < #subj & [ OPT - ]
+				       . #comps >,
+			       SPR #spr,
+			       SUBJ #spr,
+			       --KEYCOMP #keycomp ] ],
+		   CONT [ TOP #dtrhand,
+			  INDEX #ind,
+			  MESSAGE <! !>,
+			  H-CONS #hcons ],
+                   AGR #agr,
+		   ARG-S #arg-s,
+		   KEYS #keys ],
+	   NON-LOCAL #nonloc ],
+    ARGS < #stem >,
+    C-CONT.LISZT <! !> ].
 
 tag := lex_rule_super &
   [ STEM #orth,
@@ -716,7 +775,8 @@ date_det_lr := lex_rule &
     DTR [ STEM #orth,
 	  SYNSEM [ LOCAL [ STEMHEAD nstem,
                            CAT.VAL.COMPS < [ OPT + ] >,
-			   CONT.H-CONS #hcons,
+			   CONT.H-CONS [ LIST #hclist,
+                                         LAST #hclast ],
 			   KEYS [ KEY #altkey,
 				  --COMPKEY #ckey,
 				  --OCOMPKEY #ockey ],
@@ -729,22 +789,29 @@ date_det_lr := lex_rule &
 				 COMPS < >,
 				 SPEC < [ LOCAL.CONT.TOP #ntop ] > ] ],
 		     CONT [ INDEX #ind,
-			    H-CONS #hcons ],
+			    H-CONS [ LIST < qeq &
+                                            [ SC-ARG #rhand,
+                                              OUTSCPD #ntop ] . #hclist >,
+                                     LAST #hclast ] ],
 		     KEYS [ KEY #key & def_rel &
 				      [ BV #ind,
-					RESTR #ntop ],
-			    ALTKEY #altkey,
+					RESTR #rhand ],
+			    ALTKEY #altkey & [ INST #spind ],
 			    --COMPKEY #ckey,
 			    --OCOMPKEY #ockey ],
 		     CTXT #ctxt ],
 	     NON-LOCAL #nonloc ],
-    C-CONT.LISZT <! #key !> ].
+    C-CONT.LISZT <! #key,
+                    _of_rel & [ HANDEL #ntop,
+                                ARG #ind,
+                                ARG3 #spind ] !> ].
 
 ; "October": NP => Determiner
 ;          "(in) October" => "October first"
 
 month_det_lr := date_det_lr &
-  [ DTR.SYNSEM.LOCAL.KEYS.KEY mofy_rel ].
+  [ DTR.SYNSEM.LOCAL.KEYS.KEY mofy_rel,
+    SYNSEM.LOCAL.CAT.VAL.SPEC < [ LOCAL.KEYS.KEY dofm_rel ] > ].
 
 ; "Tuesday": NP => Determiner
 ;          "(on) Tuesday" => "Tuesday morning"
@@ -900,7 +967,7 @@ part_constr := lex_rule &
 	    NON-LOCAL #nonlocal ] ],
    SYNSEM partitive_noun_synsem & 
      [ LOCAL.KEYS [ KEY #key,
-		    ALTKEY #relation ],
+                    ALTKEY #relation ],
        NON-LOCAL #nonlocal ],
    C-CONT [ LISZT <! #key !> ] ].
 

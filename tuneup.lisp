@@ -1,11 +1,14 @@
-;;  tuneup.lisp
-;;
-;;    Parser tuning for CSLI Verbmobil grammar
-;;
-;;    Created: Rob Malouf, 22-Aug-1994
-;;    Last revised: Dan Flickinger, 24-Feb-97
-;;
-;;    $Id$
+;;;  tuneup.lisp
+;;;
+;;;  Copyright Daniel Flickinger 1994-1999
+;;;  All Rights Reserved.
+;;;  No use or redistribution without permission.
+;;;
+;;;    Parser tuning for CSLI Verbmobil grammar
+;;;
+;;;    Created: Rob Malouf, 22-Aug-1994
+;;;
+;;;    $Id$
 
 
 
@@ -55,9 +58,13 @@
 |#
 
 
+#|
 (pg::initialize-lex-parser :priority-fn #'pg::csli-determine-task-priority)
 (pg::initialize-syn-parser :priority-fn #'pg::csli-determine-task-priority
                            :result-restrictor lex::*result-rest*)
+|#
 
 ; (setf main::*source-grammar* 
 ;   (namestring (make-pathname :directory (pathname-directory *load-truename*))))
+
+(load "~/grammar/tuneeng.fasl")

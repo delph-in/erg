@@ -1,11 +1,14 @@
 ;;; -*- Mode: TDL; Package: DISCO -*-
 ;;;
+;;;  Copyright Daniel Flickinger 1994-1999
+;;;  All Rights Reserved.
+;;;  No use or redistribution without permission.
+;;;
 ;;;  fundamentals.tdl
 ;;;
 ;;;  Basic definitions of types for English grammar
 ;;;
 ;;;  Rob Malouf, 3-Nov-1994
-;;;  Last revision: Dan Flickinger, 20-Oct-97
 ;;;
 ;;;  $Id$
 
@@ -152,14 +155,15 @@ bool :< luk.
 ; and right-modified signs
 
 xmod :< *sort*.
-notmod :< xmod.
+notmod_or_rmod :< xmod.
+notmod :< notmod_or_rmod.
 hasmod :< xmod.
 lmod* :< hasmod.
-rmod* :< hasmod.
+rmod* := hasmod & notmod_or_rmod.
 
 lmod_and_rmod := lmod* & rmod*.
-lmod :< lmod*.
-rmod :< rmod*.
+lmod := lmod* & strict_sort.
+rmod := rmod* & strict_sort.
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Subtypes of *diff-list*
@@ -202,9 +206,14 @@ mod_local :< *avm*.
 
 head_min :< *avm*.
 
+; DPF 16-Aug-99 - Added INV to head type, since need to distinguish root
+; from non-root phrases as output from parser, and since inverted S's now have
+; MESSAGE empty, we have to require all non-root fragments to be INV -.
+
 head := head_min &
   [ MOD *list*,
-    PRD bool ].
+    PRD bool,
+    INV bool ].
 
 valence_min :< *avm*.
 
@@ -477,8 +486,9 @@ unexpressed := non_canonical &
 		REL 0-dlist,
 		QUE 0-dlist ] ].
 
-anti_synsem := synsem_min &
-  [ OPT + ].
+; DPF 28-Aug-99 - Removed OPT + from anti_synsem since it blocked 
+; "you can have anything you want"
+anti_synsem :< synsem_min.
 
 anti_synsem_unexp := anti_synsem & unexpressed.
 
@@ -609,7 +619,8 @@ basic_lex_entry := sign &
     status: lex-entry.
 
 ;; see lkbpatches
-lex_entry :< basic_lex_entry.
+lex_entry := basic_lex_entry &
+  [ SYNSEM.LOCAL.CONT.TOP-H handle ].
 infl_lex_entry := basic_lex_entry &
   [ INFLECTED +,
     ARGS < [ AFFIX no-affix ] > ].
@@ -623,8 +634,8 @@ basic_multi_lex_entry := word &
 ; are redefined in the patches file
 
 ;; see lkbpatches
-standard_mle :< basic_multi_lex_entry.
-
+standard_mle := basic_multi_lex_entry &
+  [ SYNSEM.LOCAL.CONT.TOP-H handle ].
 multi_lex_entry := basic_multi_lex_entry &
   [ STEM < #stem1, #stem2 >,
     SYNSEM.LOCAL [ KEYS.KEY.LABEL #label,
@@ -656,6 +667,22 @@ two_space_lex_entry_affixed := basic_multi_lex_entry &
 	   [ STEM < #stem2 >,
 	     AFFIX no-affix ],
 	   [ STEM < #stem3 >,
+	     AFFIX local_min ] > ].
+
+three_space_lex_entry_affixed := basic_multi_lex_entry &
+  [ STEM < #stem1, #stem2, #stem3, #stem4 >,
+    SYNSEM.LOCAL [ KEYS.KEY.LABEL #label,
+		   CONT.WGLISZT <! whg-item & [ WG-HNDLS < #label > ],
+				   whg-item & [ WG-HNDLS < #label > ],
+				   whg-item & [ WG-HNDLS < #label > ],
+				   whg-item & [ WG-HNDLS < #label > ] !> ],
+    ARGS < [ STEM < #stem1 >,
+	     AFFIX no-affix ],
+	   [ STEM < #stem2 >,
+	     AFFIX no-affix ],
+	   [ STEM < #stem3 >,
+	     AFFIX no-affix ],
+	   [ STEM < #stem4 >,
 	     AFFIX local_min ] > ].
 
 key_first := basic_multi_lex_entry &
@@ -802,6 +829,7 @@ n_or_a :< head.
 a_or_p :< head.
 v_or_p :< head.
 n_or_v :< head.
+disc_adverbee :< head.
 
 strict_type :< head_min.
 
@@ -815,10 +843,9 @@ subst := head &
 ; Adverbs modify adverbees.
 adverbee :< subst.
 
-v_or_g_or_a :< subst.
+v_or_g_or_a := subst & disc_adverbee.
 v_or_g := v_or_g_or_a &
-  [ VFORM vform,
-    INV bool ].
+  [ VFORM vform ].
 
 nominal := subst & poss-able &
   [ CASE case ].
@@ -850,7 +877,7 @@ verb* := verbal & v_or_p & n_or_v &
 
 comp* := nominal & verbal.
 
-basic_adv :< func.
+basic_adv := func & disc_adverbee.
 
 ; 'not' and closed class of other adverbs that can be added to aux COMPS list
 ; via 'adv_addition' lexical rule.
@@ -1037,6 +1064,8 @@ free_ever_rel :< quant_rel.
 ;which_rel :< quant_or_wh_rel.
 which_rel :< quant_rel.
 
+_all_rel :< quant_rel.
+
 ; Nominal sorts used for VM2
 
 nominal-sort :< *sort*.
@@ -1093,6 +1122,8 @@ nominalize_rel :< diadic_nom_rel.
 
 gerund_rel :< reg_nom_rel.
 
+apposition_rel :< nonpro_rel.
+
 temp_abstr_rel := nonpro_rel &
   [ INST.SORT time ].
 
@@ -1105,7 +1136,7 @@ temp_rel :< temp_abstr_rel.
 ; modifiers
 temp_modable_rel := temp_nondim_rel & modable_rel.
 
-day_rel :< temp_modable_rel.
+day_rel := temp_modable_rel & apposition_rel.
 
 named_day_rel := day_rel &
   [ DAY atom ].
@@ -1146,7 +1177,7 @@ numbered_hour_rel := hour_rel &
 ; appear after temporal prepositions (ignoring the elliptical "I'll see you 
 ; in ten"), and we also need to block "from ten to eleven o'clock" with
 ; "ten" as minute.
-minute_or_ampm_rel :< reg_nom_rel.
+minute_or_ampm_rel :< nom_nondim_rel.
 
 minute_rel := minute_or_ampm_rel &
   [ MINUTE string ].
@@ -1197,13 +1228,17 @@ _weekday_rel :< dofw_rel.
 _weekend_rel :< dofw_rel.
 _workday_rel :< dofw_rel.
 
-_week_rel :< non_day_diadic_rel.
+_week_rel :< non_day_diadic_modable_rel.
 _fortnight_rel :< non_day_modable_rel.
 _month_rel :< non_day_diadic_modable_rel.
 _moment_rel :< non_day_rel.
 
-named_rel := reg_nom_rel &
+named_rel := reg_nom_rel & apposition_rel &
   [ NAMED atom ].
+
+*letter-diff-list* :< *diff-list*.
+spell_rel := reg_nom_rel &
+  [ LETTERS *letter-diff-list* ].
 
 unk_rel :< named_rel.
 
@@ -1314,7 +1349,8 @@ will_would_rel :< support_arg4_rel.
 abstr_rel :< arg3_event_rel.
 
 ; AAC - added for frag
-abstr_e_rel :< event_rel.
+abstr_e_rel := event_rel &
+  [ XARG non_expl ].
 
 ; AAC - added for frag-msg
 abstr_3_rel := basic_nom_rel & arg3_rel.
@@ -1386,8 +1422,8 @@ very_deg_rel :< deg_rel.
 ; For specifiers of comparative adjectives
 much_deg_rel :< deg_rel.
 
-; For specifiers of either positives or comparatives
-very_or_much_rel := very_deg_rel & much_deg_rel.
+; For specifiers of either pos or compar adjs (e.g. 'a little')
+very_or_much_deg_rel := very_deg_rel & much_deg_rel.
 
 comparative_rel := comp_degree_rel &
   [ ARG-1 index,
@@ -1414,6 +1450,10 @@ prpstn_to_prop_rel := prop_rel &
 
 _by_pass_rel :< miscprep_ind_rel.
 _from_time_on :< miscprep_ind_rel.
+_compar_than_rel :< miscprep_ind_rel.
+comp_rel :< miscprep_ind_rel.
+_more_adj_rel :< adj_rel.
+super_rel :< miscprep_ind_rel.
 
 ; Abstract relations, specialized below either to independent relations or to
 ; ones that appear in verb-particle constructions.
@@ -1439,7 +1479,7 @@ appointment_rel :< reg_nom_rel.
 
 ;; Relations needed for VIT conversion
 
-abstr_apply := prop_rel & event_rel.
+abstr_apply := prop_rel & arg_rel.
 
 _get_somewhere_rel :< arg1_rel.
 _get_together_rel :< arg1_rel.
@@ -1474,10 +1514,16 @@ unspec_rel := nondim_rel &
 
 probable_rel :< adj_rel.
 
+; DPF 11-Jul-99 - Added C-INIT-H and C-INIT-I so the initial handle and index will be
+; visible in the semantics even for a partial coordination phrase like "and Kim left"
 conj_rel := nondim_rel &
   [ C-ARG individual,
     C-HANDELS *diff-list*,
     C-INDICES *diff-list* ].
+
+; For fragments
+
+discourse_rel :< conj_rel. 
 
 ; Abstract relations specified by more than one lexical entry
 
@@ -1863,9 +1909,6 @@ _away_adv_rel := _away_adv_rel_a & independent_rel.
 _around_rel_a :< miscprep_rel.
 _around_rel_s := _around_rel_a & selected_rel.
 _around_rel := _around_rel_a & independent_rel.
-_through_rel_a :< dir_rel.
-_through_rel_s := _through_rel_a & selected_rel.
-_through_rel := _through_rel_a & independent_rel.
 _along_p_rel_a :< dir_or_state_rel.
 _along_p_rel_s := _along_p_rel_a & selected_rel.
 _along_p_rel := _along_p_rel_a & independent_rel.
@@ -1890,12 +1933,12 @@ _apart_isect_rel := _apart_isect_rel_a & independent_rel.
 _open_rel_a :< abstr_adj_rel.
 _open_rel_s := _open_rel_a & selected_rel.
 _open_rel := _open_rel_a & independent_rel.
-_out_of_rel_a :< miscprep_rel.
-_out_of_rel_s := _out_of_rel_a & selected_rel.
-_out_of_rel := _out_of_rel_a & independent_rel.
 _until_rel_a :< prep_mod_rel.
 _until_rel_s := _until_rel_a & selected_rel.
 _until_rel := _until_rel_a & independent_rel.
 _to_until_rel_a :< _until_rel_a.
 _to_until_rel_s := _to_until_rel_a & _until_rel_s.
 _to_until_rel := _to_until_rel_a & _until_rel.
+_through_rel_a :< _until_rel_a.
+_through_rel_s := _through_rel_a & _until_rel_s.
+_through_rel := _through_rel_a & _until_rel.

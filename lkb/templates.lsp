@@ -155,7 +155,8 @@ vp ($vform=vform) :=
 		     [ VFORM $vform,
 		       INV - ],
 		  VAL [ SUBJ < synsem >,
-			COMPS *olist* ] ] ] ].
+			COMPS *olist* ],
+                  MC na ] ] ].
 
 |#
 
@@ -168,7 +169,8 @@ vp ($vform=vform) :=
                      ((local cat head inv) -)
                      ((local cat val subj first) synsem)
                      ((local cat val subj rest) *null*)
-                     ((local cat val comps) *olist*)))
+                     ((local cat val comps) *olist*)
+		     ((local cat mc) na)))
 #|
 
 pp () := synsem &

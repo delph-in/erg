@@ -24,6 +24,7 @@
   nil)
 |#
 
+#|
 (progn
   (in-package :cl-user)
   (load (dir-and-name *source-grammar* "mrsglobals-eng"))
@@ -43,7 +44,7 @@
   (setq mrs::%vit-indent% ",~%    ")
   (setq mrs::*mrs-to-vit* t)
   )
-
+|#
 (setf trees::*label-names* 
    '("CONJ" "S" "S-R" "ADV" "ADV-R" "ADV-D" "P-N" "P-I" "P-S" "PP-N" "PP-I" "PP-S" "N" "NP" "ADJ" "VP" "V" "DET" "COMP" "NEG" "XP" "B")
 ;'("CONJ" "ADV" "PP" "NP" "ADJ" "VP" "V" "S" "P" "DET" "N" "COMP" "NEG" "XP" "B")
@@ -53,6 +54,41 @@
 
 (in-package "MAIN")
 
+(defun tree-draw (&optional what)
+  (when what
+    (set-printer-kind 'pg::combo-item
+		      (case what
+			(:off NIL)
+			(:on (progn (setq *ascii-trees* T) :tree))
+			(:fancy (progn (setq *ascii-trees* NIL) :tree)))))
+  (format (modstream *page-shell*)
+          "~&Current tree display mode is: `~A'."
+	  (case (get-printer-kind 'pg::combo-item)
+	    (:tree (if *ascii-trees* :on :fancy))
+	    (T :off))))
+
+(define-command 
+    '(:draw-tree &optional mode
+      &doc 
+      "Show or set current parse tree display mode (`:on', `:fancy', or `:off').")
+    #'tree-draw)
+
+; In page/src/protocols/call-eng-scanner.lisp
+; Don't treat $ as special character, to get "$p-$m" right.
+(in-package "MAIN")
+
+(setf %eng-special-chars% 
+    '(#\. #\, #\; #\! #\? #\: #\( #\) #\{ #\} #\[ #\] #\ ))
 
 
+; In page/src/parser/gdbm-lex-access.lisp
+; Avoid NFS delay in writing .dat files
+(in-package "PARSING")
+(defun grammar-file (name)
+  (if (member name '("lexicon.dat" "semrels.dat" "relkeys.dat") :test #'equal)
+      (make-pathname :directory (pathname-directory "~/grammar/")
+                     :name name)
+    (make-pathname :directory (pathname-directory tdl::*source-grammar*)
+                   :name name)))
 
+(in-package "MAIN")

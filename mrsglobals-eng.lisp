@@ -7,6 +7,12 @@
 ;;   Language: Allegro Common Lisp
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; $Log$
+;; Revision 1.18  1999/09/02 13:43:13  discosys
+;; 1999/09/02 13:43:10 mrs2vit-eng          6.014    kasper
+;;
+;; Revision 1.21  1999/08/02 17:52:31  danf
+;; Bug fixes for CD6 semantics
+;;
 ;; Revision 1.20  1999/07/09 04:33:29  aac
 ;; changes to key path and for fragment detection
 ;;
@@ -192,6 +198,8 @@
 
 (setf *scope-feat* (vsym "SCOPE"))
 
+(setf *arg-feat* (vsym "ARG"))
+
 (setf *do-not-convert-sort-list* nil)
                                   
 (setf *relation-extra-feats* `(,(vsym "PNG") ,(vsym "PN") 
@@ -358,7 +366,7 @@
     ,(vsym "mofy_rel") ,(vsym "the_afternoon_rel")
     ,(vsym "the_morning_rel") ,(vsym "the_evening_rel")
     ,(vsym "numbered_hour_rel") ,(vsym "minute_rel") ,(vsym "dofw_rel")
-    ,(vsym "named_rel") ,(vsym "_vacation_rel") ,(vsym "holiday_rel")
+    ,(vsym "holiday_rel")
     ,(vsym "ctime_rel") ,(vsym "_hour_rel") ,(vsym "_minute_rel") 
     ,(vsym "dim_rel") ,(vsym "unspec_rel") ,(vsym "recip_pro_rel") 
     ,(vsym "_the_day_after_rel") ,(vsym "dofm_rel")
@@ -374,7 +382,7 @@
     ,(vsym "_hither_rel") ,(vsym "_home_loc_rel") 
     ,(vsym "_last_time_rel") ,(vsym "_maximum_adv_rel") 
     ,(vsym "_nearby_rel") ,(vsym "_now_rel") 
-    ,(vsym "_out_of_town_rel") ,(vsym "_right_away_rel") 
+    ,(vsym "_right_away_rel") 
     ,(vsym "_right_now_rel") ,(vsym "_sometime_rel") 
     ,(vsym "_somewhere_rel") ,(vsym "_then_temp_rel") 
     ,(vsym "_there_rel") ,(vsym "_thereabouts_rel") 
@@ -422,13 +430,20 @@
 (setf *non-expl-type* (vsym "non_expl"))
 
 ;;; from english.tdl
-(setq *mrs-to-vit* nil)
+;(setq *mrs-to-vit* nil)
 ;;; (setq main::*vm-arg-roles-only-p* nil)
-(setq mrs::*raw-mrs-output-p* nil)
-(setq mrs::%vit-indent% ",~%    ")
+;(setq mrs::*raw-mrs-output-p* nil)
+;(setq mrs::%vit-indent% ",~%    ")
 
 (setf *root-path* `(,(vsym "ROOT")))
 
 (setf *false-type* (vsym "-"))
 
 (setf *true-type* (vsym "+"))
+
+(defparameter *letter-difference-list-type* (vsym "*letter-diff-list*"))
+
+;;; don't unstring these:
+(setf *string-valued-features*
+  `(,(vsym "NAMED")))
+

@@ -151,12 +151,13 @@
                   (append current-path '(REST))))))))
 
 ;; Assign priorities to parser tasks
-
 (defun rule-priority (rule)
   (case (rule-id rule)
     (extradj_i 100)
     (extradj_s 150)
     (extracomp 200)
+    (extrasubj_f 300)
+    (extrasubj_i 300)
     (fillhead_non_wh 150)
     (fillhead_wh_r 150)
     (fillhead_wh_subj_r 150)
@@ -166,11 +167,25 @@
     (hoptcomp 200)
     (rootgap_l 100)
     (rootgap_r 100)
-    (n_n_cmpnd 200)
+    (n_n_cmpnd 250)
     (vpellipsis_lr 100)
+    (taglr 100)
     (vgering 100)
     (temp_np 300)
     (appos 200)
+    (imper 300)
+    (sailr 300)
+    (advadd 300)
+    (passive 400)
+    (intransng 400)
+    (transng 400)
+    (monthdet 400)
+    (weekdaydet 400)
+    (monthunsat 400)
+    (attr_adj 400)
+    (partitive 400)
+    (NP_part_lr 400)
+    (dative_lr 400)
     (otherwise 
      (if (get-lex-rule-entry (rule-id rule))
 	 400
@@ -191,6 +206,7 @@
 				  QUASIMODAL_LE MV_POSS_LE
 				  HOUR_WORD_LE DITRANS_PREP_LE
 				  MV_EXPL_IT_SUBJ_LIKE_LE
+                                  S_ADV_PRE_WORD_NOSPEC_LE
 				  ))
 
 (defun lex-priority (mrec)
