@@ -80,6 +80,17 @@
   '(CONT)
   "restrictor used when parsing with ambiguity packing")
 
+;;;
+;;; increase dag pool size
+;;;
+
+(defparameter *dag-pool-size* 200000)
+(defparameter *dag-pool*
+  (if (and (pool-p *dag-pool*) 
+           (not (= (pool-size *dag-pool*) *dag-pool-size*)))
+    (create-pool *dag-pool-size* #'(lambda () (make-safe-dag-x nil nil)))
+    *dag-pool*))
+
 ;;; Parse tree node labels
 
 ;;; the path where the name string is stored
