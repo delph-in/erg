@@ -23,8 +23,8 @@ satp ($head=head) := synsem &
 cp ($vform=vform) := synsem & @satp($head=verbal) &		     
   [ LOCAL.CAT [ HEAD [ VFORM $vform,
 		       MOOD ind_or_mod_subj,
-		       INV -  ],
-	          MC bool ] ].
+		       INV - ],
+	          MC - ] ].
 
 
 |#
@@ -75,7 +75,7 @@ nomp ($cont=mrs) := @satp($head=nominal) &
 
 #|
 nomp_acc ($cont=mrs) := nomp &
-  [ LOCAL [ CAT.HEAD noun_acc,
+  [ LOCAL [ CAT.HEAD mobile & [ CASE acc ],
 	    CONT $cont ] ].
 |#
 
@@ -84,7 +84,7 @@ nomp_acc ($cont=mrs) := nomp &
                            (cont (local cont)))
                    '(((local) local_basic)
                      ((local conj) cnil)
-                     ((local cat head) strict_nominal)
+                     ((local cat head) mobile_nom)
                      ((local cat val subj) *null*)
                      ((local cat val comps) *olist*)
                      ((local cat val spr) *olist*)
@@ -94,7 +94,7 @@ nomp_acc ($cont=mrs) := nomp &
 
 #|
 nomp_nom ($cont=mrs) := nomp &
-  [ LOCAL [ CAT.HEAD noun_nom,
+  [ LOCAL [ CAT.HEAD.CASE nom,
 	    CONT $cont ] ].
 |#
 
@@ -103,7 +103,7 @@ nomp_nom ($cont=mrs) := nomp &
                            (cont (local cont)))
                    '(((local) local_basic)
                      ((local conj) cnil)
-                     ((local cat head) strict_nominal)
+                     ((local cat head) nominal)
                      ((local cat val subj) *null*)
                      ((local cat val comps) *olist*)
                      ((local cat val spr) *olist*)
@@ -162,7 +162,7 @@ vp ($vform=vform) :=
 		     [ VFORM $vform,
 		       INV - ],
 		  VAL [ SUBJ < synsem >,
-			    COMPS *olist* ] ] ] ].
+		  COMPS *olist* ] ] ] ].
 
 
 |#
@@ -181,7 +181,7 @@ pp () := synsem &
   [ LOCAL local_basic &
 	  [ CAT [ HEAD prep & [ PRD - ],
 		  VAL [ SPR *olist*,
-			    COMPS *olist* ],
+		        COMPS *olist* ],
 		  MC na ] ] ].
 
 |#

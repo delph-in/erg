@@ -25,15 +25,6 @@
      (*grounding* :stop-fw *channel*)))
 
 
-(in-package "MRS")
-
-; In mrsfns.lisp --- hack to suppress printing of var-extra() information
-
-(defun get-print-name (var-struct)
-  (if (var-p var-struct)
-    (var-name var-struct)
-    (format nil "u")))
-
 (in-package "CSLI")
 
 ;; In engmorph/english-morphology.lisp, modify EXPAND-ENGL-INFL to remove the
@@ -147,46 +138,6 @@
 (setf *local-path* '(DISCO:: SYNSEM DISCO::LOCAL))
 (setf *label-fs-path* '())
 
-; In pagemrs.lisp
-; Changed GET-PARSE-FS to allow the input to already be a list of fs's
-(in-package "MRS")
-
-(defun get-parse-fs (parse)
-  (if (eq (type-of parse) 'csli-unify::fs) 
-      parse
-    (if (string-equal "1" (subseq user::*page-version* 0 1))
-	(lexicon::cfs-fs (pg::u-item-cfs parse))
-      (if (or (eq (type-of parse) 'typed-item)
-	      (eq (type-of parse) 'main::typed-item))
-	  (lexicon::cfs-fs (car (main::typed-item-args parse)))
-	(cfs-fs (pg::combo-item-cfs parse))))))
-
-; In mrsfns.lisp
-; Changed GET-MRS-STRINGS to check for flag *raw-mrs-output-p*
-
-(defun get-mrs-strings (parse-list)
-  (loop for parse in parse-list
-        collecting
-        (let* ((fs (get-parse-fs parse))
-               (sem-fs (path-value fs *initial-semantics-path*)))
-          (if (is-valid-fs sem-fs)
-              (let ((mrs-struct (sort-mrs-struct (construct-mrs sem-fs))))
-                (with-output-to-string (stream) 
-		  (if *raw-mrs-output-p*
-		      (format stream "~%~S" mrs-struct)
-		    (output-mrs1 mrs-struct 'simple stream))
-		  ))))))
-
-; In mrs-to-vit.lisp
-; Added check for empty list - was breaking on "how besides"
-
-(defun vit-bind-inst-rel-p (mrsrel)
-  (or (when (rel-flist mrsrel)
-	(vit-quant-rel-p mrsrel)
-      (when (rel-flist mrsrel)
-	(nonquantified-var-p (fvpair-value (first (rel-flist mrsrel)))))
-      (member (rel-sort mrsrel) *top-level-rel-types*))))
-
 ;; In ~page2.3/src/engmorph/english-morphology
 ;; Changed STRIP-S to match LKB's treatment of "DOES", "GOES"
 
@@ -221,32 +172,26 @@
 	    (t ())))
     (Make-Stripped-Result word-string root-string alt-root-string "-S")))
 
-(in-package "TDL")
+;; DPF (04-Mar-99) In mrsoutput.lisp
+;; Added one more line to DETERMINE-VARIABLE-TYPE
 
-; Required for munger for abstract types
 (in-package "MRS")
 
-(defun compatible-types (type1 type2)
-  (let ((type1name (fetch-and-expand-type type1))
-	(type2name (fetch-and-expand-type type2)))
-    (when (and type1name type2name)
-      (not (eq (csli-unify::unify-types type1name type2name)
-	       'CSLI-UNIFY::*FAIL*)))))
-
-(defun is-valid-type (type)
-  (tdl::get-infon (intern type lex::*lex-package*) lex::*lex-package* :avms))
-
-(defun fetch-and-expand-type (name &optional (domain *lex-package*))
-  (let* ((domain (string domain))
-         (name (intern name domain))
-         (infon (tdl::get-infon name domain :avms)))
-    (when infon
-      (tdl::expand-type name :domain domain)
-      (lex::convert 
-       (tdl::feature-structure-term (tdl::get-prototype name domain :avms))
-       user::*unifier*))))
-
-(load "~/grammar/patches/mrsmunge.fasl")
-
+(defun determine-variable-type (fs)
+  (let ((type (fs-type fs)))
+    (case type
+          (disco::event "e")
+          (disco::event_or_index "e")
+          (disco::non_expl_e_or_i "e")
+          (disco::eventtime "t")
+          (disco::handle "h")
+          (disco::hole "h")
+          (disco::label "h")
+          (disco::ref-ind "x")
+          (disco::full_ref-ind "x")
+          (disco::deg-ind "d")
+          (disco::individual "d")
+          (tdl::*diff-list* "c")  ;; Assume coordination structure
+          (t "v"))))
 
 (in-package "TDL")

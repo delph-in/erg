@@ -297,6 +297,7 @@ basicmrs := mrs_min &
   [ MESSAGE *diff-list*,  
     H-CONS *diff-list*,
     WGLISZT *diff-list*,
+    PMOOD symbol,
     --TOPKEY mod_relation ].
 
 basicmrs2 := basicmrs &
@@ -523,16 +524,23 @@ whg-item := *avm* &
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Types for Sign, Word, Phrase, and Lex-Entry
 
+;; DPF 03-Mar-99 - The -MORPHOLOGY feature was added to accommodate Verbmobil
+;; requirements for interface with prosodic information derived from speech input
+;; Same for ACCENT, SPMOOD, and FORM.
 
-sign := *avm* &
-  [ KEY-ARG bool,   
-    STEM *list*,
-    SYNSEM synsem,
+basic_sign := *avm* &
+  [ STEM *list*,
+    ACCENT bool,
+    SPMOOD symbol,
+    FORM atom,
+    KEY-ARG bool ].
+
+sign := basic_sign &
+  [ SYNSEM synsem,
     ARGS *list*,
     INFLECTED bool,
-    ACCENT bool,
-    PMOOD symbol,
-    ROOT bool ],
+    ROOT bool,
+    -MORPHOLOGY basic_sign ],
   status: root-node.
 
 phrase_or_lexrule := sign &
@@ -556,17 +564,38 @@ word := word_or_lexrule &
 ;; like "twenty-two" and "five fifteen p.m.".  So most phrases will assign the
 ;; type phr_synsem to the value of SYNSEM, but not all.
 
+;; DPF 03-Mar-99 - This definition of phrase is replaced by the following by
+;; request from WK.
+
+#|
 phrase := phrase_or_lexrule &
   [ SYNSEM.LOCAL.ARG-S < >,
     ROOT bool ].
+|#
+
+lexroot := phrase_or_lexrule &
+  [ SYNSEM.LOCAL.ARG-S < >,
+    ROOT bool ],
+  status: lexroot.
+
+phrase :< lexroot, 
+  status: root-node.
+
+;; DPF 03-Mar-99 - The features WACCENT and PMOOD were added to accommodate 
+;; Verbmobil requirements for interface with prosodic information derived from 
+;; speech input
 
 lex_entry := sign &
   [ STEM < #stem >,
-    ACCENT #accent,
     SYNSEM.LOCAL.CONT [ KEY [ LABEL #label,
 			      WACCENT #accent ],
+			PMOOD #pmood,
 			WGLISZT <! whg-item & [ WG-HNDLS < #label > ] !> ],
-    ARGS < [ STEM < #stem > ] >,
+    ARGS < #morphology & 
+	   [ STEM < #stem >,
+	     ACCENT #accent,
+	     SPMOOD #pmood ] >,
+    -MORPHOLOGY #morphology,
     INFLECTED bool ],
     status: lex-entry.
 
@@ -828,19 +857,22 @@ strict_nominal := strict_type & nominal.
 
 strict_supnoun := strict_nominal & supnoun.
 
+mobile_nom := mobile & nominal.
+
 ; The following types are used to enable strict subcategorization (the usual 
 ; case)
 
 verb := verb* & verb_or_comp.
 noun := noun* & strict_supnoun.
-noun_acc := noun & mobile & [ CASE acc ].
+noun_acc := noun & mobile_nom & [ CASE acc ].
 noun_nom := noun & [ CASE nom ].
 prep := prep* & strict_type.
 adj := adj* & strict_type.
 comp := comp* & verb_or_comp.
 gerund := gerund* & strict_supnoun.
-gerund_acc := gerund & mobile & [ CASE acc ].
+gerund_acc := gerund & mobile_nom & [ CASE acc ].
 gerund_nom := gerund & [ CASE nom ].
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;  CONT values (MRS semantics)

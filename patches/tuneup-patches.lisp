@@ -4,11 +4,13 @@
 
 (setf *unlikely-le-types* '(DISCO::DISC_ADV_MLE1 DISCO::LETTER_NAME_LE
 			    DISCO::MEALTIME_WORD_LE DISCO::NUMADJ_NOUN_WORD_LE
-			    DISCO::NP_ADV_LE DISCO::SUBCONJ_LE
+			    DISCO::NP_ADV_LE DISCO::SUBCONJ_LE 
+			    DISCO::SUBCONJ_INF_LE
 			    DISCO::BE_TH_COP_IS_LE DISCO::BE_TH_COP_ARE_LE
 			    DISCO::BE_TH_COP_WAS_LE DISCO::BE_TH_COP_WERE_LE
 			    ))
-(setf *likely-le-types* '(DISCO::COORD_C_LE DISCO::DISC_ADV_LE
+(setf *likely-le-types* '(DISCO::COORD_C_LE DISCO::DISC_ADV_LE 
+			  DISCO::QUASIMODAL_LE
 			  ))
 (setf *unlikely-lexrule-types* '(DISCO::VP_ELLIPSIS 
 				 DISCO::INTRANS_NOMINAL_GERUND))
@@ -54,6 +56,7 @@
 	(disco::fillhead_wh_nr_f 150)
 	(disco::fillhead_wh_nr_i 150)
 	(disco::fillhead_rel 150)
+	(disco::fin_non_wh_rel 100)
 	(disco::hoptcomp 200)
 	(disco::rootgap_l 100)
 	(disco::rootgap_r 100)
