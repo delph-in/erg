@@ -1,5 +1,7 @@
 ;;; LinGO big grammar specific functions
 
+(in-package :cl-user)
+
 
 (defun preprocess-sentence-string (str)
   ;; replace all punctuation by spaces
