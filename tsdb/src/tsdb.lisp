@@ -74,8 +74,7 @@
   t)
 
 (defmacro find-tsdb-directory (language)
-  `(let* ((data (dir-append (make-pathname :directory *tsdb-home*)
-                            (list :relative ,language))))
+  `(let* ((data (dir-append *tsdb-home* (list :relative ,language))))
      (namestring data)))
 
 (defun reset-tsdb-paths ()

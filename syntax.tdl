@@ -52,7 +52,7 @@ head_nexus_que_phrase := headed_phrase &
     HEAD-DTR.SYNSEM.NON-LOCAL.QUE #que ].
 
 head_nexus_modcont_phrase := headed_phrase &
-  [ SYNSEM.LOCAL.MODCONT #modcont,
+  [ SYNSEM.LOCAL.CONT.MODCONT #modcont,
     C-CONT [ MODCONT #modcont,
 	     H-CONS <! !> ] ].
 
@@ -62,9 +62,19 @@ head_nexus_nonmodcont := head_nexus_rel_phrase & head_nexus_que_phrase.
 head_nexus_phrase := head_nexus_rel_phrase & head_nexus_que_phrase &
 		     head_nexus_modcont_phrase.
 
+; In a head/local dependent phrase, the SLASH feature of the mother is
+; token-identical to that of the head daughter, which has already amalgamated
+; the SLASH values of its arguments.  See discussion of head_nexus_phrase for
+; treatment of REL and QUE.
+
+head_valence_phrase := head_nexus_phrase &
+  [ SYNSEM.NON-LOCAL.SLASH #slash,
+    HEAD-DTR.SYNSEM.NON-LOCAL.SLASH #slash,
+    C-CONT.H-CONS <! !> ].
+
 ; All phrases are either unary or binary.
 
-unary_phrase := headed_phrase &
+unary_phrase := phrase &
   [ SYNSEM.LOCAL [ CONT [ LISZT *diff-list* &
 				[ LIST #first,
 				  LAST #last ],
@@ -193,15 +203,6 @@ non_clause := head_nexus_phrase &
   [ SYNSEM.LOCAL [ CAT.ROOT na,
 		   CONT.MESSAGE no_rel ] ].
 
-non_clause_unary := unary_phrase &
-  [ SYNSEM [ LOCAL [ CAT.ROOT #root & na,
-		     CONT.MESSAGE no_rel ],
-	     NON-LOCAL [ QUE #que,
-			 REL <! !> ] ],
-    HEAD-DTR.SYNSEM [ LOCAL.CAT.ROOT #root,
-		      NON-LOCAL [ QUE #que,
-				  REL <! !> ] ] ].
-
 ; ERB (05-10-97) The immediate subtypes of clause are now rel_cl and
 ; non_rel_clause.  The latter groups together decl, imp, and (wh_)interrog,
 ; which are similar in that they can't serve as modifiers and have empty REL
@@ -213,8 +214,7 @@ non_clause_unary := unary_phrase &
 
 clause := head_compositional &
   [ SYNSEM [ LOCAL [ CAT [ HEAD verbal,
-			   VALENCE.COMPS *olist*,
-			   ROOT bool ],
+			   VALENCE.COMPS *olist* ],
 		     CONT.MESSAGE message,
 		     CONJ cnil ],
 	     NON-LOCAL [ QUE <! !>,
@@ -241,8 +241,19 @@ nonroot := phrase &
 ; anything like VFORM whether to identify cases -- see Ivan's interrogatives
 ; paper.
 
+; The [ROOT bool] constraint lives here rather than on clause because we want
+; to treat relative clauses as clauses, but we need to distinguish them as the
+; only clauses which can serve as modifiers.  That is, on the one hand we need
+; to distinguish relative clauses from ordinary finite subj_head declaratives, 
+; where both have a non-empty MOD value, but only the former can appear in a
+; head-modifier phrase; and on the other hand we need to distinguish
+; extracted-subject finite clauses from ordinary finite S/NP clauses, since 
+; only the latter can be the dtr in a thatless-relative construction.  So the
+; head-adjunct rule says the adjunct must be [ROOT na], and the thatless_rel
+; rule says the dtr must be [ROOT +].
+
 non_rel_clause := head_nexus_nonque & clause &
-  [ SYNSEM.LOCAL.CAT.MOD no-mod ].
+  [ SYNSEM.LOCAL.CAT.ROOT bool ].
 
 decl := non_rel_clause & 
   [ SYNSEM.LOCAL [ CAT.HEAD.INV -,
@@ -285,8 +296,7 @@ interrog := non_rel_clause &
 
 wh_interrog := interrog & 
   [ SYNSEM.LOCAL [ CAT [ HEAD verbal &
-			      [ MOOD ind_or_mod_subj & strict_mood ],
-			 MOD no-mod ],
+			      [ MOOD ind_or_mod_subj & strict_mood ] ],
 		   CONT.MESSAGE.PARAMS <! #que & handle !> ],
     NON-HEAD-DTR.SYNSEM [ LOCAL.CAT.HEAD subst,
 			  NON-LOCAL.QUE <! #que !> ] ].
@@ -299,14 +309,23 @@ wh_interrog_fin := wh_interrog &
   [ SYNSEM.LOCAL.CAT [ HEAD.VFORM fin,
 		       VALENCE.SUBJ < > ] ].
 
-rel_cl := clause & nonroot & head_nexus_nonrel &
+; Since MOD is a head feature, and projections of finite verbs can be relative
+; clauses, we introduce the [MOD @nbar] property directly on finite verbs, rather
+; than in the rel_cl phrase type as before.  Then we have to be sure that finite
+; VPs do not appear as postnominal modifiers, and likewise for declarative S's.
+; The former is blocked because the head-adjunct rule requires that the adjunct 
+; be [SUBJ *olist*].  The latter we block by requiring that the adjunct in a 
+; head-adjunct phrase be [ROOT na], while making declarative head_subj phrases 
+; be [ROOT +].  Thus relative clauses must also be [ROOT na].
+
+rel_cl := clause & head_nexus_nonrel &
   [ SYNSEM [ LOCAL [ CAT [ HEAD [ VFORM fin_or_inf,
+				  INV -,
 				  MOOD ind_or_mod_subj & strict_mood,
-				  INV - ],
-			   MOD @nbar() &
-				[ CONT [ TOP #hand,
-					 INDEX #ind ] ] ,
-			   ROOT - ],
+				  MOD.CONT [ TOP #hand,
+					     INDEX #ind ],
+				  POSTHEAD + ],
+			   ROOT na ],
 		     CONT [ MESSAGE hypo_rel,
 			    MODCONT [ TOP #hand,
 				      INDEX #ind,
@@ -322,18 +341,24 @@ rel_cl := clause & nonroot & head_nexus_nonrel &
 ; went home", we require the S/NP to be [ ROOT + ], which excludes subject
 ; extraction for that daughter.
 
+; The dtr is required to be [ROOT +] in order to block subject-extracted S/NPs
+; from being admitted as relative clauses.  This constraint would be removed
+; for those dialects which accept examples like "There's a man wants to talk to
+; you waiting outside."
+
 non_wh_rel_cl := head_only & rel_cl &
-  [ SYNSEM [ LOCAL.CAT [ MOD.CONT.INDEX #ind,
-			 POSTHEAD +,
-			 VALENCE #valence ],
+  [ SYNSEM [ LOCAL [ CAT [ HEAD.MOD.CONT.INDEX #ind,
+			   VALENCE #valence ] ],
 	     NON-LOCAL.SLASH <! !> ],
-    HEAD-DTR.SYNSEM [ LOCAL [ CAT.VALENCE #valence & [ SUBJ < > ],
+    HEAD-DTR.SYNSEM [ LOCAL [ CAT [ HEAD verbal,
+				    VALENCE #valence & [ SUBJ < > ],
+				    ROOT + ],
 			      CONT.MESSAGE propositional_rel ],
 		      NON-LOCAL.SLASH <! [ CAT [ HEAD noun &
-						      [ PRD - ],   
+						      [ PRD -,
+							MOD no-mod ],   
 						 VALENCE [ SPR *olist*,
-							   COMPS *olist* ],
-						 MOD no-mod ],
+							   COMPS *olist* ] ],
 					   CONT.INDEX #ind ] !> ] ].
 
 fin_non_wh_rel_cl := non_wh_rel_cl &
@@ -387,18 +412,6 @@ head_filler_phrase_inf := head_filler_phrase &
   [ HEAD-DTR.SYNSEM.LOCAL [ CAT.HEAD.VFORM inf,
 			    CONT.MESSAGE hypo_rel ] ].
 
-; In a head/local dependent phrase, the SLASH feature of the mother is
-; token-identical to that of the head daughter, which has already amalgamated
-; the SLASH values of its arguments.  See discussion of head_nexus_phrase for
-; treatment of REL and QUE.
-
-head_valence_phrase := head_nexus_phrase &
-  [ SYNSEM [ LOCAL.CONT.MODCONT #mcont,
-	     NON-LOCAL.SLASH #slash ],
-    HEAD-DTR.SYNSEM.NON-LOCAL.SLASH #slash,
-    C-CONT [ MODCONT #mcont,
-	     H-CONS <! !> ] ].
-
 ; 1-May-96 (DPF) Restricted head to be verb only, to block spurious parses
 ; where NP modifed by PP was also analyzed as its subject.
 ; 12-Jun-96 (RPM) Allow verbal gerunds to head head/subj phrases.
@@ -440,14 +453,12 @@ head_comp_or_marker_phrase := head_valence_phrase & head_compositional &
   [ SYNSEM.LOCAL [ CAT [ ROOT #root,
 			 VALENCE [ SUBJ #subj,
 				   COMPS #comps,
-				   SPR #spr ],
-			 MOD #mod ],
+				   SPR #spr ] ],
 		   CONT.MESSAGE #mes ],
     HEAD-DTR.SYNSEM.LOCAL [ CAT [ ROOT #root,
 				  VALENCE [ SUBJ #subj,
 					    COMPS < #synsem . #comps >,
-					    SPR #spr ],
-				  MOD #mod ],
+					    SPR #spr ] ],
 			    CONT.MESSAGE #mes ],
     NON-HEAD-DTR.SYNSEM #synsem,
     C-CONT.LISZT <! !> ].
@@ -476,25 +487,20 @@ head_opt_comp_phrase := head_valence_phrase & head_only & head_compositional &
   [ SYNSEM.LOCAL.CAT [ VALENCE [ SUBJ #subj,
 				 COMPS #comps,
 				 SPR #spr ],
-		       MOD #mod,
 		       POSTHEAD + ],
-    HEAD-DTR.SYNSEM.LOCAL.CAT [ VALENCE 
-			[ SUBJ #subj,
-			  COMPS < unexpressed & [ OPT + ]
-				  . #comps & < synsem, ... > >,
-			  SPR #spr ],
-				MOD #mod ],
+    HEAD-DTR.SYNSEM.LOCAL.CAT.VALENCE [ SUBJ #subj,
+					COMPS < unexpressed & [ OPT + ]
+						. #comps & < synsem, ... > >,
+					SPR #spr ],
     C-CONT.LISZT <! !> ].
 
 extracted_arg_phrase := head_only & head_compositional & 
 			head_valence_phrase & 
   [ SYNSEM.LOCAL [ CAT [ HEAD v_or_p &
 			      [ MOOD indicative ],
-			 VALENCE.SPR #spr,
-			 MOD #mod ],
+			 VALENCE.SPR #spr ],
 		   CONJ cnil ],
-    HEAD-DTR.SYNSEM.LOCAL [ CAT [ VALENCE.SPR #spr,
-				  MOD #mod ],
+    HEAD-DTR.SYNSEM.LOCAL [ CAT.VALENCE.SPR #spr,
 			    CONJ cnil ],
     C-CONT.LISZT <! !> ].
 
@@ -511,7 +517,8 @@ extracted_comp_phrase := extracted_arg_phrase & non_clause &
 				 COMPS #comps ],
 		       ROOT na ],
     HEAD-DTR.SYNSEM 
-	   [ LOCAL.CAT.VALENCE [ SUBJ #subj,
+	   [ LOCAL.CAT.VALENCE [ SUBJ #subj & 
+				      [ NON-LOCAL.SLASH <! !> ],
 				 COMPS < gap &
 					 [ LOCAL.CAT [ HEAD mobile & 
 							    [ CASE acc ] ] ]
@@ -538,12 +545,10 @@ head_spec_phrase := head_valence_phrase & head_final & non_clause &
   [ SYNSEM.LOCAL.CAT [ VALENCE [ SUBJ #subj,
 				 COMPS < >,
 				 SPR #spr ],
-		       MOD #mod,
 		       POSTHEAD #ph ],
     HEAD-DTR.SYNSEM.LOCAL [ CAT [ VALENCE [ SUBJ #subj,
 					    COMPS *olist*,
 					    SPR < #synsem & synsem . #spr > ],
-				  MOD #mod,
 				  POSTHEAD #ph,
 				  ROOT na ],
 			    CONT.MODCONT #mcont,
@@ -586,15 +591,11 @@ head_mod_phrase := head_nexus_nonmodcont &
   [ SYNSEM.LOCAL [ CAT [ VALENCE [ SUBJ #subj,
 				   SPR #spr,
 				   COMPS < > ],
-			 MOD #mod,
-			 POSTHEAD #ph,
 			 ROOT #root ],
 		   CONT.KEY #hkey ],
     HEAD-DTR.SYNSEM [ LOCAL [ CAT [ VALENCE [ SUBJ #subj,
 					      SPR #spr,
 					      COMPS *olist* ],
-				    MOD #mod,
-				    POSTHEAD #ph,
 				    ROOT #root ],
 			      CONT.KEY #hkey,
 			      CONJ cnil ],
@@ -645,7 +646,8 @@ head_mod_phrase_simple := head_mod_phrase &
   [ SYNSEM [ LOCAL [ CONT [ TOP #hand,
 			    MODCONT [ TOP #mchand,
 				      LISZT #hliszt,
-				      KEY.HANDEL #mchand ],
+				      KEY.HANDEL #hand,
+				      MESSAGE #hmcmsg ],
 			    MESSAGE #mes ] ],
 	     NON-LOCAL [ SLASH *diff-list* &
 			       [ LIST #first,
@@ -657,25 +659,27 @@ head_mod_phrase_simple := head_mod_phrase &
 			      CONT [ MODCONT [ TOP #mchand,
 					       KEY.HANDEL #hdhand,
 					       INDEX #hmcind,
-					       LISZT #hliszt ],
+					       LISZT #hliszt,
+					       MESSAGE #hmcmsg],
 				     INDEX #hind,
 				     MESSAGE #hmsg,
 				     H-STORE #hstore ] ],
 		      NON-LOCAL.SLASH *diff-list* &
 	                              [ LIST #first,
 					LAST #middle ] ],
-    NON-HEAD-DTR.SYNSEM [ LOCAL [ CAT [ MOD local & 
-					    [ CAT #localcat,
-					      AGR #agr,
-					      CONT [ TOP #hdhand,
-						     INDEX #hind,
-						     H-STORE #hstore,
-						     MESSAGE #hmsg,
-						     MODCONT [TOP #mchand,
-							      INDEX #hmcind]]],
+    NON-HEAD-DTR.SYNSEM [ LOCAL [ CAT [ HEAD strict_head &
+				       [ MOD local & 
+					     [ CAT #localcat,
+					       AGR #agr,
+					       CONT [ TOP #hdhand,
+						      INDEX #hind,
+						      H-STORE #hstore,
+						      MESSAGE #hmsg,
+						      MODCONT.INDEX #hmcind ]]],
 					VALENCE [ SUBJ *olist*,
 						  COMPS *olist*,
-						  SPR *olist* ] ],
+						  SPR *olist* ],
+					ROOT na ],
 				  CONT.MODCONT #mcont &
 				               [ TOP #hand,
 						 KEY.HANDEL #hand,
@@ -687,11 +691,12 @@ head_mod_phrase_simple := head_mod_phrase &
 				      REL <! !> ] ],
     C-CONT #mcont ].
 
-
-
 adj_head_phrase := head_mod_phrase_simple & head_final &
-  [ NON-HEAD-DTR.SYNSEM.LOCAL.CAT [ HEAD.PRD -,
-				    POSTHEAD - ] ].
+  [ SYNSEM.LOCAL.CAT.POSTHEAD #ph,
+    HEAD-DTR.SYNSEM.LOCAL.CAT.POSTHEAD #ph,
+    NON-HEAD-DTR.SYNSEM [ LOCAL.CAT [ HEAD.PRD -,
+				      POSTHEAD - ],
+			  NON-LOCAL.SLASH <! !> ] ].
 
 ; ERB (07-11-96) Non-head dtr is QUE <! !> to rule out "*Leaving when do you
 ; think would bother Sandy?" or "*Your house where did the government forclose
@@ -711,12 +716,14 @@ head_adj_phrase := head_mod_phrase_simple & head_initial &
 ; ERB (12-11-96) This is the exception; the reason I couldn't put the MESSAGE
 ; stuff on head_mod_phrase.
 
-extracted_adj_phrase := head_mod_phrase & head_only & non_clause &
-  [ SYNSEM [ LOCAL.CONT [ MESSAGE #mes,
-			  MODCONT.LISZT #hliszt ],
+extracted_adj_phrase := head_mod_phrase & head_only & head_nexus_phrase &
+  [ SYNSEM [ LOCAL [ CAT [ POSTHEAD #ph,
+			   ROOT #root ],
+		     CONT [ MESSAGE #mes,
+			    MODCONT.LISZT #hliszt ] ],
 	     NON-LOCAL.SLASH <! local &
 			      [ CAT [ POSTHEAD +,
-				      MOD #local,
+				      HEAD.MOD #local,
 				      VALENCE [ COMPS *olist*,
 						SPR *olist* ] ],
 				CONT.MODCONT #mcont & 
@@ -726,20 +733,20 @@ extracted_adj_phrase := head_mod_phrase & head_only & non_clause &
 				     [ CAT [ HEAD verb &
 						  [ MOOD ind_or_mod_subj & 
 							 strict_mood ],
-					     VALENCE [ SUBJ < synsem >,
-						       COMPS *olist* ],
-				       CONT.MODCONT.LISZT #hliszt ] ],
-			       NON-LOCAL.SLASH <! !> ] ].
+					     VALENCE.COMPS *olist*,
+					     POSTHEAD #ph,
+					     ROOT #root ],
+				       CONT.MODCONT.LISZT #hliszt ],
+			       NON-LOCAL.SLASH.LIST < > ] ].
 
 ;;
 ;; Bare plural and mass NPs, distinguished by the INDEX feature [ DIVISIBLE + ]
 ;;
 
 bare_np_phrase := head_only & non_clause & head_valence_phrase &
-  [ SYNSEM.LOCAL [ CAT [ VALENCE [ SUBJ < >,
-				   COMPS < >,
-				   SPR < > ],
-			 MOD #mod ],
+  [ SYNSEM.LOCAL [ CAT.VALENCE [ SUBJ < >,
+				 COMPS < >,
+				 SPR < > ],
 		   CONT.MESSAGE #mes ],
     HEAD-DTR.SYNSEM.LOCAL 
 	 [ CAT [ HEAD noun,
@@ -749,8 +756,7 @@ bare_np_phrase := head_only & non_clause & head_valence_phrase &
 				 [ OPT -,
 				   LOCAL local &
 				       [ CONT.KEY #quant &
-						  [ RESTR #arg  ] ] ] > ],
-		 MOD #mod ],
+						  [ RESTR #arg  ] ] ] > ] ],
 	   CONJ cnil,
 	   CONT [ INDEX #index & [ DIVISIBLE + ],
 		  KEY basic_nom_rel,
@@ -779,9 +785,9 @@ bare_np_phrase := head_only & non_clause & head_valence_phrase &
 ; relevant information from headed_phrase, head_final, and head_compositional.
 
 n_n_cmpnd_phr := binary_phrase & word &
-  [ SYNSEM [ LOCAL [ CAT [ HEAD head & #head,
+  [ SYNSEM [ LOCAL [ CAT [ HEAD head & #head &
+				[ MOD no-mod ],
 			   VALENCE #valence,
-			   MOD no-mod,
 			   ROOT #root ],
 		     CONJ cnil,
 		     CONT mrs & [ TOP #hand,
@@ -954,7 +960,8 @@ coord_phr := binary_phrase & non_headed_phrase &
 ;;
 ;; Proto-instance types
 
-subjh_rule_decl := binary_rule_right_to_left & head_subj_phrase & decl.
+subjh_rule_decl := binary_rule_right_to_left & head_subj_phrase & decl &
+  [ SYNSEM.LOCAL.CAT.ROOT + ].
 
 hcomp_rule := binary_rule_left_to_right & head_comp_phrase.
 
@@ -1020,7 +1027,7 @@ filler_head_rule_wh_nr_inf := binary_rule_right_to_left &
 
 filler_head_rule_rel := binary_rule_right_to_left & rel_cl & 
 			head_filler_phrase_fin &
-  [ SYNSEM.LOCAL.CAT.MOD.CONT.INDEX #ind,
+  [ SYNSEM.LOCAL.CAT.HEAD.MOD.CONT.INDEX #ind,
     HEAD-DTR.SYNSEM.LOCAL [ CAT.HEAD.VFORM fin,
 			    CONT.MESSAGE propositional_rel ], 
     NON-HEAD-DTR.SYNSEM.NON-LOCAL [ QUE <! !>,
