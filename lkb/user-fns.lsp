@@ -37,24 +37,6 @@
 	   (string-trim '(#\space) (coerce (nreverse result-chars) 'string))
 	   " >")))
 
-            
-#|
-(defun establish-linear-precedence (rule-fs)
-   ;;;    A function which will order the features of a rule
-   ;;;    to give (mother daughter1 ... daughtern)
-   ;;;    
-   ;;;  Modification - this must always give a feature
-   ;;;  position for the mother - it can be NIL if
-   ;;; necessary
-  (let* ((mother NIL)
-         (daughter1 (get-value-at-end-of rule-fs '(ARGS FIRST)))
-         (daughter2 (get-value-at-end-of rule-fs '(ARGS REST FIRST)))) 
-    (unless (and daughter1 (not (eql daughter1 'no-way-through)))
-      (cerror "Ignore it" "Rule without daughter"))
-    (append (list nil '(ARGS FIRST))
-            (if (and daughter2 (not (eql daughter2 'no-way-through)))
-                (list '(ARGS REST FIRST))))))
-|#
 (defun establish-linear-precedence (rule-fs)
    ;;;    A function which will order the features of a rule
    ;;;    to give (mother daughter1 ... daughtern)
@@ -72,7 +54,7 @@
             (if (and daughter2 (not (eql daughter2 'no-way-through)))
                 (list '(ARGS REST FIRST)))
             (if (and daughter3 (not (eql daughter3 'no-way-through)))
-                (if daughter2
+                (if (and daughter2 (not (eql daughter2 'no-way-through)))
                     (list '(ARGS REST REST FIRST)))))))
 
 (defun spelling-change-rule-p (rule)
