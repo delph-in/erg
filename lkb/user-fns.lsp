@@ -6,20 +6,32 @@
   ;; except
   ;; for PAGE compatability, replace #\' by #\space
   ;; except at end of word, when replace by #\space #\s
-  (let ((chars (coerce str 'list))
+  (let ((in-word nil)
+        (chars (coerce str 'list))
         (result-chars nil))
     (do* ((next-char (car chars) (car remainder))
           (remainder (cdr chars) (cdr remainder)))
          ((null next-char) nil)
          (cond ((eql next-char #\')
-                (if (or (null remainder) (eql (car remainder) #\space))
+                (cond 
+                 ((not in-word) 
+                  (if (or (null remainder) (eql (car remainder) #\space))
+                      nil
                     (progn
-                      (push #\space result-chars)
-                      (push #\s result-chars))
-                  (push #\space result-chars)))
+                      (push next-char result-chars)
+                      (setf in-word t))))
+                 ((or (null remainder) (eql (car remainder) #\space))
+                  (setf in-word nil)
+                  (push #\space result-chars)
+                  (push #\s result-chars))
+                 (t
+                  (setf in-word nil)
+                  (push #\space result-chars))))
                ((not (alphanumericp next-char)) 
+                (setf in-word nil)
                 (push #\space result-chars))
-               (t (push next-char result-chars))))
+               (t (setf in-word t) 
+                (push next-char result-chars))))
     (string-trim '(#\space) (coerce (nreverse result-chars) 'string))))
             
 (defun establish-linear-precedence (rule-fs)
