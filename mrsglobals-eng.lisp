@@ -7,6 +7,9 @@
 ;;   Language: Allegro Common Lisp
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; $Log$
+;; Revision 1.6  1999/01/15 05:56:49  danf
+;; Improvements for generation
+;;
 ;; Revision 1.5  1998/12/23 01:25:20  danf
 ;; Synchronized PAGE and LKB
 ;;
@@ -143,19 +146,6 @@
 (setf *word-feature* (vsym "WG-WORD"))
 
 (setf *id-feature* (vsym "WG-ID"))
-
-;;; WK: I copy the *VM-arg-roles ... parameters from main-package into MRS
-;; they appear to work without PAGE then
-;; AAC - take these out of main and set in mrsglobals
-(setf *VM-arg-roles-only-p* t)
-(setf *VM-arg-roles* `(,(vsym "arg1") ,(vsym "arg2") 
-				      ,(vsym "arg3") ,(vsym "arg4")))
-(setf *suppressed-VM-arg-roles* 
-    `(,(vsym "act") ,(vsym "und") ,(vsym "fig") ,(vsym "gnd") 
-      ,(vsym "i-ord") ,(vsym "preparg") 
-      ,(vsym "thm") ,(vsym "id1") 
-      ,(vsym "id2") ,(vsym "params") ,(vsym "nprep") 
-      ,(vsym "nomarg") ,(vsym "expr") ,(vsym "carg") ,(vsym "varg")))
 
 (setf *do-not-convert-sort-list* nil)
                                   
@@ -390,7 +380,7 @@
 
 ;;; from english.tdl
 (setq *mrs-to-vit* nil)
-(setq main::*vm-arg-roles-only-p* nil)
+;;; (setq main::*vm-arg-roles-only-p* nil)
 (setq mrs::*raw-mrs-output-p* nil)
 (setq mrs::%vit-indent% ",~%    ")
 (setq mrs::*giving-demo-p* t)
