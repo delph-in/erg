@@ -5,7 +5,7 @@
 (defun alphanumeric-or-extended-p (char)
   (and (graphic-char-p char)
        (not (member char '(#\space #\! #\" #\& #\' #\(
-                           #\) #\* #\+ #\, #\- #\. #\/ #\: #\;
+                           #\) #\* #\+ #\, #\. #\/ #\;
                            #\< #\= #\> #\? #\@ #\[ #\\ #\] #\^
                            #\_ #\` #\{ #\| #\} #\~)))))
 
@@ -275,10 +275,14 @@
 ;;; systems that have no on-line morphology.  also used in [incr tsdb()] for
 ;;; counting of `words'.
 ;;;
+;;; DPF 28-Aug-01 - In fact, we need uninflected forms at least for nouns in 
+;;; order to analyze measure phrases like "a ten person group arrived" where
+;;; the measure noun "person" is uninflected, so it can unify with the plural
+;;; modifier "ten".
+
 (defun dag-inflected-p (dag)           
   (let* ((key (existing-dag-at-end-of dag '(inflected))))
     (and key (not (bool-value-false key)))))
-
 
 ;;; Function to run when batch checking the lexicon
 

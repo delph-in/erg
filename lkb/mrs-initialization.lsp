@@ -10,7 +10,7 @@
       (merge-pathnames
        (make-pathname :directory 
                       (pathname-directory
-                       (dir-append *grammar-directory* 
+                       (dir-append *grammar-directory*
                                    '(:relative "data"))))
       (make-pathname 
        :name "genrules.mrs"))

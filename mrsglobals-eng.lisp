@@ -65,6 +65,9 @@
 (setf *construction-semantics-path*
   `(,(vsym "C-CONT") ,(vsym "LISZT") ,(vsym "LIST")))
 
+(setf *psoa-top-h-path* 
+  `(,(vsym "TOP")))
+
 (setf *top-semantics-type* 
   (vsym "RELATION"))
 
@@ -77,5 +80,6 @@
 
 (setf *true-type* (vsym "+"))
 
-
+; DPF Upped from 100 to 200
+(setf *maximum-genindex-relations* 200)
 
