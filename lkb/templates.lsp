@@ -3,7 +3,7 @@ satp ($head=head) := synsem &
   [ LOCAL local &
 	  [ CONJ cnil,
 	    CAT [ HEAD $head,
-		  VALENCE [ SUBJ < >,
+		  VAL [ SUBJ < >,
 			    COMPS *olist*,
 			    SPR *olist* ] ] ] ].
 
@@ -14,9 +14,9 @@ satp ($head=head) := synsem &
                      ((local) local)
                      ((local conj) cnil)
                      ((local cat head) head)
-                     ((local cat valence subj) *null*)
-                     ((local cat valence comps) *olist*)
-                     ((local cat valence spr) *olist*)))
+                     ((local cat val subj) *null*)
+                     ((local cat val comps) *olist*)
+                     ((local cat val spr) *olist*)))
 
 #|
 
@@ -35,13 +35,13 @@ cp ($vform=vform) := synsem & @satp($head=verbal) &
                      ((local) local)
                      ((local conj) cnil)
                      ((local cat head) verbal)
-                     ((local cat valence subj) *null*)
-                     ((local cat valence comps) *olist*)
-                     ((local cat valence spr) *olist*)
+                     ((local cat val subj) *null*)
+                     ((local cat val comps) *olist*)
+                     ((local cat val spr) *olist*)
                      ((local cat head vform) vform)
                      ((local cat head mood) ind_or_mod_subj)
                      ((local cat head inv) -)
-                     ((local cat root) bool)))
+                     ((local cat root) -)))
 
 #|
 
@@ -60,9 +60,9 @@ nomp ($case=case,$cont=mrs) := @satp($head=nominal) &
                    '(((local) local)
                      ((local conj) cnil)
                      ((local cat head) strict_nominal)
-                     ((local cat valence subj) *null*)
-                     ((local cat valence comps) *olist*)
-                     ((local cat valence spr) *olist*)
+                     ((local cat val subj) *null*)
+                     ((local cat val comps) *olist*)
+                     ((local cat val spr) *olist*)
                      ((local cat head case) case)
                      ((local cat root) na)
                      ((local cont) mrs)))
@@ -82,9 +82,9 @@ np ($case=case,$cont=mrs) := @satp($head=supnoun) &
                      ((local cont) mrs)
                      ((local cat head) strict_supnoun)
                      ((local conj) cnil)
-                     ((local cat valence subj) *null*)
-                     ((local cat valence comps) *null*)
-                     ((local cat valence spr) *null*)))
+                     ((local cat val subj) *null*)
+                     ((local cat val comps) *null*)
+                     ((local cat val spr) *null*)))
 
 #|
 
@@ -92,7 +92,7 @@ np ($case=case,$cont=mrs) := @satp($head=supnoun) &
 nbar ($cont=nom-obj) := local &
   [ CAT [ HEAD noun &
 	       [ MOD no-mod ],
-	  VALENCE [ SUBJ < >,
+	  VAL [ SUBJ < >,
 		    COMPS *olist*,
 		    SPR < synsem > ]],
     CONT $cont,
@@ -106,10 +106,10 @@ nbar ($cont=nom-obj) := local &
                      ((cont) nom-obj)
                      ((cat head) noun)
                      ((cat head mod) no-mod)
-                     ((cat valence subj) *null*)
-                     ((cat valence comps) *olist*)
-                     ((cat valence spr first) synsem)
-                     ((cat valence spr rest) *null*)
+                     ((cat val subj) *null*)
+                     ((cat val comps) *olist*)
+                     ((cat val spr first) synsem)
+                     ((cat val spr rest) *null*)
                      ((cat root) na)))
 
 #|
@@ -125,9 +125,9 @@ third-sg-np ( ) := @nomp ( ) &
                    '(((local) local)
                      ((local conj) cnil)
                      ((local cat head) strict_nominal)
-                     ((local cat valence subj) *null*)
-                     ((local cat valence comps) *olist*)
-                     ((local cat valence spr) *olist*)
+                     ((local cat val subj) *null*)
+                     ((local cat val comps) *olist*)
+                     ((local cat val spr) *olist*)
                      ((local cat head case) case)
                      ((local cat root) na)
                      ((local cont) mrs)
@@ -138,19 +138,19 @@ third-sg-np ( ) := @nomp ( ) &
 prd ($subj=synsem) :=
   [ LOCAL local &
 	  [ CAT [ HEAD [ PRD + ],
-		  VALENCE [ SUBJ < $subj >,
+		  VAL [ SUBJ < $subj >,
 			    SPR *olist*,
 			    COMPS *olist* ],
 		  ROOT na ] ] ].
 
 |#
 
-(make-tdl-template 'prd '((subj (local cat valence subj)))
-                   '(((local cat valence subj first) synsem)
+(make-tdl-template 'prd '((subj (local cat val subj)))
+                   '(((local cat val subj first) synsem)
                      ((local) local)
                      ((local cat head prd) +)
-                     ((local cat valence spr) *olist*)
-                     ((local cat valence comps) *olist*)
+                     ((local cat val spr) *olist*)
+                     ((local cat val comps) *olist*)
                      ((local cat root) na)))
 
 #|
@@ -161,7 +161,7 @@ vp ($vform=vform) :=
 	    CAT [ HEAD verbal & strict_head &
 		     [ VFORM $vform,
 		       INV - ],
-		  VALENCE [ SUBJ < synsem >,
+		  VAL [ SUBJ < synsem >,
 			    COMPS *olist* ] ] ] ].
 
 
@@ -173,14 +173,14 @@ vp ($vform=vform) :=
                      ((local conj) cnil)
                      ((local cat head) verb_or_comp)
                      ((local cat head inv) -)
-                     ((local cat valence subj first) synsem)
-                     ((local cat valence comps) *olist*)))
+                     ((local cat val subj first) synsem)
+                     ((local cat val comps) *olist*)))
 #|
 
 pp () := synsem &
   [ LOCAL local &
 	  [ CAT [ HEAD prep & [ PRD - ],
-		  VALENCE [ SPR *olist*,
+		  VAL [ SPR *olist*,
 			    COMPS *olist* ],
 		  ROOT na ] ] ].
 
@@ -191,8 +191,8 @@ pp () := synsem &
                      ((local) local)
                      ((local cat head) prep)
                      ((local cat head prd) -)
-                     ((local cat valence spr) *olist*)
-                     ((local cat valence comps) *olist*)
+                     ((local cat val spr) *olist*)
+                     ((local cat val comps) *olist*)
                      ((local cat root) na)))
 
 nil
