@@ -657,6 +657,7 @@ red_rel_cl := unary_phrase & rel_cl &
 				    VAL [ SUBJ < unexpressed >,
                                           COMPS *olist* ] ],
 			      CONT.HOOK [ LTOP #vpltop,
+                                          INDEX.E.TENSE no_tense,
                                           XARG #ind ],
 			      CONJ cnil,
 			      KEYS [ KEY #key,
@@ -1135,7 +1136,8 @@ extracted_subj_phrase_inf := extracted_subj_phrase & head_compositional &
 ; phrases is now determined by the feature HS-LEX of head-dtr, analogous to
 ; HC-LEX feature.  See introduction of HS-LEX in fundamentals.tdl.
 ; DPF 24-Apr-03 - Why is head-dtr [MC na]?  This prevents e.g. "I went just to
-; see kim"
+; see kim".  Also blocks "I arrived two weeks after kim left".  Remove, and
+; see what happens.
 
 head_spec_phrase := head_valence_phrase & head_final & non_clause & 
   [ INFLECTED +,
@@ -1154,7 +1156,6 @@ head_spec_phrase := head_valence_phrase & head_final & non_clause &
                                             SPR < #synsem & 
                                                   canonical_synsem . #spr >,
                                             SPEC #spec ],
-                                      MC na,
                                       HS-LEX #lex,
                                       POSTHEAD #hdph ],
 			      CONT.HOOK [ LTOP #hltop,
@@ -1171,7 +1172,8 @@ head_spec_phrase := head_valence_phrase & head_final & non_clause &
                          VAL [ SPEC < [ LOCAL [ CAT [ HEAD #head,
                                                       VAL.COMPS #comps,
                                                       POSTHEAD #hdph ],
-                                                KEYS.KEY #key,
+                                                KEYS [ KEY #key,
+                                                       ALTKEY #altkey ],
                                                 CONT.HOOK [ LTOP #hltop,
                                                             INDEX #ind,
                                                             XARG #xarg ] ],
@@ -1611,8 +1613,8 @@ adj_h_int_phrase := adj_head_int_phrase &
 ; the same for extracted adjuncts as well.
 ; DPF (09-Jan-99) But it is not clear that we ever need to extract scopal
 ; modifiers, since the ones that are post-head (maybe always adverbs) also seem
-; to be available as modifiers of S, and not restricted to POSTHEAD +.  So we'll
-; try doing without the scopal variant.
+; to be available as modifiers of S, and not restricted to POSTHEAD +.  So 
+; we'll try doing without the scopal variant.
 ;
 ; DPF 19-Oct-99 - We used to make the value of SLASH's MOD feature be the
 ; whole SYNSEM of the HEAD, but this interacted badly with coordination
@@ -2349,6 +2351,10 @@ appos_phr := head_initial & head_compositional &
 ; modifies.
 ; DPF 09-Jun-03 - Made dtr be MODIFIED.LPERIPH +_or_- to exclude "Kim arrived
 ; times I left"
+; DPF 22-Jul-03 - Might think to make SPR's KEY be much_deg_rel rather than 
+; simply degree_rel to avoid spurious ambig for "right now", given two entries
+; "right" for 'very' and 'much' type degree specifiers.  But this blocks "too
+; late" where "too" is not much-deg subtype.  
 
 temp_mod_phrase := unary_phrase & phrasal &
   [ SYNSEM [ LOCAL [ CAT [ HEAD modnp* &
@@ -2416,10 +2422,12 @@ temp_mod_phrase := unary_phrase & phrasal &
 ; DPF 11-Feb-02 - Made INDEX.SORT of phrase be that of right dtr to enable
 ; blocking of meas-NP analysis of "a laptop" in "Can you get me a lapltop before
 ; Christmas"
-; DPF 2-Apr-02 - Changed SPEC..HEAD from a_or_p_or_adv to a_or_p since we don't
+; DPF 2-Apr-02 - Changed SPEC..HEAD from a_or_adv to a_or_p since we don't
 ; want "ten times competently".  Will need to do something for comparative
 ; adverbs like "faster" as in "ten times faster".
 ; DPF 28-Nov-02 - HOOK comes only from C-CONT
+; DPF 17-Jul-03 - Changed C-CONT.RELS deg_rel to degree_rel, since we want
+; MNP specifiers for comparatives as well.
 
 basic_measure_np_phrase := phrase &
   [ INFLECTED #bool,
@@ -2456,7 +2464,7 @@ basic_measure_np_phrase := phrase &
                                       MESSAGE 0-dlist ] ],
                        NON-LOCAL.SLASH 0-dlist ],
            ROBUST #robust ],
-    C-CONT [ RELS <! #key & deg_rel,
+    C-CONT [ RELS <! #key & degree_rel,
                       udef_q_rel & #quant &
                       [ ARG0 #index,
                         RSTR #rhand ] !>,
@@ -2798,7 +2806,7 @@ basic_partitive_num_phrase := unary_phrase & phrasal &
 
 partitive_num_nocomp_phrase := basic_partitive_num_phrase &
   [ SYNSEM.LOCAL [ CAT.VAL.COMPS < >,
-                   KEYS.KEY generic_nom_rel ] ].
+                   KEYS.KEY generic_nonpro_rel ] ].
 
 partitive_num_ppof_phrase := basic_partitive_num_phrase &
   [ SYNSEM.LOCAL [ CAT.VAL.COMPS < synsem &
@@ -2864,7 +2872,7 @@ partitive_np_phrase := basic_unary_phrase & phrasal &
                           VAL [ SPR < >,
                                 SUBJ < >,
                                 COMPS < > ] ],
-                    KEYS [ KEY #key & generic_nom_rel,
+                    KEYS [ KEY #key & generic_nonpro_rel,
                            ALTKEY #argkey ],
                     AGR #agr,
                     CONT nom-obj & [ HOOK #hook & [ INDEX #agr ] ] ],
@@ -3643,8 +3651,7 @@ punct_s_coord_rule := ternary_phrase & ternary_rule_left_to_right &
                       NON-LOCAL non-local_none,
                       ROOT + ] ],
            [ SYNSEM.LOCAL [ CAT.HEAD clause-punct,
-                            CONJ cnil ],
-             KEY-ARG + ],
+                            CONJ cnil ] ],
            [ SYNSEM [ LOCAL local & 
                             [ CAT s_cat_fin_or_imp,
                               CONT.HOOK.LTOP #rhand,
@@ -3733,7 +3740,9 @@ unary_frag_rule := norm_frag_rule & basic_unary_phrase &
              SYNSEM [ LOCAL [ CAT.VAL [ COMPS *olist*,
                                         SPR *olist* ],
                               CONJ cnil ],
-                      NON-LOCAL.SLASH 0-dlist & [ LIST < > ] ] ] >,
+                      NON-LOCAL [ SLASH 0-dlist & [ LIST < > ],
+                                  REL 0-dlist,
+                                  QUE 0-dlist ] ] ] >,
     C-CONT.HCONS.LIST < [ LARG #ulbl ], ... > ].
 
 frag_np_rule := unary_frag_rule &
@@ -3807,7 +3816,8 @@ binary_frag_rule := norm_frag_rule & basic_binary_phrase &
                                       SPR *olist* ],
                             KEYS.KEY independent_rel,
                             CONJ cnil ],
-                    NON-LOCAL.SLASH 0-dlist & [ LIST < > ] ] ],
+                    NON-LOCAL [ SLASH 0-dlist & [ LIST < > ],
+                                REL 0-dlist ] ] ],
     C-CONT [ HCONS.LIST < qeq & [ LARG #mlbl ], ... > ] ].
 
 binary_left_frag_rule := binary_frag_rule &

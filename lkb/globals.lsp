@@ -144,7 +144,7 @@
     be_th_cop_were_neg_2 be_c_were_neg_subj_1 be_c_were_neg_subj_2
     be_id_were_neg_subj_1 be_id_were_neg_subj_2 be_th_cop_were_neg_subj_1
     be_th_cop_were_neg_subj_2 will_aux_neg_1 will_aux_neg_2 would_aux_neg_1
-    would_aux_neg_2
+    would_aux_neg_2 could_aux_neg_2
     be_c_am_cx be_c_am_cx_2 be_id_am_cx be_id_am_cx_2 be_c_are_cx be_c_are_cx_2
     be_id_are_cx be_id_are_cx_2 had_aux_cx had_aux_cx_2 has_aux_cx has_aux_cx_2
     have_fin_aux_cx have_fin_aux_cx_2 have_bse_aux_cx_1 have_bse_aux_cx_2 
@@ -155,6 +155,12 @@
     u_pro you_guys you_people yall yall_2 yall_3 you_all
     and_conj_slash and_then_1 and_conj_2 and_or_conj_1 and_or_conj_2
     and_or_conj_3 and_conj_amp and_conj_2_amp
+    apostrophe_s_lex apostrophe_s_phr apostrophe_s_3_lex apostrophe_s_3_phr
+    mister missus mr_title_2 doctor_ttl dr_ttl_2 prof_title mrs_title_2
+    ms_title_2 mount_ttl_2 number_abb_title number_abb_title_2 
+    number_abb2_title number_abb2_title_2 order_abb_ttl order_abb_ttl_2
+    pound_sign_title pres_ttl pres_ttl_2 
+    gonna_v1 and_c_nonprop
    )
   "temporary expedient to avoid generating dual forms")
 

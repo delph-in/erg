@@ -77,5 +77,7 @@
 (setf *true-type* (vsym "+"))
 
 ; DPF Upped from 100 to 200
-(setf *maximum-genindex-relations* 200)
+; DPF 1-Jul-03 Upped from 200 to 500 due to treatment of unspec_loc_rel for
+; e.g. free relatives.  Maybe should make this generic rel more specific.
+(setf *maximum-genindex-relations* 500)
 
