@@ -1,0 +1,1206 @@
+;;; -*- Mode: TDL; Package: DISCO -*-
+;;;
+;;;  fundamentals.tdl
+;;;
+;;;  Basic definitions of types and macros for English grammar
+;;;
+;;;  Rob Malouf, 3-Nov-1994
+;;;  Last revision: Dan Flickinger, 24-Feb-97
+;;;
+
+:begin :type.
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;  Sorts for atomic values
+
+; Person, number, gender represented as atomic sorts, where gender only
+; relevant for 3sg, and where count/mass distinction only for 3sg_neuter.
+
+png :< *sort*.
+1or3sg :< png.
+non3sg :< png.
+1sg := 1or3sg & non3sg.
+non1sg :< non3sg.
+1pl :< non1sg.
+2per :< non1sg.
+2sg :< 2per.
+2pl :< 2per.
+3pl :< non1sg.
+3sg :< 1or3sg.
+3sg_m :< 3sg.
+3sg_f :< 3sg.
+3sg_n :< 3sg.
+3sg_andro :< 3sg.
+
+; ERB declarative and interrogative seem to form a natural class
+; in that 'know', 'guess', 'suspect' ... take either.  The type
+; decl_int is meant to reflect this.  
+; ERB (23-07-96) declarative and imperative also form a class 
+; with respect to tag questions.  The type decl_imp is meant to
+; reflect this.
+
+cl_mode :< *sort*.
+no_cl_mode :< cl_mode.
+relative :< cl_mode.
+decl_int :< cl_mode.
+decl_imp :< cl_mode.
+declarative := decl_int & decl_imp.
+interrogative :< decl_int.
+imperative :< decl_imp.
+
+; Three-valued sort evoking Polish logician Jan Lukasiewicz
+luk :< *sort*.
+; NA for Not Applicable.  A strictly-typed implementation would obviate need
+; for this subtype, and we could just employ bool.
+na :< luk.
+bool :< luk.
++ :< bool.
+- :< bool.
+
+#|
+; Replace these defs with the ones below, to eliminate disjunction.
+*onull* :< *null*.
+*ocons* := *cons* & 
+  [ FIRST.OPT +, 
+    REST *onull* ].
+*olist* := *ocons* \| *onull*.
+|#
+
+#|
+; The following should replace the above, but TDL unfortunately introduces
+; a generated type "A&B" when a type C inherits from both A and B, and C
+; introduces additional constraints.  Hence when A is unified with B during
+; processing, the result is the type "A&B", not C.  So instead do the 
+; hack following.
+*olist* :< *list*.
+*ocons* := *olist* & *cons* &
+  [ FIRST.OPT +, 
+    REST *olist* ].
+*onull* := *olist* & *null*.
+|#
+
+; In addition, add constraint on optional arguments that their MODCONT.LISZT
+; must be empty, since lexical heads selecting for arguments will append this
+; LISZT to their own in order to allow, eg., meaning-bearing PP complements.
+
+*olist* := *list* &
+  [ FIRST [ OPT +,
+	    LOCAL.CONT.MODCONT.LISZT <! !> ],
+    REST  *list* & [ FIRST [ OPT +,
+			     LOCAL.CONT.MODCONT.LISZT <! !> ],
+		     REST.FIRST [ OPT +,
+				  LOCAL.CONT.MODCONT.LISZT <! !> ] ] ].
+  ;; The REST of *olist* should of course be *olist*, but TDL won't allow
+  ;; recursive type definition, so add hack of making REST.FIRST.OPT +,
+  ;; taking advantage of the fact that no lexical entry introduces three
+  ;; optional complements followed by obligatory ones.
+*ocons* := *olist* & *cons*.
+  ;; *ocons* must crucially not introduce any constraints of its own, since
+  ;; if it did, TDL would then introduce a generated type T which would
+  ;; have *olist* and *cons* as supertypes, and then *ocons* would inherit
+  ;; from T.  But then if the [OPT +] constraint were on *ocons*, it would
+  ;; not be visible during processing, when *olist* and *cons* unified.
+  ;; (see definition of function Infer-Is-GLB in 
+  ;; "page/src/tdl/control/define-feature-type.lisp")
+*onull* := *olist* & *null*.
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
+;;
+;;  Top-level feature geometry
+;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; CAT type
+
+mod_synsem :< *avm*.
+
+mod_local :< *avm*.
+
+; The MOD value specifies the type of phrase that a sign can modify, and the
+; POSTHEAD value stipulates the relative position of the modifier with
+; respect to the head.  (An earlier approach employing a generalization about
+; a head being final in its phrase or not might still be considered as an
+; alternate to this stipulative one.)
+; 15-jun-96 - Changed MOD to no longer be a HEAD feature, but rather a feature
+; in CAT, to allow relative clause phrases to assign a non-empty MOD value
+; even though the verbal head is [MOD no-mod].  Specific phrase types will
+; propagate MOD from head-dtr to mother, but crucially not the subj-head type.
+; The POSTHEAD feature stays with MOD, since only relevant when MOD non-empty.
+
+head :<  *avm*.
+
+valence := *avm* &
+  [ SUBJ mod_synsem,
+    SPR *list*,
+    COMPS *list* ].
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; CONT type
+
+mod-thing :< *avm*.
+nothing :< mod-thing.
+thing :< mod-thing.
+
+handle :< thing.
+individual :< thing.
+eventtime :< thing.
+event := individual &
+  [ TIME eventtime,
+    REFERENCE eventtime ].
+
+cont := *avm* &
+  [ HANDEL handle ].
+
+mod_relation :< cont.
+
+relation :< mod_relation.
+
+no_rel :< mod_relation.
+
+non_number_rel :< relation.
+
+norm_relation :< non_number_rel.
+
+; DIVISIBLE distinguishes singular count nouns from plural and mass nouns,
+; for determiners like "some", and for bare-plural NPs.
+
+index := individual &
+  [ PNG png,
+    DIVISIBLE bool,
+    SORT *sort* ].
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; CAT type
+
+cat := *avm* &
+  [ HEAD head,
+    VALENCE valence,
+    MOD mod_local,
+    ROOT luk,
+    AGR index,
+    POSTHEAD bool ].
+
+; The feature ROOT has three possible values: +, -, and na.  Non-clauses are
+; always ROOT na, since they can't really be said to be root or non-root.
+; All clauses are ROOT bool, and if they have a restricted distribution then
+; they are ROOT + or ROOT -.
+
+; The feature AGR is introduced on CAT rather than on HEAD since coordination
+; schema must unify the HEAD value of its daughters with that of the mother,
+; but be able to change AGR (to get plural agreement on verb when subject is
+; a coordinated NP).  
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; MRS type
+
+mrs := cont &
+  [ INDEX individual,
+    LISZT *diff-list*,
+    KEY mod_relation,      ; Pointer to the main relation in LISZT
+    MESSAGE mod_relation,  ; Relation determining message type for propositions
+    H-STORE *diff-list*,   ; Quantifier handle store
+    H-CONS *diff-list*     ; Scope constraints: list of scp_pr's
+   ;TOP-H handle,          ; Top handle of MRS expression
+   ;MODCONT cont,          ; List of relations added when sign acts as modifier
+   ;ALTKEY mod_relation,   ; Pointer to an alternate relation in LISZT
+   ;COMPKEY mod_relation,  ; Pointer to the complement's main relation
+   ;OCOMPKEY mod_relation, ; Pointer to the oblique complement's main relation
+  ].
+
+scp_pr := *top* &          ; Constrains handle of scopable argument SC-ARG
+  [ SC-ARG handle ].         ; relative to one or more handles
+
+is-one-of := scp_pr &      ; Pairs handle of scopable argument with a list of
+  [ CANDS *list* ].        ; candidate handles to unify with that handle.
+
+outscopes := scp_pr &      ; Constrains handle of scopable argument to outscope
+  [ OUTSCPD handle ].      ; argument whose handle is value of CANDS.
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; CONJ type -
+;
+; CONJ values come in two types, cnil and strict-conj (i.e., non-cnil).  Cnil
+; and the atomic substypes of strict-conj are the possible CONJ values of the
+; left conjunct in a coordinate structure.  The right conjunct must always
+; have a complex-conj CONJ value.  A complex CONJ value has three parts: the
+; handles and indices of the sub-parts of the right conjunct, and the CHEAD
+; info that gets passed from the right conjunct to the mother.  The CHEAD
+; value has two pieces of information: the relation that will bind together
+; the content of the entire coordinate structure and the CONJ values of the
+; left conjunct daughters.  For more info about how those work, see
+; top_coord_rule in syntax.tdl.
+
+conj :< *avm*.
+cnil :< conj.
+strict-conj :< conj.
+atomic-conj :< strict-conj.
+both :< atomic-conj.
+either :< atomic-conj.
+neither :< atomic-conj.
+nor :< atomic-conj.
+chead := *avm* &
+  [ LEFT *list*,
+    RELTN relation ].
+complex-conj := strict-conj &
+  [ CHEAD chead,
+    HANDELS *diff-list*,
+    INDICES *diff-list* ].
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;  Thematic roles (used for generation)
+
+throle :< *sort*.
+arg1 :< throle.
+arg2 :< throle.
+arg3 :< throle.
+; Avoid blocking unification if arg roles differ (as with control verbs)
+arg1+arg2 := arg1 & arg2.
+arg1+arg3 := arg1 & arg3.
+arg2+arg3 := arg2 & arg3.
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;  Contextual information
+
+c-inds := *avm* &
+  [ SPEECH eventtime ].
+
+ctxt := *avm* &
+  [ C-INDS c-inds,
+    PRESUP *diff-list* ].
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Synsem values
+
+local := mod_local &
+  [ CAT cat,
+    CONT cont,
+    CONJ conj,
+    CTXT ctxt,
+    ARG-S *list*,
+    THROLE throle ].
+
+affix :< local.
+no-affix :< mod_local.
+no-mod :< mod_local.
+
+non-local := *avm* &
+  [ SLASH *diff-list*,
+    QUE *diff-list*,
+    REL *diff-list* ].
+
+none :< mod_synsem.
+synsem := mod_synsem & 
+  [ LOCAL mod_local,
+    NON-LOCAL non-local,
+    OPT bool ].
+
+lex_synsem := synsem &
+  [ LOCAL local ].
+phr_synsem := synsem &
+  [ LOCAL local ].
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Types for Sign, Word, Phrase, and Lex-Entry
+
+sign := *avm* & 
+  [ STEM *list*,
+    SYNSEM synsem ],
+  status: root-node.
+
+word := sign & 
+  [ SYNSEM lex_synsem ].
+
+phrase := sign &
+  [ SYNSEM phr_synsem & [ LOCAL [ CONT [ HANDEL #hand,
+					 INDEX #index ],
+				  ARG-S < > ] ],
+    C-CONT mrs & [ HANDEL #hand,
+		   INDEX #index ] ].
+
+lex_entry := word &
+  [ STEM < #stem >,
+    ARGS < [ STEM #stem ] > ],
+  status: lex-entry.
+
+basic_multi_lex_entry :< word,
+  status: c-lex-entry.
+
+multi_lex_entry := basic_multi_lex_entry &
+  [ STEM < #stem1, #stem2 >,
+    ARGS < [ STEM #stem1 ], 
+	   [ STEM #stem2, AFFIX no-affix ] > ].
+
+key_first := basic_multi_lex_entry &
+  [ ARGS < [ KEY-ARG + ], ... > ].
+
+key_second := basic_multi_lex_entry &
+  [ ARGS < *top*, [ KEY-ARG + ], ... > ].
+
+key_third := basic_multi_lex_entry &
+  [ ARGS < *top*, *top*, [ KEY-ARG + ], ... > ].
+
+key_fourth := basic_multi_lex_entry &
+  [ ARGS < *top*, *top*, *top*, [ KEY-ARG + ], ... > ].
+
+multi_lex_entry1 := multi_lex_entry & key_first.
+multi_lex_entry2 := multi_lex_entry & key_second.
+
+two_space_lex_entry := basic_multi_lex_entry &
+  [ STEM < #stem1, #stem2, #stem3 >,
+    ARGS < [ STEM #stem1 ], 
+	   [ STEM #stem2, AFFIX no-affix ], 
+	   [ STEM #stem3, AFFIX no-affix ] > ].
+
+two_space_lex_entry1 := two_space_lex_entry & key_first.
+two_space_lex_entry2 := two_space_lex_entry & key_second.
+two_space_lex_entry3 := two_space_lex_entry & key_third.
+
+three_space_lex_entry := basic_multi_lex_entry &
+  [ STEM < #stem1, #stem2, #stem3, #stem4 >,
+    ARGS < [ STEM #stem1 ], 
+	   [ STEM #stem2, AFFIX no-affix ], 
+	   [ STEM #stem3, AFFIX no-affix ],
+	   [ STEM #stem4, AFFIX no-affix ] > ].
+
+three_space_lex_entry1 := three_space_lex_entry & key_first.
+three_space_lex_entry2 := three_space_lex_entry & key_second.
+three_space_lex_entry3 := three_space_lex_entry & key_third.
+three_space_lex_entry4 := three_space_lex_entry & key_fourth.
+
+rule :< *avm*,
+	status: rule.
+
+; LABEL and META used for labeling nodes in parse trees
+label := *top*, status: label.
+meta := *top*, status: meta.
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;  CAT values
+
+case :< *sort*.
+nom :< case.
+acc :< case.
+
+vform :< *sort*.
+non_fin :< vform.
+ger :< non_fin.
+pas :< non_fin.
+psp :< non_fin.
+bse_or_inf :< vform.
+bse :< bse_or_inf.
+; Base morphology verbs can be either base or imperative, but not if negated.
+; See discussion of type neg_word.
+bse_only := bse & non_fin.
+imp_vform :< bse.
+fin_or_inf :< vform.
+fin :< fin_or_inf.
+inf_or_prp :< non_fin.
+inf := inf_or_prp & bse_or_inf & fin_or_inf.
+prp :< inf_or_prp.
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Head types
+
+; We're cheating here by introducing POSS twice.  If we had to, it would be
+; easy enough to introduce a type that we could tie it to, but it doesn't seem
+; worth it until we sort out how we're going to do partitives.
+
+particle :< *avm*.
+poss-able := *avm* &
+  [ POSS bool ].
+
+n_or_p :< *avm*.
+a_or_p :< *avm*.
+v_or_p :< *avm*.
+v_or_g :< *avm*.
+n_or_a :< *avm*.
+
+func :< head.
+
+det := func & poss-able.
+
+subst := head &
+         [ PRD bool ].
+
+nv :< subst.
+nominal := nv & n_or_p &
+	   [ CASE case ].
+verbal := nv & 
+	  [ VFORM vform ].
+
+; Adverbs modify adverbees.
+adverbee :< subst.
+
+adj := subst & particle & a_or_p & n_or_a & adverbee.
+prep := subst & particle & n_or_p & a_or_p & v_or_p & adverbee.
+
+; Includes "now, then, here, there" etc.
+prep_noun :< prep.
+
+
+noun := nominal & poss-able & n_or_a.
+
+; Adjectives modify c(ommon-)nouns
+cnoun :< noun.
+gerund := noun & adverbee & v_or_g.
+; Lexical NPs are distinct from both common nouns and gerunds.
+pnoun :< noun.
+
+; The following is only used in parse-nodes.tdl to distinguish lexical
+; conjunctions from conjoined phrases.
+conjh :< subst.
+
+tense :< *sort*.
+present :< tense.
+past :< tense.
+future :< tense.
+presperf :< tense.
+pastperf :< tense.
+
+voice :< *sort*.
+active :< voice.
+passive :< voice.
+
+mood :< *sort*.
+ind_or_mod_subj :< mood.
+subj_or_mod_subj :< mood.
+indicative :< ind_or_mod_subj.
+subjunctive :< subj_or_mod_subj.
+modal_subj := ind_or_mod_subj & subj_or_mod_subj.
+
+verb := verbal & adverbee & v_or_p & v_or_g &
+	[ AUX bool,
+	  INV bool,
+          TENSE tense,
+          VOICE voice,
+          MOOD mood ].
+
+comp := nominal & verbal.
+
+neg :< head.
+
+adv := func & particle.
+
+root-marker :< head.
+
+detspec :< func.
+
+; Hack used in blocking unwanted affixes
+no_head :< head.
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;  CONT values (MRS semantics)
+;;
+;; The basic semantic objects are all sub-types of thing.  Right now, the only
+;; type of thing that has an internal structure is index, but that will
+;; probably change.  For example, an event might have various times associated
+;; with them or a handle may include a list of "subhandles" which are in its
+;; scope.  Indices are classified in the familiar HPSG way.
+
+
+expl-ind :< index.
+it-ind := expl-ind &
+  [ PNG 3sg_n ].
+there-ind :< expl-ind.
+non_expl-ind :< index.
+ref-ind :< non_expl-ind.
+
+; The basic semantic structure, a CONT, is just something with a handle.
+; Conts are further classified into mrss (i.e., things with liszts) and
+; relations (i.e., things that go on liszts).  Conts are divided into psoas
+; (with a distinguished event) and nom-objs (with a distinguished index).
+; We use a polymorphic attribute name INDEX for both of these, to simplify
+; manipulation of these objects; for example, modifying PPs assign as their
+; ARG's value the INDEX of the phrase they modify, whether it's an N-bar
+; (with a ref-ind value) or a VP (with an event value).  Similarly useful
+; for coordination.
+
+; ERB (03-10-96) 
+; The intermediate types ques_prop_msg and prop_com_msg represent the
+; natural classes needed for selection by know, announce, care, check,
+; etc. and the analysis of THAT (see lextypes.tdl) and the 
+; forthcoming analysis of tags on imperatives, respectively.
+
+psoa := mrs &
+	[ INDEX event ].
+
+nom-obj := mrs &
+	   [ INDEX index ].
+
+; Relations are classified according to the types of arguments they take.  All
+; relations have a handle.  In addition, quantifier relations have a bound
+; variable and a restriction, nominal relations have an instance, and event
+; relations have an event.  Furthermore, nominal relations and event relations
+; can have additional roles, depending on their meaning.
+
+; Since some temporal nouns can be either arguments or VP modifiers, their 
+; rel's INST value (coindexed with INDEX of the containing MRS) must remain 
+; unspecified for type.  Consider "Kim arrived Tuesday" vs. "Tuesday comes
+; after Monday"; in the first, Tuesday must have an EVENT index, while in the
+; second, it must have a REF-IND index.
+
+; ERB (24-10-96) Here is the series of relations that will be used for
+; questions, etc.  Cf. Gizburg & Sag.
+; ERB (12-05-96) Moved the ne_rel here.
+
+message := norm_relation &
+  [ SOA handle ].
+imp_rel :< message.
+prop_ques_rel :< message.          ;for COMPS of e.g. 'know'
+propositional_rel :< prop_ques_rel.
+prpstn_rel :< propositional_rel.   ;propositions
+hypo_rel :< propositional_rel.     ;hypotheticals (PRO to go)
+int_rel := prop_ques_rel &         ;interrogatives
+  [ PARAMS *diff-list* ].          ; actually a set of handles.
+ne_rel :< int_rel.                 ;subtype of int_rel for tag questions.
+
+quant_or_wh_rel := norm_relation &
+  [ BV ref-ind,
+    RESTR handle ].
+
+
+
+
+demon_near_rel :< demonstrative_rel.
+demon_far_rel :< demonstrative_rel.
+
+quant_rel := quant_or_wh_rel &
+  [ SCOPE handle ].
+
+udef_rel :< quant_rel.
+some_rel :< quant_rel.
+def_rel :< quant_rel.
+demonstrative_rel :< quant_rel.
+
+;which_rel should not have a scope, but given for the moment to satisfy VIT
+;which_rel :< quant_or_wh_rel.
+which_rel :< quant_rel.
+
+; Nominal sorts used for VM2
+
+nominal-sort :< *sort*.
+entity :< nominal-sort.
+time :< nominal-sort.
+info_bearer :< nominal-sort.
+nongeo_location :< nominal-sort.
+
+; Nominal relations
+
+basic_nom_rel := norm_relation &
+  [ INST individual ].
+
+nom_rel := basic_nom_rel &
+  [ INST non_expl-ind ].
+
+reg_nom_rel :< nom_rel.
+
+diadic_nom_rel := nom_rel &
+  [ NPREP thing & #arg3,
+    ARG3 #arg3 ].
+
+reg_diadic_nom_rel := diadic_nom_rel & reg_nom_rel.
+
+hcomp_nom_rel := nom_rel &
+  [ NOMARG handle & #arg3,
+    ARG3 #arg3 ].
+
+part_of_rel := diadic_nom_rel &
+  [ SET handle ].
+
+nominalize_rel := diadic_nom_rel &
+  [ NMZARG handle ].
+
+gerund_rel := diadic_nom_rel & hcomp_nom_rel.
+
+temp_rel := nom_rel &
+  [ INST.SORT time ].
+
+day_rel :< temp_rel.
+
+named_day_rel := day_rel &
+  [ DAY atom ].
+
+non_day_rel :< temp_rel.
+
+;; day_of_month_rel
+dofm_rel := named_day_rel & diadic_nom_rel &
+  [ DAY integer,
+    NPREP non_expl-ind ].
+
+;; day_of_week_rel
+dofw_rel := named_day_rel &
+  [ DAY symbol ].
+
+holiday_rel := named_day_rel &
+  [ DAY symbol ].
+
+day_part_rel := day_rel &
+  [ OF-DAY non_expl-ind ].
+
+hour_rel :< temp_rel.
+
+; a quarter till three  ("till" is head - cf "come at a quarter till.")
+hour_prep_rel := hour_rel &
+  [ HOUR-IND individual,
+    MINUTE-IND individual ].
+
+numbered_hour_rel := hour_rel &
+  [ INST.PNG 3sg_n,
+    HOUR integer,
+    MIN non_expl-ind,
+    AM-PM non_expl-ind ].
+
+minute_rel := temp_rel &
+  [ MINUTE integer ].
+
+am_pm_rel :< temp_rel.
+am_rel :< am_pm_rel.
+pm_rel :< am_pm_rel.
+
+; 'the morning', not 'some morning': 'in the morning' but 'on some morning'
+def_day_part_rel :< non_day_rel.
+
+;; named_month_rel
+mofy_rel := non_day_rel &
+  [ MONTH symbol,
+    YEAR-IND non_expl-ind ].
+
+yofc_rel := non_day_rel &
+  [ YEAR integer ].
+
+season_rel := non_day_rel &
+  [ SEASON symbol ].
+
+age_rel :< non_day_rel.
+
+_morning_rel :< day_part_rel.
+_afternoon_rel :< day_part_rel.
+_evening_rel :< day_part_rel.
+_night_rel :< day_part_rel.
+_weekday_rel :< dofw_rel.
+_weekend_rel :< dofw_rel.
+_workday_rel :< dofw_rel.
+
+
+named_rel := reg_nom_rel &
+  [ NAMED symbol ].
+
+prontype :< *sort*.
+std_pron :< prontype.
+std_1sg :< std_pron.
+std_1pl :< std_pron.
+std_2 :< std_pron.
+std_3 :< std_pron.
+recip :< prontype.
+refl :< prontype.
+impers :< prontype.
+demon :< prontype.
+zero_pron :< prontype.
+
+; Pronouns
+pron_rel := reg_nom_rel &
+  [ INST ref-ind &
+	 [ PRONTYPE prontype ] ].
+
+refl_pro_rel := pron_rel &
+  [ INST.PRONTYPE refl ].
+
+recip_pro_rel := pron_rel &
+  [ INST.PRONTYPE recip ].
+
+adj_rel := norm_relation &
+  [ NARG individual ].
+
+adj_varg_rel := adj_rel &
+  [ VARG handle ].
+
+meas_adj_rel := adj_rel &
+  [ MEAS handle ].
+
+adj_personal_rel :< adj_rel.
+adj_abstract_rel :< adj_rel.
+
+verb_aspect_rel :< norm_relation.
+event_arg_rel :< verb_aspect_rel.
+
+aspect_rel := verb_aspect_rel &
+  [ EVENT1 eventtime ].
+
+temp_prec_rel := aspect_rel &
+  [ LATER eventtime ].
+
+temp_over_rel := aspect_rel &
+  [ WHEN eventtime ].
+
+prog_rel :< aspect_rel.
+
+event_rel := event_arg_rel &
+  [ EVENT event ].
+
+mod_role_rel :< event_rel.
+
+no_role_rel :< mod_role_rel. 
+; E.g., weather verbs
+
+role_rel :< mod_role_rel.
+
+arg_rel := event_arg_rel &
+	   [ ARG thing ].
+
+irrealis_rel :< arg_rel.
+
+support_rel := event_rel &
+  [ VARG thing ].
+
+support_aux_rel :< support_rel.
+support_main_rel := support_rel & mod_role_rel.
+
+abstr_rel :< arg_rel.
+
+act_rel := role_rel &
+	   [ ACT individual ].
+und_rel := role_rel &
+           [ UND thing ].
+act_und_rel := act_rel & und_rel.
+und_only_rel :< und_rel.
+prop_rel := role_rel &
+	   [ PROP event ].
+act_prop_rel := act_rel & prop_rel.
+
+thm_rel := role_rel &
+	   [ THM thing ].
+
+expr_rel := role_rel &
+	    [ EXPR individual ].
+
+thm_expr_rel := thm_rel & expr_rel.
+
+; Not currently used
+;grd_rel := role_rel &
+;	   [ GRD individual ].
+;
+;dest_rel := role_rel &
+;	   [ DEST individual ].
+;
+;act_dest_rel := act_rel & dest_rel.
+;
+;effect_rel := role_rel &
+;	      [ EFFECT event ].
+;
+;path_rel := role_rel &
+;	    [ PATH event ].
+
+poss_rel := norm_relation &
+  [ POSSR non_expl-ind,
+    POSSD non_expl-ind ].
+
+fig_gnd_rel := role_rel &
+  [ FIG thing,
+    GND non_expl-ind ].
+
+act_fig_gnd_rel := fig_gnd_rel & act_rel.
+fig_gnd_und_rel := fig_gnd_rel & und_rel.
+
+
+; Preposition relations
+
+prep_rel := norm_relation &
+  [ PREP non_expl-ind ].	    
+
+prep_mod_rel := prep_rel & arg_rel.
+
+loc_rel :< prep_mod_rel.
+dir_rel :< loc_rel.
+state_loc_rel :< loc_rel.
+dir_or_state_rel := dir_rel & state_loc_rel.
+
+temp_loc_rel :< loc_rel.
+
+miscprep_rel :< prep_mod_rel.
+
+adv_rel :< arg_rel.
+
+neg_rel :< arg_rel.
+
+neg_polar_rel :< adv_rel.
+
+excl_rel := norm_relation &
+  [ EXCL symbol ].
+
+; Degree relations
+
+degree_rel := norm_relation &
+  [ DARG thing ].
+
+comp_degree_rel :< degree_rel.
+non_comp_degree_rel :< degree_rel.
+
+temp_degree_rel := non_day_rel & non_comp_degree_rel.
+_week_rel :< temp_degree_rel.
+_fortnight_rel :< temp_degree_rel.
+_month_rel :< temp_degree_rel.
+_moment_rel :< temp_degree_rel.
+
+; For specifiers of adjectives
+deg_rel :< non_comp_degree_rel.
+
+; For specifiers of positive adjectives
+very_deg_rel :< deg_rel.
+
+; For specifiers of comparative adjectives
+much_deg_rel :< deg_rel.
+
+; For specifiers of either positives or comparatives
+very_or_much_rel := very_deg_rel & much_deg_rel.
+
+dim_rel := arg_rel &
+  [ DIM individual ].
+
+comparative_rel := comp_degree_rel &
+  [ ARG-1 index,
+    INST index ].
+
+comp_more_less_rel := comparative_rel &
+  [ ARG-2 index ].
+more_sc_adv_rel :< comp_more_less_rel.
+comp_less_rel :< comp_more_less_rel.
+
+comp_most_least_rel := comparative_rel & 
+  [ SET handle ].
+
+comp_most_rel :< comp_most_least_rel.
+comp_least_rel :< comp_most_least_rel.
+
+; This should probably be separated into two relations in the relevant
+; lexical types, leaving the quant_rel with only its usual attributes.
+comp_q_rel := quant_rel &
+  [ ARG-1 #index,
+    ARG-2 index,
+    BV #index,
+    INST index ].
+
+act_prep_rel := act_rel & 
+  [ PREPARG individual ].
+
+act_und_thm_rel := act_und_rel & thm_rel.
+act_und_prep_rel := act_prep_rel & act_und_rel.
+act_und_thm_prep_rel := act_und_thm_rel & act_und_prep_rel.
+
+transfer_rel :< act_rel.
+transfer_obj_rel := transfer_rel & act_und_rel.
+transfer_dative_rel := transfer_obj_rel & act_und_prep_rel.
+double_np_rel := act_und_thm_rel &
+  [ THM individual ].
+dative_to_rel :< transfer_dative_rel.
+
+; bet
+act_und_thm_prop_rel := act_und_thm_rel & prop_rel.
+
+_to_rel :< dir_rel.
+_for_rel :< miscprep_rel.
+_by_rel :< miscprep_rel.
+_by_pass_rel :< miscprep_rel.
+_of_rel :< prep_rel.
+_in_rel :< dir_or_state_rel.
+until_rel :< prep_rel.
+
+subord_rel := norm_relation &
+  [ MAIN handle,
+    SUBORD handle ].
+
+vit_rel := *top*.
+vit_a_1 := vit_rel &
+  [ ACT #act,
+    ARG1 #act ].
+vit_a_2 := vit_rel &
+  [ ACT #act,
+    ARG2 #act ].
+vit_a_3 := vit_rel &
+  [ ACT #act,
+    ARG3 #act ].
+vit_u_1 := vit_rel &
+  [ UND #und,
+    ARG1 #und ].
+vit_u_2 := vit_rel &
+  [ UND #und,
+    ARG2 #und ].
+vit_u_3 := vit_rel &
+  [ UND #und,
+    ARG3 #und ].
+vit_t_2 := vit_rel &
+  [ THM #thm,
+    ARG2 #thm ].
+vit_t_3 := vit_rel &
+  [ THM #thm,
+    ARG3 #thm ].
+vit_pa_2 := vit_rel &
+  [ PREPARG #prep,
+    ARG2 #prep ].
+vit_pa_3 := vit_rel &
+  [ PREPARG #prep,
+    ARG3 #prep ].
+vit_g_1 := vit_rel &
+  [ GND #gnd,
+    ARG1 #gnd ].
+vit_g_2 := vit_rel &
+  [ GND #gnd,
+    ARG2 #gnd ].
+vit_g_3 := vit_rel &
+  [ GND #gnd,
+    ARG3 #gnd ].
+vit_f_2 := vit_rel &
+  [ FIG #fig,
+    ARG2 #fig ].
+vit_f_3 := vit_rel &
+  [ FIG #fig,
+    ARG3 #fig ].
+vit_arg_3 := vit_rel &
+  [ VARG #arg,
+    ARG3 #arg ].
+vit_arg := vit_rel &
+  [ VARG #arg,
+    ARG #arg ].
+
+vit_fg_31 := vit_f_3 & vit_g_1.
+vit_fg_32 := vit_f_3 & vit_g_2.
+vit_fg_23 := vit_f_2 & vit_g_3.
+
+vit_au_13 := vit_a_1 & vit_u_3.
+vit_au_12 := vit_a_1 & vit_u_2.
+vit_au_23 := vit_a_2 & vit_u_3.
+vit_ap_12 := vit_a_1 & vit_pa_2.
+vit_ap_13 := vit_a_1 & vit_pa_3.
+vit_ap_32 := vit_a_3 & vit_pa_2.
+vit_aup_123 := vit_au_13 & vit_pa_2.
+vit_aut_123 := vit_au_12 & vit_t_3.
+vit_autp_123 := vit_au_13 & vit_t_2 & vit_pa_2.
+vit_afg_123 := vit_a_1 & vit_fg_23.
+vit_afg_132 := vit_a_1 & vit_fg_32.
+
+act_rel_a_1 := act_rel & vit_a_1.
+act_rel_a_3 := act_rel & vit_a_3.
+und_only_rel_u_3 := und_only_rel & vit_u_3.
+und_only_rel_u_1 := und_only_rel & vit_u_1.
+act_und_rel_au_13 := act_und_rel & vit_au_13.
+act_und_rel_au_12 := act_und_rel & vit_au_12.
+act_und_rel_au_23 := act_und_rel & vit_au_23.
+act_prep_rel_ap_13 := act_prep_rel & vit_ap_13.
+act_prep_rel_ap_12 := act_prep_rel & vit_ap_12.
+act_prep_rel_ap_32 := act_prep_rel & vit_ap_32.
+fig_gnd_rel_fg_31 := fig_gnd_rel & vit_fg_31.
+fig_gnd_rel_fg_32 := fig_gnd_rel & vit_fg_32.
+act_und_prep_rel_aup_123 := act_und_prep_rel & vit_aup_123.
+act_und_thm_rel_aut_123 := act_und_thm_rel & vit_aut_123.
+act_fig_gnd_rel_afg_132 := act_fig_gnd_rel & vit_afg_132.
+act_fig_gnd_rel_afg_123 := act_fig_gnd_rel & vit_afg_123.
+act_und_thm_prep_rel_autp_123 := act_und_thm_prep_rel & vit_autp_123.
+support_main_rel_arg_3 := support_main_rel & vit_arg_3.
+support_rel_arg := support_rel & vit_arg.
+
+; Discourse functions
+
+; ERB (03-10-96) In order to capture the similarities and differences
+; between embedded and matrix questions, I am decomposing the ynq_rel
+; into polar_q_rel and request_ans_rel.  The latter is probably 
+; equivalent to the ne_rel (see below), but ne_rel is too cute to
+; forgo for the tag questions and probably too opaque for the 
+; matrix yn questions, so I will keep the two for now.  NB polar_q_rel
+; probably doesn't qualify as 'discourse function'.  
+
+; So, the ynq_root construction will contribute a polar_q_rel and
+; a request_ans_rel, whether will contribute a polar_q_rel, and
+; matrix wh questions will contribute a request_ans_rel.
+
+polar_q_rel :< arg_rel.
+request_ans_rel :< arg_rel.
+
+polite_rel :< arg_rel.
+_dont_rel :< imp_rel.
+_lets_rel :< imp_rel.
+_how_about_rel :< int_rel.
+_whatabout_rel :< int_rel.
+_not_disc_rel :< prop_ques_rel.
+
+; Phrasally introduced relations
+
+unspec_rel := norm_relation &
+  [ HINST index,
+    NHINST index ].
+
+; Relation introduced for tag questions
+
+probable_rel :< adj_rel.
+
+conj_rel := norm_relation &
+  [ C-ARG individual,
+    HANDELS *diff-list*,
+    INDICES *diff-list* ].
+
+; Abstract relations specified by more than one lexical entry
+
+airplane_rel :< reg_nom_rel.
+place_rel :< reg_nom_rel.
+telephone_rel :< reg_nom_rel.
+person_rel :< reg_nom_rel.
+nonperson_rel :< reg_nom_rel.
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Number relations
+
+number_rel := relation &
+  [ XARG individual ].
+
+integer_rel := number_rel &
+  [ ORD bool ].
+const_rel := integer_rel & [ CONST_VALUE integer].
+plus_rel := integer_rel & [ TERM1 handle,
+			    TERM2 handle].
+times_rel := integer_rel & [ FACTOR1 handle,
+			     FACTOR2 handle].
+
+;; TYPES/SORTS
+;; The ORDINAL feature determines whether its bearer is ordinal or not 
+;; (i.e., is ordinal or cardinal).  Thus it is only appropriate for
+;; numbers.  All numbers have a HEAD value of sort intsort, those
+;; used adjectivally have heads of sort intadj (or one of its 
+;; subsorts) or intdet (which has no subsorts).  Nominal uses are
+;; not yet supported.
+;;
+;; Subcategorization, which is in terms of the maximum number of digits
+;; allowed for the complement or specifier, is handled by the subsorts
+;; of the digitn hierarchy.  Currently, only adjectives participate in
+;; this hierarchy; there is only a single integer determiner ("one").
+;; Nominal uses could be added by adding a type
+;;          intnoun := intsort & digitn & noun.
+
+
+intsort := head & [ORDINAL bool].
+
+digitn :< head.
+
+digit9 :< digitn.
+digit6 :< digit9.
+digit3 :< digit6.
+digit2 :< digit3.
+digit1 :< digit2.
+
+; The sorts    digitk    specify the number of digits of a lexeme 
+; together with its largest complement and specifier.
+; The sorts    digitk-    are used for subcategorization; they include
+; values of k or fewer digits.
+ 
+digit9- :< digitn.
+digit6- :< digit9-.
+digit3- :< digit6-.
+digit2- :< digit3-.
+digit1- :< digit2-.
+
+;digit1 :< digit1-.
+;digit2 :< digit2-.
+;digit3 :< digit3-.
+;digit6 :< digit6-.
+;digit9 :< digit9-.
+
+
+intadj  := intsort & adj.
+intadjn := intadj & digitn.
+intadj9 := intadj & digit9.
+intadj6 := intadj9 & digit6.
+intadj3 := intadj6 & digit3.
+intadj2 := intadj3 & digit2.
+intadj1 := intadj2 & digit1.
+intdet  := intsort & det.
+
+; intadjn  := intadj   & digitn.
+; intadj1- := intadj1.
+
+
+; intadjk- means an integer adjective of at most k digits (when
+;   combined with specifier and complement
+
+intadj9- :< intadj.
+intadj9  :< intadj9-.
+intadj6- :< intadj9-.
+intadj6  :< intadj6-.
+intadj3- :< intadj6-.
+intadj3  :< intadj3-.
+intadj2- :< intadj3-.
+intadj2  :< intadj2-.
+intadj1  :< intadj2-.
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;
+;;  Macro definitions
+;; 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+:begin :template.
+
+satp ($head=head) := synsem &
+  [ LOCAL local &
+	  [ CONJ cnil,
+	    CAT [ HEAD $head,
+		  VALENCE [ SUBJ none,
+			    COMPS *olist*,
+			    SPR *olist* ] ] ] ].
+
+; cp complement has to be MOD empty to exclude relative clauses
+
+cp ($vform=vform) := synsem & @satp($head=verbal) &		     
+  [ LOCAL [ CAT [ HEAD [ VFORM $vform,
+			 MOOD ind_or_mod_subj ],
+		  MOD no-mod ],
+	    ROOT - ] ].
+
+nomp ($case=case,$cont=mrs) := @satp($head=nominal) &
+  [ LOCAL [ CAT [ HEAD.CASE $case,
+		  ROOT na ],
+	    CONT $cont ] ].
+
+np ($case=case,$cont=mrs) := @satp($head=noun) &
+  [ LOCAL [ CAT.HEAD.CASE $case,
+	    CONT $cont ] ].
+
+; Only used as MOD value for relative clauses, so type LOCAL, not SYNSEM
+nbar ($cont=nom-obj) := local &
+  [ CAT [ HEAD noun,
+	  VALENCE [ SUBJ none,
+		    COMPS *olist*,
+		    SPR < synsem > ],
+	  MOD no-mod ],
+    CONT $cont,
+    ROOT na ].
+
+third-sg-np ( ) := @nomp ( ) & 
+  [ LOCAL.CONT.INDEX.PNG 3sg ].
+
+prd ($subj=synsem) :=
+  [ LOCAL local &
+	  [ CAT [ HEAD [ PRD + ],
+		  VALENCE [ SUBJ $subj,
+			    SPR *olist*,
+			    COMPS *olist* ],
+		  ROOT na ] ] ].
+
+vp ($vform=vform) :=
+  [ LOCAL local &
+	  [ CONJ cnil,
+	    CAT [ HEAD verbal &
+		     [ VFORM $vform,
+		       INV - ],
+		  VALENCE [ SUBJ synsem,
+			    COMPS *olist* ] ] ] ].
+pp () := synsem &
+  [ LOCAL local &
+	  [ CAT [ HEAD prep & [ PRD - ],
+		  VALENCE [ SUBJ *top*,
+			    SPR *olist*,
+			    COMPS *olist* ],
+		  ROOT na ] ] ].
+
+:end :template.
