@@ -94,7 +94,7 @@
    (and (symbolp type-name)
       (or
          ;; graphs are pretty unreadable without glbtypes in there as well
-         ;; (search "GLBTYPE" (symbol-name type-name))
+         (search "GLBTYPE" (symbol-name type-name))
          (eql (char (symbol-name type-name) 0) #\_)
          (let* ((name (symbol-name type-name))
                 (end (length name))
