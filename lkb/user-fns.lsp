@@ -72,7 +72,21 @@
                (if (eql (char name cur) #\E) (<= (incf cur) end))
                (or (= cur end)
                    (and (digit-char-p (char name cur)) (= (incf cur) end))))))))
-
+(defun make-unknown-word-sense-unifications (word-string)
+  ;;; this assumes we always treat unknown words as proper names
+  ;;; uncomment the *unknown-word-types* in globals.lsp
+  ;;; to activate this
+  (when word-string
+    (list 
+       (make-unification :lhs
+          (create-path-from-feature-list '(STEM FIRST))
+          :rhs (make-u-value :type word-string))
+       (make-unification :lhs
+          (create-path-from-feature-list '(STEM REST))
+          :rhs (make-u-value :type 'lkb::*null*))
+       (make-unification :lhs
+          (create-path-from-feature-list '(SYNSEM LKEYS KEYREL CARG))
+          :rhs (make-u-value :type (string-downcase word-string))))))
 
 (defun make-orth-tdfs (orth)
   (let ((unifs nil)

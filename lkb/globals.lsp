@@ -223,3 +223,10 @@
   '((SYNSEM LKEYS --+COMPKEY) (SYNSEM LOCAL CAT HEAD KEYS KEY)
     (SYNSEM LKEYS --+OCOMPKEY) (SYNSEM LOCAL CAT HEAD KEYS KEY)
     (SYNSEM LKEYS --+SUBJIND) (SYNSEM --SEMIND)))
+
+;;; AAC - Dec 2003
+;;; *unknown-word-types*
+;;; deliberately commented out, but code in user-fns
+;;; depends on this just being proper names, since it sets CARG
+;;; to the word string (downcased)
+;;; (defparameter *unknown-word-types* '(n_proper_le))
