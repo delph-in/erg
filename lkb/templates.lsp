@@ -6,8 +6,9 @@
 satp ($head=head) := synsem &
   [ LOCAL local_basic &
 	  [ CONJ cnil,
-	    CAT [ HEAD $head,
-		  VAL [ SUBJ < >,
+	    CAT [ HEAD $head &
+		       [ MOOD ind_or_mod_subj ],
+		  VAL [ SUBJ *olist*,
 			COMPS *olist*,
 			SPR *olist* ] ] ] ].
 |#
@@ -17,7 +18,8 @@ satp ($head=head) := synsem &
                      ((local) local_basic)
                      ((local conj) cnil)
                      ((local cat head) head)
-                     ((local cat val subj) *null*)
+                     ((local cat head mood) ind_or_mod_subj)
+                     ((local cat val subj) *olist*)
                      ((local cat val comps) *olist*)
                      ((local cat val spr) *olist*)))
 
@@ -25,7 +27,6 @@ satp ($head=head) := synsem &
 
 cp ($vform=vform) := synsem & @satp($head=verbal) &		     
   [ LOCAL.CAT [ HEAD [ VFORM $vform,
-		       MOOD ind_or_mod_subj,
 		       INV - ],
 		MC - ] ].
 
@@ -36,7 +37,7 @@ cp ($vform=vform) := synsem & @satp($head=verbal) &
                      ((local) local_basic)
                      ((local conj) cnil)
                      ((local cat head) verbal)
-                     ((local cat val subj) *null*)
+                     ((local cat val subj) *olist*)
                      ((local cat val comps) *olist*)
                      ((local cat val spr) *olist*)
                      ((local cat head vform) vform)
@@ -49,8 +50,8 @@ cp ($vform=vform) := synsem & @satp($head=verbal) &
 nomp ($cont=mrs) := @satp($head=nominal) &
   [ LOCAL [ CAT [ HEAD strict_type &
 		       [ MOD < > ],
-		  MC na ],
-                  CONT $cont ] ].
+		  MC na_or_- ],
+	    CONT $cont ] ].
                   
 |#
 
@@ -60,10 +61,11 @@ nomp ($cont=mrs) := @satp($head=nominal) &
                      ((local cat head) strict_type)
                      ((local cat head) nominal)
                      ((local cat head mod) *null*)
-                     ((local cat val subj) *null*)
+                     ((local cat head mood) ind_or_mod_subj)
+                     ((local cat val subj) *olist*)
                      ((local cat val comps) *olist*)
                      ((local cat val spr) *olist*)
-                     ((local cat mc) na)
+                     ((local cat mc) na_or_-)
                      ((local cont) mrs_min)))
 
 #|
@@ -79,10 +81,11 @@ nomp_acc ($cont=mrs) := @nomp() &
                      ((local cat head) strict_type)
                      ((local cat head) nominal)
                      ((local cat head case) acc)
-                     ((local cat val subj) *null*)
+                     ((local cat head mood) ind_or_mod_subj)
+                     ((local cat val subj) *olist*)
                      ((local cat val comps) *olist*)
                      ((local cat val spr) *olist*)
-                     ((local cat mc) na)
+                     ((local cat mc) na_or_-)
                      ((local cont) mrs_min)
                      ((local cat head mod) *null*)))
 
@@ -97,11 +100,12 @@ nomp_nom ($cont=mrs) := @nomp() &
                      ((local conj) cnil)
                      ((local cat head) nominal)
                      ((local cat head) strict_type)
-                     ((local cat val subj) *null*)
+                     ((local cat head mood) ind_or_mod_subj)
+                     ((local cat val subj) *olist*)
                      ((local cat val comps) *olist*)
                      ((local cat val spr) *olist*)
                      ((local cat head case) nom)
-                     ((local cat mc) na)
+                     ((local cat mc) na_or_-)
                      ((local cont) mrs_min)
                      ((local cat head mod) *null*)))
 
@@ -117,10 +121,11 @@ third-sg-np ( ) := @nomp ( ) &
                      ((local conj) cnil)
                      ((local cat head) strict_type)
                      ((local cat head) nominal)
-                     ((local cat val subj) *null*)
+                     ((local cat head mood) ind_or_mod_subj)
+                     ((local cat val subj) *olist*)
                      ((local cat val comps) *olist*)
                      ((local cat val spr) *olist*)
-                     ((local cat mc) na)
+                     ((local cat mc) na_or_-)
                      ((local cont) mrs_min)
                      ((local cont index png) 3sg)
                      ((local cat head mod) *null*)))

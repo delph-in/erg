@@ -61,7 +61,7 @@ three_space_lex_entry3 three_space_lex_entry4)
 (defparameter *mother-feature* NIL
    "The feature giving the mother in a grammar rule")
 
-(defparameter *start-symbol* '(root)
+(defparameter *start-symbol* '(root_strict)
    "specifing valid parses")
 
 (defparameter *maximal-lex-rule-applications* 7

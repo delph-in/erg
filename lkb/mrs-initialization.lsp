@@ -7,7 +7,6 @@
 
 ; (time (batch-check-lexicon))
 
-#|
 ; For MRS to VIT
 
 #+:mrs
@@ -65,7 +64,6 @@
                                                       (fs-type (cdr feat-val))))
                                  feat-list)))))
         feat-list)))
-|#
 
 #+:mrs
 (in-package "CL-USER")
