@@ -858,10 +858,15 @@ head_opt_two_comp_phrase := basic_head_opt_comp_phrase &
 ; forcing noptcomp to apply before compounding.  Identify ALTKEY of mother and
 ; dtr to block e.g. "*the almost all books arrive" (and then move this identity
 ; back up to parent opt_comp phrase type).
+; DPF 9-Oct-02 - Added re-entrancy of LEX on mother and dtr in order to allow
+; n_hour_le's to be unmarked for synsem type, but propagate their (unusual)
+; [LEX -*] specification to block "an eleven meeting" but still allow "an 
+; eleven pm meeting".
 
 noun_opt_comp_phrase := basic_head_opt_comp_phrase &
   [ SYNSEM lex_synsem &
-           [ LOCAL.CAT.VAL.COMPS #comps ],
+           [ LOCAL.CAT.VAL.COMPS #comps,
+             LEX #lex ],
     HEAD-DTR [ SYNSEM lex_synsem &
                   [ LOCAL.CAT 
                           [ HEAD n_or_p & strict_type,
@@ -870,7 +875,8 @@ noun_opt_comp_phrase := basic_head_opt_comp_phrase &
                                      NON-LOCAL 
                                          [ SLASH 0-dlist,
                                            QUE 0-dlist,
-                                           REL 0-dlist ] ] . #comps > ] ] ] ].
+                                           REL 0-dlist ] ] . #comps > ],
+                    LEX #lex ] ] ].
 
 ; ERB (19-01-98) If to_c_prop can undergo subject extraction (see notes
 ; near non_wh_rel) then this can't require HEAD v_or_p.  That constraint
@@ -1345,28 +1351,19 @@ n_adj_redrel_temp := n_adj_redrel_phrase &
                                      ALTKEY temp_abstr_or_conj_rel ] ].
 
 h_adj_int_phrase := head_adj_int_phrase &
-  [ HEAD-DTR.SYNSEM.LOCAL.CAT.HEAD adverbee,
+  [ HEAD-DTR.SYNSEM.LOCAL [ CAT.HEAD adverbee,
+                            KEYS.KEY event_rel ],
     NON-HEAD-DTR.SYNSEM [ LOCAL.CAT.HEAD.TAM.TENSE no_tense,
                           NON-LOCAL.REL 0-dlist ] ].
 
-; DPF 15-Nov-01 Split h_adj_int_phrase (for non-nominal heads) into two, one 
-; for verbal adjuncts and one for the rest, in order to be able to dis-prefer
-; VP modifiers of VPs.
+; For generator, distinguish constructions where adjunct contains a gap from
+; those where it does not.
 
-h_adj_i_uns_phrase := h_adj_int_phrase &
-  [ HEAD-DTR.SYNSEM.LOCAL.KEYS.KEY nonaux_event_rel,
-    ARGS.REST.FIRST.SYNSEM.NON-LOCAL.SLASH 0-dlist ].
+h_adj_unsl_phrase := h_adj_int_phrase &
+  [ ARGS.REST.FIRST.SYNSEM.NON-LOCAL.SLASH 0-dlist ].
 
-h_adj_i_uns_aux_phrase := h_adj_int_phrase &
-  [ HEAD-DTR.SYNSEM.LOCAL.KEYS.KEY aux_event_rel,
-    ARGS.REST.FIRST.SYNSEM.NON-LOCAL.SLASH 0-dlist ].
-
-
-h_v_uns_phrase := h_adj_i_uns_phrase &
-  [ NON-HEAD-DTR.SYNSEM.LOCAL.CAT.HEAD verb* ].
-
-h_nonv_uns_phrase := h_adj_i_uns_phrase &
-  [ NON-HEAD-DTR.SYNSEM.LOCAL.CAT.HEAD a_or_p_or_adv ].
+h_adj_sl_phrase := h_adj_int_phrase &
+  [ ARGS.REST.FIRST.SYNSEM.NON-LOCAL.SLASH 1-dlist ].
 
 ; DPF 11-May-01 - Split adj_head_int_phrase into two: one for nominal head-dtrs
 ; and one for non-nominals, parallel to head_adj_phrase split.  Needed at least
@@ -1504,6 +1501,15 @@ extracted_adj_int_phrase := extracted_adj_phrase &
     C-CONT [ INDEX #index,
              LISZT <! !> ] ].
 
+extracted_adj_int_vp_phrase := extracted_adj_int_phrase &
+  [ HEAD-DTR.SYNSEM.LOCAL [ CAT.VAL.SUBJ < synsem &
+                                           [ NON-LOCAL.SLASH 0-dlist ] > ] ].
+
+extracted_adj_int_s_phrase := extracted_adj_int_phrase &
+  [ HEAD-DTR.SYNSEM.LOCAL [ CAT [ HEAD.INV +*,
+                                  VAL.SUBJ < anti_synsem > ],
+                            KEYS.KEY aux_event_rel ] ].
+
 ; DPF 14-Jul-01 - Identified MESSAGE of mother with that of head-dtr as well
 ; as already specified SLASH..MOD..MESSAGE, in order to prevent PPS for
 ; sentence-initial modification from modifying VPs.  This is only okay as long
@@ -1543,14 +1549,6 @@ extracted_adj_temp_phrase := basic_extracted_adj_phrase &
                       ARG3 #ind ] !>,
 	     H-CONS <! !> ] ].
 
-
-#|
-extracted_adj_scop_phrase := extracted_adj_phrase &
-  [ SYNSEM.NON-LOCAL.SLASH 1-dlist &
-			   <! [ CAT.HEAD.MOD < [ LOCAL scopal_mod ] > ] !>,
-    NON-HEAD-DTR.SYNSEM.LOCAL.CONT.INDEX individual & #index,
-    C-CONT.INDEX #index ].
-|#
 
 ;;
 ;; Bare plural and mass NPs, distinguished by the INDEX feature [ DIVISIBLE + ]
@@ -1929,6 +1927,8 @@ np_name_cmpnd_phr := n_n_cmpnd_phr &
 ; DPF 2-Jul-02 - Go back to making NON-HEAD-DTR..ALTKEY be no_rel to block
 ; spurious compound analysis for v-gerund for "hiring Sandy", and let's see
 ; why we wanted to remove it in the first place.
+; DPF 9-Oct-02 - Removed [OPT -] from NON-HEAD-DTR..VAL.SPR, since it prevented
+; compounds like "three pm meeting", and it's not clear what it was needed for.
 
 noun_n_cmpnd_phr := n_n_cmpnd_phr &
   [ SYNSEM [ MODIFIED.PERIPH #periph,
@@ -1938,8 +1938,7 @@ noun_n_cmpnd_phr := n_n_cmpnd_phr &
                                          LEX + ],
     NON-HEAD-DTR.SYNSEM abstr_lex_synsem &
            [ LOCAL [ CAT [ HEAD noun* & [ PRD - ],
-                           VAL.SPR *unexpcons* &
-                                < [ OPT - ] > ],
+                           VAL.SPR *unexpcons* ],
                      CONT [ TOP #ntop,
                             INDEX #nind ],
                      KEYS.ALTKEY no_rel ],
@@ -1949,6 +1948,7 @@ noun_n_cmpnd_phr := n_n_cmpnd_phr &
 					       RESTR #rhand ] !>,
 	     H-CONS <! qeq & [ SC-ARG #rhand,
 			       OUTSCPD #ntop ] !> ] ].
+
 
 ; for "account number 222"
 noun_title_cmpnd_phr := basic_n_n_cmpnd_phr &
@@ -2127,16 +2127,6 @@ temp_mod_phrase := unary_phrase & phrasal &
              E-INDEX #event,
 	     LISZT <! #key !>,
 	     H-CONS <! !> ] ].
-
-; DPF 24-Apr-01 - In order to rank "where, when" high as PPs, separate WH from
-; non-WH.
-temp_mod_nonwh_phrase := temp_mod_phrase &
-  [ SYNSEM.LOCAL.CAT.VAL.SPR < anti_synsem >,
-    ARGS < [ SYNSEM.NON-LOCAL [ SLASH 0-dlist,
-                                QUE 0-dlist ] ] > ].
-
-temp_mod_wh_phrase := temp_mod_phrase &
-  [ ARGS < [ SYNSEM.NON-LOCAL.QUE 1-dlist ] > ].
 
 ; DPF 5-Feb-01 - Restrict mother's SPEC..HEAD value to adj for now, to block
 ; silly analysis for e.g. "There are a bookcase in the office."
@@ -2937,16 +2927,13 @@ hadj_i_relcl_rule := binary_rule_right_to_left & n_adj_relcl_phrase.
 hadj_i_redrel_nontemp_rule := binary_rule_right_to_left & n_adj_redrel_nontemp.
 hadj_i_redrel_temp_rule := binary_rule_right_to_left & n_adj_redrel_temp.
 
-hadj_i_h_rule := binary_rule_right_to_left & h_adj_int_phrase.
-hadj_i_uns_aux_rule := binary_rule_right_to_left & h_adj_i_uns_aux_phrase.
-hadj_v_uns_rule := binary_rule_right_to_left & h_v_uns_phrase.
-hadj_nonv_uns_rule := binary_rule_right_to_left & h_nonv_uns_phrase.
+hadj_i_unsl_rule := binary_rule_right_to_left & h_adj_unsl_phrase.
+hadj_i_sl_rule := binary_rule_right_to_left & h_adj_sl_phrase.
 
-extradj_i_rule := rule & extracted_adj_int_phrase.
+extradj_i_vp_rule := rule & extracted_adj_int_vp_phrase.
+extradj_i_s_rule := rule & extracted_adj_int_s_phrase.
+
 extradj_temp_rule := rule & extracted_adj_temp_phrase.
-
-;; extradj_s_rule := rule & extracted_adj_scop_phrase.
-
 
 fin_non_wh_rel_rule := rule & fin_non_wh_rel_cl.
 
@@ -2968,8 +2955,9 @@ np_name_cmpnd_rule := binary_rule_right_to_left & np_name_cmpnd_phr.
 noun_n_cmpnd_rule := binary_rule_right_to_left & noun_n_cmpnd_phr.
 noun_title_cmpnd_rule := binary_rule_right_to_left & noun_title_cmpnd_phr.
 appos_rule := binary_rule_right_to_left & appos_phr.
-temp_mod_nonwh_rule := rule & temp_mod_nonwh_phrase .
-temp_mod_wh_rule := rule & temp_mod_wh_phrase.
+;temp_mod_nonwh_rule := rule & temp_mod_nonwh_phrase .
+;temp_mod_wh_rule := rule & temp_mod_wh_phrase.
+temp_mod_rule := rule & temp_mod_phrase.
 measure_np_rule := rule & measure_np_phrase.
 measure_np_symbol_rule := rule & measure_np_symbol_phrase.
 num_noun_rule := rule & num_noun_phrase.
@@ -3254,16 +3242,6 @@ mid_coord_event_rule := mid_coord_rule &
 
 ; Coordination of all nominals
 
-#|
-nom_coord_rule := coord_phr &
-  [ SYNSEM synsem &
-           [ LOCAL.KEYS [ KEY nom_rel,
-                          MESSAGE 0-dlist ] ],
-    LCONJ-DTR.SYNSEM.LOCAL [ CAT.VAL.COMPS < >,
-                             AGR.DIVISIBLE #div ],
-    RCONJ-DTR.SYNSEM.LOCAL.AGR.DIVISIBLE #div ].
-|#
-
 nom_coord_rule := coord_phr &
   [ SYNSEM synsem &
            [ LOCAL [ CONT.E-INDEX ref-ind,
@@ -3276,12 +3254,6 @@ nom_coord_rule := coord_phr &
     RCONJ-DTR.SYNSEM.LOCAL [ CONT.INDEX ref-ind,
                              KEYS.MESSAGE 0-dlist,
                              AGR.DIVISIBLE #div ] ].
-
-#|
-top_coord_nom_rule := top_coord_rule & nom_coord_rule &
-  [ LCONJ-DTR.SYNSEM.LOCAL.KEYS.KEY non_event_rel,
-    RCONJ-DTR.SYNSEM.LOCAL.KEYS.KEY non_event_rel ].
-|#
 
 top_coord_nom_rule := top_coord_rule & nom_coord_rule.
 
