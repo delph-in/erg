@@ -372,16 +372,7 @@
 
 (defun normalize-string (string)
   (let* ((string (nsubstitute #\Space #\Newline string))
-         (string (nsubstitute #\# #\@ string))
-         (string 
-          (if (> (length string) 2)
-            (reduce #'(lambda (x y)
-                        (if (and (eq x #\Space)
-                                 (eq (char (string y) 0) #\Space))
-                            (string y)
-                          (concatenate 'string (string x) (string y))))
-                    string :from-end t)
-            string)))
+         (string (nsubstitute #\# #\@ string)))
     (string-trim '(#\Space #\Tab) string)))
 
 (defun shell-escape-quotes (string)
