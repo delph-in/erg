@@ -131,6 +131,8 @@
                 (setf current-path 
                   (append current-path '(REST))))))))
 
+;; Assign priorities to parser tasks
+
 (defun rule-priority (rule)
   (case (rule-id rule)
     (extradj_i 100)
@@ -148,4 +150,25 @@
     (rootgap_r 100)
     (n_n_cmpnd 200)
     (frag_nomod_i 100)
-    (otherwise 500)))
+    (vp_ellipsis 200)
+    (otherwise 
+     (if (get-lex-rule-entry (rule-id rule))
+	 400
+       500))))
+
+(defparameter *unlikely-le-types* '(disc_adv_mle1 letter_name_le
+				    mealtime_word_le numadj_noun_word_le))
+(defparameter *likely-le-types* '(coord_c_le))
+
+(defun lex-priority (mrec)
+  (let ((lex-type (dag-type 
+		   (tdfs-indef 
+		    (if (mrecord-history mrec)
+			(mhistory-fs (car (mrecord-history mrec)))
+		      (mrecord-fs mrec))))))
+    (cond ((member lex-type *unlikely-le-types* :test #'eq) -200)
+	  ((member lex-type *likely-le-types* :test #'eq) 800)
+	  (t 600))))
+	  
+      
+	   
