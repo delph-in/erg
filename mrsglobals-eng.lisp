@@ -413,7 +413,7 @@
 (setq mrs::*raw-mrs-output-p* nil)
 (setq mrs::%vit-indent% ",~%    ")
 
-(setf *root-path* '`(,(vsym "ROOT")))
+(setf *root-path* `(,(vsym "ROOT")))
 
 (setf *false-type* (vsym "-"))
 
