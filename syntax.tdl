@@ -531,14 +531,27 @@ rel_cl := clause &
 ; since it prevents e.g. 'a good time to meet would be tomorrow'  We'll see 
 ; what it was blocking.
 
-non_wh_rel_cl := unary_phrase & rel_cl &
+; (ERB 2003-08-08) Add a type for instrument infinitival relatives,
+; like "the Fedex number to return my package.  These are similar
+; to ordinary infinitival relatives, except that we need to hallucinate
+; a SLASH value and a _with_p_rel, and make the index of the SLASH
+; be the ARG2 of the _with_p_rel.  Since non_wh_rel_cl introduces
+; a SLASH value, the new type can't inherit from it directly.  Add
+; a supertype basic_non_wh_rel_cl that has the rest of the constraints
+; from non_wh_rel_cl.  Hmmm... it seems that there might be no need
+; for that slash value, as non_wh_rel_cl just takes the KEY and INDEX
+; and zeros it out.  I have no idea what we'd put in for that KEY, and
+; the INDEX can be identified with the ARG2 of the_with_p_rel.
+
+; (ERB 2003-08-11) Move constraint on HOOK.LTOP down to daughters,
+; since I'm having the instr_inf_non_wh_rel_cl introduce the prpstn_m_rel.
+
+basic_non_wh_rel_cl := unary_phrase & rel_cl &
   [ SYNSEM [ LOCAL [ CAT [ HEAD [ VFORM #vform,
 				  TAM #tam,
 				  AUX #aux,
 				  INV #inv,
-				  MOD < [ LOCAL.KEYS.KEY #mkey,
-                                          --SEMIND #ind,
-					  NON-LOCAL.QUE 0-dlist,
+				  MOD < [ NON-LOCAL.QUE 0-dlist,
                                           MODIFIED.RPERIPH na_or_- ] > ],
 			   VAL [ SUBJ < >,
 				 SPR #spr,
@@ -553,22 +566,26 @@ non_wh_rel_cl := unary_phrase & rel_cl &
 					   INV #inv ],
 				    VAL [ SPR #spr,
                                           COMPS *olist* ] ],
-			      CONT.HOOK.LTOP #ltop,
 			      CONJ cnil,
-			      KEYS [ KEY #key,
-                                     MESSAGE 1-dlist ] ],
-		      NON-LOCAL [ SLASH 1-dlist &
-					[ LIST < [ CAT [ HEAD noun &
-							      [ PRD -,
-								MOD < > ],   
-							 VAL.COMPS < > ],
-						   AGR #ind,
-						   CONT.HOOK.INDEX #ind,
-						   KEYS.KEY #mkey ] > ],
-				  QUE 0-dlist,
+			      KEYS [ KEY #key ] ],
+		      NON-LOCAL [ QUE 0-dlist,
 				  REL 0-dlist ],
-		      MODIFIED notmod_or_rmod & strict_sort ] ] >,
-    C-CONT.HOOK.LTOP #ltop ].
+		      MODIFIED notmod_or_rmod & strict_sort ] ] > ].
+
+non_wh_rel_cl := basic_non_wh_rel_cl &
+[ SYNSEM.LOCAL.CAT.HEAD.MOD < [ LOCAL.KEYS.KEY #mkey,
+				--SEMIND #ind ] >,
+  ARGS < [ SYNSEM [ LOCAL [ CONT.HOOK.LTOP #ltop,
+			    KEYS [ MESSAGE 1-dlist ] ],
+		    NON-LOCAL.SLASH 1-dlist &
+					 [ LIST < [ CAT [ HEAD noun &
+							       [ PRD -,
+								 MOD < > ],   
+							  VAL.COMPS < > ],
+						    AGR #ind,
+						    CONT.HOOK [ INDEX #ind ],
+						    KEYS.KEY #mkey ] > ]]] >,
+  C-CONT.HOOK.LTOP #ltop  ].
 
 ; ERB (19-01-98) As much as it hurts, I don't think it is possible
 ; to avoid differentiating a inf and fin non_wh_rel_cl.  The facts of
@@ -632,12 +649,56 @@ fin_non_wh_rel_cl := non_wh_rel_cl &
     C-CONT [ RELS <! !>,
 	     HCONS <! !> ] ].
 
+; (ERB 2003-08-08) Removed redundant KEYS.MESSAGE 1-dlist here --
+; it's already on non_wh_rel_cl.
+
 inf_non_wh_rel_cl := non_wh_rel_cl &
   [ ARGS < [ SYNSEM.LOCAL [ CAT [ HEAD comp & [ VFORM inf ],
-                                  VAL.SUBJ *prolist* ],
-			    KEYS.MESSAGE 1-dlist ] ] >,
+                                  VAL.SUBJ *prolist* ] ] ] >,
     C-CONT [ RELS <! !>,
 	     HCONS <! !> ] ].
+
+; (ERB 2003-08-08) Type for instrumental infinitival relative clauses.
+; See notes at basic_non_wh_rel_cl above.  Consider adding a type
+; to capture similarities between constraints on this type and 
+; inf_non_wh_rel_cl.
+
+; (ERB 2003-08-08) Switch to nonprop to phrases so that I can still
+; get at the handle for the verb relation within the clause (which
+; should be the ARG1 of the with_p_rel).  The other options (using
+; to_c_prop_le) were to cheat and get that handle through the KEY
+; (illegal per the alegbra) or to introduce a slash value on the
+; VP (?), which raises the problem of keeping those VP/NPs out of
+; every other context.  
+;
+; This requires also switching from *prolist* to < synsem > as
+; the constraint on the SUBJ of the daughter.  Maybe need to
+; constrain NON-LOCAL values of this synsem?  -- that seemed
+; to reduce supurious ambiguity some.
+;
+; Indeed, I need to make it < unexpressed > in order to constrain
+; the NON-LOCAL values properly and keep the elided to out of this
+; construction.
+
+instr_inf_non_wh_rel_cl := basic_non_wh_rel_cl &
+  [ SYNSEM.LOCAL.CAT.HEAD.MOD < [ --SEMIND #index ] >,
+    ARGS < [ SYNSEM [ LOCAL [ CAT [ HEAD comp & [ VFORM inf ],
+				    VAL.SUBJ < unexpressed > ],
+			      CONT.HOOK [ LTOP #handle,
+					  INDEX  #event ],
+			      KEYS.MESSAGE 0-dlist ],
+		      NON-LOCAL.SLASH 0-dlist ] ] >,
+    C-CONT [ RELS <! prpstn_m_rel & 
+		   [ LBL #ltop,
+		     MARG #marg ],
+		     with_p_rel & 
+		   [ LBL #handle,
+		     ARG1 #event,
+		     ARG2 #index ] !>,
+	     HCONS <! qeq &
+		    [ HARG #marg,
+		      LARG #handle ] !>,
+	     HOOK.LTOP #ltop ] ].
 
 ; DPF 2-Jul-02 - Added MOD..RPERIPH - to block analysis of "Abrams hired"
 ; while allowing "anyone hired"
@@ -3238,6 +3299,8 @@ extradj_temp_rule := rule & extracted_adj_temp_phrase.
 fin_non_wh_rel_rule := rule & fin_non_wh_rel_cl.
 
 inf_non_wh_rel_rule := rule & inf_non_wh_rel_cl.
+
+instr_inf_non_wh_rel_rule := rule & instr_inf_non_wh_rel_cl.
 
 red_rel_cl_rule := rule & red_rel_cl.
 
