@@ -223,8 +223,8 @@ bool :< luk.
 ; -+, along with the conjoined type.
 
 +_and_- := +* & -*.
-+ :< +*.
-- :< -*.
++ := +* & strict_sort.
+- := -* & strict_sort.
 
 ; Three-valued sort for distinguishing unmodified signs from both left-modified
 ; and right-modified signs
@@ -342,6 +342,7 @@ aspect :< *sort*.
 present* :< tense.
 past* :< tense.
 future* :< tense.
+no_tense :< tense.
 
 strict_tense := tense & strict_sort.
 present := present* & strict_tense.
@@ -355,7 +356,7 @@ nonprg :< aspect.
 nonprf :< aspect.
 nonprg+nonprf := nonprg & nonprf.
 no_aspect* := nonprg+nonprf.
-progr* :< nonprf. 
+progr* :< nonprf.
 perf* :< nonprg.
 
 strict_aspect := aspect & strict_sort.
@@ -402,7 +403,9 @@ norm_relation :< non_number_rel.
 
 ; Subtypes of this relation are the types for particle semantics in
 ; verb-particle constructions like _together_rel in "get together"
-selected_rel :< relation.
+selected_rel := event_rel & [ EVENT.E [ TENSE no_tense,
+					ASPECT no_aspect ] ].
+
 ; Subtypes of this relation contrast with those of the above, in that they
 ; supply an "independent" relation.
 independent_rel :< mod_relation.
@@ -427,9 +430,13 @@ mrs_min1 := mrs_min0 &
   [ LISZT *diff-list*,
     --TOPKEY mod_relation ].
     
+;; DPF 10-Oct-00 - Added EVENT attribute for predicative phrases, as in
+;; "Kim kept calm" where the INDEX of "calm" is "Kim"'s INDEX and the first
+;; argument of _keep_rel, while "calm"'s EVENT is second argument of _keep_rel.
+
 mrs := mrs_min1 &
-  [ H-CONS *diff-list*,
-    WGLISZT *diff-list*,
+  [ E-INDEX event,
+    H-CONS *diff-list*,
     TOP-H handle ].
 
 ; Constrains handle of scopable argument SC-ARG relative to one or more 
@@ -459,15 +466,16 @@ cnil_or_numconj :< conj.
 cnil :< cnil_or_numconj.
 real-conj := conj &
   [ CHEAD chead ].
-strict-conj :< real-conj.
-atomic-conj :< strict-conj.
+strict-conj :< conj.
+strict-real-conj := strict-conj & real-conj.
+atomic-conj :< strict-real-conj.
 both :< atomic-conj.
 either :< atomic-conj.
 neither :< atomic-conj.
 nor :< atomic-conj.
 chead := *avm* &
   [ LEFT *list* ].
-complex-conj :< strict-conj.
+complex-conj :< strict-real-conj.
 phr-conj :< real-conj.
 num-conj := cnil_or_numconj & strict-conj.
 
@@ -569,11 +577,11 @@ canonical_synsem := expressed_synsem &
 
 lex_synsem := canonical_synsem & lex_or_phrase &
   [ LOCAL local_min,
-    LEX + ].
+    LEX +* ].
 
 phr_synsem := canonical_synsem & lex_or_phrase &
   [ LOCAL local_min,
-    LEX - ].
+    LEX -* ].
 
 non_canonical := synsem &
   [ LOCAL.CONT.INDEX non_expl ].
@@ -649,9 +657,11 @@ sign := basic_sign &
 phrase_or_lexrule := sign &
   [ SYNSEM canonical_synsem &
 	   [ LOCAL.CONT [ TOP #hand,
-			  INDEX #index ] ],
+			  INDEX #index,
+                          E-INDEX #event ] ],
     C-CONT mrs_min & [ TOP #hand,
-		       INDEX #index ] ].
+		       INDEX #index,
+                       E-INDEX #event ] ].
 
 word_or_lexrule_min := sign_min.
 
@@ -687,8 +697,9 @@ lexroot := phrase_or_lexrule &
   [ SYNSEM.LOCAL.ARG-S < >,
     ROOT bool ].
 
-phrase := lexroot &
-  [ SYNSEM.LOCAL.CAT.HC-LEX - ].
+; DPF 02-Sept-00 - Removed [ HC-LEX - ] because it blocks conjoined lexical
+; entries like "two and three"  
+phrase :< lexroot.
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Affixation
@@ -901,21 +912,22 @@ it-ind := expl-ind & full_index &
   [ PNG [ PN 3sg*,
 	  GEN neut* ] ].
 there-ind :< expl-ind.
+
 non_expl-ind := index & event_or_index.
 ref-ind :< non_expl-ind.
 deg-ind :< non_expl-ind.
-full_non_expl := non_expl & full_index.
+full_non_expl := full_index & non_expl-ind.
 full_there-ind := there-ind & full_index.
 full_ref-ind := ref-ind & full_non_expl.
-full_deg-ind := deg-ind & full_index.
+full_deg-ind := deg-ind & full_non_expl.
 
 conj-ind :< event_or_index.
 conj_event := conj-ind & event.
-conj_ref-ind := conj-ind & ref-ind.
-conj_full_ref-ind := conj_ref-ind & full_ref-ind.
-conj_deg-ind := conj-ind & deg-ind.
-conj_full_deg-ind := conj_deg-ind & full_deg-ind.
 conj_non_expl-ind := conj-ind & non_expl-ind.
+conj_ref-ind := conj_non_expl-ind & ref-ind.
+conj_full_ref-ind := conj_ref-ind & full_ref-ind.
+conj_deg-ind := conj_non_expl-ind & deg-ind.
+conj_full_deg-ind := conj_deg-ind & full_deg-ind.
 conj_full_non_expl := conj_non_expl-ind & full_non_expl.
 
 ; The basic semantic structure, a CONT, is just something with a handle.
@@ -1066,6 +1078,8 @@ hcomp_nom_rel := nom_rel & arg3_rel &
 
 nominalize_rel :< diadic_nom_rel.
 
+; Changed gerund_rel to subtype of non_temp_nom_rel rather than reg_nom_rel
+; to avoid semantically anomalous readings for e.g. "Kim is sleeping".
 gerund_rel := non_temp_nom_rel &
   [ INST ref-ind ].
 
@@ -1088,6 +1102,8 @@ temp_modable_rel := temp_nondim_rel & modable_rel.
 
 day_rel :< temp_modable_rel.
 
+diadic_day_rel := day_rel & diadic_nom_rel.
+
 named_day_rel := day_rel & abstr_named_rel &
   [ DAY atom ].
 
@@ -1105,8 +1121,7 @@ dofw_rel := named_day_rel &
 holiday_rel := named_day_rel &
   [ DAY symbol ].
 
-day_part_rel := day_rel &
-  [ OF-DAY non_expl-ind ].
+day_part_rel := day_rel.
 
 ; dim_rel: 'almost three o'clock'
 hour_rel := temp_abstr_rel & dim_rel.
@@ -1134,7 +1149,7 @@ minute_rel := minute_or_ampm_rel &
   [ MINUTE string ].
 |#
 
-modable_hour_rel := hour_rel & modable_rel.
+modable_hour_rel := hour_rel & modable_rel & diadic_nom_rel.
 
 ; 'Kim sleeps three times each day'
 _time_rel :< modable_hour_rel.
@@ -1190,12 +1205,12 @@ _fortnight_rel :< non_day_modable_rel.
 _month_rel :< non_day_diadic_modable_rel.
 _moment_rel :< non_day_rel.
 
-named_rel := reg_nom_rel & apposition_rel & abstr_named_rel &
+gen_named_rel := reg_nom_rel & abstr_named_rel &
   [ NAMED atom ].
 
-*letter-diff-list* :< *diff-list*.
-spell_rel := reg_nom_rel &
-  [ LETTERS *letter-diff-list* ].
+named_rel := gen_named_rel & apposition_rel.
+
+named_abb_rel := gen_named_rel.
 
 unk_rel :< named_rel.
 
@@ -1239,7 +1254,8 @@ arg4_rel := relation &
 basic_adj_arg4_rel := basic_adj_rel & arg4_rel.
 adj_arg4_rel := basic_adj_arg4_rel & adj_rel.
 adj_arg2_rel := adj_rel & arg2_rel.
-it_adj_arg24_rel := basic_adj_arg4_rel & adj_arg2_rel.
+it_adj_arg24_rel := basic_adj_arg4_rel & adj_arg2_rel & expl_rel.
+it_adj_arg4_rel := adj_arg4_rel & expl_rel.
 adj_arg24_rel := adj_arg4_rel & adj_arg2_rel.
 adj_arg3_rel := adj_rel & arg3_rel.
 
@@ -1258,7 +1274,11 @@ v_event_rel := verb_aspect_rel & nondim_rel & event_or_arg_rel.
 mod_role_rel :< v_event_rel.
 
 no_role_rel :< mod_role_rel. 
-; E.g., weather verbs
+
+; For generator to know when to introduce expletive "it"
+expl_rel :< relation.
+
+weather_v_rel := expl_rel & no_role_rel.
 
 role_rel :< mod_role_rel.
 
@@ -1272,13 +1292,13 @@ arg14_rel := arg1_rel & arg4_rel &
     ARG4 thing ].
 arg24_rel := arg2_rel & arg4_rel.
 arg123_rel := arg12_rel & arg13_rel.
-arg124_rel := arg12_rel & arg14_rel.
+arg124_rel := arg12_rel & arg14_rel & expl_rel.
 arg134_rel := arg13_rel & arg14_rel.
 arg1234_rel := arg123_rel & arg14_rel.
 arg3_event_rel := arg3_rel & role_rel.
 arg4_event_rel := arg4_rel & v_event_rel.
-arg24_event_rel := arg2_rel & arg4_event_rel.
-
+arg24_event_rel := arg2_rel & arg4_event_rel & expl_rel.
+arg14_expl_rel := arg14_rel & expl_rel.
 
 ellipsis_rel := role_rel &
   [ ROLE thing ].
@@ -1307,12 +1327,6 @@ abstr_suit_rel :< arg13_rel.
 prop_rel := event_rel &
 	   [ PROP non_expl ].
 
-poss_rel := nondim_rel &
-  [ POSSR non_expl-ind,
-    POSSD non_expl-ind ].
-
-_got_poss_rel :< poss_rel.
-
 ; For copula "be", only for external interface (not used in grammar)
 support_rel :< no_role_rel.
 
@@ -1324,9 +1338,9 @@ prep_rel := dim_rel & arg3_rel & event_rel &
 prep_mod_rel := prep_rel & arg_rel.
 
 loc_abstr_rel :< prep_mod_rel.
-dir_rel :< loc_abstr_rel.
-state_loc_rel :< loc_abstr_rel.
-dir_or_state_rel := dir_rel & state_loc_rel.
+dir_or_state_rel := loc_abstr_rel.
+dir_rel :< dir_or_state_rel.
+state_loc_rel :< dir_or_state_rel.
 
 temp_loc_abstr_rel :< loc_abstr_rel.
 
@@ -1339,9 +1353,20 @@ dir_or_state_ind_rel := dir_or_state_rel & independent_rel.
 temp_loc_indep_rel := temp_loc_abstr_rel & independent_rel.
 temp_loc_rel :< temp_loc_indep_rel.
 
+#|
+poss_rel := nondim_rel &
+  [ POSSR non_expl-ind,
+    POSSD non_expl-ind ].
+|#
+
+poss_rel :< prep_mod_rel.
+
+_got_poss_rel :< poss_rel.
+
 part_of_rel :< reg_diadic_nom_rel.
 diadic_noprep_nom_rel :< reg_diadic_nom_rel.
 diadic_noarg_nom_rel :< reg_diadic_nom_rel.
+diadic_noarg_nom_appos_rel := reg_diadic_nom_rel & apposition_rel.
 
 abstr_adv_rel := arg_rel & dim_rel & norm_relation.
 
@@ -1430,8 +1455,8 @@ _cop_id_rel :< cop_id_rel.
 temp_span_rel :< meas_adj_rel.
 _equal_adj_rel :< adj_arg3_rel.
 unspec_adj_rel :< adj_rel.
-number_rel :< reg_nom_rel.
-quantity_rel :< reg_nom_rel.
+number_rel :< reg_diadic_nom_rel.
+quantity_rel :< reg_diadic_nom_rel.
 _be_prd_rel :< event_arg_rel.
 
 
@@ -1521,8 +1546,8 @@ _there_cop_rel := v_event_rel & arg3_rel &
 abstr_number_rel := dim_rel & arg_rel & number_or_degree_rel & independent_rel &
   [ ARG individual ].
 
-integer_rel := abstr_number_rel &
-  [ ORD bool ].
+integer_rel :< abstr_number_rel.
+
 const_rel := integer_rel & [ CONST_VALUE string].
 
 plus_rel := integer_rel & [ TERM1 handle,
@@ -1530,7 +1555,8 @@ plus_rel := integer_rel & [ TERM1 handle,
 times_rel := integer_rel & [ FACTOR1 handle,
 			     FACTOR2 handle].
 
-ord_rel := abstr_adj_rel & const_rel.
+ord_rel :< const_rel.
+card_rel :< const_rel.
 
 minute_rel :< const_rel.
 
@@ -1785,16 +1811,16 @@ _against_rel_a :< miscprep_rel.
 _against_rel_s := _against_rel_a & selected_rel.
 _against_rel := _against_rel_a & independent_rel.
 _up_rel := dir_rel & selected_rel.
-_forth_rel_a :< abstr_adv_rel.
+_forth_rel_a :< miscprep_rel.
 _forth_rel_s := _forth_rel_a & selected_rel.
 _forth_rel := _forth_rel_a & independent_rel.
-_forward_rel_a :< abstr_adv_rel.
+_forward_rel_a :< miscprep_rel.
 _forward_rel_s := _forward_rel_a & selected_rel.
 _forward_rel := _forward_rel_a & independent_rel.
 _off_rel_a :< dir_or_state_rel.
 _off_rel_s := _off_rel_a & selected_rel.
 _off_rel := _off_rel_a & independent_rel.
-_back_adv_rel_a :< abstr_adv_rel.
+_back_adv_rel_a :< miscprep_rel.
 _back_adv_rel_s := _back_adv_rel_a & selected_rel.
 _back_adv_rel := _back_adv_rel_a & independent_rel.
 _down_rel_a :< dir_rel.
@@ -1803,10 +1829,10 @@ _down_rel := _down_rel_a & independent_rel.
 _across_rel_a :< dir_or_state_rel.
 _across_rel_s := _across_rel_a & selected_rel.
 _across_rel := _across_rel_a & independent_rel.
-_around_loc_rel_a :< abstr_adv_rel.
+_around_loc_rel_a :< miscprep_rel.
 _around_loc_rel_s := _around_loc_rel_a & selected_rel.
 _around_loc_rel := _around_loc_rel_a & independent_rel.
-_together_rel_a :< abstr_adv_rel.
+_together_rel_a :< miscprep_rel.
 _together_rel_s := _together_rel_a & selected_rel.
 _together_rel := _together_rel_a & independent_rel.
 _as_rel := miscprep_rel & independent_rel.
@@ -1816,10 +1842,10 @@ _short_rel := _short_rel_a & independent_rel.
 _without_rel_a :< miscprep_rel.
 _without_rel_s := _without_rel_a & selected_rel.
 _without_rel := _without_rel_a & independent_rel.
-_aside_rel_a :< abstr_adv_rel.
+_aside_rel_a :< miscprep_rel.
 _aside_rel_s := _aside_rel_a & selected_rel.
 _aside_rel := _aside_rel_a & independent_rel.
-_away_adv_rel_a :< abstr_adv_rel.
+_away_adv_rel_a :< miscprep_rel.
 _away_adv_rel_s := _away_adv_rel_a & selected_rel.
 _away_adv_rel := _away_adv_rel_a & independent_rel.
 _around_rel_a :< miscprep_rel.
@@ -1837,7 +1863,7 @@ _behind_rel := _behind_rel_a & independent_rel.
 _after_prepx_rel_a :< temp_loc_abstr_rel.
 _after_prepx_rel_s := _after_prepx_rel_a & selected_rel.
 _after_prepx_rel := _after_prepx_rel_a & independent_rel.
-_into_rel_a :< miscprep_rel.
+_into_rel_a :< dir_rel.
 _into_rel_s := _into_rel_a & selected_rel.
 _into_rel := _into_rel_a & independent_rel.
 _upon_rel_a :< state_loc_rel.
@@ -1910,20 +1936,6 @@ work_unspec :< arg1_rel.
 
 ; Needed for idiosyncratic decomposition of "why"
 cause :< miscprep_rel.
-
-; Hack 13-Oct-99
-; The following types in the ESEMDB don't follow the typographical 
-; conventions for rel names, so can't be in the semrels.tdl file.
-bring_down :< arg13_rel.
-clarinet :< reg_nom_rel.
-controller :< reg_nom_rel.
-eco_friendly :< adj_rel.
-household :< reg_nom_rel.
-inside_n :< reg_nom_rel.
-radio :< reg_nom_rel.
-start_unspec :< arg13_rel.
-nearly_grad :< very_deg_rel.
-trace_n :< reg_nom_rel.
 
 ; Used for unknown word lexical entries
 

@@ -58,7 +58,7 @@
    "specifing valid parses")
 ;; Use the following for parsing fragments as well as full clauses:
 #|
-(defparameter *start-symbol* '(root_strict root root_conj root_subord)
+(defparameter *start-symbol* '(root_strict root_lex root_phr root_conj root_subord)
   "specifing valid parses including fragments")
 |#
 

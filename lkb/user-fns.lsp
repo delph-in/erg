@@ -101,7 +101,6 @@
 ;; Assign priorities to parser tasks
 (defun rule-priority (rule)
   (case (rule-id rule)
-    (extradj_i 100)
     (extradj_s 150)
     (extracomp 200)
     (extrasubj_f 300)
@@ -112,29 +111,33 @@
     (fillhead_wh_nr_f 150)
     (fillhead_wh_nr_i 150)
     (fillhead_rel 100)
+    (freerel 100)
     (hoptcomp 200)
     (rootgap_l 100)
     (rootgap_r 100)
     (n_n_cmpnd 250)
-    (nadj_i 400)    
+    (nadj_rc 400)    
+    (nadj_rr 700)    
     (adjh_i 350)
     (mid_coord_np 800)
     (top_coord_np 700)
     (hcomp 800)
+    (hadj_i_uns 450)
     (hadj_s 400)
+    (hadj_ivx_uns 150)
     (bare_np 300)
     (fin_non_wh_rel 200)
     (inf_non_wh_rel 100)
-    (vpellipsis_lr 100)
-    (taglr 100)
+    (vpellipsis_ref_lr 100)
+    (vpellipsis_expl_lr 100)
+    (taglr 300)
     (vgering 100)
-    (temp_np 300)
-    (numadj_np 200)
+    (numadj_np 100)
     (measure_np 200)
     (appos 200)
     (imper 300)
     (sailr 300)
-    (advadd 300)
+    (advadd 700)
     (passive 400)
     (intransng 200)
     (transng 400)
@@ -153,36 +156,53 @@
 (defun gen-rule-priority (rule)
   (rule-priority rule))
 
-(defparameter *unlikely-le-types* '(disc_adv_mle1 letter_name_le
+(defparameter *unlikely-le-types* '(letter_name_le
 				    n_mealtime_le 
-				    n_adv_le p_subconj_inf_le 
-				    vc_there_is_le vc_there_are_le
-				    vc_there_was_le vc_there_were_le
+				    n_adv_le 
+				    p_subconj_inf_le 
+				    vc_there_is_le 
+				    vc_there_are_le
+				    vc_there_was_le 
+				    vc_there_were_le
 				    adv_int_vp_post_le 
 				    n_freerel_pro_le
-				    v_sorb_le det_part_one_le 
-				    adv_disc_like_le p_cp_le
+				    v_sorb_le 
+				    det_part_one_le 
+				    adv_disc_like_le 
+				    p_cp_le
 				    v_obj_equi_non_trans_prd_le
                                     v_subj_equi_prd_le
                                     v_obj_equi_prd_le
-                                    coord_c_mle
                                     n_adv_le
 				    comp_to_prop_elided_le
 				    comp_to_nonprop_elided_le
+                                    n_hour_prep_le
+	  			    n_pers_pro_noagr_le 
+                                    n_proper_abb_le
+                                    v_np_trans_lowprio_le
 				    ))
-(defparameter *likely-le-types* '(conj_complex_le adv_disc_le 
-				  va_quasimodal_le v_poss_le
-				  n_hour_le p_ditrans_le
+
+(defparameter *likely-le-types* '(conj_complex_le 
+				  adv_disc_le 
+				  va_quasimodal_le 
+				  v_poss_le
+				  n_hour_le 
+				  p_ditrans_le
 				  v_expl_it_subj_like_le
                                   adv_s_pre_word_nospec_le
-				  adj_more_le v_subj_equi_le
-				  n_proper_le v_prep_particle_np_le
-				  wh_pro_word_le
+				  adj_more_le 
+				  v_subj_equi_le
+				  n_proper_le 
+				  v_prep_particle_np_le
+				  n_wh_pro_le
                                   v_empty_prep*_intrans_le
                                   v_empty_prep_intrans_le
 				  comp_to_nonprop_le
 				  conj_and_num_le
 				  adj_complemented_unspecified_card_le
+				  adj_reg_equi_le
+                                  v_np_prep_trans_le
+                                  v_np_prep*_trans_le
 				  ))
 
 (defun lex-priority (mrec)
