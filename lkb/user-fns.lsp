@@ -84,10 +84,7 @@
            (push (make-unification :lhs opath                    
                                    :rhs
                                    (make-u-value 
-                                    ;;; DPF hack 010801
-                                    :type orth-value
-                                    ;;:types (list orth-value)
-                                    ))
+                                    :type orth-value))
                  unifs)
            (setq tmp-orth-path (append tmp-orth-path *list-tail*))))
     (let ((indef (process-unifications unifs)))

@@ -1,5 +1,7 @@
 (in-package "MRS")
 
+(setf *sem-relation-suffix* "_rel")
+
 (setf *value-feats* `(,(vsym "CARG")))
 
 (setf *feat-priority-list*  
