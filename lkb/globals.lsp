@@ -75,6 +75,10 @@
   '(CONT)
   "restrictor used when parsing with ambiguity packing")
 
+(defparameter *chart-dependencies*
+  '((SYNSEM LOCAL KEYS --+COMPKEY) (SYNSEM LOCAL KEYS KEY)
+    (SYNSEM LOCAL KEYS --+OCOMPKEY) (SYNSEM LOCAL KEYS KEY)))
+
 ;;;
 ;;; increase dag pool size
 ;;;
