@@ -233,7 +233,7 @@
 ;;; counting of `words'.
 ;;;
 (defun dag-inflected-p (dag)           
-  (let* ((key (existing-dag-at-end-of dag 'inflected))
+  (let* ((key (existing-dag-at-end-of dag '(inflected)))
          (type (and (dag-p key) (dag-type key))))
     (when type
       (or (eq type '+) (and (consp type) (eq (first type) '+))))))
