@@ -48,3 +48,5 @@
 (defun is-munge-type (val)
   (declare (ignore val))
   t)
+
+(in-package :cl-user)

@@ -56,7 +56,11 @@
 (defparameter *mother-feature* NIL
    "The feature giving the mother in a grammar rule")
 
-(defparameter *start-symbol* '(root_strict)
+(defparameter *start-symbol* 
+  #-:arboretum
+  '(root_strict)
+  #+:arboretum
+  '(root_strict root_strict_robust)
    "specifing valid parses")
 ;; Use the following for parsing fragments as well as full clauses:
 #|
