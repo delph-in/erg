@@ -7,6 +7,9 @@
 ;;   Language: Allegro Common Lisp
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; $Log$
+;; Revision 1.14  1999/06/04 22:45:45  danf
+;; Better scoping; moved KEY to LOCAL
+;;
 ;; Revision 1.13  1999/05/06 16:56:29  danf
 ;; Improved treatment of scope
 ;;
@@ -96,7 +99,7 @@
 
 (setf *MRS-SCOPING* t)
 
-(setf *GIVING-DEMO-P* t)
+(setf *GIVING-DEMO-P* nil)
 
 (setf *initial-semantics-path* 
   `(,(vsym "SYNSEM") ,(vsym "LOCAL") ,(vsym "CONT")))
