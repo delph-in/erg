@@ -73,7 +73,7 @@
 		      current-word-record tmp-result-chars char-count)
 		     result-list)
 	       (setf in-word nil)
-	       (setf tmp-result-chars nil)))
+               (setf tmp-result-chars nil)))
 	    ((char= next-char #\Space)
 	     (when in-word
 	       (push
@@ -113,9 +113,9 @@
     (when (and (tdfs-p tdfs) (integerp cfrom)
 	       (> cfrom -1) (integerp cto)
 	       (> cto -1)) 
-      (let* ((replace-alist (list (cons 'initial-cfrom-val  
+      (let* ((replace-alist (list (cons 'cfrom  
 					(format nil "~A" cfrom))
-				  (cons 'initial-cto-val  
+				  (cons 'cto  
 					(format nil "~A" cto))))
 	     (new-dag (tdfs-indef tdfs))
 	     ;;; need to restrict replacement to the RELS list
