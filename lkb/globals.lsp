@@ -75,7 +75,7 @@
   '(RELS HCONS)
   "restrictor used when parsing with ambiguity packing")
 
-(setf *chart-packing-p* :t)
+;;; (setf *chart-packing-p* :t)
 
 ;;;
 ;;; increase dag pool size
