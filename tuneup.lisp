@@ -40,10 +40,10 @@
 ;;    yet adequate to do so}.
 
   (lex::augment-filter 
-   '((extradj_i (:forbid fin_non_wh_rel))
-     (extradj_s (:forbid fin_non_wh_rel))
-     (extradj_i (:forbid imper))
-     (extradj_s (:forbid imper))
+   '(;(extradj_i (:forbid fin_non_wh_rel))
+     ;(extradj_s (:forbid fin_non_wh_rel))
+     ;(extradj_i (:forbid imper))
+     ;(extradj_s (:forbid imper))
      (hadj_i (:forbid imper))
      (hadj_i (:forbid extrasubj))
      (extracomp (:forbid extracomp))

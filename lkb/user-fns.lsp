@@ -93,23 +93,23 @@
               sense-id))
      (t
       (let* ((type (car types))
-             (res (assoc type *infl-pos-record*)))
-        (if res (cdr res)
-          (let ((type-entry (get-type-entry type)))
-            (cond (type-entry 
-                   (eval-possible-leaf-type type)
-                   (let ((pos
-                          (extract-infl-pos-from-fs 
-                           (tdfs-indef (type-tdfs type-entry)))))
-                     (unless pos
-                       (format t "~%No position identified for ~A" sense-id))
-                     (push (cons type pos) *infl-pos-record*)
-                     pos))
-                  (t
-                   (format t "~%Warning ~A specifies invalid type,~
+	     (res (assoc type *infl-pos-record*)))
+	(if res (cdr res)
+	  (let ((type-entry (get-type-entry type)))
+	    (cond (type-entry 
+		   (eval-possible-leaf-type type)
+		   (let ((pos
+			  (extract-infl-pos-from-fs 
+			   (tdfs-indef (type-tdfs type-entry)))))
+		     (unless (or pos (subtype-p type 'non_affix_bearing))
+		       (format t "~%No position identified for ~A" sense-id))
+		     (push (cons type pos) *infl-pos-record*)
+		     pos))
+		  (t
+		   (format t "~%Warning ~A specifies invalid type,~
  no affix position found"
-                           sense-id)
-                   nil)))))))))
+			   sense-id)
+		   nil)))))))))
 
 
 (defun extract-infl-pos-from-fs (fs)  

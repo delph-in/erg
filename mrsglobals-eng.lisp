@@ -7,6 +7,9 @@
 ;;   Language: Allegro Common Lisp
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; $Log$
+;; Revision 1.5  1998/12/23 01:25:20  danf
+;; Synchronized PAGE and LKB
+;;
 ;; Revision 1.4  1998/10/30 01:12:04  danf
 ;; Lots of Verbmobil-based changes, slower processing and somewhat broader coverage
 ;;
@@ -145,7 +148,8 @@
 ;; they appear to work without PAGE then
 ;; AAC - take these out of main and set in mrsglobals
 (setf *VM-arg-roles-only-p* t)
-(setf *VM-arg-roles* `(,(vsym "arg1") ,(vsym "arg2") ,(vsym "arg3")))
+(setf *VM-arg-roles* `(,(vsym "arg1") ,(vsym "arg2") 
+				      ,(vsym "arg3") ,(vsym "arg4")))
 (setf *suppressed-VM-arg-roles* 
     `(,(vsym "act") ,(vsym "und") ,(vsym "fig") ,(vsym "gnd") 
       ,(vsym "i-ord") ,(vsym "preparg") 
@@ -211,22 +215,22 @@
      (,(vsym "1PL*")
       (vit_number pl)
       (vit_person 1))
-     ((:AND ,(vsym "3SG*") ,(vsym "STRICT_PN"))
+     ((:AND ,(vsym "3SG*") ,(vsym "STRICT_SORT"))
       (vit_number sg)
       (vit_person 3))
-     ((:AND ,(vsym "2SG*") ,(vsym "STRICT_PN"))
+     ((:AND ,(vsym "2SG*") ,(vsym "STRICT_SORT"))
       (vit_number sg)
       (vit_person 2))
-     ((:AND ,(vsym "1SG*") ,(vsym "STRICT_PN"))
+     ((:AND ,(vsym "1SG*") ,(vsym "STRICT_SORT"))
       (vit_number sg)
       (vit_person 1))
-     ((:AND ,(vsym "3PL*") ,(vsym "STRICT_PN"))
+     ((:AND ,(vsym "3PL*") ,(vsym "STRICT_SORT"))
       (vit_number pl)
       (vit_person 3))
-     ((:AND ,(vsym "2PL*") ,(vsym "STRICT_PN"))
+     ((:AND ,(vsym "2PL*") ,(vsym "STRICT_SORT"))
       (vit_number pl)
       (vit_person 2))
-     ((:AND ,(vsym "1PL*") ,(vsym "STRICT_PN"))
+     ((:AND ,(vsym "1PL*") ,(vsym "STRICT_SORT"))
       (vit_number pl)
       (vit_person 1)))
 
@@ -267,14 +271,14 @@
      (,(vsym "FIN_OR_BSE") (vit_tense pres) (vit_perf nonperf)))
 
     (,(vsym "VITMOOD") vit-tenseandaspect
-     ((:AND ,(vsym "INDICATIVE*") ,(vsym "STRICT_MOOD")) (vit_mood ind))
-     ((:AND ,(vsym "MODAL_SUBJ*") ,(vsym "STRICT_MOOD")) (vit_mood ind))
+     ((:AND ,(vsym "INDICATIVE*") ,(vsym "STRICT_SORT")) (vit_mood ind))
+     ((:AND ,(vsym "MODAL_SUBJ*") ,(vsym "STRICT_SORT")) (vit_mood ind))
      ((:AND ,(vsym "MODAL_SUBJ*") ,(vsym "INDICATIVE*") 
-	    ,(vsym "STRICT_MOOD")) (vit_mood conj))
+	    ,(vsym "STRICT_SORT")) (vit_mood conj))
      ((:AND ,(vsym "INDICATIVE*") ,(vsym "MODAL_SUBJ*")
-	    ,(vsym "STRICT_MOOD")) (vit_mood conj))
-     ((:AND ,(vsym "IND_OR_MOD_SUBJ") ,(vsym "STRICT_MOOD")) (vit_mood imp))
-     ((:AND ,(vsym "STRICT_MOOD") ,(vsym "WOULD_SUBJ*")) (vit_mood conj))
+	    ,(vsym "STRICT_SORT")) (vit_mood conj))
+     ((:AND ,(vsym "IND_OR_MOD_SUBJ") ,(vsym "STRICT_SORT")) (vit_mood imp))
+     ((:AND ,(vsym "STRICT_SORT") ,(vsym "WOULD_SUBJ*")) (vit_mood conj))
      (,(vsym "INDICATIVE") (vit_mood ind))
      (,(vsym "INDICATIVE*") (vit_mood ind))
      (,(vsym "MODAL_SUBJ") (vit_mood ind))
@@ -385,7 +389,7 @@
 (setf *non-expl-type* (vsym "non_expl"))
 
 ;;; from english.tdl
-(setq *mrs-to-vit* t)
+(setq *mrs-to-vit* nil)
 (setq main::*vm-arg-roles-only-p* nil)
 (setq mrs::*raw-mrs-output-p* nil)
 (setq mrs::%vit-indent% ",~%    ")

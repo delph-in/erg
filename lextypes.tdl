@@ -83,7 +83,7 @@ topkey := word &
 ; produce a sign which is still a word -- one with [ SYSNEM lex_synsem ].
 
 hc-to-phr := word &
-  [ SYNSEM.LOCAL.CAT.HCTYPE phr_synsem ].
+  [ SYNSEM.LOCAL.CAT.HC-LEX - ].
 
 ; nontopkey_word's have all the defaults except topkey and non_affix_bearing.
 nontopkey := nonque & nonconj & nonslash & nonrel & nonmsg &
@@ -101,7 +101,7 @@ norm_no_affix_word := norm_word & non_affix_bearing.
 
 norm_mod_word := nonque & nonconj & nonslash & nonrel &
 		 mcna & topkey &
-   [ SYNSEM.LOCAL [ CAT.HEAD.MOD.CONT.MESSAGE #msg,
+   [ SYNSEM.LOCAL [ CAT.HEAD.MOD < [ LOCAL.CONT.MESSAGE #msg ] >,
 		    CONT.MESSAGE #msg ] ].
 
 norm_mod_no_affix_word := norm_mod_word & non_affix_bearing.
@@ -377,14 +377,52 @@ four_arg := basic_four_arg & nonzero_arg_synsem.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 nomod_local := local &
-  [ CAT.HEAD.MOD no-mod ].
+  [ CAT.HEAD.MOD < > ].
 
 nomod_synsem := lex_synsem &
-  [ LOCAL.CAT [ HEAD.MOD no-mod,
+  [ LOCAL.CAT [ HEAD.MOD < >,
 		VAL.SUBJ < > ] ].
 
-intersective_mod :< local.
-scopal_mod :< local.
+scopal_mod :< local_min.
+intersective_mod :< local_min.
+scopal_mod_local := scopal_mod & local.
+int_mod_local := intersective_mod & local. 
+
+np_cat := cat &
+  [ HEAD nominal & strict_type &
+	 [ POSS - ],
+    VAL [ SPR *olist*,
+	  COMPS *olist* ] ].
+
+s_cat := cat &
+  [ HEAD verb,
+    VAL [ SUBJ < >,
+	  COMPS *olist* ],
+    MC + ].
+
+vp_cat := cat &
+  [ HEAD verb,
+    VAL [ SUBJ < synsem_min >,
+	  COMPS *olist* ],
+    MC na ].
+
+n_or_v_cat := cat &
+  [ HEAD n_or_v & strict_type,
+    VAL [ SPR < synsem >,
+	  COMPS *olist* ] ].
+
+nbar_cat := n_or_v_cat &
+  [ HEAD noun &
+	 [ POSS -,
+	   MOD < > ],
+    VAL [ SUBJ < >,
+	  SPR < [ OPT - ] > ],
+    MC na ].
+
+adverbee_cat := cat &
+  [ HEAD adverbee & strict_type ].
+
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Linking Types
@@ -401,36 +439,36 @@ atrans_lt := linking_type &
 						KEY.LABEL #label ] ] ] >,
 	    CONT.KEY no_role_rel & [ LABEL #label ] ] ].
 
-act_subj_lt := linking_type &
+arg1_subj_lt := linking_type &
   [ LOCAL [ CAT.VAL.SUBJ < [ LOCAL local &
 				   [ CONT.INDEX #subjind & non_expl-ind,
 				     THROLE arg1 ] ] >,
-	    CONT.KEY act_rel & [ ACT #subjind ] ] ].
+	    CONT.KEY arg1_rel & [ ARG1 #subjind ] ] ].
 
 unacc_lt := linking_type &
   [ LOCAL [ CAT.VAL.SUBJ < [ LOCAL local & [ CONT.INDEX #subjind,
-					         THROLE arg1 ] ] >,
-	    CONT.KEY und_only_rel & [ UND #subjind ] ] ].
+					     THROLE arg1 ] ] >,
+	    CONT.KEY arg3_rel & [ ARG3 #subjind ] ] ].
 
-act_und_lt := act_subj_lt & 
+arg13_lt := arg1_subj_lt & 
   [ LOCAL [ CAT.VAL.COMPS < [ LOCAL local &
 					[ CONT.INDEX #objind & non_expl-ind,
                                           THROLE arg3 ] ], ... >,
-	    CONT.KEY act_und_rel & [ UND #objind ] ] ].
+	    CONT.KEY arg13_rel & [ ARG3 #objind ] ] ].
 
-trans_lt :< act_und_lt.
+trans_lt :< arg13_lt.
 
-act_und_h_lt := act_subj_lt & 
+arg14_lt := arg1_subj_lt & 
   [ LOCAL [ CAT.VAL.COMPS < [ LOCAL local &
 				     [ CONT [ KEY verb_aspect_rel,
 					      MESSAGE <! [ HANDEL #mhand ] !> ],
 				       THROLE arg3 ] ], ... >,
-	    CONT.KEY act_und_rel & [ UND #mhand ] ] ].
+	    CONT.KEY arg14_rel & [ ARG4 #mhand ] ] ].
 
 ; "suppose" which makes its KEY same as its complement's KEY
 ; - wouldn't need this if had defaults
 
-alt_act_und_h_lt := linking_type &
+alt_arg14_lt := linking_type &
   [ LOCAL [ CAT.VAL [ SUBJ < [ LOCAL local &
 				     [ CONT.INDEX #subjind & non_expl-ind,
 				       THROLE arg1 ] ] >,
@@ -438,8 +476,8 @@ alt_act_und_h_lt := linking_type &
 				      [ CONT [ KEY verb_aspect_rel,
 					       MESSAGE <! [ HANDEL #mhand ] !> ],
 					THROLE arg3 ] ], ... > ],
-	    CONT.ALTKEY act_und_rel & [ ACT #subjind,
-					UND #mhand ] ] ].
+	    CONT.ALTKEY arg14_rel & [ ARG1 #subjind,
+				      ARG4 #mhand ] ] ].
 
 ; Maybe only for main verb "have" (AAC internal comment moved)
 poss_lt := linking_type &         
@@ -449,43 +487,47 @@ poss_lt := linking_type &
 		      COMPS < [ LOCAL local &
 				      [ CONT.INDEX #objind & non_expl-ind,
 					THROLE arg3 ] ], ... > ],
-	    CONT.LISZT <! act_und_rel & 
-			[ ACT #subjind,
-			  UND #objind ] !> ] ].
+	    CONT.LISZT <! arg13_rel & 
+			[ ARG1 #subjind,
+			  ARG3 #objind ] !> ] ].
 
-expl_obj_lt := act_subj_lt &
+expl_obj_lt := arg1_subj_lt &
   [ LOCAL [ CAT.VAL.COMPS < [ LOCAL local &
 					[ CONT [ INDEX it-ind,
 						 KEY.LABEL #label ] ] ], ... >,
-	    CONT.KEY act_rel & [ LABEL #label ] ] ].
+	    CONT.KEY.LABEL #label ] ].
 
 expl_obj_cp_lt := expl_obj_lt &
   [ LOCAL [ CAT.VAL.COMPS < synsem, 
 			    [ LOCAL local &
 				      [ CONT.MESSAGE <! [ HANDEL #mhand ] !> ] ],
 			    ... >,
-	    CONT.KEY act_und_rel & [ UND #mhand ] ] ].
+	    CONT.KEY arg14_rel & [ ARG4 #mhand ] ] ].
 
-particle_cp_lt := act_subj_lt &
+particle_cp_lt := arg1_subj_lt &
   [ LOCAL [ CAT.VAL.COMPS < *top*, [ LOCAL local &
 				      [ CONT [ KEY verb_aspect_rel,
 					       MESSAGE <! [ HANDEL #mhand ] !> ],
 					THROLE arg3 ] ], ... >,
-	    CONT.KEY act_und_rel & [ UND #mhand ] ] ].  
+	    CONT.KEY arg14_rel & [ ARG4 #mhand ] ] ].  
 
-ditrans_lt := act_und_lt &
-  [ LOCAL [ CAT.VAL.COMPS < *top*, [ LOCAL local &
+ditrans_lt := arg1_subj_lt &
+  [ LOCAL [ CAT.VAL.COMPS < [ LOCAL local &
 					 [ CONT.INDEX #obj2ind & non_expl-ind,
-					   THROLE arg2 ] ], ... >,
-	    CONT.KEY act_und_thm_rel & [ THM #obj2ind ] ] ].
+					   THROLE arg2 ] ], 
+			    [ LOCAL local &
+					 [ CONT.INDEX #objind & non_expl-ind,
+					   THROLE arg3 ] ], ... >,
+	    CONT.KEY arg123_rel & [ ARG2 #obj2ind,
+				    ARG3 #objind ] ] ].
 
 tritrans_lt := ditrans_lt &
   [ LOCAL [ CAT.VAL.COMPS < *top*, *top*, [ LOCAL local &
 						  [ CONT.INDEX #obj3ind ] ],
 				... >,
-	    CONT.KEY act_und_thm_prop_rel & [ PROP #obj3ind ] ] ].
+	    CONT.KEY arg1234_rel & [ ARG4 #obj3ind ] ] ].
 
-prep_intrans_lt := act_subj_lt &
+prep_intrans_lt := arg1_subj_lt &
   [ LOCAL [ CAT.VAL.COMPS 
 			< [ LOCAL local &
 				  [ CONT.KEY prep_rel & [ ARG #index ] ] ],
@@ -494,63 +536,65 @@ prep_intrans_lt := act_subj_lt &
 		   KEY #key,
 		   LISZT <! #key !> ] ] ].
 
-empty_prep_intrans_lt := act_subj_lt &
+empty_prep_intrans_lt := arg1_subj_lt &
   [ LOCAL [ CAT.VAL.COMPS < [ LOCAL local &
-					[ CAT.HEAD.MOD no-mod,
-					  CONT.KEY prep_rel & 
-						   [ PREP #objind ],
+					[ CONT [ TOP #top,
+						 KEY prep_rel & 
+						     [ ARG3 #objind ] ],
 					  THROLE arg2 ] ], ... >,
-	    CONT.KEY act_prep_rel & [ PREPARG #objind ] ] ].
+	    CONT [ TOP #top,
+		   KEY arg13_rel & [ ARG3 #objind ] ] ] ].
 
 ; Argument coercion as in "Kim suggests on Friday"
-prep_intrans_event_lt := act_subj_lt &
+prep_intrans_event_lt := arg1_subj_lt &
   [ LOCAL [ CAT.VAL.COMPS 
 			 < [ LOCAL local &
 				   [ CONT.KEY prep_rel & [ ARG #event ],
 				     THROLE arg2 ] ], ... >,
-	    CONT [ KEY #key & act_und_rel & [ UND #event ],
+	    CONT [ KEY #key & arg12_rel & [ ARG2 #event ],
 		   LISZT <! #key !> ] ] ].
 
-prep_trans_lt := act_und_lt &
+prep_trans_lt := arg13_lt &
   [ LOCAL [ CAT.VAL.COMPS < *top*, 
 			    [ LOCAL local &
-				    [ CAT.HEAD.MOD local_min,
+				    [ CAT.HEAD.MOD < synsem_min >,
 				      CONT.KEY prep_rel & [ ARG #event ] ] ],
 			    ... >,
 	    CONT [ KEY #key,
 		   INDEX #event,
 		   LISZT <! #key !> ] ] ].
 
-empty_prep_trans_lt := act_und_lt &
+empty_prep_trans_lt := arg13_lt &
   [ LOCAL [ CAT.VAL.COMPS < *top*, [ LOCAL local &
-				     [ CAT.HEAD.MOD no-mod,
-				       CONT.KEY prep_rel &
-						[ PREP #objind ],
+				     [ CONT [ TOP #top,
+					      KEY prep_rel &
+						  [ ARG3 #objind ] ],
 				       THROLE arg2 ] ], ... >, 
-	    CONT.KEY act_und_prep_rel & [ PREPARG #objind ] ] ].
+	    CONT [ TOP #top,
+		   KEY arg123_rel & [ ARG2 #objind ] ] ] ].
 
-empty_prep_particle_intrans_lt := act_subj_lt &
+empty_prep_particle_intrans_lt := arg1_subj_lt &
   [ LOCAL [ CAT.VAL.COMPS < *top*, [ LOCAL local &
-					 [ CAT.HEAD.MOD no-mod,
-					   CONT.KEY prep_rel & 
+					 [ CONT.KEY prep_rel & 
                                                  [ ARG #event ] ] ], ... >,
-	    CONT.KEY act_rel & [ EVENT #event ] ] ].
+	    CONT.KEY arg1_rel & [ EVENT #event ] ] ].
 
-empty_prep_particle_trans_lt := act_und_lt &
+empty_prep_particle_trans_lt := arg13_lt &
   [ LOCAL [ CAT.VAL.COMPS < synsem, synsem, [ LOCAL local &
-					      [ CAT.HEAD.MOD no-mod,
-						CONT.KEY prep_rel &
-							 [ PREP #objind ],
+					      [ CONT [ TOP #top,
+						       KEY prep_rel &
+							   [ ARG3 #objind ] ],
 						THROLE arg2 ] ], ... >, 
-	    CONT.KEY act_und_prep_rel & [ PREPARG #objind ] ] ].
+	    CONT [ TOP #top,
+		   KEY arg123_rel & [ ARG2 #objind ] ] ] ].
 
-cp_trans_lt := act_und_lt &
+cp_trans_lt := arg13_lt &
   [ LOCAL [ CAT.VAL.COMPS < *top*, 
 			    [ LOCAL local &
 				 [ CONT [ KEY event_rel,
 					  MESSAGE <! [ HANDEL #mhand ] !> ] ] ], 
 			    ...>,
-	    CONT.KEY act_und_thm_rel & [ THM #mhand ] ] ].
+	    CONT.KEY arg134_rel & [ ARG4 #mhand ] ] ].
 
 ; "explain to Kim that ..."
 pp_cp_lt := empty_prep_intrans_lt &
@@ -559,9 +603,9 @@ pp_cp_lt := empty_prep_intrans_lt &
 				  [ CONT [ KEY event_rel,
 					   MESSAGE <! [ HANDEL #mhand ] !> ] ] ],
 			    ... >,
-	    CONT [ KEY act_und_prep_rel & [ UND #mhand ] ] ] ].
+	    CONT [ KEY arg134_rel & [ ARG4 #mhand ] ] ] ].
 
-double_pp_lt := act_subj_lt &
+double_pp_lt := arg1_subj_lt &
   [ LOCAL [ CAT.VAL.COMPS < [ LOCAL local &
 					[ CONT.KEY prep_rel &
 						   [ ARG #event ] ] ], 
@@ -578,7 +622,7 @@ s_equi_lt := linking_type &
   [ LOCAL [ CAT.VAL.SUBJ < [ LOCAL local &
 				   [ CONT.INDEX #index & non_expl-ind,
                                      THROLE arg1 ] ] >,
-	    CONT.KEY fig_gnd_rel & [ GND #index ] ] ].
+	    CONT.KEY arg14_rel & [ arg1 #index ] ] ].
 
 equi_prd_lt := linking_type & 
   [ LOCAL [ CAT.VAL.--KEYCOMP.LOCAL.CONT [ TOP #tophand,
@@ -590,7 +634,7 @@ equi_prd_lt := linking_type &
 			    [ HANDEL #hand,
 			      LABEL #label,
 			      EVENT #event & event ] !>,
-		   KEY.FIG #event,
+		   KEY.ARG4 #event,
 		   ALTKEY #altkey ] ] ].
 
 ; ERB (14-12-97) Subj_equi verbs now require that their complement have
@@ -613,7 +657,7 @@ subj_equi_lt := s_equi_lt &
 subj_equi_inf_lt := subj_equi_lt &
   [ LOCAL [ CAT.VAL.--KEYCOMP.LOCAL local &
 				    [ CONT.MESSAGE <! [ HANDEL #hand ] !> ],
-	    CONT.KEY.FIG #hand ] ].
+	    CONT.KEY.ARG4 #hand ] ].
 
 ; 'stay calm'
 subj_equi_prd_lt := equi_prd_lt & s_equi_lt &
@@ -634,7 +678,7 @@ subj_equi_prd_lt := equi_prd_lt & s_equi_lt &
 ; ERB (21-01-98) The pro_ss needs to be constrained to be unslashed.
 
 ; 'persuade Kim to leave'
-obj_equi_lt := act_subj_lt &
+obj_equi_lt := arg1_subj_lt &
   [ LOCAL [ CAT.VAL.COMPS < [ LOCAL local &
 				    [ CONT.INDEX #index & non_expl-ind,
 				      THROLE arg2 ] ],
@@ -643,23 +687,23 @@ obj_equi_lt := act_subj_lt &
 						 [ LOCAL.CONT.INDEX #index,
 						   NON-LOCAL.SLASH 0-dlist ] >,
 				  THROLE arg3 ] ] >,
-	    CONT.KEY act_fig_gnd_rel & [ GND #index ] ] ].
+	    CONT.KEY arg134_rel & [ ARG3 #index ] ] ].
 
 ; 'persuade Kim to leave'
 obj_equi_inf_lt := obj_equi_lt &
   [ LOCAL [ CAT.VAL.--KEYCOMP.LOCAL local &
 				    [ CONT.MESSAGE <! [ HANDEL #hand ] !> ],
-	    CONT.KEY.FIG #hand ] ].
+	    CONT.KEY.ARG4 #hand ] ].
 
-pp_inf_lt := act_subj_lt &
+pp_inf_lt := arg1_subj_lt &
  [ LOCAL [ CAT.VAL [ COMPS < [ LOCAL local &
-				     [ CONT.KEY.PREP #und,
+				     [ CONT.KEY.ARG3 #arg2,
 				       THROLE arg2 ] ],
 			     [ LOCAL local &
 				     [ CONT.TOP #hand,
 				       THROLE arg3 ] ] > ],
-	   CONT.KEY act_und_thm_rel & [ UND #und,
-					THM #hand ] ] ].
+	   CONT.KEY arg124_rel & [ ARG2 #arg2,
+				   ARG4 #hand ] ] ].
 
 ; 'consider Kim wise'
 
@@ -690,9 +734,9 @@ anom_equi_lt := s_equi_lt &
 						     [ CONT.INDEX #subjind ] ] >,
 				    CONT.MESSAGE <! [ HANDEL #hand ] !>,
 				    THROLE arg3 ] ] > ],
-	    CONT.KEY fig_gnd_und_rel &
-		     [ FIG #hand,
-		       UND #objind ] ] ].
+	    CONT.KEY arg134_rel &
+		     [ ARG4 #hand,
+		       ARG3 #objind ] ] ].
 
 ; 'turn out unreliable' (also resultatives like 'turned up drunk')
 anom_equi_prd_lt := equi_prd_lt & s_equi_lt &
@@ -708,7 +752,7 @@ anom_equi_prd_lt := equi_prd_lt & s_equi_lt &
 						      [ CONT.INDEX #index ] ] >,
 				    CONT.TOP #chand,
                                     THROLE arg3 ] ] > ],
-	    CONT.ALTKEY.ARG #chand ] ].
+	    CONT.ALTKEY.ARG4 #chand ] ].
 
 ; 'turn out to be red'
 anom_equi_particle_lt := s_equi_lt &
@@ -721,19 +765,19 @@ anom_equi_particle_lt := s_equi_lt &
 						     [ CONT.INDEX #index ] ] >,
 				    CONT.MESSAGE <! [ HANDEL #hand ] !>,
                                     THROLE arg3 ] ] > ],
-	    CONT.KEY.FIG #hand ] ].
+	    CONT.KEY.ARG4 #hand ] ].
 
 ssr_lt := linking_type &
   [ LOCAL.CONT.KEY support_rel ].
 
 basic_ssr_expr_lt := ssr_lt &
   [ LOCAL [ CAT.VAL.--KEYCOMP.LOCAL.CONT.TOP #hand,
-	    CONT.KEY.VARG #hand ] ].
+	    CONT.KEY.ARG4 #hand ] ].
 
 ssr_expr_lt := basic_ssr_expr_lt &
   [ LOCAL [ CAT.VAL [ --KEYCOMP #comp,
-		      COMPS < [ LOCAL.CONT.KEY.PREP #expr ], #comp, ... >],
-	    CONT.KEY.EXPR #expr ] ].
+		      COMPS < [ LOCAL.CONT.KEY.ARG3 #arg4 ], #comp, ... >],
+	    CONT.KEY.ARG4 #arg4 ] ].
 
 ssr_prdp_expr_lt := basic_ssr_expr_lt &
   [ LOCAL [ CAT.VAL [ --KEYCOMP #comp,
@@ -741,10 +785,10 @@ ssr_prdp_expr_lt := basic_ssr_expr_lt &
 			      [ LOCAL.CONT.KEY [ HANDEL #chand,
 						 LABEL #label ] ],
 			      [ LOCAL.CONT.KEY _to_rel &
-					       [ PREP #expr ] ], 
+					       [ ARG3 #arg2 ] ], 
 			      ... > ],
 	    CONT [ INDEX #ind,
-		   KEY #key & [ EXPR #expr & non_expl-ind ],
+		   KEY #key & [ ARG2 #arg2 & non_expl-ind ],
 		   LISZT <! #key,
 			    support_rel &
 			    [ HANDEL #chand,
@@ -760,92 +804,96 @@ sor_lt := linking_type &
 			      [ LOCAL local &
 				      [ CONT.TOP #hand,
 					THROLE arg3 ] ] > ],
-	    CONT.KEY fig_gnd_rel & [ FIG #hand,
-				     GND #index ] ] ].
+	    CONT.KEY arg14_rel & [ ARG4 #hand,
+				   ARG1 #index ] ] ].
 
 expl_it_subj_lt := linking_type &
   [ LOCAL [ CAT.VAL [ SUBJ < [ LOCAL local & [ CONT [ INDEX it-ind,
 						      KEY.HANDEL #hand ] ] ] >,
 		      COMPS < [ LOCAL local &
-				      [ CONT.KEY.PREP #expr ] ], #comp, ... >,
+				      [ CONT.KEY.ARG3 #arg4 ] ], #comp, ... >,
 		      --KEYCOMP #comp & 
 			   [ LOCAL local &
 				   [ CONT.MESSAGE <! [ HANDEL #hand ] !> ] ] ],
-	    CONT.KEY support_expr_rel &
+	    CONT.KEY support_arg4_rel &
 		[ HANDEL #hand,
-		  EXPR #expr ] ] ].
+		  ARG4 #arg4 ] ] ].
 
 expl_prep_trans_lt := linking_type &
  [ LOCAL [ CAT.VAL [ SUBJ < [ LOCAL local &
 				    [ CONT [ INDEX it-ind,
 					     KEY.LABEL #label ] ] ] >,
 		     COMPS < [ LOCAL local &
-				     [ CONT.INDEX #und,
+				     [ CONT.INDEX #arg2,
 				       THROLE arg3 ] ],
 			     [ LOCAL local &
 				     [ CONT [ KEY prep_rel & 
 						  [ HANDEL #hand,
 						    ARG #index,
-						    PREP #act ] ],
+						    ARG3 #arg1 ] ],
 				       THROLE arg1 ] ], ...> ],
 	   CONT [ INDEX #index,
-		  KEY act_und_rel & [ HANDEL #hand,
+		  KEY arg13_rel & [ HANDEL #hand,
 				      LABEL #label,
-				      ACT #act,
-				      UND #und ] ] ] ].
+				      ARG1 #arg1,
+				      ARG3 #arg2 ] ] ] ].
 
-expl_pp_inf_lt := act_subj_lt &
+expl_pp_inf_lt := arg1_subj_lt &
  [ LOCAL [ CAT.VAL [ COMPS < [ LOCAL local &
 				     [ CONT [ INDEX it-ind,
 					      KEY.LABEL #label ] ] ],
 			     [ LOCAL local &
-				     [ CONT.KEY.PREP #und,
+				     [ CONT.KEY.ARG3 #arg2,
 				       THROLE arg2 ] ],
 			     [ LOCAL local &
 				     [ CONT.TOP #hand,
 				       THROLE arg3 ] ] > ],
-	   CONT.KEY act_und_thm_rel & [ LABEL #label,
-					UND #und,
-					THM #hand ] ] ].
+	   CONT.KEY arg124_rel & [ LABEL #label,
+				   ARG2 #arg2,
+				   ARG4 #hand ] ] ].
 
 ; 'leave it to Kim to find the answer'
 expl_pp_inf_oeq_lt := expl_pp_inf_lt &
  [ LOCAL.CAT.VAL.COMPS < *top*,
-			 [ LOCAL.CONT.KEY.PREP #und ],
-			 [ LOCAL.CONT.KEY act_rel & [ ACT #und ] ] > ].
+			 [ LOCAL.CONT.KEY.ARG3 #arg3 ],
+			 [ LOCAL.CONT.KEY arg1_rel & [ ARG1 #arg3 ] ] > ].
 
 ; 'arrange with Kim to meet her'
 pp_inf_seq_lt := pp_inf_lt &
  [ LOCAL.CAT.VAL [ SUBJ < [ LOCAL local &
-				  [ CONT.INDEX #act ] ] >,
+				  [ CONT.INDEX #arg1 ] ] >,
 		   COMPS < *top*,
-			   [ LOCAL.CONT.KEY act_rel & [ ACT #act ] ] > ] ].
+			   [ LOCAL.CONT.KEY arg1_rel & [ ARG1 #arg1 ] ] > ] ].
 
 ; 'arrange it with Kim to meet her'
 expl_pp_inf_seq_lt := expl_pp_inf_lt &
  [ LOCAL.CAT.VAL [ SUBJ < [ LOCAL local &
-				  [ CONT.INDEX #act ] ] >,
+				  [ CONT.INDEX #arg1 ] ] >,
 		   COMPS < *top*,
 			   *top*,
-			   [ LOCAL.CONT.KEY act_rel & [ ACT #act ] ] > ] ].
+			   [ LOCAL.CONT.KEY arg1_rel & [ ARG1 #arg1 ] ] > ] ].
 
 ; suffice
 atrans_inf_lt := linking_type &
   [ LOCAL [ CAT.VAL.COMPS < [ LOCAL local &
 				    [ CONT.TOP #hand ] ] >,
-	    CONT.KEY fig_gnd_rel & [ FIG #hand ] ] ].
+	    CONT.KEY arg14_rel & [ ARG4 #hand ] ] ].
 
-particle_NP_lt := act_subj_lt & 
-  [ LOCAL [ CAT.VAL.COMPS < *top*, [ LOCAL local &
-				     [ CONT.INDEX #index & non_expl-ind,
-				       THROLE arg3 ] ] >,
-	    CONT.KEY act_und_rel & [ UND #index ] ] ].
+particle_NP_lt := arg1_subj_lt & 
+  [ LOCAL [ CAT.VAL.COMPS < [ LOCAL.CONT.TOP #top ], 
+			    [ LOCAL local &
+				    [ CONT.INDEX #index & non_expl-ind,
+				      THROLE arg3 ] ] >,
+	    CONT [ TOP #top,
+		   KEY arg13_rel & [ ARG3 #index ] ] ] ].
 
-NP_particle_lt := act_subj_lt & 
+NP_particle_lt := arg1_subj_lt & 
   [ LOCAL [ CAT.VAL.COMPS < [ LOCAL local &
 				    [ CONT.INDEX #index & non_expl-ind,
-				      THROLE arg3 ] ], ... >,
-	    CONT.KEY act_und_rel & [ UND #index ] ] ].
+				      THROLE arg3 ] ], 
+			    [ LOCAL.CONT.TOP #top ], ... >,
+	    CONT [ TOP #top,
+		   KEY arg13_rel & [ ARG3 #index ] ] ] ].
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Val Types
@@ -856,7 +904,7 @@ NP_particle_lt := act_subj_lt &
 valence_type :< lex_synsem.
 
 unsat_subst := valence_type &
-  [ LOCAL.CAT.VAL.SUBJ < @nomp( ) > ].
+  [ LOCAL.CAT.VAL.SUBJ < @nomp() > ].
 
 intrans_subst := unsat_subst & one_arg &
   [ LOCAL.CAT.VAL.COMPS < > ].
@@ -871,14 +919,14 @@ two_arg_subst := unsat_two_arg_subst &
 
 ; For verbs that passivize.
 trans_subst := unsat_subst &
-  [ LOCAL.CAT.VAL.COMPS < @nomp($case=acc), ... > ].
+  [ LOCAL.CAT.VAL.COMPS < @nomp_acc(), ... > ].
   
 np_trans_subst := trans_subst & two_arg_subst & two_arg &
   [ LOCAL.CAT.VAL.COMPS < synsem > ].
   
 ; For verbs with NP complement but that don't passivize.
 non_trans_subst := unsat_two_arg_subst &
-  [ LOCAL.CAT.VAL.COMPS < @nomp($case=acc), ... > ].
+  [ LOCAL.CAT.VAL.COMPS < @nomp_acc(), ... > ].
   
 np_non_trans_subst := non_trans_subst & two_arg_subst & 
   [ LOCAL.CAT.VAL.COMPS < synsem > ].
@@ -909,24 +957,24 @@ three_arg_raising_subst := unsat_three_arg_subst & three_arg_raising.
 three_arg_trans_subst := unsat_three_arg_subst & three_arg & trans_subst.
 
 prep_trans_subst := three_arg_trans_subst & 
-  [ LOCAL.CAT.VAL.COMPS < @nomp($case=acc), @pp() > ].
+  [ LOCAL.CAT.VAL.COMPS < @nomp_acc(), @pp() > ].
   
 prep_non_trans_subst := three_arg_trans_subst & 
-  [ LOCAL.CAT.VAL.COMPS < @nomp($case=acc) & lex_synsem, @pp() > ].
+  [ LOCAL.CAT.VAL.COMPS < @nomp_acc() & lex_synsem, @pp() > ].
   
 prd_trans_subst := three_arg_trans_subst & 
-  [ LOCAL.CAT.VAL.COMPS < @nomp($case=acc), @prd() > ].
+  [ LOCAL.CAT.VAL.COMPS < @nomp_acc(), @prd() > ].
 
 prd_non_trans_subst := three_arg_subst & non_trans_subst &
-  [ LOCAL.CAT.VAL.COMPS < @nomp($case=acc), @prd() > ].
+  [ LOCAL.CAT.VAL.COMPS < @nomp_acc(), @prd() > ].
 
 ditrans_subst := three_arg_trans_subst & 
-  [ LOCAL.CAT.VAL.COMPS < @nomp($case=acc), @nomp($case=acc) > ].
+  [ LOCAL.CAT.VAL.COMPS < @nomp_acc(), @nomp_acc() > ].
   
 ; 'inform Kim that S'
 cp_trans_subst := three_arg_trans_subst &
   [ LOCAL.CAT.VAL [ --KEYCOMP #comp,
-		    COMPS < @nomp($case=acc),
+		    COMPS < @nomp_acc(),
 			    #comp & @cp($vform=fin) > ] ]. 
   
 pp_cp_subst := three_arg_subst &
@@ -935,7 +983,7 @@ pp_cp_subst := three_arg_subst &
 			    #comp & @cp($vform=fin) > ] ].
   
 np_comp_subst := three_arg_trans_subst & 
-  [ LOCAL.CAT.VAL.COMPS < @nomp($case=acc),
+  [ LOCAL.CAT.VAL.COMPS < @nomp_acc(),
 			  [ LOCAL local &
 				 [ CAT [ HEAD prep,
 					 VAL [ SUBJ < synsem >,
@@ -1005,7 +1053,7 @@ ssr_pp_inf_subst :=  three_arg_raising_subst &
 	   [ SUBJ < [ LOCAL.CONT #subj ] >,
 	     COMPS < @pp(),
 		     [ LOCAL local &
-			     [ CAT [ HEAD verbal & strict_head &
+			     [ CAT [ HEAD verbal & strict_type &
 					  [ VFORM inf ],
 				     VAL [ SUBJ < [ LOCAL.CONT #subj,
 						    NON-LOCAL [ SLASH 0-dlist,
@@ -1084,8 +1132,7 @@ sor_inf_non_trans_subst := inf_non_trans_subst &
 particle_subst := unsat_two_arg_subst &
   [ LOCAL [ CAT.VAL.COMPS 
            < lex_synsem & [ LOCAL local &
-				  [ CAT.HEAD particle & [ PRD -,
-							  MOD no-mod ],
+				  [ CAT.HEAD.PRD -,
 				    CONT [ H-STORE <! !>,
 					   KEY.LABEL #label ] ],
 			    NON-LOCAL [ SLASH 0-dlist,
@@ -1095,14 +1142,13 @@ particle_subst := unsat_two_arg_subst &
 
 particle_NP_subst := particle_subst & three_arg &
   [ LOCAL.CAT.VAL.COMPS < lex_synsem,
-			  @nomp($case=acc) > ].
+			  @nomp_acc() > ].
 
 generic_NP_particle_subst := unsat_subst & 
-  [ LOCAL [ CAT.VAL.COMPS < @nomp($case=acc),
+  [ LOCAL [ CAT.VAL.COMPS < @nomp_acc(),
 			    lex_synsem &
 			    [ LOCAL local &
-				    [ CAT [ HEAD particle & [ PRD -,
-							      MOD no-mod ] ],
+				    [ CAT [ HEAD.PRD - ],
 				      CONT.KEY #ckey & [ LABEL #label ] ],
 			      NON-LOCAL [ SLASH 0-dlist,
 					  REL 0-dlist,
@@ -1159,14 +1205,14 @@ particle_np_pp_subst := generic_NP_particle_subst & four_arg &
 
 np_np_cp_subst := unsat_four_arg_subst & trans_subst & four_arg &
   [ LOCAL.CAT.VAL [ --KEYCOMP #comp,
-		    COMPS < @nomp($case=acc),
-			    @nomp($case=acc),
+		    COMPS < @nomp_acc(),
+			    @nomp_acc(),
 			    #comp & @cp($vform=fin) &
 			    [ NON-LOCAL.SLASH 0-dlist ] > ] ].
 
 ; E.g., "I'm not doing too badly"
 
-adv_subst := unsat_two_arg_subst & topkey &
+adv_subst := unsat_two_arg_subst &
   [ LOCAL [ CAT.VAL.COMPS < lex_synsem & [ LOCAL local &
 						 [ CAT.HEAD adv,
 						   CONT [ KEY adv_rel &
@@ -1182,8 +1228,8 @@ adv_subst := unsat_two_arg_subst & topkey &
 ;;
 ;; Verb synsems should inherit from one valence type and one linking type.
 ;; The type verb_synsem is given a non-empty SPR value so VPs can be modified
-;; by PPs, but the synsem is marked [ LOCAL.CONT.KEY no_rel ] to block 
-;; unification, to avoid ever picking up an actual specifier.
+;; by PPs, but (hack) the synsem is of type anti_synsem to block unification, to
+;; avoid ever picking up an actual specifier.
 ;;   Added VIT links for the moment, to satisfy VIT requirements for visibility
 ;; of TENSE and MOOD information.  (Actually, moved VITTENSE specification to
 ;; the various inflectional affixes in lexrules.tdl, to accommodate the collapse
@@ -1200,7 +1246,7 @@ verb_synsem := lex_synsem &
 		  VAL [ SUBJ < synsem & #subj &
 			       [ LOCAL local &
 				       [ AGR #agr ] ] >,
-			SPR < synsem & [ LOCAL.CONT.KEY no_rel ] >,
+			SPR < anti_synsem >,
 			COMPS #comps ] ],
 	    CONT.INDEX.VIT.VITMOOD #vitmood,
 	    ARG-S < #subj . #comps > ],
@@ -1209,13 +1255,13 @@ verb_synsem := lex_synsem &
 
 atrans_verb := verb_synsem & intrans_subst & atrans_lt.
 
-unerg_verb := verb_synsem & intrans_subst & act_subj_lt.
+unerg_verb := verb_synsem & intrans_subst & arg1_subj_lt.
   
 unacc_verb := verb_synsem & intrans_subst & unacc_lt.
   
 ; For at least main verb "have" (e.g, "Kim has some rice")
 poss_verb := verb_synsem & two_arg_subst & two_arg & poss_lt &
-  [ LOCAL.CAT.VAL.COMPS < @nomp($case=acc) > ].
+  [ LOCAL.CAT.VAL.COMPS < @nomp_acc() > ].
   
 np_trans_verb := verb_synsem & np_trans_subst & trans_lt.
   
@@ -1263,8 +1309,8 @@ np_comp_verb := verb_synsem & np_comp_subst & obj_equi_lt.
 np_comp_obj_verb := verb_synsem & np_comp_subst & 
   [ LOCAL [ CAT.VAL.COMPS < [ LOCAL.CONT.INDEX #index ],
 			    [ LOCAL.CONT.INDEX #event ] >,
-	    CONT.KEY fig_gnd_rel & [ FIG #event,
-				     GND #index ] ] ].
+	    CONT.KEY arg13_rel & [ ARG3 #event,
+				   ARG1 #index ] ] ].
 
 to_trans_verb := empty_prep_trans_verb &
   [ LOCAL.CONT.OCOMPKEY _to_rel ].
@@ -1284,12 +1330,12 @@ double_pp_verb := verb_synsem & double_pp_subst & double_pp_lt.
 
 ssr_verb := verb_synsem & ssr_inf_subst & two_arg_raising & ssr_lt &
   [ LOCAL [ CAT.VAL.--KEYCOMP.LOCAL.CONT.TOP #hand,
-	    CONT.KEY.VARG #hand ] ].
+	    CONT.KEY.ARG4 #hand ] ].
 
 ssr_prd_verb := verb_synsem & ssr_two_arg_raising_subst & ssr_lt &
   [ LOCAL [ CAT.VAL [ COMPS < @prd() & #comp >,
 		      --KEYCOMP #comp & [ LOCAL.CONT.TOP #hand ] ],
-	    CONT [ KEY #key & [ VARG #hand ],
+	    CONT [ KEY #key & [ ARG4 #hand ],
 		   LISZT <! #key !> ] ] ].
 
 ssr_pp_inf_verb := verb_synsem & ssr_pp_inf_subst & ssr_expr_lt.
@@ -1344,7 +1390,7 @@ anom_equi_prd_verb := verb_synsem & prd_trans_subst & anom_equi_prd_lt.
 cp_prop+ques_verb := verb_synsem &
   [ LOCAL [ CAT.VAL [ --KEYCOMP 
 			  [ LOCAL local &
-				  [ CAT [ HEAD verbal & strict_head &
+				  [ CAT [ HEAD verbal & strict_type &
 					       [ INV - ] ],
 				    CONT [ TOP #hand,
 					   MESSAGE <! prop_ques_rel &
@@ -1357,7 +1403,7 @@ fin_cp_prop+ques_verb := cp_prop+ques_verb &
 ;; DPF 4/21/98 - Moved [ COMPS.FIRST.LOCAL.CAT.MC - ] from cp_ques_intrans_verb
 ;; to cp_intrans_verb, to block spurious parse for e.g. "Kim knows who left"
 cp_intrans_verb := fin_cp_prop+ques_verb & cp_intrans_subst & two_arg &
-		   act_und_h_lt &
+		   arg14_lt &
   [ LOCAL.CAT.VAL.COMPS < [ LOCAL.CAT.MC - ] > ].
 
 cp_prop_intrans_verb := cp_intrans_verb &
@@ -1368,7 +1414,7 @@ cp_ques_intrans_verb := cp_intrans_verb &
 
 ;; suppose
 cp_prop_raise_key_verb := fin_cp_prop+ques_verb & cp_intrans_subst & two_arg &
-			  alt_act_und_h_lt &
+			  alt_arg14_lt &
   [ LOCAL [ CAT.VAL.COMPS < [ LOCAL.CONT [ KEY #key,
 					   MESSAGE <! propositional_rel !> ] ] >,
 	    CONT [ KEY #key & mod_role_rel,
@@ -1434,7 +1480,7 @@ expl_prep_trans_verb := verb_synsem & non_trans_subst &
 			expl_prep_trans_lt & three_arg_subst &
   [ LOCAL.CAT.VAL.COMPS < *top*, @pp() > ].
 
-particle_verb := verb_synsem & particle_subst & act_subj_lt & two_arg &
+particle_verb := verb_synsem & particle_subst & arg1_subj_lt & two_arg &
   [ LOCAL.CAT.VAL.COMPS < *top* > ].
 
 particle_NP_verb := verb_synsem & particle_NP_subst & particle_NP_lt.
@@ -1451,7 +1497,7 @@ particle_np_pp_verb := verb_synsem & particle_np_pp_subst & empty_prep_particle_
 ; prefer it if ...
 expl_obj_cp_verb := fin_cp_prop+ques_verb & cp_trans_subst & expl_obj_cp_lt.
 
-adv_verb := verb_synsem & adv_subst & act_subj_lt & two_arg &
+adv_verb := verb_synsem & adv_subst & arg1_subj_lt & two_arg &
   [ LOCAL [ CAT.VAL.COMPS < *top* >,
 	    CONT [ LISZT.LIST < #key, ... >,
 		   KEY #key ] ] ].
@@ -1486,13 +1532,13 @@ main_verb := main_verb_sans_key & topkey &
 ; select for.  Also, AUX verbs optionally take a neg (post-head) specifier.
 
 aux_verb := verb_synsem &
-  [ LOCAL [ CAT [ HEAD.TENSE #vittense,
-		  VAL [ --KEYCOMP #comp,
-			COMPS < #comp, ... > ] ],
+  [ LOCAL [ CAT.HEAD.TENSE #vittense,
 	    CONT.INDEX.VIT.VITTENSE #vittense ] ].
 		
 aux_verb_ssr := aux_verb & ssr_subst & basic_two_arg &
   [ LOCAL [ ARG-S < synsem, [ LOCAL.CONT.H-STORE #hstore ] >,
+	    CAT.VAL [ --KEYCOMP #comp,
+		      COMPS < #comp, ... > ],
 	    CONT.H-STORE #hstore ] ].
 
 aux_verb_ssr_two_arg := aux_verb_ssr & basic_two_arg_raising.
@@ -1503,7 +1549,7 @@ aux_verb_word_super := mcna & nonconj & nonmsg & hc-to-phr &
 aux_verb_word := aux_verb_word_super &
   [ SYNSEM.LOCAL.CAT.HEAD.AUX +* ].
 
-bse_aux_verb_word := aux_verb_word & 
+bse_aux_verb_word := aux_verb_word & non_affix_bearing &
   [ SYNSEM.LOCAL local &
 		 [ CAT [ VAL [ SUBJ < [ OPT - ] >,
 			       COMPS < @vp($vform=bse) &
@@ -1511,7 +1557,8 @@ bse_aux_verb_word := aux_verb_word &
 					       [ CAT.HEAD.PRD - ],
 					 OPT - ] > ],
 			 HEAD [ VFORM fin,
-				MOD intersective_mod & @nbar() ] ] ] ].
+				MOD < [ LOCAL intersective_mod &
+					      [ CAT nbar_cat ] ] > ] ] ] ].
 
 ;; ought, going
 inf_aux_verb_word := aux_verb_word_super &
@@ -1563,13 +1610,13 @@ generic_modal_verb_word := aux_verb_word_super &
 	   [ LOCAL [ CAT.VAL.--KEYCOMP.LOCAL.CONT.TOP #hand,
 		     CONT [ INDEX #event,
 			    KEY [ EVENT #event,
-				  VARG #hand ] ] ] ],
+				  ARG4 #hand ] ] ] ],
     ARGS < [ AFFIX no-affix ] , ... > ].
 
 fin_modal_verb_word := generic_modal_verb_word &
   [ SYNSEM.LOCAL [ CAT [ HEAD [ PRD -,
 				VFORM fin ],
-			 VAL.SUBJ < @nomp($case=nom) &
+			 VAL.SUBJ < @nomp_nom() &
 				    [ OPT - ] > ],
 		   CONT psoa ] ].
 
@@ -1586,6 +1633,15 @@ pos_modal_verb_word := modal_verb_word & topkey &
 		   CONT [ KEY #key,
 			  LISZT <! #key !>,
 			  H-CONS <! is-one-of, leq !> ] ] ].
+
+will_verb_word := fin_modal_verb_word & bse_aux_verb_word &
+  [ SYNSEM.LOCAL.CAT.HEAD.TENSE future* ].
+pos_will_verb_word := will_verb_word & topkey &
+  [ SYNSEM.LOCAL [ CAT.HEAD.AUX +*,
+		   CONT [ KEY #key,
+			  LISZT <! #key !>,
+			  H-CONS <! is-one-of, leq !> ] ] ].
+
 
 ought_verb_word := pres_modal_verb_word & inf_aux_verb_word.
 pos_ought_verb_word := ought_verb_word & topkey &
@@ -1612,8 +1668,9 @@ quasimodal_word := inf_aux_verb_word & topkey &
 				     ARG #hand ] !> ] ] ] ]. 
 |#
 
+#|
 quasimodal_word := inf_aux_verb_word &
-  [ SYNSEM [ LOCAL [ CAT [ HEAD.MOD no-mod,
+  [ SYNSEM [ LOCAL [ CAT [ HEAD.MOD < >,
 			   VAL.COMPS.FIRST.LOCAL.CONT [ TOP #hand,
 							INDEX #event,
 							KEY [ HANDEL #khand,
@@ -1624,6 +1681,14 @@ quasimodal_word := inf_aux_verb_word &
 				  LABEL #label ],
 			    LISZT <! !>,
 			    H-CONS <! !> ] ] ] ]. 
+|#
+
+quasimodal_word := generic_modal_verb_word & inf_aux_verb_word &
+  [ SYNSEM [ LOCAL [ CAT [ HEAD.MOD < >,
+			   VAL [ SUBJ < @nomp_nom() > ] ],
+		     CONT [ KEY #key,
+			    LISZT <! #key !>,
+			    H-CONS <! is-one-of, leq !> ] ] ] ].
 
 contracted_aux_word := word &
   [ SYNSEM.LOCAL.CAT.VAL.COMPS.FIRST.NON-LOCAL.SLASH 0-dlist ].
@@ -1749,8 +1814,8 @@ common_noun_ppcomp_synsem := common_noun_synsem & two_arg &
 				    [ CAT [ HEAD prep & [ PRD - ],
 					    VAL.COMPS *olist* ],
 				      CONT.KEY #ckey & 
-					  [ PREP #index ] ] ] >,
-	    CONT [ KEY.NPREP #index,
+					  [ ARG3 #index ] ] ] >,
+	    CONT [ KEY.ARG3 #index,
 		   COMPKEY #ckey ] ] ].
 
 noun_ppcomp_synsem := common_noun_ppcomp_synsem & nonpro_nomod_synsem &
@@ -1766,7 +1831,7 @@ temp_noun_ppcomp_synsem := common_noun_ppcomp_synsem & temp_mod_synsem &
 
 ; For e.g. "hotel" as in "the hotel Marriott" or "the Marriott hotel Hannover"
 common_noun_npcomp_synsem := common_noun_synsem & two_arg & nomod_synsem &
-  [ LOCAL [ CAT.VAL.COMPS < @nomp($case=acc) &
+  [ LOCAL [ CAT.VAL.COMPS < @nomp_acc() &
 			    [ LOCAL.CONT.KEY.INST #cindex,
 			      OPT - ] >,
 	    CONT [ INDEX #index,
@@ -1796,7 +1861,7 @@ scoping_noun_synsem := common_noun_synsem & nonpro_nomod_synsem & two_arg &
   [ LOCAL [ CAT.VAL.--KEYCOMP [ LOCAL.CONT [ TOP #chand,
 					     MESSAGE <! [ HANDEL #mhand,
 							  SOA #chand ] !> ] ],
-	    CONT.KEY hcomp_nom_rel & [ NOMARG #mhand ] ] ].
+	    CONT.KEY hcomp_nom_rel & [ ARG3 #mhand ] ] ].
 		   
 common_noun_vpcomp_synsem := scoping_noun_synsem &
   [ LOCAL [ CAT.VAL [ --KEYCOMP #comp,
@@ -1817,7 +1882,7 @@ common_noun_vpcomp_synsem := scoping_noun_synsem &
 common_noun_cpcomp_synsem := scoping_noun_synsem &
   [ LOCAL [ CAT.VAL [ --KEYCOMP #comp,
 		      COMPS < #comp & @cp($vform=fin) & 
-			      [ LOCAL.CAT.HEAD comp & strict_head,
+			      [ LOCAL.CAT.HEAD comp & strict_type,
 				OPT - ] > ],
 	    CONT.LISZT <! relation !> ] ].
 
@@ -1827,7 +1892,7 @@ mass_noun_synsem := noun_nocomp_synsem &
 		 LISZT <! relation !> ] ].
 
 ; One of the relations in LISZT is the support relation nominalize_rel 
-; which is a subtype of nom_rel, but also introduces the NOMARG attribute 
+; which is a subtype of nom_rel, but also introduces the ARG3 attribute 
 ; for the handle of the verbal relation.  The other rel is the verbal relation.
 
 deverbal_noun_synsem := common_noun_synsem & nonpro_nomod_synsem &
@@ -1925,21 +1990,23 @@ partitive_noun_synsem := noun_synsem &
 						VAL.COMPS *olist* ],
 					  CONT.KEY #ckey & _of_rel &
 					      [ HANDEL #phand, 
-						PREP #cind ] ],
+						ARG3 #cind ] ],
 				  NON-LOCAL.SLASH 0-dlist,
 				  OPT + ] > ],
 		  HEAD [ PRD +,
-			 MOD no-mod ] ],
+			 MOD < > ] ],
 	    CONT [ TOP #phand,
 		   INDEX #index,
 		   KEY #key,
 		   ALTKEY #altkey,
-		   LISZT <! part_of_rel & #key & [ HANDEL #phand,
-						   INST #index,
-						   NPREP #cind ],
-			    quant_or_wh_rel & #altkey & [ HANDEL #hand,
-							  BV #index,
-							  RESTR #phand ] !>,
+		   LISZT.LIST < part_of_rel & #key & 
+				[ HANDEL #phand,
+				  INST #index,
+				  ARG3 #cind ],
+				quant_or_wh_rel & #altkey & 
+				[ HANDEL #hand,
+				  BV #index,
+				  RESTR #phand ], ... >,
 		   COMPKEY #ckey ] ] ].
 
 basic_intr_noun_word := hcons_amalg_word & basic_affix_bearing &
@@ -1994,7 +2061,7 @@ noun_cpcomp_word := hcons_amalg_word & affix_bearing &
 
 noun_npcomp_word := hc_word & affix_bearing &
   [ SYNSEM common_noun_npcomp_synsem &
-	   [ LOCAL.CAT.HCTYPE lex_synsem ] ].
+	   [ LOCAL.CAT.HC-LEX + ] ].
 
 numadj_noun_word := hcons_amalg_word & non_affix_bearing &
   [ SYNSEM numadj_noun_synsem ].
@@ -2027,7 +2094,8 @@ plur_noun_word := hcons_amalg_word & non_affix_bearing &
 
 part_noun_word := que_word &
   [ SYNSEM partitive_noun_synsem &
-	   [ NON-LOCAL.QUE 0-dlist ] ].
+	   [ LOCAL.CONT.LISZT <! relation, relation !>,
+	     NON-LOCAL.QUE 0-dlist ] ].
 
 ;;
 ;; Lexical NPs
@@ -2169,7 +2237,7 @@ expletive_there_word := nontopkey & non_affix_bearing &
 free_rel_pro_word := norm_no_affix_word &
   [ SYNSEM synsem &
 	   [ LOCAL [ CAT [ HEAD noun &
-				[ MOD no-mod ],
+				[ MOD < > ],
 			   VAL [ SPR < >,
 				 SUBJ < >,
 				 COMPS < #comp & synsem &
@@ -2217,7 +2285,7 @@ free_rel_pro_word := norm_no_affix_word &
 
 free_rel_pro_np_gap_word := free_rel_pro_word &
   [ SYNSEM.LOCAL.CAT.VAL.COMPS.FIRST.NON-LOCAL.SLASH.LIST.FIRST.CAT.HEAD noun &
-								[ MOD no-mod ] ].
+								[ MOD < > ] ].
 
 free_rel_pro_pp_gap_word := free_rel_pro_word &
   [ SYNSEM.LOCAL.CAT.VAL.COMPS.FIRST.NON-LOCAL.SLASH.LIST.FIRST.CAT.HEAD prep ].
@@ -2303,38 +2371,44 @@ deictic_pro_word := norm_no_affix_word &
 
 ; ERB (05-10-97) Making this specific to question auxes.  See notes near sai
 ; in syntax.tdl.
+; DPF (10-Jan-99) Added SUBJ < anti_synsem > which never unifies with real
+; synsem, in order to allow adjunct extraction to apply to inverted sentences
+; such as "When is Kim happy" but not to non-inverted sentences, since the
+; latter results in lots of spurious ambiguity.
 
 sai_synsem := lex_synsem &
   [ LOCAL [ CAT [ HEAD verb* & [ INV +,
 				 AUX +* ],
-		  VAL [ SUBJ < >,
+		  VAL [ SUBJ < anti_synsem >,
 			COMPS #comps & < [ NON-LOCAL.SLASH 0-dlist ], ... > ],
 		  MC + ],
-	    CONT mrs &
+	    CONT basicmrs &
 		[ MESSAGE <! int_rel !> ],
 	    ARG-S #comps ] ].
 
+
+;; For AAC 14-Jan-99 - try with example "Sara sleeps doesn't she" then test
+;; unification of the SAILR edge (for doesn't) with the lexical rule TAGLR.
+
+#|
 tag_synsem := lex_synsem &
   [ LOCAL [ CAT [ HEAD verb &
 		       [ AUX -,
 			 INV -,
 			 TENSE #tense,
-			 MOD intersective_mod &
-			     [ CAT [ HEAD verb &
-					  [ VFORM fin,
-					    TENSE #tense ],
-				     VAL [ SUBJ < >,
-					   COMPS *olist* ],
-				     MC + ],
-			       AGR #agr &
-				   [ PNG png & [ GEN strict_gen,
-						 PN strict_pn ] ],
-			       CONT [ TOP #hand,
-				      INDEX #ind,
-				      KEY #key &
-					  [ LABEL #label ],
-				      MESSAGE <! #presup & prpstn_rel &
-					       [ SOA #hand ] !> ] ] ],
+			 MOD < [ LOCAL intersective_mod &
+				       [ CAT s_cat &
+					     [ HEAD [ VFORM fin,
+						      TENSE #tense ] ],
+					 AGR #agr &
+					     [ PNG png & [ GEN strict_sort,
+							   PN strict_sort ] ],
+					 CONT [ TOP #hand,
+						INDEX #ind,
+						KEY #key &
+						    [ LABEL #label ],
+						MESSAGE <! #presup & prpstn_rel &
+							[ SOA #hand ] !> ] ] ]>],
 		  POSTHEAD +,
 		  VAL [ SUBJ < >,
 			SPR < >,
@@ -2352,6 +2426,43 @@ tag_synsem := lex_synsem &
 			    [ PARAMS <! !> ] !>,
 		   LISZT <! !> ],
 	    CTXT.PRESUP <! #presup !> ] ].
+|#
+
+tag_synsem := lex_synsem &
+  [ LOCAL [ CAT [ HEAD verb &
+		       [ AUX -,
+			 INV -,
+			 TENSE #tense,
+			 MOD < [ LOCAL intersective_mod &
+				       [ CAT s_cat &
+					     [ HEAD [ VFORM fin,
+						      TENSE #tense ] ],
+					 AGR #agr &
+					     [ PNG png & [ GEN strict_sort,
+							   PN strict_sort ] ],
+					 CONT [ TOP #hand,
+						INDEX #ind,
+						KEY #key &
+						    [ LABEL #label ],
+						MESSAGE <! #presup & prpstn_rel &
+							[ SOA #hand ] !> ] ] ]>],
+		  POSTHEAD +,
+		  VAL [ SUBJ < >,
+			SPR < >,
+			COMPS < pronominal_synsem &
+				[ OPT -,
+				  LOCAL [ AGR #tagagr,
+					  CONT [ INDEX #agr,
+						 KEY.LABEL #label ] ] ] > ],
+		  
+		  MC na ],
+	    AGR #tagagr,
+	    CONT [ INDEX #ind,
+		   KEY #key,
+		   MESSAGE <! ne_rel &
+			    [ PARAMS <! !> ] !> ],
+	    CTXT.PRESUP <! #presup !> ] ].
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; ADJECTIVES
@@ -2400,8 +2511,8 @@ basic_adj_synsem := lex_synsem &
 ;; We assume for now, counterfactually, that all modifying adjectives are
 ;; intersective.
 
-;; ERB (03-02-98) Maybe should add MOD.SPR.OPT - to keep adjectives from 
-;; modifying partitives.
+;; ERB (03-02-98) Maybe should add MOD < [ LOCAL.SPR.OPT ] > - to keep 
+;; adjectives from modifying partitives.
 
 ;; DPF (16-Feb-98) Made SUBJ.INDEX be 'individual' rather than non_expl-ind,
 ;; to ensure that it gets discourse-bound if the adjective is used in a fragment.
@@ -2410,18 +2521,15 @@ basic_adj_synsem := lex_synsem &
 ;; specifiers (which distinguishes "common" from "proper" nominals).
 
 modifying_adj_synsem := basic_adj_synsem &
-  [ LOCAL [ CAT [ HEAD.MOD intersective_mod &
-			   [ CAT [ HEAD noun &
-					[ POSS - ],
-				   VAL [ SPR < synsem & [ OPT - ] >,
-					 COMPS *olist* ] ],
-			     CONT.INDEX #ind & ref-ind ],
+  [ LOCAL [ CAT [ HEAD.MOD < [ LOCAL intersective_mod &
+				     [ CAT nbar_cat,
+				       CONT.INDEX #ind & ref-ind ] ] >,
 		  VAL.SUBJ < [ LOCAL.CONT.INDEX individual ] > ],
 	    CONT [ INDEX #ind,
 		   KEY adj_rel & [ ARG #ind ] ] ] ].
 
 nomod_adj_synsem := basic_adj_synsem &
-  [ LOCAL.CAT.HEAD.MOD no-mod ].
+  [ LOCAL.CAT.HEAD.MOD < > ].
 
 adj_synsem :< modifying_adj_synsem.
 
@@ -2446,9 +2554,9 @@ intrans_pred_adj_synsem := intrans_adj_synsem & prd_synsem.
 trans_adj_pred_synsem := pred_adj_synsem & three_arg &
   [ LOCAL.CAT.VAL.COMPS < @pp() > ].
 
-; e.g. 'able' - Can't use equi_intrans_lt since it specifies a fig_gnd_rel, 
+; e.g. 'able' - Can't use equi_intrans_lt since it specifies an arg13_rel, 
 ; which is incompatible with adj_rel.  Also, the subj index of adjectives is 
-; bound to the ARG role, not the GND role of equi verbs; the ARG role is used
+; bound to the ARG role, not the ARG1 role of equi verbs; the ARG role is used
 ; to give a uniform treatment of semantics of noun modification for adjectives.
 
 reg_adj_equi_synsem := pred_adj_synsem & inf_intrans_subst & three_arg &
@@ -2458,16 +2566,16 @@ reg_adj_equi_synsem := pred_adj_synsem & inf_intrans_subst & three_arg &
 						   [ CONT.INDEX #subjind ] ] >,
 				 CONT.TOP #hand ],
 			 OPT + ] > ],
-	    CONT.KEY adj_varg_rel &
+	    CONT.KEY adj_arg4_rel &
 		     [ ARG #subjind,
-		       VARG #hand ] ] ].
+		       ARG4 #hand ] ] ].
 
 scoping_adj_synsem := basic_adj_synsem & prd_synsem &
   [ LOCAL [ CAT.VAL.--KEYCOMP.LOCAL.CONT [ TOP #hand,
 					   MESSAGE <! message &
 						      [ HANDEL #top,
 							SOA #hand ] !> ],
-	    CONT.KEY basic_adj_varg_rel & [ VARG #top ] ] ].
+	    CONT.KEY basic_adj_arg4_rel & [ ARG4 #top ] ] ].
 
 reg_adj_atrans_synsem := nomod_adj_synsem & scoping_adj_synsem & pp_inf_subst & 
 			 four_arg &
@@ -2477,17 +2585,17 @@ reg_adj_atrans_synsem := nomod_adj_synsem & scoping_adj_synsem & pp_inf_subst &
 				  KEY.LABEL #label ] ] >,
 	    COMPS < [ LOCAL.CONT.KEY _for_rel & [ HANDEL #ahand,
 						  ARG #ind,
-						  PREP #expr ],
+						  ARG3 #expr ],
 		      OPT + ],
 		    [ LOCAL.CAT.VAL.SUBJ < [ LOCAL.CONT.INDEX #sind,
 					     NON-LOCAL.SLASH 0-dlist ] >,
 		      OPT - ], ...> ],
       CONT [ TOP-H #toph,
 	     INDEX #ind,
-	     KEY it_adj_varg_expr_rel &
+	     KEY it_adj_arg24_rel &
 		   [ HANDEL #ahand,
 		     LABEL #label,
-		     EXPR #expr ],
+		     ARG2 #expr ],
 	     LISZT <! relation, 
 		      pron_rel &
 		      [ HANDEL #toph,
@@ -2496,7 +2604,7 @@ reg_adj_atrans_synsem := nomod_adj_synsem & scoping_adj_synsem & pp_inf_subst &
 
 reg_adj_cp_synsem := scoping_adj_synsem & nomod_adj_synsem & cp_intrans_subst & 
 		     three_arg &
-  [ LOCAL.CONT [ KEY adj_varg_rel,
+  [ LOCAL.CONT [ KEY adj_arg4_rel,
 		 LISZT <! relation !> ] ].
 
 
@@ -2533,8 +2641,8 @@ intrans_adj_oddsem := norm_no_affix_word &
 compound_adj_word := intrans_adj_oddsem &
   [ SYNSEM attr_adj_synsem &
 	 [ LOCAL 
-	   [ CAT.HEAD.MOD.CONT [ TOP #hand,
-				 INDEX #nind ],
+	   [ CAT.HEAD.MOD < [ LOCAL.CONT [ TOP #hand,
+					   INDEX #nind ] ] >,
 	     CONT [ TOP #hand,
 		    LISZT <! relation & [ ARG #aind ],
 			     unspec_rel & [ HANDEL #hand,
@@ -2546,9 +2654,9 @@ compound_adj_word := intrans_adj_oddsem &
 
 reg_trans_adj := reg_adj_word &
   [ SYNSEM trans_adj_pred_synsem &
-	   [ LOCAL [ CAT.VAL.COMPS < [ LOCAL.CONT.KEY.PREP #index ,
+	   [ LOCAL [ CAT.VAL.COMPS < [ LOCAL.CONT.KEY.ARG3 #index ,
 				       OPT +] >, 
-		     CONT.LISZT <! [ PREPARG #index ] !> ] ] ].
+		     CONT.LISZT <! [ ARG3 #index ] !> ] ] ].
 
 ; These 'irregular' types are for multi-word adjectives, which cannot
 ; be affix-bearing under the current regime.  They should be eliminated
@@ -2577,7 +2685,7 @@ irreg_trans_adj := irreg_adj_word &
   [ SYNSEM trans_adj_pred_synsem &
 	   [ LOCAL [ CAT.VAL.COMPS < [ LOCAL.CONT.KEY.ARG #index,
 				       OPT + ] >,
-		     CONT.LISZT <! [ PREPARG #index ] !> ] ] ].
+		     CONT.LISZT <! [ ARG3 #index ] !> ] ] ].
 
 reg_adj_equi_word := norm_word & affix_bearing &
   [ SYNSEM reg_adj_equi_synsem &
@@ -2611,7 +2719,7 @@ wh_adjective_word := nonconj & non_affix_bearing & mcna & nonslash & nonrel &
       [ LOCAL [ STEMHEAD astem,
 		ARG-S #subj,
 		CAT [ POSTHEAD +,
-		      HEAD adj* & [ MOD no-mod ],
+		      HEAD adj* & [ MOD < > ],
 		      VAL [ SUBJ #subj &
 				 < @nomp() &
 				   [ LOCAL [ CONT [ INDEX #ind,
@@ -2650,12 +2758,9 @@ wh_adjective_word := nonconj & non_affix_bearing & mcna & nonslash & nonrel &
 measure_adj_attr_synsem := zero_arg &
   [ LOCAL [ CAT [ HEAD adj* &
 		       [ PRD -,
-			 MOD intersective_mod &
-			     [ CAT [ HEAD noun &
-					  [ POSS - ],
-				     VAL [ SPR < synsem & [ OPT - ] >,
-					   COMPS *olist* ] ],
-			       CONT.INDEX #ind ] ],
+			 MOD < [ LOCAL intersective_mod &
+				       [ CAT nbar_cat,
+					 CONT.INDEX #ind ] ] > ],
 		  VAL [ SUBJ < >,
 			SPR < synsem &
 			      [ LOCAL local &
@@ -2674,7 +2779,7 @@ measure_adj_attr_synsem := zero_arg &
 		   LISZT <! meas_adj_rel & #key &
 			    [ HANDEL #hand,
 			      ARG #ind,
-			      PREPARG #inst ],
+			      ARG3 #inst ],
 			    nom_rel & #altkey & [ HANDEL #hand,
 						  INST #inst ] !>,
 		   KEY #key,
@@ -2687,15 +2792,12 @@ meas_adj_word := norm_no_affix_word &
 
 title_synsem := modifier_synsem & zero_arg &
   [ LOCAL [ CAT [ HEAD noun &
-		       [ MOD intersective_mod &
-			     [ CAT [ HEAD noun &
-					  [ POSS - ],
-				     VAL [ SPR *olist*,
-					   COMPS *olist* ] ],
-			       CONT [ TOP #hand,
-				      INDEX #ind,
-				      KEY named_rel & 
-					  [ HANDEL #khand ] ] ] ],
+		       [ MOD < [ LOCAL intersective_mod &
+				       [ CAT np_cat,
+					 CONT [ TOP #hand,
+						INDEX #ind,
+						KEY named_rel & 
+						    [ HANDEL #khand ] ] ] ] > ],
 		  VAL [ SUBJ < >,
 			SPR < >,
 			COMPS < > ] ],
@@ -2723,7 +2825,7 @@ post_title_word := norm_no_affix_word &
 ; single attribute, ARG, for the index of the phrase modified, or for the
 ; index of the subject of the PP, in a predicative construction.
 
-; Prepositions also have a distinguished role PREP which has as value the
+; Prepositions also have a distinguished role ARG3 which has as value the
 ; index of the object of the preposition.  We could introduce distinct role
 ; names for each preposition (e.g. "ON" for on_rel, "IN" for in-rel) but this
 ; would complicate the definition of the prep_synsem type, since it needs to
@@ -2762,7 +2864,7 @@ prep_synsem_unspec_subj := basic_prep_synsem &
 					       KEY #ckey ] ] ], ... >,
 		  POSTHEAD + ],
 	    CONT [ LISZT.LIST < #key, ... >,
-		   KEY #key & [ PREP #objind ],
+		   KEY #key & [ ARG3 #objind ],
 		   COMPKEY #ckey ] ] ].
 
 ; For lexical prepositions taking at least one complement
@@ -2771,8 +2873,9 @@ prep_synsem := prep_synsem_unspec_subj & unsat_two_arg_subst.
 ; For predicative Ps and PPs like "when", which have a (non-expletive) NP subject
 
 prep_p_synsem := basic_prep_synsem &
-  [ LOCAL [ CAT.VAL [ SUBJ < @nomp() & #subj &
-			     [ LOCAL [ CONT.INDEX #subjind & event_or_index,
+  [ LOCAL [ CAT.VAL [ SUBJ < synsem & #subj &
+			     [ LOCAL [ CAT np_cat,
+				       CONT.INDEX #subjind & event_or_index,
 				       THROLE arg1 ],
 			       NON-LOCAL [ SLASH 0-dlist,
 					   REL 0-dlist,
@@ -2783,15 +2886,14 @@ prep_p_synsem := basic_prep_synsem &
 
 ; Ps and PPs that can be modifiers.
 ; Block PP modification of infinitival "to" - spurious ambiguity.
-; Constrain MOD.CONT.INDEX to be non_expl, for fragments like "perhaps in a week"
+; Constrain MOD < [ LOCAL.CONT.INDEX > to be non_expl, for fragments like 
+; "perhaps in a week"
 
 basic_mod_n_or_vp_synsem := lex_synsem &
-  [ LOCAL [ CAT [ HEAD.MOD intersective_mod & 
-			   [ CAT [ HEAD n_or_v & strict_head,
-				   VAL [ SPR < synsem >,
-					 COMPS *olist* ] ],
-			     CONT [ INDEX #ind & non_expl,
-				    MESSAGE #msg ] ],
+  [ LOCAL [ CAT [ HEAD.MOD < [ LOCAL intersective_mod &
+				     [ CAT n_or_v_cat,
+				       CONT [ INDEX #ind & non_expl,
+					      MESSAGE #msg ] ] ] >,
 		  POSTHEAD + ],
 	    CONT [ KEY.ARG #ind,
 		   INDEX #ind,
@@ -2847,7 +2949,7 @@ lex_pp_nospec_synsem := basic_lex_pp_synsem & basic_mod_n_or_vp_synsem &
 lex_pp_nomod_synsem := prep_p_synsem & one_arg & 
   [ LOCAL [ CAT [ HEAD prep* &
 		       [ PRD +,
-			 MOD no-mod ],
+			 MOD < > ],
 		  VAL [ SPR < >,
 			COMPS < > ] ],
 	    CONT [ INDEX #ind,
@@ -2862,7 +2964,7 @@ lex_pp_one_arg_synsem := lex_pp_synsem & one_arg.
 ; the complement is missing.
 basic_prep_word := amalg_word &
   [ SYNSEM trans_prep_synsem &
-	 [ LOCAL.CAT.VAL.COMPS < @nomp($case=acc) > ] ].
+	 [ LOCAL.CAT.VAL.COMPS < @nomp_acc() > ] ].
 
 prep_word := basic_prep_word &
   [ SYNSEM.LOCAL.CAT.VAL.COMPS < [ LOCAL.CONT.INDEX ref-ind ] > ].
@@ -2878,7 +2980,7 @@ prep_n_or_p_word := amalg_word &
   [ SYNSEM trans_prep_synsem &
 	 [ LOCAL [ CAT.VAL.COMPS < synsem &
 				   [ LOCAL local &
-					   [ CAT [ HEAD n_or_p & strict_head,
+					   [ CAT [ HEAD n_or_p & strict_type,
 						   VAL [ SUBJ *olist*,
 							 SPR *olist*,
 							 COMPS *olist* ] ],
@@ -2890,7 +2992,7 @@ prep_n_or_p_word := amalg_word &
 ; 'from now on', maybe 'from two to four'
 ditrans_prep_word := norm_no_affix_word &
   [ SYNSEM ditrans_prep_synsem &
-	 [ LOCAL [ CAT.VAL.COMPS < @nomp($case=acc) & [ OPT - ], 
+	 [ LOCAL [ CAT.VAL.COMPS < @nomp_acc() & [ OPT - ], 
 				   synsem & [ LOCAL local &
 						    [ CAT [ HEAD.PRD -,
 							    MC na ] ] ] > ] ] ].
@@ -2908,7 +3010,7 @@ prep_cp_word := amalg_word &
 
 ; Prepositions that don't modify nominals - e.g, 'until'
 prep_no_n_mod_word := prep_word &
-  [ SYNSEM.LOCAL.CAT [ HEAD.MOD.CAT.VAL.SUBJ < synsem >,
+  [ SYNSEM.LOCAL.CAT [ HEAD.MOD < [ LOCAL.CAT.VAL.SUBJ < synsem > ] >,
 		       VAL.COMPS < [ OPT - ] > ] ].
 
 ; "Case-marking" prepositions, which cannot be modifiers
@@ -2917,7 +3019,7 @@ prep_no_n_mod_word := prep_word &
 prep_nosubj_synsem := basic_one_arg &
   [ LOCAL [ ARG-S #comps,
 	    CAT [ HEAD prep* & [ PRD -,
-				 MOD no-mod ],
+				 MOD < > ],
 		  VAL [ SUBJ < >,
 			SPR < >,
 			COMPS #comps & < synsem & 
@@ -2930,24 +3032,24 @@ prep_nosubj_synsem := basic_one_arg &
 							  H-STORE #hstore ] ],
 					   OPT - ] > ] ],
 	    CONT [ TOP #top,
-		   LISZT <! !>,
-		   KEY prep_rel &
+		   LISZT <! #key !>,
+		   KEY prep_rel & #key &
 		       [ HANDEL #chand,
-			 PREP #ind,
+			 ARG3 #ind,
 			 LABEL #label ],
 		   H-STORE #hstore,
 		   H-CONS <! !>,
 		   COMPKEY #ckey ] ] ].
 
-; Removed constraint on [COMPS.FIRST.MOD no-mod] to allow "of the second"
+; Removed constraint on [COMPS.FIRST.MOD < >] to allow "of the second"
 prep_nomod_word := amalg_word &
   [ SYNSEM prep_nosubj_synsem & 
-	 [ LOCAL.CAT.VAL.COMPS < @nomp($case=acc) > ] ].
+	 [ LOCAL.CAT.VAL.COMPS < @nomp_acc() > ] ].
 
 ; nominal "of"
-prep_nomod_empty_word := prep_nomod_word &
+prep_nomod_of_word := prep_nomod_word &
   [ SYNSEM.LOCAL.CONT [ INDEX #ind,
-			KEY.PREP #ind ] ].
+			KEY.ARG3 #ind ] ].
 
 ; Lexical PPs
 
@@ -2966,7 +3068,7 @@ pp_decomp_word :=  norm_no_affix_word &
 				 loc_rel & #key &
 				 [ HANDEL #lhand,
 				   ARG #event,
-				   PREP #ind ] !>,
+				   ARG3 #ind ] !>,
 			  H-STORE <! #dhand !>,
 			  H-CONS <! is-one-of &
 				    [ SC-ARG #top,
@@ -3009,7 +3111,7 @@ prep_idiom_nomod_word := amalg_word &
 at_prep_word := amalg_word &
   [ SYNSEM trans_prep_synsem &
 	 [ LOCAL [ CAT.VAL.COMPS
-		       < @nomp($case=acc) & 
+		       < @nomp_acc() & 
 			 [ LOCAL.CONT.KEY hour_rel,
 			   OPT - ], ...> ] ] ].
 
@@ -3040,12 +3142,12 @@ hour_prep_word := norm_no_affix_word &
   [ SYNSEM nomod_onearg_synsem &
 	 [ LOCAL [ CAT [ HEAD noun* &
 			      [ POSS - ],
-			 VAL [ SPR < synsem & @nomp($case=acc) &
+			 VAL [ SPR < synsem & @nomp_acc() &
 				     [ LOCAL [ CAT.POSTHEAD -,
 					       CONT [ INDEX #minute,
 						      KEY minute_rel ] ],
 				       OPT + ] >,
-			       COMPS < synsem & @nomp($case=acc) & 
+			       COMPS < synsem & @nomp_acc() & 
 				       [ LOCAL.CONT 
 						    [ INDEX #hour,
 						      KEY numbered_hour_rel &
@@ -3075,10 +3177,10 @@ hour_prep_word := norm_no_affix_word &
 basic_adverb_synsem := zero_arg &
   [ LOCAL [ CAT [ HEAD adv &
 		       [ PRD -,
-			 MOD local &
-			     [ CAT.HEAD adverbee & strict_head,
-			       CONT [ INDEX #vevent & individual,
-				      MESSAGE #msg ] ] ],
+			 MOD < [ LOCAL local_basic &
+				       [ CAT.HEAD adverbee & strict_type,
+					 CONT [ INDEX #vevent & individual,
+						MESSAGE #msg ] ] ] > ],
 		  VAL [ SUBJ < >,
 			COMPS < > ] ],
 	    CONT [ INDEX #vevent,
@@ -3088,13 +3190,14 @@ basic_adverb_synsem := zero_arg &
 		   MESSAGE #msg ] ] ].
 
 basic_scopal_adverb_synsem := basic_adverb_synsem &
-  [ LOCAL [ CAT.HEAD.MOD scopal_mod &
-			 [ CONT.TOP #mhand ],
+  [ LOCAL [ CAT.HEAD.MOD < [ LOCAL scopal_mod &
+				   [ CONT.TOP #mhand ] ] >,
 	    CONT.KEY.ARG #mhand & handle ] ].
 
 basic_int_adverb_synsem := basic_adverb_synsem &
-  [ LOCAL [ CAT.HEAD.MOD intersective_mod &
-			 [ CONT.INDEX #vevent ],	
+  [ LOCAL [ CAT.HEAD.MOD < [ LOCAL intersective_mod &
+				   [ CAT adverbee_cat,
+				     CONT.INDEX #vevent ] ] >,	
 	    CONT [ INDEX #vevent,
 		   KEY.ARG #vevent ] ] ].
 
@@ -3117,68 +3220,70 @@ intersect_spec_adverb_synsem := basic_int_adverb_synsem & spec_adverb_synsem.
 
 ; VP, PP, AP
 scopal_adverb_synsem := scopal_spec_adverb_synsem &
-  [ LOCAL.CAT.HEAD.MOD.CAT [ VAL [ SUBJ < synsem >,
-				   COMPS *olist* ],
-			     MC na ] ].
+  [ LOCAL.CAT.HEAD.MOD < [ LOCAL.CAT [ VAL [ SUBJ < synsem >,
+					     COMPS *olist* ],
+				       MC na ] ] > ].
 intersect_adverb_synsem := intersect_spec_adverb_synsem &
-  [ LOCAL.CAT.HEAD.MOD.CAT [ VAL [ SUBJ < synsem >,
-				   COMPS *olist* ],
-			     MC na ] ].
+  [ LOCAL.CAT.HEAD.MOD < [ LOCAL.CAT [ VAL [ SUBJ < synsem >,
+					     COMPS *olist* ],
+				       MC na ] ] > ].
 
 ; VP only
 ; Block adj modifiee to avoid spurious parse for "almost empty"
 
 scopal_vp_adverb_synsem := scopal_spec_adverb_synsem &
-  [ LOCAL.CAT.HEAD.MOD.CAT [ HEAD v_or_g & strict_head,
-			     VAL [ SUBJ < synsem >,
-				   COMPS *olist* ],
-			     MC na ] ].
+  [ LOCAL.CAT.HEAD.MOD < [ LOCAL.CAT [ HEAD v_or_g & strict_type,
+				       VAL [ SUBJ < synsem >,
+					     COMPS *olist* ],
+				       MC na ] ] > ].
 
 intersect_vp_adverb_synsem := intersect_spec_adverb_synsem &
-  [ LOCAL.CAT.HEAD.MOD.CAT [ HEAD v_or_g & strict_head,
-			     VAL [ SUBJ < synsem >,
-				   COMPS *olist* ],
-			     MC na ] ].
+  [ LOCAL.CAT.HEAD.MOD < [ LOCAL.CAT [ HEAD v_or_g & strict_type,
+				       VAL [ SUBJ < synsem >,
+					     COMPS *olist* ],
+				       MC na ] ] > ].
 
 intersect_unsatp_adverb_synsem := intersect_spec_adverb_synsem &
-  [ LOCAL.CAT.HEAD.MOD.CAT [ HEAD adverbee & strict_head,
-			     VAL [ SUBJ < synsem >,
-				   COMPS *olist* ],
-			     MC na ] ].
+  [ LOCAL.CAT.HEAD.MOD < [ LOCAL.CAT [ HEAD adverbee & strict_type,
+				       VAL [ SUBJ < synsem >,
+					     COMPS *olist* ],
+				       MC na ] ] > ].
 
 ; S or VP (for pre-head scopal adverbs only)
 scopal_s_or_vp_adverb_synsem := scopal_spec_adverb_synsem &
-  [ LOCAL.CAT.HEAD.MOD.CAT [ HEAD adverbee & strict_head,
-			     VAL.COMPS *olist* ] ].
+  [ LOCAL.CAT.HEAD.MOD < [ LOCAL.CAT [ HEAD adverbee & strict_type,
+				       VAL.COMPS *olist* ] ] > ].
 
 ; S or VP (for pre-head intersective adverbs only) 
 intersect_s_or_vp_adverb_synsem := intersect_spec_adverb_synsem &
-  [ LOCAL.CAT.HEAD.MOD.CAT [ HEAD adverbee & strict_head,
-			     VAL.COMPS *olist* ] ].
+  [ LOCAL.CAT.HEAD.MOD < [ LOCAL.CAT [ HEAD adverbee & strict_type,
+				       VAL.COMPS *olist* ] ] > ].
 
 ; For adverbs like "maybe" which take no degree specifier
 scopal_s_or_vp_adverb_nospec_synsem := basic_scopal_adverb_synsem &
   [ LOCAL.CAT [ VAL.SPR < >,
-		HEAD.MOD.CAT [ HEAD adverbee & strict_head,
-			       VAL.COMPS *olist* ] ] ].
+		HEAD.MOD < [ LOCAL.CAT [ HEAD adverbee & strict_type,
+					 VAL.COMPS *olist* ] ] > ] ].
 
 intersect_s_or_vp_adverb_nospec_synsem := basic_int_adverb_synsem &
   [ LOCAL.CAT [ VAL.SPR < >,
-		HEAD.MOD.CAT [ HEAD adverbee & strict_head,
-			       VAL.COMPS *olist* ] ] ].
+		HEAD.MOD < [ LOCAL.CAT [ HEAD adverbee & strict_type,
+					 VAL.COMPS *olist* ] ] > ] ].
 
 adverb_word := norm_mod_no_affix_word &
   [ SYNSEM scopal_adverb_synsem & 
-	   [ LOCAL.CAT.HEAD.MOD.CAT.HEAD v_or_g_or_a & strict_head ] ].
+	   [ LOCAL.CAT.HEAD.MOD < [ LOCAL.CAT.HEAD v_or_g_or_a & 
+						   strict_type ] > ] ].
     
 int_adverb_word := norm_mod_no_affix_word &
   [ SYNSEM intersect_adverb_synsem &
-	   [ LOCAL.CAT.HEAD.MOD.CAT.HEAD v_or_g_or_a & strict_head ] ].
+	   [ LOCAL.CAT.HEAD.MOD < [ LOCAL.CAT.HEAD v_or_g_or_a & 
+						   strict_type ] > ] ].
     
 ; 'back' of 'back on the table'
 int_pp_adverb_word := norm_mod_no_affix_word &
   [ SYNSEM intersect_adverb_synsem &
-	   [ LOCAL.CAT [ HEAD.MOD.CAT.HEAD prep & strict_head,
+	   [ LOCAL.CAT [ HEAD.MOD < [ LOCAL.CAT.HEAD prep & strict_type ] >,
 			 POSTHEAD - ] ] ].
     
 adv_pre_word := norm_mod_no_affix_word &
@@ -3235,11 +3340,14 @@ wh_adverb_word := nonconj & non_affix_bearing & mcna & nonslash & nonrel &
 		      VAL.COMPS < >,
 		      HEAD prep* &
 			       [ PRD bool,
-				 MOD [ CAT.HEAD v_or_g_or_a & strict_head,
-				       CONT.H-STORE [ LIST #hslist,
-						      LAST #hslast ] ] ] ],
+				 MOD < [ LOCAL 
+					       [ CAT.HEAD v_or_g_or_a & 
+							  strict_type,
+						 CONT.H-STORE 
+						      [ LIST #hslist,
+							LAST #hslast ] ] ] > ] ],
 		CONT [ KEY #key,
-		       LISZT <! #key & [ PREP #objind ],
+		       LISZT <! #key & [ ARG3 #objind ],
 			        which_rel & [ HANDEL #hand,
 					      BV #objind,
 					      RESTR #restr ],
@@ -3256,7 +3364,7 @@ rel_adverb_word := rel_word &
 		      POSTHEAD +,
 		      VAL.COMPS < > ],
 		CONT [ KEY #key,
-		       LISZT <! #key & [ PREP #objind ],
+		       LISZT <! #key & [ ARG3 #objind ],
 			        def_rel & [ HANDEL #hand,
 					    BV #objind,
 					    RESTR #restr ],
@@ -3533,15 +3641,11 @@ poss_of := nonque & nonconj & nonslash & nonrel & mcna & non_affix_bearing &
        [ ARG-S #comps,
 	 CAT [ HEAD prep* & 
 		    [ PRD -,
-		      MOD intersective_mod & 
-			  [ CAT [ HEAD noun &
-				       [ POSS - ],
-				  VAL [ COMPS *olist*,
-					SPR < synsem > ],
-				  MC na ],
-			    CONT [ TOP #hand,
-				   INDEX #index,
-				   MESSAGE #msg ] ] ],
+		      MOD < [ LOCAL intersective_mod &
+				    [ CAT nbar_cat,
+				      CONT [ TOP #hand,
+					     INDEX #index,
+					     MESSAGE #msg ] ] ] > ],
 	       VAL [ SUBJ < >,
 		     SPR < >,
 		     COMPS #comps & < @nomp() & 
@@ -3568,17 +3672,24 @@ poss_of := nonque & nonconj & nonslash & nonrel & mcna & non_affix_bearing &
 ; if-clauses, but not spurious - get different scopes of "if" and modals.
 ; But we restrict them to modifying only finite VPs or imperatives.
 
+; DPF (10-Jan-99) Changed these to modify S rather than VP, since they don't
+; appear to survive extraction from embedded clauses, nor do they appear inside
+; an extraposed subject relative clause.
+
+; DPF (10-Jan-98) For some reason, can't make the HEAD value prep* - fails to
+; unify with strict_type in "Kim sleeps if Sandy sleeps".  Solve later.
+
 subconj_synsem := nonprd_synsem & basic_one_arg & basic_nonzero_arg_synsem &
   [ LOCAL [ ARG-S #comps,
-	    CAT [ HEAD prep* &
-		       [ MOD scopal_mod &
-			     [ CAT [ HEAD verb & [ VFORM fin ],
-				     VAL [ SUBJ < synsem >,
-					   COMPS *olist* ],
-				     MC na ],
-			       CONT [ TOP #arg1,
-				      INDEX #ind,
-				      MESSAGE #msg ] ] ],
+	    CAT [ HEAD prep &
+		       [ MOD < [ LOCAL scopal_mod &
+				       [ CAT [ HEAD verb & [ VFORM fin ],
+					       VAL [ SUBJ *olist*,
+						     COMPS *olist* ],
+					       MC + ],
+					 CONT [ TOP #arg1,
+						INDEX #ind,
+						MESSAGE #msg ] ] ] > ],
 		  VAL [ SUBJ < >,
 			COMPS #comps & 
 			     < synsem &
@@ -3599,8 +3710,7 @@ subconj_synsem := nonprd_synsem & basic_one_arg & basic_nonzero_arg_synsem &
 					     REL 0-dlist,
 					     QUE 0-dlist ],
 				 OPT - ] >,
-			SPR < > ],
-		  POSTHEAD + ],
+			SPR < > ] ],
 	    CONT [ INDEX #ind,
 		   KEY #key,
 		   COMPKEY #ckey,
@@ -3621,20 +3731,20 @@ subconj_word := norm_mod_no_affix_word &
     
 subconj_if_word :< subconj_word.
 
-;  [ SYNSEM.LOCAL.CAT [ HEAD.MOD.CAT.HEAD.MOOD #mood,
+;  [ SYNSEM.LOCAL.CAT [ HEAD.MOD < [ LOCAL.CAT.HEAD.MOOD #mood ] >,
 ;                       VAL.COMPS.FIRST.LOCAL.CAT.HEAD.MOOD #mood ] ].
 
 ; "in order to"
 subconj_inf_synsem := prd_synsem & one_arg &
   [ LOCAL [ CAT [ HEAD prep* &
-		       [ MOD scopal_mod &
-			     [ CAT [ HEAD verb,
-				     VAL [ SUBJ < synsem >,
-					   COMPS *olist* ],
-				     MC na ],
-			       CONT [ TOP #arg1,
-				      INDEX #ind,
-				      MESSAGE #msg ] ] ],
+		       [ MOD < [ LOCAL scopal_mod &
+				       [ CAT [ HEAD verb,
+					       VAL [ SUBJ < synsem >,
+						     COMPS *olist* ],
+					       MC na ],
+					 CONT [ TOP #arg1,
+						INDEX #ind,
+						MESSAGE #msg ] ] ] > ],
 		  VAL [ SUBJ < >,
 			COMPS < @vp($vform=bse) &
 				[ LOCAL local &
@@ -3651,8 +3761,7 @@ subconj_inf_synsem := prd_synsem & one_arg &
 					      REL 0-dlist,
 					      QUE 0-dlist ],
 				  OPT - ] >,
-			SPR < > ],
-		  POSTHEAD + ],
+			SPR < > ] ],
 	    CONT [ LISZT <! subord_rel & #key &
 			    [ MAIN #arg1,
 			      SUBORD #arg2 ] !>,
@@ -3693,8 +3802,7 @@ marker_word := conj_word &
 							      LAST #hslast ],
 						    KEY #key ] ],
 				     OPT - ] 
-				   . #comps > ],
-		     HCTYPE canonical_synsem ],
+				   . #comps > ] ],
 	       CONT [ MESSAGE #msg,
 		      KEY #key,
 		      H-STORE [ LIST #hslist,
@@ -3748,14 +3856,14 @@ coord_word_atomic := marker_word &
 neg_word := norm_mod_no_affix_word &
   [ SYNSEM nonzero_arg_synsem & 
 	 [ LOCAL [ CAT [ HEAD neg &
-			      [ MOD scopal_mod &
-				    [ CAT [ HEAD verbal & strict_head &
-						 [ VFORM non_fin ],
-					    VAL [ SUBJ < synsem >,
-						  COMPS *olist* ] ],
-				      CONT [ TOP #mhand,
-					     INDEX #vevent,
-					     MESSAGE #msg ] ] ],
+			      [ MOD < [ LOCAL scopal_mod &
+					      [ CAT [ HEAD verbal & strict_type &
+							   [ VFORM non_fin ],
+						      VAL [ SUBJ < synsem_min >,
+							    COMPS *olist* ] ],
+						CONT [ TOP #mhand,
+						       INDEX #vevent,
+						       MESSAGE #msg ] ] ] > ],
 			 VAL [ SUBJ < >,
 			       COMPS < >,
 			       SPR < > ],
@@ -3772,9 +3880,7 @@ neg_word := norm_mod_no_affix_word &
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ; Complementizers except for 'to' are marked [SUBJ < >] which prevents them
-; from having PP modifiers.  The POSS feature here is inappropriate, but since
-; TDL is not strictly typed, unification would succeed with [ POSS + ] for a
-; CP without the specification [ POSS - ] on CPs given below.
+; from having PP modifiers.
 
 ; ERB (07-10-96) 'whether' clauses are made with the regular hcomp rule, so
 ; the polar_q_rel must come from 'whether' itself.  This means that whether
@@ -3796,13 +3902,22 @@ neg_word := norm_mod_no_affix_word &
 ; because to_c_nonprop has to be MC na in order to head hcomps that
 ; serve as modifiers, as in "a teacher to talk to Sandy".
 
+; DPF (27-Sept-98) Made KEY be event_rel, since "to" needs to pass up the
+; KEY.HANDEL of its complement, in order to get the desired semantics for e.g.
+; "Kim is going to lose" where the copula's support_rel identifies its HANDEL
+; with that of its complement's KEY.
+; DPF (13-Jan-99) Generalized to make KEY be event_rel for all complementizers,
+; needed in particular to avoid treating complementizers as particles, which
+; are selected by KEY value.
+
 complementizer_word := msg_word & 
   [ SYNSEM.LOCAL local &
 		 [ CAT [ HEAD comp &
 			      [ POSS -,
 				INV - ],
 			 VAL.SPR < > ],
-		   CONT.LISZT <! !> ] ].
+		   CONT [ KEY event_rel,
+			  LISZT <! !> ] ] ].
 
 plain_compl_word := complementizer_word &
   [ SYNSEM.LOCAL [ CAT.VAL [ SUBJ < #subj >,
@@ -3861,7 +3976,7 @@ two_place_compl_word := complementizer_word &
 		    H-CONS <! !> ] ] ] ].
 
 sor_compl_word := two_place_compl_word &
-  [ SYNSEM.LOCAL.CAT.VAL.COMPS < @np() & #subj &
+  [ SYNSEM.LOCAL.CAT.VAL.COMPS < @nomp() & #subj &
 				 [ OPT - ],
 				 [ LOCAL.CAT.VAL.SUBJ < #subj > ] > ].
 
@@ -3891,10 +4006,8 @@ for_compl_word := sor_compl_word &
 ; COMPKEY, but that causes at least one problem: to was able to be the
 ; SPR of the, since the constrains its choice of SPR by a semantic
 ; constraint on the KEY.
-; DPF (27-Sept-98) Made KEY be event_rel, since "to" needs to pass up the
-; KEY.HANDEL of its complement, in order to get the desired semantics for e.g.
-; "Kim is going to lose" where the copula's support_rel identifies its HANDEL
-; with that of its complement's KEY.
+; DPF (13-Jan-99) This problem should be solved by the above decision to
+; make all complementizers have the KEY be of type event_rel.
 
 to_compl_word := plain_compl_word &
   [ SYNSEM basic_two_arg &
@@ -3913,8 +4026,7 @@ to_compl_word := plain_compl_word &
 							  KEY.HANDEL 
 							      #khand ] ] ] > ] ],
 		     CONT [ TOP #top,
-                            KEY event_rel &
-				[ HANDEL #khand ],
+                            KEY.HANDEL #khand,
 			    H-CONS <! !> ] ] ] ].
 
 ; ERB (14-12-97) Why is the SUBJ here specified as acc?? I'm taking it
@@ -3935,7 +4047,8 @@ to_compl_word := plain_compl_word &
 ; what yet.  It also needs to be MC na so it can feed extrasubj.
 
 to_compl_prop_word := to_compl_word & 
-  [ SYNSEM [ LOCAL [ CAT [ HEAD.MOD intersective_mod & @nbar(),
+  [ SYNSEM [ LOCAL [ CAT [ HEAD.MOD < [ LOCAL intersective_mod &
+					      [ CAT nbar_cat ] ] >,
 			   VAL.SUBJ < pro_ss >,
 			   MC na ],
 		     CONT [ MESSAGE <! hypo_rel !>,
@@ -4083,7 +4196,7 @@ whether_compl_word_inf := whether_compl_word & plain_compl_word &
 
 root_marker_word := nonque & non_affix_bearing & nonrel & nonconj & hc-to-phr &
   [ SYNSEM synsem &
-	 [ LOCAL [ CAT [ HEAD root-marker & [ MOD no-mod,
+	 [ LOCAL [ CAT [ HEAD root-marker & [ MOD < >,
 					      MOOD #mood ],
 			 VAL [ SPR < >,
 			       COMPS < synsem &
@@ -4099,9 +4212,7 @@ root_marker_word := nonque & non_affix_bearing & nonrel & nonconj & hc-to-phr &
 
 lex_imperative := root_marker_word &
   [ SYNSEM.LOCAL 
-	   [ CAT [ HEAD [ AUX -*,
-			  VFORM bse ],
-		   VAL 
+	   [ CAT [ VAL 
 		    [ SUBJ < >,
 		      COMPS < [ LOCAL [ CAT [ HEAD verb &
 						   [ VFORM bse ],
@@ -4229,13 +4340,13 @@ how_about_v_word := how_about_word &
 disc_adv_synsem := canonical_synsem &
   [ LOCAL [ CAT [ HEAD root-marker &
 		       [ PRD -,
-			 MOD scopal_mod &
-			     [ CAT [ HEAD v_or_g_or_a & strict_head,
-				     VAL.COMPS *olist*,
-				     MC na_or_+ ],
-			       CONT [ INDEX #ind,
-				      MESSAGE #msg ],
-			       CONJ cnil ] ],
+			 MOD < [ LOCAL scopal_mod &
+				       [ CAT [ HEAD v_or_g_or_a & strict_type,
+					       VAL.COMPS *olist*,
+					       MC na_or_+ ],
+					 CONT [ INDEX #ind,
+						MESSAGE #msg ],
+					 CONJ cnil ] ] > ],
 		  VAL [ SUBJ < >,
 			SPR < >,
 			COMPS < > ] ],
@@ -4257,8 +4368,8 @@ disc_adv_phr_synsem := disc_adv_synsem & phr_synsem.
 
 disc_adv_word := msg_word & topkey &
   [ SYNSEM disc_adv_lex_synsem &
-	   [ LOCAL [ CAT.HEAD.MOD.CONT [ TOP #top,
-					 KEY.HANDEL #khand ],
+	   [ LOCAL [ CAT.HEAD.MOD < [ LOCAL.CONT [ TOP #top,
+						   KEY.HANDEL #khand ] ] >,
 		     CONT [ TOP #top,
 			    KEY #key & excl_rel & [ HANDEL #khand ],
 			    LISZT <! #key !>,
@@ -4270,7 +4381,7 @@ disc_adv_word := msg_word & topkey &
 				      OUTSCPD #khand ] !> ] ] ] ].
 
 disc_adv_saturated_word := disc_adv_word &
-  [ SYNSEM.LOCAL.CAT.HEAD.MOD.CAT.VAL.SUBJ < > ].
+  [ SYNSEM.LOCAL.CAT.HEAD.MOD < [ LOCAL.CAT.VAL.SUBJ < > ] > ].
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;   Temporal nouns
@@ -4311,13 +4422,8 @@ hour_word := hc_word_no_affix &
 						      INDEX #darg,
 						      KEY degree_rel ] ],
 				       OPT + ] >,
-			       COMPS < [ LOCAL local &
-					       [ CAT [ HEAD.CASE nom,
-						       VAL [ SUBJ < >,
-							     COMPS *olist*,
-							     SPR *olist* ],
-						       POSTHEAD +,
-						       MC na ],
+			       COMPS < @nomp_nom() &
+				       [ LOCAL [ CAT.POSTHEAD +,
 						 CONT [ KEY minute_rel &
 							    [ HANDEL #tophand,
 							      LABEL #label,
@@ -4327,20 +4433,15 @@ hour_word := hc_word_no_affix &
 							      LAST #hslast ] ] ],
 					 NON-LOCAL.SLASH 0-dlist,
 					 OPT + ],
-				       [ LOCAL local &
-					       [ CAT [ HEAD.CASE nom,
-						       VAL [ SUBJ < >,
-							     COMPS *olist*,
-							     SPR *olist* ],
-						       POSTHEAD +,
-						       MC na ],
+				       @nomp_nom() &
+				       [ LOCAL [ CAT.POSTHEAD +,
 						 CONT.KEY am_pm_rel &
 						     [ HANDEL #tophand,
 						       LABEL #label,
 						       INST #ampm ] ],
 					 NON-LOCAL.SLASH 0-dlist,
 					 OPT + ] > ],
-			 HCTYPE lex_synsem ],
+			 HC-LEX + ],
 		   CONT nom-obj &
 		       [ TOP #reshand,
 			 TOP-H #tophand,
@@ -4457,7 +4558,7 @@ month_of_year_synsem := month_year_synsem &
 			    OPT + ] > ].
 
 month_no_of_year_synsem := month_year_synsem &
-  [ LOCAL.CAT.VAL.COMPS < @nomp($case=acc) &
+  [ LOCAL.CAT.VAL.COMPS < @nomp_acc() &
 			  [ LOCAL.CONT.KEY yofc_rel, 
 			    NON-LOCAL.SLASH 0-dlist,
 			    OPT - ] > ].
@@ -4486,7 +4587,7 @@ dom_synsem := temp_noun_ppcomp_synsem &
 	    CONT.LISZT <! dofm_rel &
 			  [ INST [ PNG png & [ PN 3sg*,
 					       GEN neut* ] ],
-			    NPREP #inst ] !> ] ].
+			    ARG3 #inst ] !> ] ].
 
 
 day_of_month_word := norm_word & non_affix_bearing &
@@ -4680,18 +4781,16 @@ num_synsem := zero_arg &
 int_adj_synsem := lex_synsem & 
   [ LOCAL [ CAT [ HEAD intadj &
 		       [ PRD -,
-			 MOD intersective_mod & [ CAT [ HEAD noun &
-						  [ POSS -],
-					     VAL [ SPR < synsem >,
-						   COMPS *olist* ] ],
-				       CONT.INDEX #index ] ],
+			 MOD < [ LOCAL intersective_mod &
+				       [ CAT nbar_cat,
+					 CONT.INDEX #index ] ] > ],
 		  POSTHEAD - ],
 	    CONT [ INDEX #index,
 		   KEY integer_rel &
 		       [ ARG #index ] ] ] ].
 
 norm_num_synsem := num_synsem & int_adj_synsem &
-  [ LOCAL.CAT.HCTYPE lex_synsem ].
+  [ LOCAL.CAT.HC-LEX + ].
 
 norm_num_word := nontopkey & non_affix_bearing &
   [ SYNSEM norm_num_synsem ].
@@ -4830,26 +4929,3 @@ one_word := nontopkey & non_affix_bearing &
 		   CONT.LISZT <! const_rel & 
 			       [ CONST_VALUE "1" ] !> ] ].
 			   
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; String boundaries and punctuation
-
-string_boundary := sign &
-  [ INFLECTED +,
-    ROOT +,
-    STEM < #stem >,
-    ARGS < [ STEM < #stem >,
-	     AFFIX no-affix ] >,
-    SYNSEM [ LOCAL [ CAT [ HEAD punct &
-				[ MOD no-mod ],
-			   VAL [ SUBJ < >,
-				 SPR < >,
-				 COMPS < > ],
-			   MC + ],
-		     CONT [ KEY no_rel,
-			    MESSAGE <! !>,
-			    H-STORE <! !> ],
-		     CONJ cnil ],
-	     NON-LOCAL [ SLASH 0-dlist,
-			 REL 0-dlist,
-			 QUE 0-dlist ] ] ].
-

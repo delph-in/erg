@@ -1,6 +1,6 @@
 #|
 satp ($head=head) := synsem &
-  [ LOCAL local &
+  [ LOCAL local_basic &
 	  [ CONJ cnil,
 	    CAT [ HEAD $head,
 		  VAL [ SUBJ < >,
@@ -11,7 +11,7 @@ satp ($head=head) := synsem &
 
 (make-tdl-template 'satp '((head (local cat head)))
                    '((() synsem)
-                     ((local) local)
+                     ((local) local_basic)
                      ((local conj) cnil)
                      ((local cat head) head)
                      ((local cat val subj) *null*)
@@ -32,7 +32,7 @@ cp ($vform=vform) := synsem & @satp($head=verbal) &
 (make-tdl-template 'cp '((head (local cat head))
                          (vform (local cat head vform)))
                    '((() synsem)
-                     ((local) local)
+                     ((local) local_basic)
                      ((local conj) cnil)
                      ((local cat head) verbal)
                      ((local cat val subj) *null*)
@@ -45,9 +45,13 @@ cp ($vform=vform) := synsem & @satp($head=verbal) &
 
 #|
 
-nomp ($case=case,$cont=mrs) := @satp($head=nominal) &
-  [ LOCAL [ CAT [ HEAD strict_head &
-		       [ CASE $case ],
+; DPF (28-Jul-98) Added MOD < > to exclude non-finite relative clauses, which
+; are otherwise not distinguishable from nomp's.  Maybe also needed to exclude 
+; the second (modifier) entries for temporal NPs like "Tuesday".
+
+nomp ($cont=mrs) := @satp($head=nominal) &
+  [ LOCAL [ CAT [ HEAD strict_type &
+                       [ MOD < > ],
 		  MC na ],
 	    CONT $cont ] ].
 
@@ -55,62 +59,58 @@ nomp ($case=case,$cont=mrs) := @satp($head=nominal) &
 |#
 
 (make-tdl-template 'nomp '((head (local cat head))
+                           (cont (local cont)))
+                   '(((local) local_basic)
+                     ((local conj) cnil)
+                     ((local cat head) strict_nominal)
+                     ((local cat head mod) *null*)
+                     ((local cat val subj) *null*)
+                     ((local cat val comps) *olist*)
+                     ((local cat val spr) *olist*)
+                     ((local cat mc) na)
+                     ((local cont) mrs_min)))
+
+; DPF (8-Jan-99) Added accusative and nominative subtypes of nomp, since 
+; nominative ones are not 'mobile' - see fundamentals.tdl
+
+#|
+nomp_acc ($cont=mrs) := nomp &
+  [ LOCAL [ CAT.HEAD noun_acc,
+	    CONT $cont ] ].
+|#
+
+(make-tdl-template 'nomp_acc '((head (local cat head))
                            (case (local cat head case))
                            (cont (local cont)))
-                   '(((local) local)
+                   '(((local) local_basic)
                      ((local conj) cnil)
                      ((local cat head) strict_nominal)
                      ((local cat val subj) *null*)
                      ((local cat val comps) *olist*)
                      ((local cat val spr) *olist*)
-                     ((local cat head case) case)
+                     ((local cat head case) acc)
                      ((local cat mc) na)
-                     ((local cont) mrs)))
+                     ((local cont) mrs_min)))
+
 #|
-
-np ($case=case,$cont=mrs) := @satp($head=supnoun) &
-  [ LOCAL [ CAT.HEAD strict_head &
-		     [ CASE $case ],
+nomp_nom ($cont=mrs) := nomp &
+  [ LOCAL [ CAT.HEAD noun_nom,
 	    CONT $cont ] ].
-
 |#
 
-(make-tdl-template 'np '((head (local cat head))
+(make-tdl-template 'nomp_nom '((head (local cat head))
                            (case (local cat head case))
                            (cont (local cont)))
-                   '(((local cat head case) case)
-                     ((local cont) mrs)
-                     ((local cat head) strict_supnoun)
+                   '(((local) local_basic)
                      ((local conj) cnil)
+                     ((local cat head) strict_nominal)
                      ((local cat val subj) *null*)
-                     ((local cat val comps) *null*)
-                     ((local cat val spr) *null*)))
+                     ((local cat val comps) *olist*)
+                     ((local cat val spr) *olist*)
+                     ((local cat head case) nom)
+                     ((local cat mc) na)
+                     ((local cont) mrs_min)))
 
-#|
-
-; Only used as MOD value for relative clauses, so type LOCAL, not SYNSEM
-nbar ($cont=nom-obj) := local &
-  [ CAT [ HEAD noun &
-	       [ MOD no-mod ],
-	  VAL [ SUBJ < >,
-		    COMPS *olist*,
-		    SPR < synsem > ]],
-    CONT $cont,
-    MC na ].
-
-
-|#
-
-(make-tdl-template 'nbar '((cont (cont)))
-                   '((() local)
-                     ((cont) nom-obj)
-                     ((cat head) noun)
-                     ((cat head mod) no-mod)
-                     ((cat val subj) *null*)
-                     ((cat val comps) *olist*)
-                     ((cat val spr first) synsem)
-                     ((cat val spr rest) *null*)
-                     ((cat mc) na)))
 
 #|
 third-sg-np ( ) := @nomp ( ) & 
@@ -122,7 +122,7 @@ third-sg-np ( ) := @nomp ( ) &
 (make-tdl-template 'third-sg-np '((head (local cat head))
                            (case (local cat head case))
                            (cont (local cont)))
-                   '(((local) local)
+                   '(((local) local_basic)
                      ((local conj) cnil)
                      ((local cat head) strict_nominal)
                      ((local cat val subj) *null*)
@@ -130,13 +130,13 @@ third-sg-np ( ) := @nomp ( ) &
                      ((local cat val spr) *olist*)
                      ((local cat head case) case)
                      ((local cat mc) na)
-                     ((local cont) mrs)
+                     ((local cont) mrs_min)
                      ((local cont index png) 3sg)))
 
 
 #|
 prd ($subj=synsem) :=
-  [ LOCAL local &
+  [ LOCAL local_basic &
 	  [ CAT [ HEAD [ PRD + ],
 		  VAL [ SUBJ < $subj >,
 			    SPR *olist*,
@@ -147,7 +147,7 @@ prd ($subj=synsem) :=
 
 (make-tdl-template 'prd '((subj (local cat val subj)))
                    '(((local cat val subj first) synsem)
-                     ((local) local)
+                     ((local) local_basic)
                      ((local cat head prd) +)
                      ((local cat val spr) *olist*)
                      ((local cat val comps) *olist*)
@@ -156,9 +156,9 @@ prd ($subj=synsem) :=
 #|
 
 vp ($vform=vform) :=
-  [ LOCAL local &
+  [ LOCAL local_basic &
 	  [ CONJ cnil,
-	    CAT [ HEAD verbal & strict_head &
+	    CAT [ HEAD verbal & strict_type &
 		     [ VFORM $vform,
 		       INV - ],
 		  VAL [ SUBJ < synsem >,
@@ -169,7 +169,7 @@ vp ($vform=vform) :=
 
 (make-tdl-template 'vp '((vform (local cat head vform)))
                    '(((local cat head vform) vform)
-                     ((local) local)
+                     ((local) local_basic)
                      ((local conj) cnil)
                      ((local cat head) verb_or_comp)
                      ((local cat head inv) -)
@@ -178,7 +178,7 @@ vp ($vform=vform) :=
 #|
 
 pp () := synsem &
-  [ LOCAL local &
+  [ LOCAL local_basic &
 	  [ CAT [ HEAD prep & [ PRD - ],
 		  VAL [ SPR *olist*,
 			    COMPS *olist* ],
@@ -188,7 +188,7 @@ pp () := synsem &
 
 (make-tdl-template 'pp nil
                    '((() synsem)
-                     ((local) local)
+                     ((local) local_basic)
                      ((local cat head) prep)
                      ((local cat head prd) -)
                      ((local cat val spr) *olist*)
