@@ -56,13 +56,15 @@ three_space_lex_entry3 three_space_lex_entry4)
 
 (defparameter *chart-limit* 100)
 
-(defparameter *maximum-number-of-edges* 6000)
+(defparameter *maximum-number-of-edges* 3000)
 
 (defparameter *mother-feature* NIL
    "The feature giving the mother in a grammar rule")
 
 (defparameter *start-symbol* '(root_strict)
    "specifing valid parses")
+;(defparameter *start-symbol* '(root)
+;   "specifing valid parses")
 
 (defparameter *maximal-lex-rule-applications* 7
    "The number of lexical rule applications which may be made

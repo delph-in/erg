@@ -562,10 +562,12 @@ word_or_lexrule := sign &
 ; neg_rel's HANDEL as TOP, rather than the KEY's HANDEL (where the KEY must still
 ; be the same as for the positive auxiliary in order to get tag questions right).
 ;
+; Not all words have lex_synsem - e.g. lexical PPs like "tomorrow" are phr_synsem
+; since they can be post-nominal modifiers.
+
 word := word_or_lexrule &
-  [ SYNSEM lex_synsem &
-	   [ LOCAL.CONT [ TOP #hand,
-			  --TOPKEY.HANDEL #hand ] ],
+  [ SYNSEM.LOCAL.CONT [ TOP #hand,
+			--TOPKEY.HANDEL #hand ],
     ROOT - ].
 
 ;; Not all phrases have SYNSEM phr_synsem, since we need to allow the head-comp
@@ -634,6 +636,19 @@ multi_lex_entry_affixed := basic_multi_lex_entry &
     ARGS < [ STEM < #stem1 >,
 	     AFFIX no-affix ],
 	   [ STEM < #stem2 >,
+	     AFFIX local_min ] > ].
+
+two_space_lex_entry_affixed := basic_multi_lex_entry &
+  [ STEM < #stem1, #stem2, #stem3 >,
+    SYNSEM.LOCAL [ KEYS.KEY.LABEL #label,
+		   CONT.WGLISZT <! whg-item & [ WG-HNDLS < #label > ],
+				   whg-item & [ WG-HNDLS < #label > ],
+				   whg-item & [ WG-HNDLS < #label > ] !> ],
+    ARGS < [ STEM < #stem1 >,
+	     AFFIX no-affix ],
+	   [ STEM < #stem2 >,
+	     AFFIX no-affix ],
+	   [ STEM < #stem3 >,
 	     AFFIX local_min ] > ].
 
 key_first := basic_multi_lex_entry &
@@ -731,9 +746,10 @@ bse := bse_or_inf & fin_or_bse.
 ; Base morphology verbs can be either base or imperative, but not if negated.
 ; See discussion of type neg_word.
 bse_only := bse & non_fin.
-imp_vform :< bse.
+fin_or_imp :< vform.
+imp_vform := bse & fin_or_imp.
 fin_or_inf :< vform.
-fin := fin_or_inf & fin_or_bse.
+fin := fin_or_inf & fin_or_bse & fin_or_imp.
 inf_or_prp :< non_fin.
 inf := inf_or_prp & bse_or_inf & fin_or_inf.
 prp :< inf_or_prp.
@@ -789,6 +805,9 @@ det := func & poss-able.
 subst := head &
   [ MOOD mood ].
 
+; Adverbs modify adverbees.
+adverbee :< subst.
+
 v_or_g_or_a :< subst.
 v_or_g := v_or_g_or_a &
   [ VFORM vform,
@@ -797,16 +816,13 @@ v_or_g := v_or_g_or_a &
 nominal := subst & poss-able &
   [ CASE case ].
 
-verbal := v_or_g &
+verbal := v_or_g & adverbee &
   [ AUX bool ].
 
 ; mobile things can be extracted in the complement-extraction rule, from which
 ; we exclude nominative-case NPs by not making all nouns mobile.
 
 mobile :< head.
-
-; Adverbs modify adverbees.
-adverbee :< subst.
 
 adj* := a_or_p & v_or_g_or_a & n_or_a & adverbee & mobile.
 
@@ -820,17 +836,21 @@ noun* := supnoun & n_or_v & n_or_p & n_or_a.
 
 gerund* := supnoun & adverbee & v_or_g & n_or_v.
 
-verb* := verbal & adverbee & v_or_p & n_or_v &
+verb* := verbal & v_or_p & n_or_v &
   [ TENSE tense,
     VOICE voice ].
 
 comp* := nominal & verbal.
 
-neg :< func.
+basic_adv :< func.
 
-adv := func & mobile.
+; 'not' and closed class of other adverbs that can be added to aux COMPS list
+; via 'adv_addition' lexical rule.
+lexadv :< basic_adv.
 
-root-marker := v_or_g & strict_type.
+adv := basic_adv & mobile.
+
+root-marker := v_or_g & adverbee & strict_type.
 
 detspec :< func.
 
@@ -907,6 +927,15 @@ full_non_expl := non_expl & full_index.
 full_there-ind := there-ind & full_index.
 full_ref-ind := ref-ind & full_non_expl.
 full_deg-ind := deg-ind & full_index.
+
+conj-ind :< event_or_index.
+conj_event := conj-ind & event.
+conj_ref-ind := conj-ind & ref-ind.
+conj_full_ref-ind := conj-ind & full_ref-ind.
+conj_deg-ind := conj-ind & deg-ind.
+conj_full_deg-ind := conj-ind & full_deg-ind.
+conj_non_expl-ind := conj-ind & non_expl-ind.
+conj_full_non_expl := conj-ind & full_non_expl.
 
 ; The basic semantic structure, a CONT, is just something with a handle.
 ; Conts are further classified into mrss (i.e., things with liszts) and
@@ -1053,7 +1082,7 @@ hcomp_nom_rel := nom_rel & arg3_rel &
 
 nominalize_rel :< diadic_nom_rel.
 
-gerund_rel := diadic_nom_rel & hcomp_nom_rel.
+gerund_rel := diadic_nom_rel & hcomp_nom_rel & reg_nom_rel.
 
 temp_abstr_rel := nonpro_rel &
   [ INST.SORT time ].
@@ -1109,8 +1138,12 @@ minute_or_ampm_rel :< temp_nondim_rel.
 minute_rel := minute_or_ampm_rel &
   [ MINUTE string ].
 
+modable_hour_rel := hour_rel & modable_rel.
+
 ; 'Kim sleeps three times each day'
-_time_rel := hour_rel & modable_rel.
+_time_rel :< modable_hour_rel.
+; 'How many hours did Kim work?'
+_hour_rel :< modable_hour_rel.
 
 am_pm_rel :< minute_or_ampm_rel.
 am_rel :< am_pm_rel.
@@ -1239,7 +1272,7 @@ arg1234_rel := arg123_rel & arg14_rel.
 arg3_event_rel := arg3_rel & role_rel.
 
 ellipsis_rel := role_rel &
-  [ ROLE event ].
+  [ ROLE thing ].
 
 event_arg_rel := event_rel & arg_rel.
 
@@ -1316,6 +1349,8 @@ adv_rel := abstr_adv_rel & independent_rel.
 neg_rel := arg_rel & independent_rel.
 
 neg_polar_rel :< adv_rel.
+
+_from_to_rel :< miscprep_ind_rel.
 
 
 ; Degree relations
@@ -1419,9 +1454,6 @@ polite_rel :< arg_rel.
 unspec_rel := nondim_rel &
   [ HINST index,
     NHINST index ].
-
-; Used for vocatives for now.
-unspec_mod_rel :< prep_mod_ind_rel.
 
 ; Relation introduced for tag questions
 
@@ -1760,7 +1792,6 @@ _on_rel := _on_rel_a & independent_rel.
 _with_rel_a :< miscprep_rel.
 _with_rel_s := _with_rel_a & selected_rel.
 _with_rel := _with_rel_a & independent_rel.
-_on_idiom_rel := miscprep_rel & selected_rel.
 _at_rel_a :< state_loc_rel.
 _at_rel_s := _at_rel_a & selected_rel.
 _at_rel := _at_rel_a & independent_rel.
@@ -1830,7 +1861,9 @@ _behind_rel := _behind_rel_a & independent_rel.
 _after_prepx_rel_a :< temp_loc_abstr_rel.
 _after_prepx_rel_s := _after_prepx_rel_a & selected_rel.
 _after_prepx_rel := _after_prepx_rel_a & independent_rel.
-_into_rel := to_dir_rel & selected_rel.
+_into_rel_a :< miscprep_rel.
+_into_rel_s := _into_rel_a & selected_rel.
+_into_rel := _into_rel_a & independent_rel.
 _upon_rel_a :< state_loc_rel.
 _upon_rel_s := _upon_rel_a & selected_rel.
 _upon_rel := _upon_rel_a & independent_rel.
@@ -1840,3 +1873,6 @@ _apart_isect_rel := _apart_isect_rel_a & independent_rel.
 _open_rel_a :< abstr_adj_rel.
 _open_rel_s := _open_rel_a & selected_rel.
 _open_rel := _open_rel_a & independent_rel.
+_out_of_rel_a :< dir_indep_rel.
+_out_of_rel_s := _out_rel_a & selected_rel.
+_out_of_rel := _out_rel_a & independent_rel.

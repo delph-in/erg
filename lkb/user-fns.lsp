@@ -157,18 +157,19 @@
     (extradj_i 100)
     (extradj_s 150)
     (extracomp 200)
-    (fillhead_d 150)
-    (fillhead_imp 150)
+    (fillhead_non_wh 150)
     (fillhead_wh_r 150)
+    (fillhead_wh_subj_r 150)
     (fillhead_wh_nr_f 150)
     (fillhead_wh_nr_i 150)
-    (fillhead_rel 150)
+    (fillhead_rel 100)
     (hoptcomp 200)
     (rootgap_l 100)
     (rootgap_r 100)
     (n_n_cmpnd 200)
-    (frag_nomod_i 100)
-    (vp_ellipsis 200)
+    (vpellipsis_lr 100)
+    (vgering 100)
+    (temp_np 300)
     (otherwise 
      (if (get-lex-rule-entry (rule-id rule))
 	 400
@@ -179,13 +180,15 @@
 
 (defparameter *unlikely-le-types* '(DISC_ADV_MLE1 LETTER_NAME_LE
 			    MEALTIME_WORD_LE NUMADJ_NOUN_WORD_LE
-			    NP_ADV_LE SUBCONJ_LE 
-			    SUBCONJ_INF_LE SUBCONJ_INF_3MLE2
+			    NP_ADV_LE SUBCONJ_INF_LE SUBCONJ_INF_3MLE2
 			    BE_TH_COP_IS_LE BE_TH_COP_ARE_LE
 			    BE_TH_COP_WAS_LE BE_TH_COP_WERE_LE
+			    INT_VP_ADV_POST_WORD_LE FREEREL_PRO_NP_WORD_LE
+			    MV_SORB_LE PDET_ONE_LE
 			    ))
 (defparameter *likely-le-types* '(COORD_C_LE DISC_ADV_LE 
-				  QUASIMODAL_LE
+				  QUASIMODAL_LE MV_POSS_LE
+				  HOUR_WORD_LE
 				  ))
 
 (defun lex-priority (mrec)

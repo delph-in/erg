@@ -7,6 +7,9 @@
 ;;   Language: Allegro Common Lisp
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; $Log$
+;; Revision 1.18  1999/06/18 05:56:57  aac
+;; get the right version this time
+;;
 ;; Revision 1.16  1999/06/09 05:58:53  aac
 ;; added comments regarding patches, added lilfes identifier patch, added global for compare
 ;;
@@ -337,6 +340,7 @@
     (,(vsym "meas_adj_rel") vit-discourse (vit_dir no))
     (,(vsym "unspec_rel") vit-discourse (vit_dir no))
     (,(vsym "abstr_apply") vit-discourse (vit_dir no))
+    (,(vsym "_cop_id_rel") vit-discourse (vit_dir no))
     ))
 
 (setf *top-level-rel-types* 
@@ -365,7 +369,7 @@
     ,(vsym "_somewhere_rel") ,(vsym "_then_temp_rel") 
     ,(vsym "_there_rel") ,(vsym "_thereabouts_rel") 
     ,(vsym "_upstairs_rel")
-    ,(vsym "_and_rel")
+    ,(vsym "_and_rel") ,(vsym "_pm_rel") ,(vsym "_am_rel")
     ))
 
 #|

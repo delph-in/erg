@@ -7,8 +7,8 @@
 
 ; (time (batch-check-lexicon))
 
-#|
 
+#|
 ; For MRS to VIT
 
 #+:mrs
@@ -19,11 +19,7 @@
        (data-dir1 
               (make-pathname :directory 
                              (pathname-directory
-                              (dir-append data-dir2 '(:relative "data")))))
-	(data-dir3
-              (make-pathname :directory 
-                             (pathname-directory
-                              (dir-append data-dir2 '(:relative "lkb"))))))
+                              (dir-append data-dir2 '(:relative "data"))))))
   (load (merge-pathnames
          (make-pathname :name "lkb-db-eng.lisp")
           data-dir1))
@@ -32,6 +28,9 @@
          (merge-pathnames
             (make-pathname :name "new-rules.mrs")
             data-dir1)))))
+|#
+
+#|
 
 ; Use this version for VM, but not for generation.
 

@@ -48,8 +48,7 @@ cp ($vform=vform) := synsem & @satp($head=verbal) &
 #|
 
 nomp ($cont=mrs) := @satp($head=nominal) &
-  [ LOCAL [ CAT [ HEAD strict_type &
-		       [ MOD < > ],
+  [ LOCAL [ CAT [ HEAD strict_type,
 		  MC na_or_- ],
 	    CONT $cont ] ].
                   
@@ -60,7 +59,6 @@ nomp ($cont=mrs) := @satp($head=nominal) &
                      ((local conj) cnil)
                      ((local cat head) strict_type)
                      ((local cat head) nominal)
-                     ((local cat head mod) *null*)
                      ((local cat head mood) ind_or_mod_subj)
                      ((local cat val subj) *olist*)
                      ((local cat val comps) *olist*)
@@ -86,8 +84,7 @@ nomp_acc ($cont=mrs) := @nomp() &
                      ((local cat val comps) *olist*)
                      ((local cat val spr) *olist*)
                      ((local cat mc) na_or_-)
-                     ((local cont) mrs_min)
-                     ((local cat head mod) *null*)))
+                     ((local cont) mrs_min)))
 
 #|
 nomp_nom ($cont=mrs) := @nomp() &
@@ -106,8 +103,7 @@ nomp_nom ($cont=mrs) := @nomp() &
                      ((local cat val spr) *olist*)
                      ((local cat head case) nom)
                      ((local cat mc) na_or_-)
-                     ((local cont) mrs_min)
-                     ((local cat head mod) *null*)))
+                     ((local cont) mrs_min)))
 
 #|
 
@@ -127,8 +123,7 @@ third-sg-np ( ) := @nomp ( ) &
                      ((local cat val spr) *olist*)
                      ((local cat mc) na_or_-)
                      ((local cont) mrs_min)
-                     ((local cont index png) 3sg)
-                     ((local cat head mod) *null*)))
+                     ((local cont index png) 3sg)))
 
 
 #|
