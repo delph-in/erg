@@ -119,7 +119,7 @@
 
 (defparameter *psql-lexicon-parameters* 
   #+:psql
-  '((:db "erg") (:host "localhost"))
+  '((:db "erg") (:semi t))
   #-:psql
   nil)
 
