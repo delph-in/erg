@@ -6,9 +6,9 @@
 ;;
 ;;  To build a new database:
 ;;
-;;    (build-comlex "~malouf/comlex/comlex.raw")))
+;;    (lkb::build-comlex "~malouf/comlex/comlex.raw")))
 ;;
-
+;;    Changed with new type names (Bond: 2000-11-01)
 
 (defparameter *comlex-db-file* 
     (merge-pathnames #p"comlex" (this-directory)))
@@ -81,22 +81,22 @@
   (case (car entry)
     (noun 
      (fcase entry
-	    (ntitle '((:noun title_le title_rel)
-		      (:noun intr_noun_word_le reg_nom_rel)))
-	    (countable '((:noun noun_ppof_word_le reg_diadic_nom_rel)))
-	    (otherwise '((:noun massn_le reg_nom_rel)))))
-    (adverb '((:adverb adv_word_le adv_rel)))
+	    (ntitle '((:noun n_title_le title_rel)
+		      (:noun n_intr_le reg_nom_rel)))
+	    (countable '((:noun n_ppof_le reg_diadic_nom_rel)))
+	    (otherwise '((:noun n_mass_le reg_nom_rel)))))
+    (adverb '((:adverb adv_le adv_rel)))
     (adjective 
-     (cons '(:adjective intrans_adj_le adj_rel)
+     (cons '(:adjective adj_intrans_le adj_rel)
 	   (select-subcats entry
-			   (adj-to-inf '((:adjective reg_adj_equi_le 
+			   (adj-to-inf '((:adjective adj_reg_equi_le 
 						     adj_arg4_rel))))))
     (verb
      (select-subcats entry
-		     (intrans '((:verb mv_unerg_le arg1_rel)))
-		     (np '((:verb mv_np_trans_le arg13_rel)))
-		     (np-to-np '((:verb mv_ditrans_le arg123_rel)))
-		     (s '((:verb mv_cp_non_trans_le arg14_rel)))))))
+		     (intrans '((:verb v_unerg_le arg1_rel)))
+		     (np '((:verb v_np_trans_le arg13_rel)))
+		     (np-to-np '((:verb v_ditrans_le arg123_rel)))
+		     (s '((:verb v_cp_non_trans_le arg14_rel)))))))
 
 ;;*************************************************************************** 
 ;; Given a string, pull in all the lexical entries with that string in

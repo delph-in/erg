@@ -153,40 +153,36 @@
 (defun gen-rule-priority (rule)
   (rule-priority rule))
 
-(defparameter *unlikely-le-types* '(DISC_ADV_MLE1 LETTER_NAME_LE
-				    MEALTIME_WORD_LE NUMADJ_NOUN_WORD_LE
-				    NP_ADV_LE SUBCONJ_INF_LE 
-				    SUBCONJ_INF_3MLE2
-				    BE_TH_COP_IS_LE BE_TH_COP_ARE_LE
-				    BE_TH_COP_WAS_LE BE_TH_COP_WERE_LE
-				    INT_VP_ADV_POST_WORD_LE 
-				    FREEREL_PRO_NP_WORD_LE
-				    MV_SORB_LE PDET_ONE_LE 
-				    DISC_ADV_LIKE_LE PREP_CP_LE
-				    MV_OBJ_EQUI_NON_TRANS_PRD_LE
-				    FREEREL_PRO_NP_WORD_LE
-                                    MV_SUBJ_EQUI_PRD_LE
-                                    MV_OBJ_EQUI_PRD_LE
-                                    COORD_C_MLE
-                                    NP_ADV_LE
-				    ORDINAL_ADJ_LE
-				    TO_C_PROP_ELIDED_LE
-				    TO_C_NONPROP_ELIDED_LE
+(defparameter *unlikely-le-types* '(disc_adv_mle1 letter_name_le
+				    n_mealtime_le 
+				    n_adv_le p_subconj_inf_le 
+				    vc_there_is_le vc_there_are_le
+				    vc_there_was_le vc_there_were_le
+				    adv_int_vp_post_le 
+				    n_freerel_pro_le
+				    v_sorb_le det_part_one_le 
+				    adv_disc_like_le p_cp_le
+				    v_obj_equi_non_trans_prd_le
+                                    v_subj_equi_prd_le
+                                    v_obj_equi_prd_le
+                                    coord_c_mle
+                                    n_adv_le
+				    comp_to_prop_elided_le
+				    comp_to_nonprop_elided_le
 				    ))
-(defparameter *likely-le-types* '(COORD_C_LE DISC_ADV_LE 
-				  QUASIMODAL_LE MV_POSS_LE
-				  HOUR_WORD_LE DITRANS_PREP_LE
-				  MV_EXPL_IT_SUBJ_LIKE_LE
-                                  S_ADV_PRE_WORD_NOSPEC_LE
-				  MORE_ADJ_LE MV_SUBJ_EQUI_LE
-				  PROPER_LE MV_PREP_PARTICLE_NP_LE
-				  WH_PRO_WORD_LE
-                                  MV_EMPTY_PREP*_INTRANS_LE
-                                  MV_EMPTY_PREP_INTRANS_LE
-				  TO_C_NONPROP_LE
-				  HOW_ABOUT_N_OR_P_MLE1
-				  AND_NUM_LE
-				  COMPLEMENTED_UNSPECIFIED_CARD_LE
+(defparameter *likely-le-types* '(conj_complex_le adv_disc_le 
+				  va_quasimodal_le v_poss_le
+				  n_hour_le p_ditrans_le
+				  v_expl_it_subj_like_le
+                                  adv_s_pre_word_nospec_le
+				  adj_more_le v_subj_equi_le
+				  n_proper_le v_prep_particle_np_le
+				  wh_pro_word_le
+                                  v_empty_prep*_intrans_le
+                                  v_empty_prep_intrans_le
+				  comp_to_nonprop_le
+				  conj_and_num_le
+				  adj_complemented_unspecified_card_le
 				  ))
 
 (defun lex-priority (mrec)
