@@ -119,7 +119,7 @@
       (write-vit vit-out vit))
     (format vit-out ",vitCheck(V).~%~%halt.~%"))
   (excl::run-shell-command "cd /eo/e1/vm2/vitADT/lib/Vit_Adt;/opt/quintus/bin3.2/sun4-5/prolog < ~/tmp/vitcheck" :output "~/tmp/vitout" :if-output-exists :supersede :error-output "~/tmp/viterror" :if-error-output-exists :supersede)
-  (excl::run-shell-command "tail +56 ~/tmp/viterror | tail -r | tail +2 | tail -r" :output stream)
+  (excl::run-shell-command "tail +56 ~/tmp/viterror | tail -r | tail +2 | tail -r" :output "~/tmp/errorout" :error-output "~/tmp/realerrorout" :if-output-exists :supersede :if-error-output-exists :supersede)
   (format stream "~%"))
 
 
@@ -182,6 +182,50 @@
                                       groups 
                                       labels 
                                       (rel-label rel)))
+         (dbitem (get-db-item (rel-sort rel)))
+         (args (collect-args-and-values-from-rel rel dbitem))
+         (pred (make-p-term :predicate 
+               (get-vit-predicate-name (rel-sort rel) dbitem)
+               :args 
+               (cons label
+                     (loop for val in (second args)
+                          collect
+                           (convert-mrs-val-to-vit val labels)))))
+         (inst (get-vit-instance-from-rel pred))
+         (semantics 
+          (cons pred
+                (loop for arg in (first args)
+                                 ;; arg is (argN . value)
+                    collect
+                      (make-p-term :predicate
+                                   (first arg)
+                                   :args (if (member (first arg) 
+						     *no-inst-arg-roles*)
+					     (list label
+                                               (convert-mrs-val-to-vit 
+                                                (rest arg)
+                                                labels))
+					   (list label
+						 inst
+						 (convert-mrs-val-to-vit 
+						  (rest arg)
+						  labels))))))))
+    (convert-mrs-var-extra (second args) vit inst groups labels)
+    (when (rel-extra rel)
+      (convert-mrs-rel-extra (rel-extra rel) vit inst label groups labels))
+    (when *relation-type-check*
+      (convert-relation-type-info-to-vit rel vit inst label))
+    semantics))
+
+#|
+;old version for page 2.1
+(defun convert-mrs-rel-to-vit (rel vit groups labels)
+  ;;; returns a list, to allow for splitting of relations into multiple p-terms
+  ;;; e.g. for verbs
+  (let* ((label (convert-label-to-vit (rel-handel rel) 
+                                      groups 
+                                      labels 
+                                      (rel-label rel)))
          (args (collect-args-and-values-from-rel rel))
          (pred (make-p-term :predicate 
                (get-vit-predicate-name (rel-sort rel))
@@ -215,6 +259,7 @@
     (when *relation-type-check*
       (convert-relation-type-info-to-vit rel vit inst label))
     semantics))
+|#
 
 ;; In mrsoutput.lisp
 ;; Changed create-type to convert string values to symbols, since VIT checker 
