@@ -106,8 +106,12 @@
 				  (cons 'initial-cto-val  
 					(format nil "~A" cto))))
 	     (new-dag (tdfs-indef tdfs))
+	     ;;; need to restrict replacement to the RELS list
+	     ;;; otherwise get MSG clashes
 	     (retyped-dag
-	      (replace-dag-types new-dag mrs::*initial-semantics-path*
+	      (replace-dag-types new-dag 
+				 (append mrs::*initial-semantics-path*
+				       mrs::*psoa-liszt-path*) 
 				 replace-alist)))
 	(when retyped-dag
 	  (setf (tdfs-indef tdfs) retyped-dag))))))
