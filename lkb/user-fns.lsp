@@ -251,7 +251,7 @@
                       (and (find-package :lkb)
                            (find-symbol "*GRAMMAR-VERSION*" :lkb))))
          (prefix
-          (if (and version (boundp version))
+          (if version
             (remove-if-not #'alphanumericp (symbol-value version))
             "biglex")))
     (setf *psorts-temp-file* 
@@ -310,3 +310,7 @@
        (let ((fs-type (type-of-fs fs)))
          (eql fs-type '-))))
 
+#-:lui 
+(defun lui-status-p (foo)
+  (declare (ignore foo))
+  nil)
