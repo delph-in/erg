@@ -19,7 +19,8 @@
         (chars (coerce str 'list))
 	(tmp-result-chars nil)
 	(result-list nil)
-	(current-word-record nil))
+	(current-word-record nil)
+	(apos nil))
     (do* ((next-char (car chars) (car remainder))
           (remainder (cdr chars) (cdr remainder))
 	  (char-count 0 (+ char-count 1)))
@@ -55,10 +56,14 @@
 	       (setf in-word t))
 	      ;; leave the end of word to the normal mechanism
 	      (t
-	       ;; end of word
+	       ;; treat apostrophe as end of word
+	       ;; but save to put on start of new one, since
+	       ;; that's what preprocessor.fsr is doing
+	       ;; and how RASP characterization works
 	       (push (make-end-of-word 
 		      current-word-record tmp-result-chars char-count)
 		     result-list)
+	       (setf apos t)
 	       (setf in-word nil)	
 	       (setf tmp-result-chars nil))))
 	    ((not (alphanumeric-or-extended-p next-char))
@@ -77,6 +82,13 @@
 		result-list)
 	       (setf in-word nil)
 	       (setf tmp-result-chars nil)))
+	    (apos ; only set when in-word is nil
+	     (setf current-word-record
+	       (make-chared-word :cfrom (- char-count 1)))
+	     (setf apos nil)
+	     (setf in-word t)
+	     (push #\' tmp-result-chars)
+	     (push next-char tmp-result-chars))
 	    (t
 	     (when (not in-word)
 	       (setf current-word-record
