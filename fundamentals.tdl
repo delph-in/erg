@@ -150,11 +150,18 @@ fem_and_neut := fem* & neut*.
 fem_and_andro := fem* & andro*.
 neut_and_andro := neut* & andro*.
 
-masc := masc* & strict_sort.
-fem := fem* & strict_sort.
-neut := neut* & strict_sort.
-andro := andro* & strict_sort.
-andro1 := andro1* & strict_sort.
+strict_gender := gender & strict_sort.
+masc := masc* & strict_gender.
+fem := fem* & strict_gender.
+neut := neut* & strict_gender.
+andro := andro* & strict_gender.
+andro1 := andro1* & strict_gender.
+; The following two are used in tag questions to block mismatched expletive
+; pronouns in main clause and tag, since we can't block on unified index
+; values, since in general tag questions introduce a pronoun which must have
+; a unique index bound by the quantifier it (now) introduces lexically.
+no_gend_it := strict_gender.
+no_gend_there := strict_gender.
 
 png := *avm* & 
   [ PN pernum,
@@ -330,11 +337,11 @@ hole :< thing.
 ; DIVISIBLE distinguishes singular count nouns from plural and mass nouns,
 ; for determiners like "some", and for bare-plural NPs.
 
-index :< individual.
-
+index := individual &
+  [ PNG png ].
+    
 full_index := index &
-  [ PNG png,
-    PRONTYPE prontype,
+  [ PRONTYPE prontype,
     SORT *sort* ].
 
 ; This is the type of the index of the phrase modified by predicative PPs, which
@@ -679,6 +686,12 @@ non-local := non-local_min &
 ;; "the day he arrived"
 unexpr_local :< local_basic.
 
+;; For exceptions to lexical rules
+alts_min :< *avm*.
+alts := alts_min &
+  [ PASSIVE bool ].
+no_alts :< alts_min.
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Types for Sign, Word, Phrase, and Lex-Entry
 
@@ -705,7 +718,9 @@ phrase_or_lexrule := sign &
 
 word_or_lexrule_min := sign_min.
 
-word_or_lexrule := word_or_lexrule_min & sign.
+; ALTS allow lexical entries to block lexical rule application
+word_or_lexrule := word_or_lexrule_min & sign &
+  [ ALTS alts_min ].
 
 ; We use --TOPKEY rather than KEY because of negated auxiliaries, which have the
 ; neg_rel's HANDEL as TOP, rather than the KEY's HANDEL (where the KEY must still
@@ -956,8 +971,9 @@ modnp := modnp* & strict_type.
 expl-ind :< index.
 it-ind := expl-ind & full_index &
   [ PNG [ PN 3sg*,
-	  GEN neut* ] ].
-there-ind :< expl-ind.
+          GEN no_gend_it ] ].
+there-ind := expl-ind &
+  [ PNG.GEN no_gend_there ].
 
 non_expl-ind := index & event_or_index.
 ref-ind :< non_expl-ind.
@@ -1123,6 +1139,9 @@ nondim_rel :< norm_relation.
 
 modable_rel :< norm_relation.
 
+; nontemp_rel used to distinguish temporal nominal phrases from all others
+nontemp_rel :< norm_relation.
+
 ; Nominal relations
 
 instance_rel := independent_rel &
@@ -1135,7 +1154,7 @@ nom_rel := basic_nom_rel &
 
 nonpro_rel :< nom_rel.
 nom_nondim_rel := nom_rel & nondim_rel.
-non_temp_nom_rel :< nom_nondim_rel.
+non_temp_nom_rel := nom_nondim_rel & nontemp_rel.
 reg_nom_rel := non_temp_nom_rel & nonpro_rel.
 modable_nom_rel := non_temp_nom_rel & modable_rel & nonpro_rel.
 
@@ -1176,7 +1195,7 @@ gen_named_rel := abstr_named_rel &
   [ NAMED atom ].
 abstr_named_np_rel :< gen_named_rel.
 named_np_rel := abstr_named_np_rel & reg_nom_rel. 
-named_num_rel := abstr_named_np_rel & reg_nom_rel.
+named_num_rel := abstr_named_np_rel & reg_nom_rel & card_rel.
 
 ; Relation used in decomposed lexical semantics, e.g. for 'when'
 
@@ -1197,8 +1216,12 @@ dofm_rel := diadic_day_rel & gen_named_rel &
   [ NAMED string,
     ARG3 non_expl-ind ].
 
+;; Need supertype of dofw_rel and pro_poss_rel for the specifier of the small
+;; class of words like "morning" as in "my mornings" or "Tuesday mornings"
+dofw_or_poss_rel :< norm_relation.
+
 ;; day_of_week_rel
-dofw_rel := named_day_rel &
+dofw_rel := named_day_rel & dofw_or_poss_rel &
   [ NAMED symbol ].
 
 holiday_rel := named_day_rel &
@@ -1294,6 +1317,9 @@ unk_rel :< named_rel.
 gen_numval_rel :< reg_nom_rel.
 gen_currency_rel :< reg_nom_rel.
 
+; For X to Y constructions
+interval_rel :< diadic_modable_nom_rel.
+
 ;; The relation event_or_arg_rel is designed to distinguish non-nominal signs, 
 ;; including verbs, adjectives, prepositions, and adverbs.  One use of this 
 ;; distinction is for the conjuncts accepted by "but": "*Kim but Sandy left."
@@ -1325,7 +1351,11 @@ recip_pro_rel := non_temp_nom_rel & nonpro_rel &
 generic_nom_rel := non_temp_nom_rel &
   [ INST ref-ind ].
 
-basic_adj_rel :< event_dim_rel.
+; For partitives
+generic_nonpro_rel := nonpro_rel &
+  [ INST ref-ind ].
+
+basic_adj_rel := event_dim_rel & nontemp_rel.
 
 abstr_adj_rel := basic_adj_rel & event_arg_dim_rel &
   [ ARG non_expl ].
@@ -1369,7 +1399,7 @@ no_role_rel :< mod_role_rel.
 
 weather_v_rel := expl_rel & no_role_rel.
 
-role_rel :< mod_role_rel.
+role_rel := mod_role_rel & nontemp_rel.
 
 arg1_rel := role_rel &
   [ ARG1 thing ].
@@ -1426,19 +1456,20 @@ basic_prep_mod_rel := prep_rel & event_arg_dim_rel.
 prep_mod_rel :< basic_prep_mod_rel.
 basic_poss_rel := basic_prep_mod_rel & [ EVENT.E.TENSE no_tense ].
 poss_rel := basic_poss_rel & prep_mod_rel.
-pro_poss_rel := basic_poss_rel.
+pro_poss_rel := basic_poss_rel & dofw_or_poss_rel.
 _got_poss_rel :< poss_rel.
 
 
-
+nontemp_prep_rel := prep_mod_rel & nontemp_rel.
 loc_abstr_rel :< prep_mod_rel.
-dir_or_state_rel := loc_abstr_rel.
+dir_or_state_rel := loc_abstr_rel & nontemp_prep_rel.
 dir_rel :< dir_or_state_rel.
 state_loc_rel :< dir_or_state_rel.
 
 temp_loc_abstr_rel :< loc_abstr_rel.
+unspec_temp_loc_abstr_rel := temp_loc_abstr_rel & unspec_loc_rel.
 
-miscprep_rel :< prep_mod_rel.
+miscprep_rel :< nontemp_prep_rel.
 
 dir_indep_rel := dir_rel & independent_arg_rel.
 miscprep_ind_rel := miscprep_rel & independent_arg_rel.
@@ -1507,6 +1538,9 @@ much_deg_rel :< deg_rel.
 ; For e.g. 'eightish'
 approx_grad_rel :< deg_rel.
 
+; For syntactic rules (for indexing for generation)
+gen_deg_rel :< deg_rel.
+
 comparative_rel := comp_degree_rel &
   [ ARG-1 index,
     C-INST index ].
@@ -1554,7 +1588,7 @@ _to_rel_a :< to_dir_rel.
 _for_rel_a :< miscprep_rel.
 _by_rel_a :< miscprep_rel.
 of_or_about_rel := prep_rel.
-_of_rel_a := prep_mod_rel & of_or_about_rel.
+_of_rel_a := of_or_about_rel & nontemp_prep_rel.
 _in_rel_a :< dir_or_state_rel.
 
 subord_rel := nondim_rel & independent_rel &
@@ -1807,7 +1841,7 @@ intadj1  := intadj2- & digit1.
 ; subjects or complements without discharging that SUBJ value.
 
 pro_ss := expressed_non_canonical &
-  [ LOCAL.CAT.HEAD.CASE acc,
+  [ LOCAL.CAT.HEAD noun & [ CASE acc ],
     NON-LOCAL [ REL 0-dlist,
 		QUE 0-dlist ] ].
 
@@ -2062,3 +2096,8 @@ generic_verb_rel :< arg13_rel.
 generic_noun_rel :< diadic_noarg_nom_rel.
 generic_adj_rel :< adj_rel.
 generic_adv_rel :< adv_rel.
+
+; You'd never believe it if I told you.
+_emailheaderdiv_rel := arg1_rel & [ ARGH thing ].
+_ehkeywordersatz_rel :< reg_nom_rel.
+_ehmodifierersatz_rel :< abstr_adv_rel.
