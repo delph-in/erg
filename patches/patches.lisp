@@ -524,8 +524,8 @@ Output:
     (setf (direction cpu)
       (if (setf (output-stream target)
 	    (strings-to-typed-items 
-	     (cons "<s" (nreverse 
-			 (cons "s>" 
+	     (cons "<" (nreverse 
+			 (cons ">" 
 			       (nreverse
 				(eng-scan-input in t nil)))))))
 	  :forward

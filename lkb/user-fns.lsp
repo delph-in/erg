@@ -33,9 +33,9 @@
                (t (setf in-word t) 
                 (push next-char result-chars))))
     (concatenate 'string 
-	   "<S "
+	   "< "
 	   (string-trim '(#\space) (coerce (nreverse result-chars) 'string))
-	   " S>")))
+	   " >")))
 
             
 #|
