@@ -7,6 +7,9 @@
 ;;   Language: Allegro Common Lisp
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; $Log$
+;; Revision 1.12  1999/05/03 01:22:06  danf
+;; More bug fixes in new MRS scoping
+;;
 ;; Revision 1.11  1999/04/29 03:07:06  danf
 ;; Bug fixes for new scoping
 ;;
@@ -350,6 +353,7 @@
     ,(vsym "_somewhere_rel") ,(vsym "_then_temp_rel") 
     ,(vsym "_there_rel") ,(vsym "_thereabouts_rel") 
     ,(vsym "_upstairs_rel")
+    ,(vsym "_and_rel")
     ))
 
 #|

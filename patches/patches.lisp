@@ -190,6 +190,7 @@
           (disco::full_ref-ind "x")
           (disco::deg-ind "d")
           (disco::individual "d")
+	  (disco::0-dlist "c")
           (tdl::*diff-list* "c")  ;; Assume coordination structure
           (t "v"))))
 

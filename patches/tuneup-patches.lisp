@@ -5,12 +5,12 @@
 (setf *unlikely-le-types* '(DISCO::DISC_ADV_MLE1 DISCO::LETTER_NAME_LE
 			    DISCO::MEALTIME_WORD_LE DISCO::NUMADJ_NOUN_WORD_LE
 			    DISCO::NP_ADV_LE DISCO::SUBCONJ_LE 
-			    DISCO::SUBCONJ_INF_LE
-			    DISCO::BE_TH_COP_IS_LE DISCO::BE_TH_COP_ARE_LE
-			    DISCO::BE_TH_COP_WAS_LE DISCO::BE_TH_COP_WERE_LE
+			    DISCO::SUBCONJ_INF_LE DISCO::SUBCONJ_INF_3MLE2
 			    ))
 (setf *likely-le-types* '(DISCO::COORD_C_LE DISCO::DISC_ADV_LE 
-			  DISCO::QUASIMODAL_LE
+			  DISCO::QUASIMODAL_LE DISCO::TO_C_PROP_LE
+			  DISCO::BE_C_IS_LE DISCO::BE_C_ARE_LE
+			  DISCO::BE_C_WAS_LE DISCO::BE_C_WERE_LE
 			  ))
 (setf *unlikely-lexrule-types* '(DISCO::VP_ELLIPSIS 
 				 DISCO::INTRANS_NOMINAL_GERUND))
@@ -31,6 +31,7 @@
 	      ((and (eq (combo-item-itype rule-item) :lex-entry)
 		    (member (fs-type (cfs-fs (combo-item-cfs rule-item)))
 			    *unlikely-le-types*))
+	       
 	       -200)
 	;; Higher ranking for lex-entries of certain types
 	      ((and (eq (combo-item-itype rule-item) :lex-entry)
@@ -49,7 +50,6 @@
 	(disco::extradj_i 100)
 	(disco::extradj_s 150)
 	(disco::extracomp 200)
-	(disco::extrasubj 100)
 	(disco::fillhead_d 150)
 	(disco::fillhead_imp 150)
 	(disco::fillhead_wh_r 150)

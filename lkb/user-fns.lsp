@@ -157,7 +157,6 @@
     (extradj_i 100)
     (extradj_s 150)
     (extracomp 200)
-    (extrasubj 100)
     (fillhead_d 150)
     (fillhead_imp 150)
     (fillhead_wh_r 150)
@@ -175,9 +174,16 @@
 	 400
        500))))
 
-(defparameter *unlikely-le-types* '(disc_adv_mle1 letter_name_le
-				    mealtime_word_le numadj_noun_word_le))
-(defparameter *likely-le-types* '(coord_c_le))
+(defparameter *unlikely-le-types* '(DISC_ADV_MLE1 LETTER_NAME_LE
+			    MEALTIME_WORD_LE NUMADJ_NOUN_WORD_LE
+			    NP_ADV_LE SUBCONJ_LE 
+			    SUBCONJ_INF_LE SUBCONJ_INF_3MLE2
+			    BE_TH_COP_IS_LE BE_TH_COP_ARE_LE
+			    BE_TH_COP_WAS_LE BE_TH_COP_WERE_LE
+			    ))
+(defparameter *likely-le-types* '(COORD_C_LE DISC_ADV_LE 
+				  QUASIMODAL_LE
+				  ))
 
 (defun lex-priority (mrec)
   (let ((lex-type (dag-type 
