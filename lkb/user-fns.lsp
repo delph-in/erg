@@ -4,7 +4,7 @@
 
 (defun alphanumeric-or-extended-p (char)
   (and (graphic-char-p char)
-       (not (member char '(#\space #\! #\" #\$ #\& #\' #\(
+       (not (member char '(#\space #\! #\" #\& #\' #\(
                            #\) #\* #\+ #\, #\- #\. #\/ #\: #\;
                            #\< #\= #\> #\? #\@ #\[ #\\ #\] #\^
                            #\_ #\` #\{ #\| #\} #\~)))))
@@ -91,7 +91,10 @@
            (push (make-unification :lhs opath                    
                                    :rhs
                                    (make-u-value 
-                                    :type orth-value))
+                                    ;;; DPF hack 010801
+                                    :type orth-value
+                                    ;;:types (list orth-value)
+                                    ))
                  unifs)
            (setq tmp-orth-path (append tmp-orth-path *list-tail*))))
     (let ((indef (process-unifications unifs)))
@@ -103,107 +106,130 @@
 (defun rule-priority (rule)
   (case (rule-id rule)
     (extradj_s 150)
-    (extracomp 200)
+    (extracomp 250)
     (extrasubj_f 300)
     (extrasubj_i 300)
     (fillhead_non_wh 150)
-    (fillhead_wh_r 150)
+    (fillhead_wh_r 300)
     (fillhead_wh_subj_r 150)
     (fillhead_wh_nr_f 150)
     (fillhead_wh_nr_i 150)
-    (fillhead_rel 100)
+    (fillhead_rel 250)
     (freerel 100)
     (hoptcomp 200)
     (rootgap_l 100)
     (rootgap_r 100)
-    (n_n_cmpnd 250)
-    (nadj_rc 400)    
-    (nadj_rr 700)    
-    (adjh_i 350)
+    (np_n_cmpnd 300)
+    (np_n_cmpnd_2 300)
+    (noun_n_cmpnd 500)
+    (nadj_rc 400)
+    (nadj_rr 600)
+    (adjh_i 450)
     (mid_coord_np 800)
     (top_coord_np 700)
     (hcomp 800)
     (hadj_i_uns 450)
     (hadj_s 400)
-    (hadj_ivx_uns 150)
-    (bare_np 300)
+    (bare_np 500)
+    (bare_vger 500)
+    (proper_np 800)
     (fin_non_wh_rel 200)
     (inf_non_wh_rel 100)
+    (runon_s 50)
     (vpellipsis_ref_lr 100)
     (vpellipsis_expl_lr 100)
     (taglr 300)
-    (vgering 100)
+    (vgering 350)
     (numadj_np 100)
     (measure_np 200)
     (appos 200)
     (imper 300)
+    (temp_np 400)
     (sailr 300)
     (advadd 700)
     (passive 400)
     (intransng 200)
-    (transng 400)
+    (transng 300)
     (monthdet 400)
     (weekdaydet 400)
     (monthunsat 400)
     (attr_adj 400)
-    (partitive 400)
+    (attr_adj_pres_part 200)
+    (partitive 200)
     (NP_part_lr 400)
-    (dative_lr 400)
-    (otherwise 
-     (if (get-lex-rule-entry (rule-id rule))
-	 400
-       500))))
+    (dative_lr 300)
+    (otherwise 500)))
 
 (defun gen-rule-priority (rule)
   (rule-priority rule))
 
-(defparameter *unlikely-le-types* '(letter_name_le
-				    n_mealtime_le 
-				    n_adv_le 
-				    p_subconj_inf_le 
-				    vc_there_is_le 
-				    vc_there_are_le
-				    vc_there_was_le 
-				    vc_there_were_le
-				    adv_int_vp_post_le 
-				    n_freerel_pro_le
-				    v_sorb_le 
-				    det_part_one_le 
-				    adv_disc_like_le 
-				    p_cp_le
-				    v_obj_equi_non_trans_prd_le
-                                    v_subj_equi_prd_le
-                                    v_obj_equi_prd_le
-                                    n_adv_le
-				    comp_to_prop_elided_le
-				    comp_to_nonprop_elided_le
-                                    n_hour_prep_le
-	  			    n_pers_pro_noagr_le 
-                                    n_proper_abb_le
-                                    v_np_trans_lowprio_le
+(defparameter *unlikely-le-types* '(N_MEALTIME_LE
+				    N_ADV_LE
+				    VC_THERE_IS_LE
+				    VC_THERE_ARE_LE
+				    VC_THERE_WAS_LE
+				    VC_THERE_WERE_LE
+				    ADV_INT_VP_POST_LE
+				    N_FREEREL_PRO_LE
+                                    N_FREEREL_PRO_ADV_LE
+				    V_SORB_LE
+				    DET_PART_ONE_LE
+				    ADV_DISC_LIKE_LE
+                                    ADV_DISC_LE
+				    P_CP_LE
+				    V_OBJ_EQUI_NON_TRANS_PRD_LE
+                                    V_SUBJ_EQUI_PRD_LE
+                                    V_OBJ_EQUI_PRD_LE
+                                    N_ADV_LE
+				    COMP_TO_PROP_ELIDED_LE
+				    COMP_TO_NONPROP_ELIDED_LE
+                                    N_HOUR_PREP_LE
+	  			    N_PERS_PRO_NOAGR_LE
+                                    N_PROPER_ABB_LE
+                                    V_NP_TRANS_LOWPRIO_LE
+                                    V_NP*_TRANS_LOWPRIO_LE
+                                    V_DITRANS_ONLY_LE
+                                    N_DEICTIC_PRO_LE
+                                    V_UNACC_LE
+                                    N_INTR_LOWPRIO_LE
+                                    P_NBAR_COMP_LE
 				    ))
 
-(defparameter *likely-le-types* '(conj_complex_le 
-				  adv_disc_le 
-				  va_quasimodal_le 
-				  v_poss_le
-				  n_hour_le 
-				  p_ditrans_le
-				  v_expl_it_subj_like_le
-                                  adv_s_pre_word_nospec_le
-				  adj_more_le 
-				  v_subj_equi_le
-				  n_proper_le 
-				  v_prep_particle_np_le
-				  n_wh_pro_le
-                                  v_empty_prep*_intrans_le
-                                  v_empty_prep_intrans_le
-				  comp_to_nonprop_le
-				  conj_and_num_le
-				  adj_complemented_unspecified_card_le
-				  adj_reg_equi_le
-                                  v_np_prep_trans_le
-                                  v_np_prep*_trans_le
+(defparameter *likely-le-types* '(CONJ_COMPLEX_LE
+				  VA_QUASIMODAL_LE
+				  V_POSS_LE
+				  N_HOUR_LE
+				  P_DITRANS_LE
+				  V_EXPL_IT_SUBJ_LIKE_LE
+                                  ADV_S_PRE_WORD_NOSPEC_LE
+				  ADJ_MORE_LE
+				  V_SUBJ_EQUI_LE
+				  N_PROPER_LE
+				  V_PREP_PARTICLE_NP_LE
+				  N_WH_PRO_LE
+                                  V_EMPTY_PREP*_INTRANS_LE
+                                  N_REL_PRO_LE
+                                  V_EMPTY_PREP_INTRANS_LE
+				  COMP_TO_PROP_LE
+				  COMP_TO_NONPROP_LE
+				  CONJ_AND_NUM_LE
+				  ADJ_COMPLEMENTED_UNSPECIFIED_CARD_LE
+				  ADJ_REG_EQUI_LE
+                                  V_NP_PREP_TRANS_LE
+                                  V_NP_PREP*_TRANS_LE
+                                  V_NP*_PREP_TRANS_LE
+                                  P_SUBCONJ_LE
+                                  V_EMPTY_PREP*_TRANS_NOSUBJ_LE
+                                  N_REL_PRO_LE
+                                  V_DOUBLE_PP_LE
+                                  V_NP*_TRANS_PRP_NALE
+                                  V_NP*_TRANS_PRES3SG_NALE
+                                  V_NP*_TRANS_PAST_NALE
+                                  V_NP*_TRANS_PSP_NALE
+                                  ADJ_TRANS_LE
+                                  V_PREP_INTRANS_UNACC_LE
+                                  V_SSR_LE
+                                  N_TITLE_LE
 				  ))
 
 (defun lex-priority (mrec)
@@ -251,7 +277,7 @@
 ;;;
 (defun dag-inflected-p (dag)           
   (let* ((key (existing-dag-at-end-of dag '(inflected))))
-    (and key (bool-value-true key))))
+    (and key (not (bool-value-false key)))))
 
 
 ;;; Function to run when batch checking the lexicon
