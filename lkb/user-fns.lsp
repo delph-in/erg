@@ -101,7 +101,7 @@
              
 
 ;;; return true for types that shouldn't be displayed in type hierarchy
-;;; window. None of their descendents (if any) will be displayed either
+;;; window. Any non-hide descendents will be displayed
 
 (defun hide-in-type-hierarchy-p (type-name)
    ;; starts with _, or ends with _[0-9][M]LE[0-9]
