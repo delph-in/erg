@@ -23,7 +23,10 @@
      (disco::head-dtr)
      (disco::lconj-dtr)
      (disco::rconj-dtr)
-     (disco::non-head-dtr))))
+     (disco::non-head-dtr)
+     (disco::mod-dtr)
+     (disco::nonmod-dtr)
+     )))
 
 (unless lexicon::*rf-filter*
   (rule-filter :print nil)
@@ -39,6 +42,7 @@
 ;; 5. Prevent extracomp from feeding itself (the constraints in the rule are not
 ;;    yet adequate to do so}.
 
+#|
   (lex::augment-filter 
    '(;(extradj_i (:forbid fin_non_wh_rel))
      ;(extradj_s (:forbid fin_non_wh_rel))
@@ -49,8 +53,9 @@
      (hadj_i_uns (:forbid imper))
      (hadj_i_uns (:forbid extrasubj))
      (extracomp (:forbid extracomp))
-     )))
-
+     ))
+|#
+)
 
 (main::get-grammar-from-tdl)
 

@@ -53,13 +53,8 @@ head_nexus_que_phrase := headed_phrase &
   [ SYNSEM.NON-LOCAL.QUE #que,
     HEAD-DTR.SYNSEM.NON-LOCAL.QUE #que ].
 
-head_nexus_econt_phrase := headed_phrase &
-  [ C-CONT.H-CONS <! !> ].
-
-head_nexus_nonque := head_nexus_rel_phrase & head_nexus_econt_phrase.
-head_nexus_nonecont := head_nexus_rel_phrase & head_nexus_que_phrase.
 head_nexus_phrase := head_nexus_rel_phrase & head_nexus_que_phrase &
-		     head_nexus_econt_phrase.
+  [ C-CONT.H-CONS <! !> ].
 
 ; In a head/local dependent phrase, the SLASH feature of the mother is
 ; token-identical to that of the head daughter, which has already amalgamated
@@ -221,19 +216,6 @@ mc_phrase := phrase &
 	     NON-LOCAL [ SLASH 0-dlist,
 			 QUE 0-dlist ] ] ].
 
-nonroot := phrase &
-  [ SYNSEM.LOCAL.CAT.MC - ].
-
-; ERB (03-10-96) hcomp_nc is no longer a subtype of this because some of them
-; are "clauses" in the sense of having a message (e.g., "Kim wants [to leave]").
-; This is actually in need of revision: we are probably going to need to 
-; distinguish between to-headed hcomp_ncs which are selected by equi predicates 
-; or otherwise have PRO subjects and whether-headed hcomp_ncs on the one hand, 
-; and all other instances on the other with a restriction equivalent to SUBJ 
-; list(PRO) in order to block "To rain is difficult" etc.  I think this should 
-; be possible without resorting to anything like VFORM whether to identify cases
-; -- see Ivan's interrogatives paper.
-
 ; The [MC bool] constraint lives here rather than on clause because we want
 ; to treat relative clauses as clauses, but we need to distinguish them as the
 ; only clauses which can serve as modifiers.  That is, on the one hand we need
@@ -245,10 +227,11 @@ nonroot := phrase &
 ; head-adjunct rule says the adjunct must be [MC na], and the thatless_rel
 ; rule says the dtr must be [MC +].
 
-non_rel_clause := head_nexus_nonque & clause & head_compositional &
+non_rel_clause := head_nexus_rel_phrase & clause & head_compositional &
   [ SYNSEM.LOCAL [ CAT.MC bool,
 		   CONT.MESSAGE <! message & #msg !> ],
-    C-CONT.LISZT.LIST < #msg, ... > ].
+    C-CONT [ LISZT.LIST < #msg, ... >,
+	     H-CONS <! !> ] ].
 
 decl := non_rel_clause & 
   [ SYNSEM.LOCAL [ CAT.HEAD.INV -,
@@ -294,8 +277,6 @@ interrog := non_rel_clause &
 ; determiner "whose" as filler in filler-head-wh rules.  Assume all
 ; wh-interrog phrases are [MOOD ind_or_mod_subj].
 
-
-;  AAC - inherit from binary_headed_phrase because of NON-HEAD-DTR
 
 wh_interrog := interrog & binary_headed_phrase &
   [ SYNSEM.LOCAL [ CAT [ HEAD verbal &
@@ -512,7 +493,8 @@ inf_non_wh_rel_cl := non_wh_rel_cl &
 ; we move this constraint to the extracted=adjunct rule, since it seems to
 ; hold true for adjuncts, but not for complements.
 
-head_filler_phrase := head_final & head_nexus_nonecont & 
+head_filler_phrase := head_final & head_nexus_rel_phrase & 
+		      head_nexus_que_phrase & 
   [ SYNSEM [ LOCAL [ CAT.VAL [ SUBJ #subj,
 			       COMPS < >,
 			       SPR < > ],
@@ -524,7 +506,9 @@ head_filler_phrase := head_final & head_nexus_nonecont &
                                           COMPS *olist* ] ],
 			      CONT.H-STORE #hstore ],
 		      NON-LOCAL [ SLASH 1-dlist &
-					[ LIST < #slash > ],
+					[ LIST [ FIRST #slash,
+						 REST < > & #last ],
+					  LAST #last ],
 				  QUE 0-dlist,
 				  REL 0-dlist ] ],
     NON-HEAD-DTR.SYNSEM [ LOCAL #slash & local &
@@ -578,17 +562,29 @@ head_subj_phrase := head_valence_phrase & head_final &
 
 head_comp_or_marker_phrase := head_valence_phrase & head_compositional & 
 			      head_initial &
-  [ SYNSEM.LOCAL [ CAT [ MC #mc,
-			 VAL [ SUBJ #subj,
-			       COMPS #comps,
-			       SPR #spr ] ],
-		   CONT.MESSAGE #hmsg ],
+  [ SYNSEM canonical_synsem &
+	   [ LOCAL [ CAT [ MC #mc,
+			   VAL [ SUBJ #subj,
+				 COMPS #comps,
+				 SPR #spr ] ],
+		     CONT.MESSAGE #hmsg ] ],
     HEAD-DTR.SYNSEM.LOCAL [ CAT [ MC #mc,
 				  VAL [ SUBJ #subj,
 					COMPS < #synsem . #comps >,
 					SPR #spr ] ],
 			    CONT.MESSAGE #hmsg ],
-    NON-HEAD-DTR.SYNSEM #synsem ].
+    NON-HEAD-DTR.SYNSEM #synsem & canonical_synsem,
+    C-CONT.LISZT <! !> ].
+
+; ERB (03-10-96) hcomp_nc is no longer marked as non-clause because some of them
+; are "clauses" in the sense of having a message (e.g., "Kim wants [to leave]").
+; This is actually in need of revision: we are probably going to need to 
+; distinguish between to-headed hcomp_ncs which are selected by equi predicates 
+; or otherwise have PRO subjects and whether-headed hcomp_ncs on the one hand, 
+; and all other instances on the other with a restriction equivalent to SUBJ 
+; list(PRO) in order to block "To rain is difficult" etc.  I think this should 
+; be possible without resorting to anything like VFORM whether to identify cases
+; -- see Ivan's interrogatives paper.
 
 ; ERB (05-10-97) In order for one single hcomp rule to build things like "how
 ; about on Friday", the restriction HEAD subst needs to be removed from this
@@ -602,25 +598,21 @@ head_comp_or_marker_phrase := head_valence_phrase & head_compositional &
 ; make all PRED - entries have an empty COMPS list.  
 
 head_comp_phrase := head_comp_or_marker_phrase &
-  [ SYNSEM canonical_synsem &
-	   [ LOCAL [ CAT.POSTHEAD #ph,
+  [ SYNSEM [ LOCAL [ CAT.POSTHEAD #ph,
 		     CONJ cnil ],
 	     LEX #lex ],
     HEAD-DTR [ SYNSEM.LOCAL.CAT [ POSTHEAD #ph,
-				  HC-LEX #lex ] ],
-    C-CONT.LISZT <! !> ].
+				  HC-LEX #lex ] ] ].
 
 head_marker_phrase := head_comp_or_marker_phrase &
-  [ SYNSEM canonical_synsem &
-	   [ LOCAL [ CONJ strict-conj,
+  [ SYNSEM [ LOCAL [ CONJ strict-conj,
 		     CONT.ALTKEY #altkey ],
 	     NON-LOCAL #nonlocal,
 	     LEX #lex ],
     HEAD-DTR word_or_lexrule &
 	     [ SYNSEM.LOCAL.CONT.ALTKEY #altkey ],
     NON-HEAD-DTR.SYNSEM [ LOCAL.CAT.HC-LEX #lex,
-			  NON-LOCAL #nonlocal ],
-    C-CONT.LISZT <! !> ].
+			  NON-LOCAL #nonlocal ] ].
 
 ; Skip an optional complement as long as there is still another obligatory
 ; complement on the list (here assumed to be the second complement, since it's
@@ -650,8 +642,7 @@ head_opt_comp_phrase := head_valence_phrase & head_only & head_compositional &
 ; will be moved to extracted_comp_phrase.  Extrasubj will say 
 ; HEAD verbal.
 
-extracted_arg_phrase := head_only & head_compositional & 
-			head_valence_phrase & 
+extracted_arg_phrase := head_valence_phrase & head_only & head_compositional &
   [ SYNSEM.LOCAL [ CAT [ HEAD.MOOD indicative,
 			 VAL.SPR #spr ],
 		   CONJ cnil ],
@@ -665,9 +656,6 @@ extracted_arg_phrase := head_only & head_compositional &
 ; complements out of subjunctive-verb-headed phrases.
 
 ; *** We still need special extraction rules for fronting CPs and VPs.
-
-; AAC - EXTRACTED_COMP_PHRASE: HEAD_NEXUS_PHRASE is redundant - 
-; it is an ancestor of EXTRACTED_ARG_PHRASE 
 
 extracted_comp_phrase := extracted_arg_phrase & 
   [ SYNSEM canonical_synsem &
@@ -737,8 +725,8 @@ head_spec_phrase := head_valence_phrase & head_final & non_clause & phrasal &
     NON-HEAD-DTR.SYNSEM #synsem &
 		        [ LOCAL.CAT [ MC na,
 				      VAL.SPEC < [ LOCAL.CONT [ TOP #top,
-								KEY #key ] ] > ],
-			  NON-LOCAL.SLASH 0-dlist ] ]. 
+								KEY #key ] ] > ]
+				    ] ].
 
 ; The noncompositional head_spec is for making non-number phrases: 
 ;  - determiner + noun NPs  "the book"
@@ -751,13 +739,13 @@ head_spec_noncompos := head_spec_phrase & nonhead_compositional &
 	     LISZT <! !>,
 	     H-CONS <! !> ] ].
 
-
 ; Among others, the compositional head_spec is used for number expressions 
 ; like "two hundred", and for degree phrases like "less than four" and
 ; "very tall"
 
 head_spec_compos := head_spec_phrase & head_compositional &
-  [ NON-HEAD-DTR.SYNSEM.LOCAL.CONT.KEY number_or_degree_rel,
+  [ NON-HEAD-DTR.SYNSEM [ LOCAL.CONT.KEY number_or_degree_rel,
+			  NON-LOCAL.SLASH 0-dlist ], 
     C-CONT.LISZT <! !> ].
 
 ; The SYNSEM value of the head of a head/modifier phrase is token-identical to
@@ -776,7 +764,7 @@ head_spec_compos := head_spec_phrase & head_compositional &
 ; blocking modifiers of "where" etc, but perhaps the generalization is wrong
 ; anyway; consider "right where", "exactly when" "just how".
 
-head_mod_phrase := head_nexus_nonecont & phrasal &
+head_mod_phrase := head_nexus_phrase & phrasal &
   [ SYNSEM [ LOCAL [ CAT [ VAL [ SUBJ #subj,
 				 SPR #spr,
 				 COMPS < > ],
@@ -790,8 +778,7 @@ head_mod_phrase := head_nexus_nonecont & phrasal &
 			      CONT.KEY #hkey,
 			      CONJ cnil ],
 		      NON-LOCAL [ REL 0-dlist ] ],
-    C-CONT [ LISZT <! !>,
-	     H-CONS <! !> ] ].
+    C-CONT.LISZT <! !> ].
 
 ; Added restriction on adjunct's specifier to prevent unsaturated nouns
 ; (like 'afternoon') from serving as modifiers before they pick up their
@@ -805,20 +792,20 @@ head_mod_phrase := head_nexus_nonecont & phrasal &
 ; independent of that of their modifiee.
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; DPF 16-Jul-98 - Reconsider this paragraph...
-; head_mod_phrase_simple cannot inherit from nonhead_compositional, since some
-; adjuncts (e.g. relative clauses) specify a value for TOP and/or INDEX on
-; the mother which is distinct from their own (this is the purpose of the
-; ECONT attribute).  Thus it is true that the nonhead daughter determines
-; the TOP and INDEX of the mother, but they are not necessarily simply the
-; nonhead's own.  It is assumed here that every adjunct (sign with non-empty
-; MOD value) will also specify in its ECONT attribute values for TOP,
-; INDEX, and LISZT.
-; Also, head_mod phrases cannot identify the mother's ECONT with the head
-; daughter's, since the modifier may itself be modified, and that can affect
-; the handle and index of the resulting phrase.  Cf. Kasper's example of
-; "an apparently unsolvable problem", where the handle of the modifier phrase
-; will depend on whether there is an adverb modifying the adjective or not.
+;;; DPF 16-Jul-98 - Reconsider this paragraph...
+;;; head_mod_phrase_simple cannot inherit from nonhead_compositional, since some
+;;; adjuncts (e.g. relative clauses) specify a value for TOP and/or INDEX on
+;;; the mother which is distinct from their own (this is the purpose of the
+;;; ECONT attribute).  Thus it is true that the nonhead daughter determines
+;;; the TOP and INDEX of the mother, but they are not necessarily simply the
+;;; nonhead's own.  It is assumed here that every adjunct (sign with non-empty
+;;; MOD value) will also specify in its ECONT attribute values for TOP,
+;;; INDEX, and LISZT.
+;;; Also, head_mod phrases cannot identify the mother's ECONT with the head
+;;; daughter's, since the modifier may itself be modified, and that can affect
+;;; the handle and index of the resulting phrase.  Cf. Kasper's example of
+;;; "an apparently unsolvable problem", where the handle of the modifier phrase
+;;; will depend on whether there is an adverb modifying the adjective or not.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ; SLASH of mother is append of SLASH lists for the two daughters.  In principle
@@ -1063,53 +1050,6 @@ bare_np_phrase := head_only & non_clause & phrasal &
 ; proper name left members of N-N compounds, and also wrong for hour words like
 ; "a one o'clock meeting" since "one o'clock" already supplied a def_rel of
 ; its own.
-#|
-n_n_cmpnd_phr := head_final &
-  [ SYNSEM lex_synsem &
-	   [ LOCAL [ CAT [ HEAD.MOD < >,
-			   VAL #valence,
-			   MC #mc ],
-		     CONT [ MESSAGE #msg,
-			    H-STORE #hstore ] ],
-	     NON-LOCAL [ SLASH #slash,
-			 QUE 0-dlist,
-			 REL 0-dlist ] ],
-    HEAD-DTR.SYNSEM nonpronominal_synsem &
-	   [ LOCAL [ CAT [ HEAD noun*,
-			   VAL #valence &
-			       [ SPR < synsem & [ OPT - ] > ],
-			   MC #mc ],
-		     CONT [ MESSAGE #msg,
-			    INDEX #hind & ref-ind,
-			    KEY.HANDEL #khhand,
-			    H-STORE #hstore ],
-		     CONJ cnil ],
-	     NON-LOCAL [ SLASH #slash,
-			 QUE 0-dlist,
-			 REL 0-dlist ] ],
-    NON-HEAD-DTR.SYNSEM nonpronominal_synsem &
-	   [ LOCAL [ CAT [ HEAD noun* & [ PRD - ],
-			   VAL [ COMPS *olist*,
-				 SPR *unexplist* ] ],
-		     AGR.PNG.PN 3sg,
-		     CONT [ INDEX #modind & ref-ind,
-			    KEY nom_rel &
-				  [ HANDEL #khand ] ] ],
-	     NON-LOCAL [ SLASH 0-dlist,
-			 QUE 0-dlist,
-			 REL 0-dlist ] ],
-    C-CONT [ LISZT <! unspec_rel & [ HANDEL #uhand,
-				     HINST #hind,
-				     NHINST #modind ],
-		      some_rel & [ HANDEL #khhand,
-				   BV #modind,
-				   RESTR #khand,
-				   SCOPE #schand ] !>,
-	     H-CONS <! is-one-of & [ SC-ARG #schand,
-				     CANDS <! #uhand !> ],
-		       leq & [ SC-ARG #schand,
-			       OUTSCPD #uhand ] !> ] ].
-|#
 n_n_cmpnd_phr := head_final &
   [ SYNSEM lex_synsem &
 	   [ LOCAL [ CAT [ HEAD.MOD < >,
@@ -1145,7 +1085,6 @@ n_n_cmpnd_phr := head_final &
     C-CONT [ LISZT <! unspec_rel & [ HINST #hind,
 				     NHINST #modind ] !>,
 	     H-CONS <! !> ] ].
-
 
 ;;
 ;; Temporal NP modifiers
@@ -1201,31 +1140,9 @@ temp_mod_phrase := unary_phrase & phrasal &
 ;; Vocative modifiers
 ;;
 
+;; Commented out for the present - too expensive in processing, and too many
+;; ambiguities
 #|
-vocative_phrase := unary_phrase &
-  [ SYNSEM disc_adv_phr_synsem &
-	   [ LOCAL [ CAT [ HEAD.MOD < [ LOCAL [ CAT [ VAL [ SUBJ < >,
-							    SPR *olist* ],
-						      MC + ],
-						CONT.TOP #top ] ] >,
-			   MC na ],
-		     CONT.KEY #key ],
-	     NON-LOCAL #nonloc &
-		   [ SLASH 0-dlist,
-		     REL 0-dlist,
-		     QUE 0-dlist ] ],
-    ROOT -,
-    ARGS < [ SYNSEM [ LOCAL [ CAT [ HEAD noun,
-				    VAL [ SPR < >,
-					  COMPS *olist* ] ],
-			      CONT.KEY #key & named_rel,
-			      CONJ cnil ],
-		      NON-LOCAL #nonloc ] ] >,
-    C-CONT [ TOP #top,
-	     LISZT <! !>,
-	     H-CONS <! !> ] ].
-|#
-
 vocative_phrase := unary_phrase &
   [ SYNSEM disc_adv_phr_synsem &
 	   [ LOCAL [ CAT [ HEAD.MOD < [ LOCAL [ CAT s_cat,
@@ -1252,7 +1169,59 @@ vocative_phrase := unary_phrase &
 		      [ ARG #event,
 			ARG3 #ind ] !>,
 	     H-CONS <! !> ] ].
+|#
 
+; DPF 12-Mar-99 - Can't simply identify HEAD of HEAD-DTR with SLASH..HEAD of 
+; NON-HEAD-DTR, since these two HEAD values themselves include MOD, which 
+; includes SUBJ values, which include CONT, and since the free relative
+; combines with an S (not a VP), that SUBJ.CONT of the S/NP is now identified
+; with the semantics of the S/NP's subject, but now it's not possible to
+; use the free_rel phrase as a VP modifier, because it will eventually want to
+; unify that same MOD.SUBJ.CONT with that of the subject of the VP that the
+; free_rel modifies, but the LISZT value of that attribute is already bound to 
+; the earlier subject's LISZT.
+;   So we have each free-rel lexical entry specify the relevant constraints on
+; the SLASH of its sister in this construction.
+;   The QUE value of the free relatives is a singleton list containing an index
+; instead of a handle - this distinguishes free relatives from question words,
+; and makes available this index for interpretation at the top of the phrase,
+; which may be desirable if there is indeed ambiguity in the meaning of
+; examples like "I'll interview whoever's frog wins this race."  (We're not
+; doing anything with that index just now, beyond checking for its presence.)
+
+free_rel_phrase := head_initial & head_compositional &
+  [ SYNSEM [ LOCAL [ CAT [ HEAD n_or_p,
+			   MC na,
+			   VAL [ SUBJ < >,
+				 COMPS < >,
+				 SPR < > ] ] ],
+	     NON-LOCAL [ SLASH 0-dlist,
+			 QUE 0-dlist,
+			 REL 0-dlist ] ],
+    HEAD-DTR.SYNSEM [ LOCAL local_min &
+			    [ CAT [ VAL [ COMPS < >,
+					  SPR *olist* ] ],
+			      CONT.KEY #key ],
+		      NON-LOCAL [ QUE 1-dlist & <! index !>,
+				  SLASH <! local_min & #loc !> ] ],
+    NON-HEAD-DTR.SYNSEM [ LOCAL.CAT [ HEAD verb &
+					   [ VFORM fin,
+					     INV - ],
+				      VAL [ SUBJ *olist*,
+					    SPR *olist*,
+					    COMPS *olist* ] ],
+			  NON-LOCAL [ SLASH 1-dlist &
+				       [ LIST [ FIRST #loc &
+						 [ CAT.VAL [ COMPS *olist*,
+							     SPR *olist* ],
+						   CONT.KEY #key ],
+						REST < > & #last ],
+					 LAST #last ],
+				      QUE 0-dlist,
+				      REL 0-dlist ] ],
+    C-CONT.LISZT <! !> ].
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
 ;; Coordinate structures
 ;;
@@ -1454,11 +1423,10 @@ hmark_rule := binary_rule_left_to_right & head_marker_phrase.
 
 extracomp_rule := rule & extracted_comp_phrase.
 
-extrasubj_rule := rule & extracted_subj_phrase & head_nexus_nonque & clause &
-		  nonroot &
-  [ SYNSEM.LOCAL.CAT [ HEAD.INV -,
-		       MC bool ],
-    C-CONT.LISZT <! !> ].
+extrasubj_rule := rule & extracted_subj_phrase & clause &
+  [ SYNSEM.LOCAL.CAT.HEAD.INV -,
+    C-CONT [ LISZT <! !>,
+	     H-CONS <! !> ] ].
 
 hspec_nc_rule := binary_rule_right_to_left & head_spec_noncompos.
 
@@ -1472,9 +1440,9 @@ hadj_i_n_rule := binary_rule_right_to_left & n_adj_int_phrase.
 hadj_i_h_rule := binary_rule_right_to_left & h_adj_int_phrase.
 
 extradj_i_rule := rule & extracted_adj_int_phrase.
-#|
-extradj_s_rule := rule & extracted_adj_scop_phrase.
-|#
+
+;; extradj_s_rule := rule & extracted_adj_scop_phrase.
+
 
 fin_non_wh_rel_rule := rule & fin_non_wh_rel_cl.
 
@@ -1489,7 +1457,7 @@ n_n_cmpnd_rule := binary_rule_right_to_left & n_n_cmpnd_phr.
 
 temp_mod_rule := rule & temp_mod_phrase.
 
-vocative_rule := rule & vocative_phrase.
+;; vocative_rule := rule & vocative_phrase.
 
 ;; DPF 22-Dec-98 - Modified filler_head_rule_non_wh to require head to be 
 ;; VFORM fin, in order to block "*Kim hire".  The VFORM used to be fin_or_imp,
@@ -1530,17 +1498,16 @@ filler_head_rule_wh_subj := binary_rule_left_to_right &
     HEAD-DTR.SYNSEM.LOCAL.CAT.VAL.SUBJ < >,
     NON-HEAD-DTR.SYNSEM.LOCAL.CAT.HEAD noun & [ CASE nom ] ].
 
-; AAC - SYNSEM missing from HEAD-DTR path in filler_head-rule_wh_nr-fin
 ;; DPF (21-Apr-98) Removed constraint making HEAD-DTR [MC -], since this was
 ;; blocking "Abrams knows who Kim saw."
 
 filler_head_rule_wh_nr_fin := binary_rule_left_to_right & 
 			      head_filler_phrase_fin & wh_interrog_fin &
-                              nonroot & 
-  [ SYNSEM.LOCAL.CAT.HEAD.INV - ].
+  [ SYNSEM.LOCAL.CAT [ HEAD.INV -,
+		       MC - ] ].
 
 filler_head_rule_wh_nr_inf := binary_rule_left_to_right & 
-			      head_filler_phrase_inf & wh_interrog & nonroot & 
+			      head_filler_phrase_inf & wh_interrog &
   [ SYNSEM.LOCAL.CAT [ HEAD.INV -,
 		       VAL.SUBJ < synsem >,
 		       MC - ] ].
@@ -1664,6 +1631,8 @@ root_gap_rule_postmod := binary_rule_right_to_left & root_gap_clause &
     NONMOD-DTR #left,
     ARGS < #left, #right > ].
 
+free_rel_rule := binary_rule_left_to_right & free_rel_phrase.
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
 ;; Unary rules that define admissible outputs for the parser.
@@ -1723,6 +1692,7 @@ root_clause := root_phrase &
              INDEX #index,
 	     H-CONS <! !> ] ].
 
+#|
 frag := root_phrase &
   [ ARGS < [ SYNSEM [ LOCAL [ CAT [ MC na,
 				    VAL [ SUBJ *unexplist*,
@@ -1863,6 +1833,7 @@ frag_fin := root_phrase &
 			       [ PRONTYPE std_pron ] ] !>,
              INDEX #index,
 	     H-CONS <! !> ] ].
+|#
 
 ; Generalized ARG to be not only n_or_p, but subst, in order to allow, e.g.,
 ; "And I guess we should meet."
