@@ -292,7 +292,7 @@ v_or_p :< v_or_a_or_p.
 n_or_v :< subst.
 
 ; Adverbs modify adverbees.
-adverbee :< subst.
+adverbee :< head.
 
 v_or_g_or_a :< subst.
 v_or_g := v_or_g_or_a & v_or_g_or_p &
@@ -333,9 +333,9 @@ modnp := n_or_p & nominal & prep_or_modnp & a_or_p & mobile & a_or_adv.
 
 supnoun :< nominal.
 
-noun_or_nomger :< supnoun.
+noun_or_nomger := supnoun & n_or_p.
 
-noun := n_or_v & n_or_p & n_or_a & noun_or_nomger.
+noun := n_or_v & n_or_a & noun_or_nomger.
 
 ; DPF 10-Apr-02 - Added n_or_p since want to allow gerunds to undergo noptcomp
 ; rule, to get e.g."way of saying that Kim arrives"
@@ -351,7 +351,7 @@ basic_adv :< func.
 ; 'not' and closed class of other adverbs that can be added to aux COMPS list
 ; via 'adv_addition' lexical rule.
 basic_lexadv := basic_adv & disc_adverbee.
-negadv :< basic_lexadv.
+negadv := basic_lexadv & adverbee.
 lexadv :< basic_lexadv.
 
 reg_adv := basic_adv & disc_adverbee & p_or_adv &
@@ -484,11 +484,13 @@ luk :< *sort*.
 ; NA for Not Applicable.  
 na_or_+ :< luk.
 na_or_- :< luk.
++_or_- :< luk.
 
 na := na_or_+ & na_or_-.
 bool :< luk.
-+ := bool & na_or_+.
-- := bool & na_or_-.
+
++ := bool & na_or_+ & +_or_-.
+- := bool & na_or_- & +_or_-.
 
 ; Three-valued sort for distinguishing unmodified signs from both left-modified
 ; and right-modified signs
@@ -516,15 +518,15 @@ semsort :< *sort*.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; CONT types
 
-mod-thing :< *avm*.
-nothing :< mod-thing.
+basic_semarg :< *avm*.
+nothing :< basic_semarg.
 
 instloc :< *top*.
-thing := mod-thing &
+semarg := basic_semarg &
   [ INSTLOC instloc ].
 
-handle :< thing.
-individual_min := thing.
+handle :< semarg.
+individual_min := semarg.
 individual := individual_min &
  [ DIVISIBLE bool,
    SORT *sort* ].
@@ -560,9 +562,14 @@ real_tense :< tense.
 nonpast :< real_tense.
 present :< nonpast.
 past :< real_tense.
-future :< nonpast.
+generic_future := nonpast.
+future :< generic_future.
+; going to
+go_fut := generic_future.
 ; is going to
-pres+fut := present & future.
+pres+fut := present & go_fut.
+; was going to
+past+fut := past & go_fut.
 no_tense :< tense.
 ; For PPs that can never be complements of 'be'
 nontense :< basic_tense.
@@ -596,15 +603,11 @@ disc_frag :< event_or_index.
 
 ; WLINK links semantic relation to input string elements, more or less.
 
-basic_relation := *avm* &
+relation := *avm* &
   [ LBL handle,
     WLINK *list*,
     PRED predsort ].
 
-relation :< basic_relation.
-
-; DPF 3-May-03 - Changed arg0_rel to inherit from relation rather than
-; basic_relation, to eliminate unwanted GLB type.
 arg0_relation := relation &
   [ ARG0 event_or_index ].
 
@@ -621,7 +624,7 @@ event_relation := arg0_relation &
 hook := *top* &
   [ LTOP handle,
     INDEX *top*,
-    XARG mod-thing ].
+    XARG basic_semarg ].
 
 mrs_min := *avm* &
   [ HOOK hook,
@@ -718,12 +721,10 @@ astem :< stemhead.
 ;  KEYREL relation          ; Pointer to main relation in RELS
 ;  ALTKEYREL relation       ; Pointer to an alternate relation in RELS
 ;  ALT2KEYREL relation      ; Pointer to a second alternate relation in RELS
-;  --COMPKEY basic_relation   ; Pointer to the complement's main relation
-;  --OCOMPKEY basic_relation  ; Pointer to the oblique complement's main rel
-;  --+COMPKEY basic_relation  ; Pointer to obligatory complement
-;  --+OCOMPKEY basic_relation ; Pointer to obligatory oblique complement
-
-
+;  --COMPKEY predsort       ; Pointer to the complement's KEY
+;  --OCOMPKEY predsort      ; Pointer to the oblique complement's KEY
+;  --+COMPKEY predsort      ; Pointer to obligatory complement's KEY
+;  --+OCOMPKEY predsort      ; Pointer to obligatory oblique complement's KEY
 
 keys := *avm* &
   [ KEY predsort,
@@ -731,9 +732,9 @@ keys := *avm* &
     ALT2KEY predsort ].
 
 lexkeys := *avm* &
-  [ KEYREL basic_relation,
-    ALTKEYREL basic_relation,
-    ALT2KEYREL basic_relation,
+  [ KEYREL relation,
+    ALTKEYREL relation,
+    ALT2KEYREL relation,
     --COMPKEY predsort,
     --OCOMPKEY predsort,
     --+COMPKEY predsort,
@@ -750,8 +751,8 @@ lexkeys := *avm* &
 ;; (and use defaults)
 
 non_affix_bearing := word_or_lexrule &
-[ INFLECTED +,
-  SYNSEM.LKEYS.KEYREL.WLINK *cons* ].
+  [ SYNSEM.LKEYS.KEYREL.WLINK *cons*,
+    INFLECTED + ].
 
 ; Rule
 
@@ -808,8 +809,8 @@ psp_adj :< vform.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;  CONT values (MRS semantics)
 ;;
-;; The basic semantic objects are all sub-types of thing.  Right now, the only
-;; type of thing that has an internal structure is index, but that will
+;; The basic semantic objects are all sub-types of semarg.  Right now, the only
+;; type of semarg that has an internal structure is index, but that will
 ;; probably change.  For example, an event might have various times associated
 ;; with them or a handle may include a list of "subhandles" which are in its
 ;; scope.  Indices are classified in the familiar HPSG way.
@@ -1045,18 +1046,18 @@ it_adj_arg12_relation := adj_arg12_relation.
 it_adj_arg123_relation := adj_arg123_relation.
 
 basic_arg1_relation := relation &
-  [ ARG1 thing ].
+  [ ARG1 semarg ].
 
 arg1_relation := basic_arg01_relation & event_relation.
 
 arg2_relation := relation &
-  [ ARG2 thing ].
+  [ ARG2 semarg ].
 
 arg3_relation := relation &
-  [ ARG3 thing ].
+  [ ARG3 semarg ].
 
 arg4_relation := relation &
-  [ ARG4 thing ].
+  [ ARG4 semarg ].
 
 basic_arg01_relation := basic_arg1_relation & arg0_relation.
 basic_arg12_relation := basic_arg01_relation & arg2_relation.
@@ -1091,7 +1092,7 @@ comparative_relation := degree_relation &
     C-ARG0 index ].
 
 comp_more_less_relation := comparative_relation &
-  [ ARG-2 thing ].
+  [ ARG-2 semarg ].
 
 comp_most_least_relation := comparative_relation &
   [ C-SET handle ].
@@ -1146,8 +1147,8 @@ basic_conj_relation := relation &
 
 conj_relation := basic_conj_relation &
   [ PRED conj_rel,
-    L-HNDL mod-thing,
-    R-HNDL mod-thing ].
+    L-HNDL basic_semarg,
+    R-HNDL basic_semarg ].
 
 ; Abstract relations specified by more than one lexical entry
 
@@ -1267,6 +1268,11 @@ _northward_rel := adj_rel.
 _southward_rel := adj_rel.
 _eastward_rel := adj_rel.
 _westward_rel := adj_rel.
+_upward_rel := adj_rel.
+_downward_rel := adj_rel.
+_downhill_p_rel :< dir_rel.
+_inward_rel := adj_rel.
+_outward_rel := adj_rel.
 _inland_adj_rel := adj_rel.
 _late_adv_rel := miscprep_rel.
 _elsewhere_j_rel := adj_rel.
@@ -1275,7 +1281,7 @@ _forever_j_rel := adj_rel.
 ; For fragments
 unknown_relation := arg0_relation &
   [ PRED unknown_rel,
-    ARG thing ].
+    ARG semarg ].
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;  Basic types
@@ -1519,6 +1525,7 @@ _from_p_sel_rel :< selected_prep_rel.
 _in_p_sel_rel :< selected_prep_rel.
 _into_p_sel_rel :< selected_prep_rel.
 _of_p_sel_rel :< selected_prep_rel.
+_of_p_nbar_rel :< selected_prep_rel.
 _off_p_sel_rel :< selected_prep_rel.
 _on_p_sel_rel :< selected_prep_rel.
 _open_j_sel_rel :< selected_adj_rel.
@@ -1537,13 +1544,13 @@ _upon_p_sel_rel :< selected_prep_rel.
 _with_p_sel_rel :< selected_prep_rel.
 _without_p_sel_rel :< selected_prep_rel.
 _hold_n_sel_rel :< selected_rel.
-_ahold_n_sel_rel :< selected_rel.
-_note_sel_rel :< selected_rel.
-_advantage_sel_rel :< selected_rel.
-_care_n_sel_rel :< selected_rel.
-_charge_n_sel_rel :< selected_rel.
-_part_sel_rel :< selected_rel.
-_use_sel_rel :< selected_rel.
+_ahold_n_sel_rel :< norm_nom_rel.
+_note_sel_rel :< norm_nom_rel.
+_advantage_sel_rel :< norm_nom_rel.
+_care_n_sel_rel :< norm_nom_rel.
+_charge_n_sel_rel :< norm_nom_rel.
+_part_sel_rel :< norm_nom_rel.
+_use_sel_rel :< norm_nom_rel.
 
 _a_per_rel :< miscprep_rel.
 _about_p_rel :< of_miscprep_rel.
@@ -1637,7 +1644,6 @@ _nationwide_rel :< miscprep_rel.
 _near_p_rel :< dir_or_state_rel.
 _nearby_rel :< miscprep_rel.
 _next_to_rel :< dir_or_state_rel.
-_of_p_nbar_rel :< miscprep_rel.
 _of_p_rel :< of_nontemp_rel.
 _off_of_rel :< miscprep_rel.
 _off_p_rel :< dir_or_state_rel.
@@ -1652,6 +1658,7 @@ _out_p_rel :< dir_or_state_rel.
 _out_of_p_rel :< miscprep_rel.
 _outside_prep_rel :< dir_or_state_rel.
 _over_p_rel :< dir_or_state_rel.
+_overnight_j_rel :< adj_rel.
 _past_p_rel :< miscprep_minute_rel.
 _per_rel :< miscprep_rel.
 _previous_to_rel :< temp_loc_rel.
@@ -1676,6 +1683,7 @@ _under_p_rel :< dir_or_state_rel.
 _unlike_p_rel :< miscprep_rel.
 _until_p_rel :< abstr_until_rel.
 _up_p_rel :< dir_rel.
+_uphill_p_rel :< dir_rel.
 _up_to_rel :< miscprep_rel.
 _up_until_rel :< miscprep_rel.
 _upon_p_rel :< state_loc_rel.
@@ -1801,8 +1809,10 @@ quant_or_wh_rel := quant_or_deg_rel.
 quant_rel := quant_or_wh_rel.
 non_freerel_q_rel := non_freerel_rel & quant_rel.
 impl_or_expl_q_rel := non_freerel_q_rel & i_or_e_quant_or_deg_rel.
+; Used in bare plurals
+impl_or_proper_q_rel := quant_rel.
 ; Used in appositive rule
-implicit_q_rel := impl_or_expl_q_rel.
+implicit_q_rel := impl_or_expl_q_rel & impl_or_proper_q_rel.
 explicit_q_rel := impl_or_expl_q_rel.
 ; Determiners with these relations show agreement with of_PP in partitives
 explicit_quant_agr_q_rel := explicit_q_rel.
@@ -1815,13 +1825,14 @@ much_many_q_rel := explicit_quant_noagr_q_rel.
 ; for "afternoons" which must be the one that takes an optional PP-of and
 ; usually requires a definite determiner (unless it's a bare plural)
 abstr_def_or_udef_q_rel := quant_rel.
+def_or_udef_q_rel := abstr_def_or_udef_q_rel.
 udef_q_rel := implicit_q_rel & explicit_quant_or_udef_noagr_q_rel &
-              abstr_def_or_udef_q_rel.
+              def_or_udef_q_rel.
 some_q_rel := explicit_quant_agr_q_rel.
 any_q_rel := explicit_quant_agr_q_rel.
 every_q_rel := explicit_q_rel.
 no_q_rel := explicit_q_rel.
-abstr_def_q_rel := abstr_def_or_udef_q_rel.
+abstr_def_q_rel := def_or_udef_q_rel.
 def_q_rel := abstr_def_q_rel & implicit_q_rel.
 def_explicit_q_rel := abstr_def_q_rel & explicit_quant_noagr_q_rel.
 def_both_rel := def_explicit_q_rel.
@@ -1830,7 +1841,8 @@ nondef_explicit_q_rel := explicit_q_rel.
 ; Used for lexical NPs including proper names
 ; It is distinct from i_or_e_quant_or_deg_rel to prevent relative clauses
 ; from attaching to proper names with no specifier.
-proper_q_rel := non_freerel_q_rel.
+proper_q_rel := non_freerel_q_rel & abstr_def_or_udef_q_rel &
+                impl_or_proper_q_rel.
 number_q_rel := non_freerel_q_rel.
 pronoun_q_rel :< non_freerel_q_rel.
 demonstrative_q_rel :< explicit_q_rel.
@@ -1866,7 +1878,7 @@ hcomp_nom_rel := basic_hcomp_nom_rel & reg_nom_rel.
 hcomp_modable_nom_rel := basic_hcomp_nom_rel & modable_rel.
 nominalize_rel := basic_hcomp_nom_rel.
 gerund_rel := non_temp_nom_rel.
-apposition_rel :< nonpro_rel.
+apposition_rel :< nom_rel.
 ; Non-appositional nouns
 norm_nom_rel :< reg_nom_rel.
 temp_abstr_or_conj_rel := predsort.
@@ -2018,7 +2030,10 @@ abstr_excl_rel := independent_mod_rel.
 greet_rel :< abstr_excl_rel.
 
 excl_rel :< abstr_excl_rel.
-pron_rel := non_temp_nom_rel & abstr_named_rel.
+basic_pron_rel := non_temp_nom_rel & abstr_named_rel.
+pron_rel := basic_pron_rel.
+; Margaret herself just arrived.
+refl_pron_rel := basic_pron_rel & apposition_rel.
 recip_pro_rel := non_temp_nonpro_rel.
 generic_nom_rel := non_temp_nonpro_rel.
 ; For partitives
@@ -2120,6 +2135,7 @@ abstr_adv_dim_rel := abstr_adv_rel & non_event_dim_rel.
 adv_rel :< abstr_adv_dim_rel.
 
 neg_rel :< abstr_adv_rel.
+_never_r_rel :< abstr_adv_rel.
 
 neg_polar_rel :< abstr_adv_dim_rel.
 
