@@ -101,7 +101,9 @@
 
 (defparameter *psql-lexicon-parameters* 
   #+:psql
-  '((:db "lingo") (:host "localhost") (:table "erg2"))
+  ;; bmw20 (16 Feb 04) - phase out use of :table
+  ;;  '((:user "bmw20") (:db "erg") (:host "localhost") (:table "erg2"))
+  '((:user "bmw20") (:db "erg") (:host "localhost") (:table "erg"))
   #-:psql
   nil)
 
