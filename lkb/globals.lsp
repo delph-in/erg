@@ -76,10 +76,6 @@ three_space_lex_entry3 three_space_lex_entry4)
 (defparameter *deleted-daughter-features* '(ARGS HEAD-DTR NON-HEAD-DTR LCONJ-DTR RCONJ-DTR)
    "features pointing to daughters deleted on building a constituent")
 
-(defparameter *head-marking-path* '(SYNSEM LOCAL CONT KEY)
-   "coreferenced between mother and head daughter")
-
-
 ;;; Parse tree node labels
 
 ;;; the path where the name string is stored
@@ -104,7 +100,7 @@ three_space_lex_entry3 three_space_lex_entry4)
 
 ;;; for the compare function 
 
-(def-lkb-parameter *discriminant-path* '(synsem local keys key))
+(defparameter *discriminant-path* '(synsem local keys key))
 
 ;;; Hide lexical rule nodes in parse tree
 ;;; (setf  *dont-show-lex-rules* t)

@@ -229,3 +229,21 @@
                      :directory (pathname-directory (lkb-tmp-dir))))))
 
 
+;;; Function to run when batch checking the lexicon
+
+(defun lex-check-lingo (new-fs id)
+  (unless (extract-infl-pos-from-fs (tdfs-indef new-fs))
+    (format *lkb-background-stream* "~%No position identified for ~A" id))
+  (when new-fs
+    (let* ((inflbool 
+           (existing-dag-at-end-of (tdfs-indef new-fs)
+                                   '(inflected)))
+          (type (and (dag-p inflbool) (dag-type inflbool))))
+      (when type
+        (when
+            (or (eq type 'bool)
+                (and (consp type) (eq (first type) 'bool)))
+          (format *lkb-background-stream* "~%INFLECTED unset on ~A" id))))))
+
+
+(setf *grammar-specific-batch-check-fn* #'lex-check-lingo)
