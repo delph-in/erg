@@ -6,7 +6,7 @@
                                               ,(vsym "DAY") 
                                               ,(vsym "HOUR") 
                                                ,(vsym "MINUTE")        
-                                               ,(vsym "ORD") 
+                                               ;; ,(vsym "ORD") 
                                                ,(vsym "CONST_VALUE") 
                                                ,(vsym "NAMED") 
                                                ,(vsym "TITLE") 

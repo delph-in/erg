@@ -121,7 +121,9 @@
 		     (let ((pos
 			    (extract-infl-pos-from-fs 
 			     (tdfs-indef (type-tdfs type-entry)))))
-		       (unless (or pos (subtype-p type 'non_affix_bearing))
+		       (unless (or pos 
+                                   (or (subtype-p type 'non_affix_bearing)
+                                       (subtype-p type 'infl_lex_entry)))
 			 (format t "~%No position identified for ~A" sense-id))
 		       (push (cons type pos) *infl-pos-record*)
 		       pos))
@@ -168,11 +170,15 @@
     (rootgap_l 100)
     (rootgap_r 100)
     (n_n_cmpnd 250)
+    (nadj_i 400)    
     (adjh_i 350)
     (mid_coord_np 800)
     (top_coord_np 700)
     (hcomp 800)
     (hadj_s 400)
+    (bare_np 300)
+    (fin_non_wh_rel 200)
+    (inf_non_wh_rel 100)
     (vpellipsis_lr 100)
     (taglr 100)
     (vgering 100)

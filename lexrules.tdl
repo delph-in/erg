@@ -26,8 +26,10 @@
 non_fin_verb := local & 
   [ STEMHEAD vstem,
     CAT.HEAD [ VOICE active,
-	       TENSE #vittense ],
-    CONT.INDEX #index & [ VIT.VITTENSE #vittense ],
+	       TAM [ TENSE #tense,
+		     ASPECT #aspect ] ],
+    CONT.INDEX #index & [ E [ TENSE #tense,
+			      ASPECT #aspect ] ],
     KEYS.KEY.EVENT #index ].
 
 ; Need to constrain MOD value for PRP verbs.  Also for passive participles.
@@ -60,20 +62,27 @@ verb_participle_affix := local &
 
 prp_verb := non_fin_verb & verb_participle_affix &
   [ CAT.HEAD [ VFORM prp,
-	       TENSE progr* ] ].
+	       TAM.ASPECT progr* ] ].
 
 psp_verb := non_fin_verb & nomod_local &
   [ CAT.HEAD [ VFORM psp,
-	       TENSE nonprg,
+	       TAM.ASPECT nonprg,
 	       PRD - ] ].
 
 non_perf :< local.
 
-bse_verb := non_fin_verb & non_perf & nomod_local &
+; DPF 12-May-00 - bse_verb needs to have [ MOD nbar ] to enable coordination
+; of imperative and declarative clauses, as in "Leave and I will follow you"
+
+bse_verb := non_fin_verb & non_perf &
   [ CAT [ HEAD [ VFORM bse,
+                 MOD < [ LOCAL intersective_mod &
+			       [ CAT nbar_cat ] ] >,
 		 PRD -,
-		 TENSE no_aspect* ],
-	  VAL.SUBJ < [ OPT - ] > ] ].
+		 TAM.ASPECT no_aspect* ],
+          POSTHEAD +,
+	  VAL.SUBJ < unexpressed &
+                     [ OPT - ] > ] ].
 
 ; Since finite verbs can project relative clauses, we introduce [MOD < nbar >]
 ; here, and make sure that no other projections of finite verbs can be
@@ -83,27 +92,31 @@ fin_verb := non_perf &
   [ STEMHEAD vstem,
     CAT [ HEAD [ PRD -,
                  VOICE active,
-		 TENSE #tense,
-		 VFORM fin,
+		 TAM [ TENSE #tense,
+		       ASPECT #aspect ],
+		 VFORM fin*,
 		 MOD < [ LOCAL intersective_mod &
 			       [ CAT nbar_cat ] ] > ],
 	  POSTHEAD +,
 	  VAL.SUBJ < synsem & [ LOCAL [ CAT nomp_cat_nom_min,
 					CONJ cnil ],
 				OPT - ] > ],
-    CONT psoa & [ INDEX #event & [ VIT.VITTENSE #tense ] ],
+    CONT psoa & [ INDEX #event & [ E [ TENSE #tense,
+				       ASPECT #aspect ] ] ],
     KEYS.KEY.EVENT #event ].
 
 pres_verb := fin_verb & 
-  [ CAT.HEAD [ TENSE present*,
-	       MOOD indicative* ] ].
+  [ CAT.HEAD.TAM [ TENSE present*,
+		   ASPECT no_aspect*,
+		   MOOD indicative* ] ].
 
 past_verb := fin_verb & 
-  [ CAT.HEAD [ TENSE past*,
-               MOOD indicative* ] ].
+  [ CAT.HEAD.TAM [ TENSE past*,
+		   ASPECT no_aspect*,
+		   MOOD indicative* ] ].
 
 subjunctive_verb := fin_verb & 
-  [ CAT.HEAD.MOOD subjunctive ].
+  [ CAT.HEAD.TAM.MOOD subjunctive ].
 
 third_sg_fin_verb := pres_verb &
   [ AGR.PNG png & [ PN 3sg ] ].
@@ -116,13 +129,19 @@ non_third_sg_fin_verb := pres_verb &
 ;;  Nominal inflections
 
 sing_noun := local &
-  [ STEMHEAD nstem,
+  [ STEMHEAD countnstem,
     CONT.INDEX [ PNG png & [ PN 3sg*,
 			     GEN neut* ],
 		 DIVISIBLE - ] ]. 
 
+mass_noun := local &
+  [ STEMHEAD massnstem,
+    CONT.INDEX [ PNG png & [ PN 3sg*,
+			     GEN neut* ],
+		 DIVISIBLE + ] ]. 
+
 plur_noun := local &
-  [ STEMHEAD nstem,
+  [ STEMHEAD countnstem,
     CONT.INDEX [ PNG png & [ PN 3pl* ],
 		 DIVISIBLE + ] ].
 
@@ -211,19 +230,31 @@ lex_rule_infl := lex_rule_compos &
     AFFIX #affix,
     KEY-ARG #keyarg,   
     SYNSEM #synsem,
-    ARGS < #dtr & [ AFFIX #argaff ] >,
+    ARGS < #dtr >,
     DTR #dtr & [ INFLECTED -,
                  AFFIX #affix,
                  KEY-ARG #keyarg,   
-                 SYNSEM #synsem,
-                 --FINAL-ARG [ AFFIX #argaff ] ],
+                 SYNSEM #synsem ],
     C-CONT.LISZT <! !> ].
 
 
-lex_rule_infl_affixed := lex_rule_infl & affix_bearing.
+;lex_rule_infl_affixed := lex_rule_infl & affix_bearing.
 
-lex_rule_infl_no-affix := lex_rule_infl & non_affix_bearing.
+#|
+lex_rule_infl_affixed := lex_rule_infl & basic_affix_bearing &
+  [ DTR basic_affix_bearing & [ --FINAL-ARG #arg ],
+    --FINAL-ARG #arg ].
+|#
 
+
+lex_rule_infl_affixed := lex_rule_infl & basic_affix_bearing &
+  [ DTR basic_affix_bearing,
+    ARGS < #arg >,
+    --FINAL-ARG #arg ].
+
+
+lex_rule_infl_no-affix := lex_rule_infl & non_affix_bearing &
+  [ DTR non_affix_bearing ].
 
 
 ; ERB (05-10-97) Now that sai stamps MESSAGE int_rel on its output, that
@@ -234,11 +265,9 @@ lex_rule_infl_no-affix := lex_rule_infl & non_affix_bearing.
 
 lex_rule_super := lex_rule_supermost &
   [ DTR word_or_lexrule &
-        [ -MORPHOLOGY #morphology,
-	  INFLECTED +,
+        [ INFLECTED +,
           SYNSEM.LOCAL local &
 		       [ CONJ cnil ] ],
-    -MORPHOLOGY #morphology,
     INFLECTED +,
     SYNSEM.LOCAL local &
 	[ CONJ cnil ] ],
@@ -248,9 +277,11 @@ lex_rule_super_compos := lex_rule_super & lex_rule_compos.
 
 lex_rule := lex_rule_super_compos &
   [ DTR #stem &
-	[ SYNSEM.LOCAL [ CAT.MC #mc,
+	[ SYNSEM.LOCAL [ CAT [ MC #mc,
+			       HC-LEX #hclex ],
 			 KEYS.MESSAGE #msg ] ],
-    SYNSEM.LOCAL [ CAT.MC #mc,
+    SYNSEM.LOCAL [ CAT [ MC #mc,
+			 HC-LEX #hclex ],
 		   KEYS.MESSAGE #msg ],
     ARGS < #stem > ].
 
@@ -283,6 +314,9 @@ lex_rule := lex_rule_super_compos &
 ; rule.  By identifying SUBJ with dtr's SPR, we can maintain lexical control
 ; over modifiability, in particular blocking spurious modification of 
 ; auxiliary "do", both in noninverted and inverted clauses.
+; DPF 22-Apr-00 - Added reentrancy for VFORM on DTR and mother - don't know
+; why this was omitted before.  It's needed to block spurious parse for e.g. 
+; "Could you sleep please"
 
 sai := lex_rule_super_compos &
   [ STEM #orth,
@@ -290,10 +324,9 @@ sai := lex_rule_super_compos &
 	 [ STEM #orth,
 	   SYNSEM [ LOCAL [ CAT [ HEAD verb &
 				       [ INV +,
-					 VFORM fin,
-                                         MOOD #mood,
-                                         TENSE #tense,
-                                         VOICE #voice ],
+					 VFORM fin* & #vform,
+                                         TAM #tam,
+					 VOICE #voice ],
 				  VAL [ SUBJ < #subj & canonical_synsem >,
 					COMPS #comps,
 					SPR #spr,
@@ -305,8 +338,8 @@ sai := lex_rule_super_compos &
 			    KEYS #keys ],
 		    NON-LOCAL #nonloc ] ],
     SYNSEM sai_synsem &
-	 [ LOCAL [ CAT [ HEAD [ MOOD #mood,
-                                TENSE #tense,
+	 [ LOCAL [ CAT [ HEAD [ VFORM #vform,
+				TAM #tam,
                                 VOICE #voice ],
                          VAL [ COMPS < #subj & [ OPT - ]
 				       . #comps >,
@@ -328,8 +361,8 @@ tag := lex_rule_super &
     DTR #stem &
 	[ STEM #orth,
 	  SYNSEM sai_synsem &
-	       [ LOCAL [ CAT [ HEAD [ TENSE #tense,
-				      MOOD indicative ],
+	       [ LOCAL [ CAT [ HEAD.TAM [ TENSE #tense,
+					  MOOD ind_or_mod_subj & strict_sort ],
 			       VAL.COMPS < #subj, [ LOCAL.CAT.HEAD subst ], ... > ],
 			 KEYS.KEY #key ],
 		 NON-LOCAL #nonloc & 
@@ -337,7 +370,7 @@ tag := lex_rule_super &
 			 REL 0-dlist,
 			 QUE 0-dlist ] ] ],
     SYNSEM tag_synsem &
-	 [ LOCAL [ CAT [ HEAD.TENSE #tense,
+	 [ LOCAL [ CAT [ HEAD.TAM [ TENSE #tense ],
 			 VAL.COMPS.FIRST #subj ],
 		   CONT.LISZT #cliszt,
 		   KEYS [ KEY #key,
@@ -357,7 +390,7 @@ adv_addition := lex_rule &
                [ LOCAL [ STEMHEAD vstem,
 			 CAT [ HEAD #head & verb &
 				    [ AUX +,
-				      VFORM fin ],
+				      VFORM fin* ],
 			       VAL [ SUBJ #subj & < canonical_synsem >,
 				     COMPS #comps & *substlist*,
 				     SPR #spr ],
@@ -469,13 +502,11 @@ passive_verb := lex_rule &
                [ LOCAL [ STEMHEAD vstem,
                          CAT [ HEAD.VFORM psp_or_psp_irreg,
 			       VAL [ SUBJ < [ LOCAL local &
-						    [ CONT.INDEX #subjind,
-						      THROLE #subjrole ], 
+						    [ CONT.INDEX #subjind ], 
 						  NON-LOCAL #snonloc ] >,
 					 SPR #spr,
 					 COMPS [ FIRST [ LOCAL local &
-							[ CONT #objcont,
-							  THROLE #objrole ],
+							[ CONT #objcont ],
 							 NON-LOCAL #ononloc ],
 						 REST #comps ] ] ],
 			 CONT [ TOP #hand,
@@ -493,8 +524,7 @@ passive_verb := lex_rule &
 			 VAL [ SUBJ < synsem &
 					[ LOCAL [ CAT nomp_cat_min,
 						  CONJ cnil,
-						  CONT #objcont,
-						  THROLE #objrole ],
+						  CONT #objcont ],
 					  NON-LOCAL #ononloc ] >,
 				   SPR #spr,
 				   COMPS < synsem & 
@@ -505,8 +535,7 @@ passive_verb := lex_rule &
 							   COMPS *olist* ] ],
 					       CONT.TOP #hand,
 					       KEYS.KEY _by_pass_rel &
-						   [ ARG3 #subjind ],
-					       THROLE #subjrole ],
+						   [ ARG3 #subjind ] ],
 					     NON-LOCAL #snonloc,
 					     OPT + ]
 					   . #comps > ] ],
@@ -529,8 +558,7 @@ it-extraposition := lex_rule &
 	  SYNSEM extraposable_synsem &
 	       [ LOCAL [ CAT [ HEAD #head,
 			       VAL [ SUBJ < [ LOCAL local &
-						    [ CONT.INDEX #subjind,
-						      THROLE #subjrole ] ] >,
+						[ CONT.INDEX #subjind ] ] >,
 					 COMPS #comps ] ] ],
 			 CONT #cont,
 			 CTXT #ctxt,
@@ -544,8 +572,7 @@ it-extraposition := lex_rule &
 				   COMPS < synsem & 
 					   [ LOCAL [ CAT s_cat_fin_v_c,
 						     CONJ cnil,
-						     CONT.INDEX #subjind,
-						     THROLE #subjrole ],
+						     CONT.INDEX #subjind ],
 					     OPT - ]
 					   . #comps > ] ],
 		   CONT #cont,
@@ -563,7 +590,7 @@ it-extraposition := lex_rule &
 ;; DPF 02-June-99 - We also block the auxiliary verbs "being, having, doing",
 ;; to avoid identity copula analyses for "Kim is being good" or "Kim is having
 ;; hired Sandy".
-;; DPF 31-Jul-88 - Make gerund_rel like nominalize_rel in identifying its
+;; DPF 31-Jul-99 - Make gerund_rel like nominalize_rel in identifying its
 ;; handle with the verb_rel's, rather than taking the verb's handle as arg.
 
 verbal_gerund := lex_rule &
@@ -580,7 +607,7 @@ verbal_gerund := lex_rule &
 				--OCOMPKEY #ockey ],
 			 CTXT #ctxt ],
 		 NON-LOCAL #nonloc ] ],
-    SYNSEM nonpronominal_synsem &
+    SYNSEM nonpro_onearg_synsem &
 	   [ LOCAL [ AGR #ind,
 		     CAT [ HEAD gerund* &
 				[ MOD < >,
@@ -677,7 +704,7 @@ nominal_gerund := lex_rule &
 				--OCOMPKEY #ockey ],
 			 CTXT #ctxt ],
 		 NON-LOCAL #nonloc ] ],
-    SYNSEM nonpronominal_synsem & nomod_synsem &
+    SYNSEM nonpro_nomod_synsem &
 	   [ LOCAL 
 	     [ AGR #ind,
 	       CAT 
@@ -762,7 +789,8 @@ date_det_lr := lex_rule &
 			    --COMPKEY #ckey,
 			    --OCOMPKEY #ockey ],
 		     CTXT #ctxt ],
-	     NON-LOCAL #nonloc ],
+	     NON-LOCAL #nonloc,
+	     MODIFIED hasmod ],
     C-CONT.LISZT <! #key,
                     _of_rel & [ HANDEL #ntop,
                                 ARG #ind,
@@ -819,6 +847,7 @@ month_unsat_lr := lex_rule &
 		     CONT [ TOP #top,
 			    INDEX #index & [ DIVISIBLE - ],
 			    H-CONS #hcons ],
+		     AGR #index,
 		     KEYS.KEY mofy_mod_rel &
 			 [ HANDEL #top,
 			   INST #index,
@@ -944,6 +973,7 @@ NP_particle_lr := lex_rule &
    DTR [ STEM #orth,
          SYNSEM particle_NP_verb &
 	  [ LOCAL [ CAT [ HEAD #head,
+                          POSTHEAD #ph,
 			  VAL [ SUBJ #subj,
 				    COMPS < [ OPT #opt1 ], [ OPT #opt2 ] > ] ],
 		    CONT #cont,
@@ -952,6 +982,7 @@ NP_particle_lr := lex_rule &
 	    NON-LOCAL #nonlocal ] ],
    SYNSEM NP_particle_verb &
 	  [ LOCAL [ CAT [ HEAD #head,
+                          POSTHEAD #ph,
 			  VAL [ SUBJ #subj,
 				    COMPS < canonical_synsem & [ OPT #opt2 ], 
 					    [ OPT #opt1 ] > ] ],
