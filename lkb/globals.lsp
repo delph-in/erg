@@ -136,26 +136,22 @@
 ;;; this belongs in the user-prefs file, not here
 
 (defparameter *duplicate-lex-ids* 
-  '(an_det will_aux_neg_1 will_aux_neg_2 would_aux_neg_1 
-    would_aux_neg_1 do1_neg_1 do1_neg_2 hadnt_aux_1 hadnt_aux_2
-    hadnt_aux_subj_1 hadnt_aux_subj_2 hasnt_aux_1 hasnt_aux_2
-    aint_sg_have_aux_1 aint_sg_have_aux_2 have_fin_aux_neg_1
-    have_fin_aux_neg_2 be_c_is_neg_1  be_c_is_neg_2
+  '(an_det will_aux_neg_2 would_aux_neg_2 do1_neg_2 hadnt_aux_1 hadnt_aux_2
+    hadnt_aux_subj_1 hadnt_aux_subj_2 hasnt_aux_1 hasnt_aux_2 be_c_is_neg_2
+    aint_sg_have_aux_1 aint_sg_have_aux_2 have_fin_aux_neg_2 be_c_is_neg_1  
     aint_be_c_is_neg_1 aint_be_c_is_neg_2 be_id_is_neg_1 be_id_is_neg_2
     aint_be_id_is_neg_1 aint_be_id_is_neg_2 be_th_cop_is_neg_1 
     be_th_cop_is_neg_2 aint_be_th_cop_is_neg_1 aint_be_th_cop_is_neg_2 
     might_aux_neg_1 might_aux_neg_2 must_aux_neg_1 must_aux_neg_2
     need_aux_neg_1 need_aux_neg_2 ought_aux_neg_1 ought_aux_neg_2
-    should_aux_neg_1 should_aux_neg_2 be_id_was_neg_1 be_id_was_neg_2 
-    be_th_cop_was_neg_1 be_th_cop_was_neg_2
-    be_c_was_neg_1 be_c_was_neg_2 be_id_was_neg_subj_1 be_id_was_neg_subj_2
-    be_th_cop_was_neg_subj_1 be_th_cop_was_neg_subj_2 be_c_was_neg_subj_1
-    be_c_was_neg_subj_2 be_c_were_neg_1 be_c_were_neg_2
-    be_id_were_neg_1 be_id_were_neg_2 be_th_cop_were_neg_1
-    be_th_cop_were_neg_2 be_c_were_neg_subj_1 be_c_were_neg_subj_2
-    be_id_were_neg_subj_1 be_id_were_neg_subj_2 be_th_cop_were_neg_subj_1
-    be_th_cop_were_neg_subj_2 will_aux_neg_1 will_aux_neg_2 would_aux_neg_1
-    would_aux_neg_2 could_aux_neg_2
+    should_aux_neg_2 could_aux_neg_2 be_id_was_neg_1 be_id_was_neg_2 
+    be_th_cop_was_neg_1 be_th_cop_was_neg_2 be_c_was_neg_1 be_c_was_neg_2 
+    be_id_was_neg_subj_1 be_id_was_neg_subj_2 be_th_cop_was_neg_subj_1 
+    be_th_cop_was_neg_subj_2 be_c_was_neg_subj_1 be_c_was_neg_subj_2 
+    be_c_were_neg_1 be_c_were_neg_2 be_id_were_neg_1 be_id_were_neg_2 
+    be_th_cop_were_neg_1 be_th_cop_were_neg_2 be_c_were_neg_subj_1 
+    be_c_were_neg_subj_2 be_id_were_neg_subj_1 be_id_were_neg_subj_2 
+    be_th_cop_were_neg_subj_1 be_th_cop_were_neg_subj_2 
     be_c_am_cx be_c_am_cx_2 be_id_am_cx be_id_am_cx_2 be_c_are_cx be_c_are_cx_2
     be_id_are_cx be_id_are_cx_2 had_aux_cx had_aux_cx_2 has_aux_cx has_aux_cx_2
     have_fin_aux_cx have_fin_aux_cx_2 have_bse_aux_cx_1 have_bse_aux_cx_2 
@@ -170,7 +166,7 @@
     mister missus mr_title_2 doctor_ttl dr_ttl_2 prof_title mrs_title_2
     ms_title_2 mount_ttl_2 number_abb_title number_abb_title_2 
     number_abb2_title number_abb2_title_2 order_abb_ttl order_abb_ttl_2
-    pound_sign_title pres_ttl pres_ttl_2 aint_be_c_am_neg_2
+    pound_sign_title pres_ttl pres_ttl_2 aint_be_c_am_neg_2 aint_be_c_are_neg_1
     aint_be_c_are_neg_2 aint_be_c_is_neg_2 aint_be_id_am_neg_2
     aint_be_id_are_neg_2 aint_be_id_is_neg_2 aint_be_th_cop_are_neg_2
     aint_be_th_cop_is_neg_2 aint_pl_have_aux_2 aint_sg_have_aux_2
@@ -180,19 +176,40 @@
     be_id_was_neg_subj_2 be_id_were_neg_2 be_id_were_neg_subj_2
     be_th_cop_are_neg_2 be_th_cop_is_neg_2 be_th_cop_was_neg_2
     be_th_cop_was_neg_subj_2 be_th_cop_were_neg_2 be_th_cop_were_neg_subj_2
-    can_aux_neg_2 could_aux_neg_2 dare_aux_neg_2 did1_neg_2 do1_neg_2
-    does1_neg_2 dont_2 hadnt_aux_2 hadnt_aux_subj_2 hasnt_aux_2
-    have_fin_aux_neg_2 might_aux_neg_2 must_aux_neg_2 need_aux_neg_2
-    ought_aux_neg_2 should_aux_neg_2 will_aux_neg_2 would_aux_neg_2
-    gonna_v1 and_c_nonprop that_c_subj wherein
+    can_aux_neg_2 dare_aux_neg_2 did1_neg_2 does1_neg_2 dont_2 
+    might_aux_neg_2 must_aux_neg_2 need_aux_neg_2 ought_aux_neg_2 
+    should_aux_neg_2 gonna_v1 and_c_nonprop that_c_subj wherein
+    be_it_cop_is_neg_1 be_it_cop_is_neg_2 aint_be_it_cop_is_neg_1 
+    aint_be_it_cop_is_neg_2 be_it_cop_was_neg_1 be_it_cop_was_neg_2
+    be_it_cop_was_neg_subj_1 be_it_cop_was_neg_subj_2 be_it_cop_were_neg_1
+    be_it_cop_were_neg_2 be_it_cop_were_neg_subj_1 be_it_cop_were_neg_subj_2
+    be_it_cop_is_cx be_it_cop_is_cx_2 aint_be_it_cop_are_neg_2
+    aint_be_it_cop_is_neg_2 be_it_cop_are_neg_2 be_it_cop_is_neg_2 
+    be_it_cop_was_neg_2 be_it_cop_was_neg_subj_2 be_it_cop_were_neg_2 
+    be_it_cop_were_neg_subj_2 shall_aux_pos
+    sunday_n2 monday_n2 tuesday_n2 wednesday_n2 thursday_n2 friday_n2
+    saturday_n2 slash_punct_adv1 or_else_1
+    which_r whom2
    )
   "temporary expedient to avoid generating dual forms")
 
 (setf *semantics-index-path* '(synsem local cont hook index))
 
-(setf *intersective-rule-names* '(adjn_i adjh_i nadj_rc fin_non_wh_rel
-                                  nadj_rr_nt nadj_rr_t hadj_i_uns))
+; DPF 27-Nov-03 - Finally noticed that on the current clever approach to
+; intersective modification, we can't generate np-adverbial modifiers as
+; in "Kim arrived the day after Sandy" since "*Kim arrived the day" is not
+; well-formed, which means we don't generate that 'skeleton' into which we
+; could then insert the PP-modifier.  Given that the presence of intersective
+; modifiers is apparently sometimes syntactically required, this two-stage
+; approach to generation may be threatened.  For now, commenting out the
+; relevant noun-modifying rules.  Also hadj_i_uns, since only verb-participles
+; which are post-modified can be reduced relatives: "women working for Browne"
+
+;(setf *intersective-rule-names* '(adjn_i adjh_i nadj_rc
+;                                  nadj_rr_nt nadj_rr_t hadj_i_uns))
+(setf *intersective-rule-names* '(adjh_i nadj_rr_nt))
 
 (defparameter *chart-dependencies*
   '((SYNSEM LKEYS --+COMPKEY) (SYNSEM LOCAL CAT HEAD KEYS KEY)
-    (SYNSEM LKEYS --+OCOMPKEY) (SYNSEM LOCAL CAT HEAD KEYS KEY)))
+    (SYNSEM LKEYS --+OCOMPKEY) (SYNSEM LOCAL CAT HEAD KEYS KEY)
+    (SYNSEM LOCAL CAT VAL SUBJ FIRST --SEMIND) (SYNSEM --SEMIND)))

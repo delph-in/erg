@@ -37,8 +37,10 @@ sign := basic_sign &
 
 phrase_or_lexrule := sign &
   [ SYNSEM canonical_synsem &
-	   [ LOCAL.CONT.HOOK #hook ],
-    C-CONT mrs_min & [ HOOK #hook ] ].
+	   [ LOCAL.CONT.HOOK #hook,
+             PHON.ONSET #onset ],
+    C-CONT mrs_min & [ HOOK #hook ],
+    ARGS.FIRST.SYNSEM.PHON.ONSET #onset ].
 
 word_or_lexrule_min := sign_min.
 
@@ -72,11 +74,12 @@ synsem_min0 := synsem_min &
 
 synsem_min1 := synsem_min0 &
   [ OPT bool,
-    LEX bool,
+    LEX luk,
     ROOT bool,
     NON-LOCAL non-local_min,
     MODIFIED xmod,
-    --SEMIND *top* ].
+    --SEMIND *top*,
+    PHON phon ].
 
 lex_or_phrase :< synsem_min1.
 
@@ -203,8 +206,8 @@ cat := cat_min &
     VAL valence_min,
     MC luk,
     POSTHEAD bool,
-    HC-LEX bool,
-    HS-LEX bool].
+    HC-LEX luk,
+    HS-LEX luk ].
 
 local_min := mod_local &
   [ CAT cat_min,
@@ -214,6 +217,13 @@ local_min := mod_local &
 ; no-affix :< mod_local.
 
 non-local_min :< *avm*.
+
+phon := *avm* &
+  [ ONSET onset ].
+
+onset := *sort*.
+con := onset.
+voc := onset.
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
 ;;
@@ -293,6 +303,8 @@ a_or_p := v_or_a_or_p.
 v_or_p :< v_or_a_or_p.
 n_or_v :< subst.
 
+n_or_adv :< head.
+
 ; Adverbs modify adverbees.
 adverbee :< head.
 
@@ -326,7 +338,7 @@ prep_or_modnp :< head.
 prep := a_or_p & v_or_p & n_or_p & mobile & prep_or_modnp & v_or_g_or_p &
         p_or_adv & adverbee.
 
-; For result of temp_mod non-branching rule
+; For result of npadv_mod non-branching rule
 ; Need mobile for "where did i put it"
 ; DPF 13-Oct-02 - Changed parent a_or_adv to a_or_p so these guys
 ; can take meaure_np degree specifiers.
@@ -337,7 +349,7 @@ supnoun :< nominal.
 
 noun_or_nomger := supnoun & n_or_p.
 
-noun := n_or_v & n_or_a & noun_or_nomger.
+noun := n_or_v & n_or_a & noun_or_nomger & n_or_adv.
 
 ; DPF 10-Apr-02 - Added n_or_p since want to allow gerunds to undergo noptcomp
 ; rule, to get e.g."way of saying that Kim arrives"
@@ -357,7 +369,7 @@ negadv := basic_lexadv & adverbee.
 lexadv :< basic_lexadv.
 
 reg_adv := basic_adv & disc_adverbee & p_or_adv &
-           a_or_adv.
+           a_or_adv & n_or_adv.
 adv := reg_adv & mobile.
 adv_nonmob :< reg_adv.
 deg_adv :< basic_adv.
@@ -582,7 +594,8 @@ ind_or_mod_subj_tam := basic_ind_or_mod_subj_tam &
  [ TENSE real_tense ].
 
 past_or_subj_tam := tam &
- [ ASPECT no_aspect ].
+ [ TENSE real_tense,
+   ASPECT no_aspect ].
 
 subjnct_tam := past_or_subj_tam &
  [ MOOD subjunctive ].
@@ -802,6 +815,7 @@ inf := inf_or_prp & bse_or_inf & fin_or_inf.
 prp :< inf_or_prp.
 
 inf_and :< vform.
+inf_but :< vform.
 psp_adj :< vform.
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -844,6 +858,8 @@ conj_full_ref-ind := conj_ref-ind & conj_full-ind & full_ref-ind.
 conj_deg-ind := conj_event_or_deg-ind & conj_non_expl-ind & deg-ind.
 conj_full_deg-ind := conj_deg-ind & conj_full-ind & full_deg-ind.
 
+unbound-ind := non_expl-ind.
+
 ; The basic semantic structure, a CONT, is just something with a handle.
 ; Conts are further classified into mrss (i.e., things with liszts) and
 ; relations (i.e., things that go on liszts).  Conts are divided into psoas
@@ -879,9 +895,17 @@ psoa_mrs := psoa_basicmrs & mrs.
 ; they won't appear as controlled complements.  Will perhaps want to treat
 ; indefinite NPs in copular constructions by relaxing this constraint for e.g.
 ; "Kim is a consultant"
+; DPF 13-Nov-03 - Removed [ HOOK.XARG nothing ], since nom-obj is also the
+; type assigned to determiners, and these need to be able to take degree
+; specifiers, including comparative/equative ones like "as many X", where the
+; degree-spec identifies its SPEC's XARG with one argument in the comparative
+; relation - necessary because adjectives expose their modifiee noun's index
+; as the adj's XARG (since the adj's INDEX is its event, for copula constr's).
+; DPF 27-Nov-03 - Also, experimentally, make XARG of NPs be the handle of
+; the nbar, which often seems to be needed, e.g. in it-clefts, where the
+; rel clause wants to identify its message's handle with that of the nbar.
 
-nom-obj := mrs &
-  [ HOOK.XARG nothing ].
+nom-obj := mrs.
 
 ; Relations are classified according to the types of arguments they take.  All
 ; relations have a handle.  In addition, quantifier relations have a bound
@@ -1072,6 +1096,10 @@ aux_arg1_relation := arg1_relation &
 prep_relation := basic_arg12_relation &
   [ PRED prep_rel,
     ARG2 non_expl ].	    
+
+prep_notense_relation := prep_relation &
+  [ ARG0.E [ TENSE no_tense,
+             ASPECT no_aspect ] ].
 
 adv_relation := basic_arg1_relation.
 
@@ -1374,11 +1402,16 @@ integer :< atom.
 ; SUBJ to be *olist* rather than *null*, which e.g. allows verbal gerunds to 
 ; have optional but non-empty SUBJ value and still themselves appear as 
 ; subjects or complements without discharging that SUBJ value.
+; DPF 15-Nov-03 - Added CONT.HOOK.INDEX ref-ind, which blocks spurious analysis
+; of e.g. "to be" with expletive-subj elided be.  And linked it to --SEMIND
+; for consistency.
 
 pro_ss := expressed_non_canonical &
-  [ LOCAL.CAT.HEAD noun & [ CASE acc ],
+  [ LOCAL [ CAT.HEAD noun & [ CASE acc ],
+            CONT.HOOK.INDEX ref-ind & #ind ],
     NON-LOCAL [ REL 0-dlist,
-		QUE 0-dlist ] ].
+		QUE 0-dlist ],
+    --SEMIND #ind ].
 
 ; ERB (19-01-98) We need a subtype of pro and gap so that to_c_prop
 ; can undergo subject extraction.  See the notes near non_wh_rel in
@@ -1506,6 +1539,7 @@ _about_p_sel_rel :< selected_prep_rel.
 _across_p_sel_rel :< selected_prep_rel.
 _after_p_sel_rel :< selected_prep_rel.
 _against_p_sel_rel :< selected_prep_rel.
+_ahead_p_sel_rel :< selected_prep_rel.
 _along_p_sel_rel :< selected_prep_rel.
 _apart_j_sel_rel :< selected_adj_rel.
 _around_p_sel_rel :< selected_prep_rel.
@@ -1614,6 +1648,7 @@ _except+for_p_rel :< miscprep_rel.
 _except_p_rel :< miscprep_rel.
 _excepting_p_rel :< miscprep_rel.
 _facing_p_rel :< dir_rel.
+_far_r_rel :< dir_or_state_rel.
 _for_p_rel :< miscprep_rel.
 _for+example_p_rel :< miscprep_rel.
 _for+instance_p_rel :< miscprep_rel.
@@ -1682,6 +1717,7 @@ _prior+to_p_rel :< temp_loc_rel.
 _regarding_p_rel :< miscprep_rel.
 _right+away_p_rel :< miscprep_rel.
 _since_p_rel :< temp_loc_rel.
+_straight_r_rel :< dir_or_state_rel.
 _such+as_p_rel :< miscprep_rel.
 _than_p_ind_rel :< miscprep_rel.
 _then_p_temp_rel :< miscprep_rel.
@@ -1841,10 +1877,11 @@ explicit_quant_noagr_q_rel := explicit_q_rel &
                               explicit_quant_or_udef_noagr_q_rel.
 much_many_q_rel := explicit_quant_noagr_q_rel.
 ; DPF 19-Oct-02 - This is to allow not only ordinary bare plurals, but also
-; for "afternoons" which must be the one that takes an optional PP-of and
+; "afternoons" which must be the one that takes an optional PP-of and
 ; usually requires a definite determiner (unless it's a bare plural)
 abstr_def_or_udef_q_rel := quant_rel.
 def_or_udef_q_rel := abstr_def_or_udef_q_rel.
+def_or_proper_q_rel := abstr_def_or_udef_q_rel.
 udef_q_rel := implicit_q_rel & explicit_quant_or_udef_noagr_q_rel &
               def_or_udef_q_rel.
 some_q_rel := explicit_quant_agr_q_rel.
@@ -1853,18 +1890,18 @@ every_q_rel := explicit_q_rel.
 no_q_rel := explicit_q_rel.
 abstr_def_q_rel := def_or_udef_q_rel.
 def_q_rel := abstr_def_q_rel & implicit_q_rel.
-def_explicit_q_rel := abstr_def_q_rel & explicit_quant_noagr_q_rel.
+def_explicit_q_rel := abstr_def_q_rel & explicit_quant_noagr_q_rel &
+                      def_or_proper_q_rel.
 def_both_rel := def_explicit_q_rel.
 ; Used only in KEYS.KEY
 nondef_explicit_q_rel := explicit_q_rel.
 ; Used for lexical NPs including proper names
 ; It is distinct from i_or_e_quant_or_deg_rel to prevent relative clauses
 ; from attaching to proper names with no specifier.
-proper_q_rel := non_freerel_q_rel & abstr_def_or_udef_q_rel &
-                impl_or_proper_q_rel.
-number_q_rel := non_freerel_q_rel.
+proper_q_rel := non_freerel_q_rel & def_or_proper_q_rel & impl_or_proper_q_rel.
+number_q_rel := non_freerel_q_rel & def_or_proper_q_rel.
 pronoun_q_rel :< non_freerel_q_rel.
-demonstrative_q_rel :< explicit_q_rel.
+demonstrative_q_rel := explicit_q_rel & def_or_proper_q_rel.
 demon_near_q_rel :< demonstrative_q_rel.
 demon_far_q_rel :< demonstrative_q_rel.
 free_relative_ever_q_rel :< quant_rel.
@@ -2014,7 +2051,7 @@ _afternoon_n_rel :< day_part_rel.
 _evening_n_rel :< day_part_rel.
 _night_n_rel :< day_part_rel.
 _weekend_n_rel :< day_part_rel.
-_day_n_rel :< unnamed_day_rel.
+_day_n_rel :< day_rel.
 
 _week_n_rel :< non_day_diadic_modable_rel.
 _month_n_rel :< non_day_diadic_modable_rel.
@@ -2100,6 +2137,8 @@ _had+better_v_rel :< modal_rel.
 ellipsis_rel := v_event_rel.
 ; Used to ensure tag question agreement, but will not appear in RELS.
 have_aux_rel := v_event_rel & aux_event_rel.
+; For infinitival relatives and purposive-to constructions: 'Kim is to stay'
+expected_inf_rel := v_event_rel.
 
 ; Needed to allow filtering of the relations for "will" and "would" for VIT.
 will_would_rel :< aux_arg1_rel.
@@ -2235,6 +2274,7 @@ _be_v_prd_rel := v_event_rel & aux_event_rel.
 _dollar_n_rel :< norm_nom_rel.
 
 unspec_rel := prep_rel.
+
 ; Used for vocatives.
 unspec_mod_rel :< prep_mod_rel.
 
@@ -2293,6 +2333,7 @@ _all_j_rel := adj_rel & dofw_or_poss_q_rel.
 _late_j_next+last_rel := adj_rel & dofw_or_poss_q_rel.
 v_event_arg1_rel := aux_event_rel & v_event_rel.
 _be_v_there_rel :< v_event_arg1_rel.
+_be_v_itcleft_rel :< v_event_arg1_rel.
 _exist_v_there_rel :< v_event_arg1_rel.
 _have_v_to_rel :< modal_rel.
 _got_v_to_rel :< v_event_arg1_rel.
