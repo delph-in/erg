@@ -218,6 +218,18 @@
       (make-pathname :name (concatenate 'string prefix "-rels")
                      :directory (pathname-directory (lkb-tmp-dir))))))
 
+;;;
+;;; used in lexicon compilation for systems like PET and CHiC: when we compile
+;;; out the morphology, there is no point in outputting uninflected entries for
+;;; systems that have no on-line morphology.  also used in [incr tsdb()] for
+;;; counting of `words'.
+;;;
+(defun dag-inflected-p (dag)           
+  (let* ((key (existing-dag-at-end-of dag 'inflected))
+         (type (and (dag-p key) (dag-type key))))
+    (when type
+      (or (eq type '+) (and (consp type) (eq (first type) '+))))))
+
 
 ;;; Function to run when batch checking the lexicon
 
