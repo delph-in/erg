@@ -7,6 +7,9 @@
 ;;   Language: Allegro Common Lisp
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; $Log$
+;; Revision 1.10  1999/04/24 20:20:45  aac
+;; added refl_pro as top level rel, added scope feature
+;;
 ;; Revision 1.9  1999/03/12 09:53:20  danf
 ;; Further fixes to improve generation
 ;;
@@ -82,7 +85,9 @@
 
 (setf *MRS-FOR-LANGUAGE* 'english)
 
-(setf *MRS-SCOPING* nil)
+(setf *MRS-SCOPING* t)
+
+(setf *GIVING-DEMO-P* nil)
 
 (setf *initial-semantics-path* 
   `(,(vsym "SYNSEM") ,(vsym "LOCAL") ,(vsym "CONT")))
@@ -169,6 +174,8 @@
                                ,(vsym "FUN")))
 
 (setf *complex-extra-feats* `(,(vsym "VIT") ,(vsym "PNG")))
+
+(setf *ignored-sem-features* `(,(vsym "PARAMS")))
 
 (setf *vit-sort-feature* (vsym "SORT"))
 

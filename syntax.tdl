@@ -183,8 +183,7 @@ nonhead_compositional := binary_headed_phrase &
 
 non_clause := head_nexus_phrase &
   [ SYNSEM.LOCAL [ CAT.MC na,
-		   CONT.MESSAGE 0-dlist ],
-    C-CONT.H-CONS <! !> ].
+		   CONT.MESSAGE 0-dlist ] ].
 
 
 
@@ -245,7 +244,7 @@ decl := non_rel_clause &
 
 ; Added [SYNSEM..SPR < >] on imp to preserve intended constraints on modifiers
 ; which only attach to VP and N-bar.
-imp := non_rel_clause & head_valence_phrase &
+imp := non_rel_clause & head_valence_phrase & head_only &
   [ SYNSEM.LOCAL [ CAT [ HEAD [ INV -,
 				VFORM imp_vform,
 				TENSE present ],
@@ -301,6 +300,18 @@ wh_interrog := interrog & binary_headed_phrase &
 wh_interrog_fin := wh_interrog &
   [ SYNSEM.LOCAL.CAT [ HEAD.VFORM fin,
 		       VAL.SUBJ *olist* ] ].
+
+; DPF (28-Apr-99) Need this construction to get simple yes-no questions like
+; "Did Kim fall", while keeping the phrase "did Kim devour" with an empty
+; MESSAGE so it can be the head of "What did Kim devour", where this filler-head
+; rule introduces the interrogative message.
+
+yesno_phrase := interrog & head_valence_phrase & head_only &
+  [ HEAD-DTR.SYNSEM [ LOCAL [ CAT [ HEAD.INV +,
+				    VAL [ SUBJ *olist*,
+					  COMPS *olist* ] ],
+			      CONT.MESSAGE 0-dlist ],
+		      NON-LOCAL.SLASH 0-dlist ] ].
 
 ; Since MOD is a head feature, and projections of finite verbs can be relative
 ; clauses, we introduce the [MOD nbar] property directly on finite verbs, rather
@@ -529,6 +540,8 @@ head_filler_phrase_inf := head_filler_phrase &
 ; 1-May-96 (DPF) Restricted head to be verb only, to block spurious parses
 ; where NP modifed by PP was also analyzed as its subject.
 ; 12-Jun-96 (RPM) Allow verbal gerunds to head head/subj phrases.
+; DPF (28-Apr-99) Added INV - to head-dtr, since most auxiliary verbs are
+; underspecified for INV.
 
 ; N.B. Since all head_subj_phrase constructions inherit from type clause,
 ; which inherits from head_compositional, this type does not (though it could,
@@ -540,7 +553,8 @@ head_subj_phrase := head_valence_phrase & head_final &
 			       COMPS < >,
 			       SPR < > ] ],
 		   CONJ cnil ],
-    HEAD-DTR.SYNSEM.LOCAL.CAT [ VAL [ SUBJ < #synsem >,
+    HEAD-DTR.SYNSEM.LOCAL.CAT [ HEAD.INV -,
+				VAL [ SUBJ < #synsem >,
 				      COMPS *olist* ],
 				MC na ],
     NON-HEAD-DTR.SYNSEM #synsem & canonical_synsem &
@@ -619,6 +633,9 @@ head_marker_phrase := head_comp_or_marker_phrase &
 ; complement on the list (here assumed to be the second complement, since it's
 ; hard and perhaps unnecessary to allow the obligatory one to appear in an
 ; arbitrary position).
+; DPF (27-Apr-99) Note that this formulation unfortunately does not get
+; "Kim bet Abrams won" with the first two optional complements missing, since
+; the rule forces the complement after the omitted one to be expressed.
 
 head_opt_comp_phrase := head_valence_phrase & head_only & head_compositional &
   [ SYNSEM canonical_synsem &
@@ -642,11 +659,15 @@ head_opt_comp_phrase := head_valence_phrase & head_only & head_compositional &
 ; near non_wh_rel) then this can't require HEAD v_or_p.  That constraint
 ; will be moved to extracted_comp_phrase.  Extrasubj will say 
 ; HEAD verbal.
+; DPF (28-Apr-99) Added identity of MESSAGE for mother and head-dtr, since it
+; wasn't being propagated.
 
 extracted_arg_phrase := head_valence_phrase & head_only & head_compositional &
   [ SYNSEM.LOCAL [ CAT.HEAD.MOOD indicative,
+		   CONT.MESSAGE #msg,
 		   CONJ cnil ],
-    HEAD-DTR.SYNSEM.LOCAL.CONJ cnil ].
+    HEAD-DTR.SYNSEM.LOCAL [ CONJ cnil,
+			    CONT.MESSAGE #msg ] ].
 
 ; To block extraction of subjects of inverted auxiliaries, introduce (hack)
 ; restriction to accusative case on the extracted complement. This restriction
@@ -661,7 +682,7 @@ extracted_comp_phrase := extracted_arg_phrase &
 	   [ LOCAL.CAT [ VAL [ SUBJ #subj,
 			       SPR #spr,
 			       COMPS #comps ],
-			 MC #mc ],
+			   MC #mc ],
 	     LEX #lex ],
     HEAD-DTR [ SYNSEM 
 	       [ LOCAL.CAT [ HEAD v_or_p,
@@ -710,7 +731,7 @@ extracted_subj_phrase := extracted_arg_phrase &
 ; to also allow "exactly which books".
 
 head_spec_phrase := head_valence_phrase & head_final & non_clause & phrasal &
-		    head_compositional &
+		    nonhead_compositional &
   [ SYNSEM.LOCAL.CAT [ VAL [ SUBJ #subj,
 			     COMPS < >,
 			     SPR #spr,
@@ -729,7 +750,8 @@ head_spec_phrase := head_valence_phrase & head_final & non_clause & phrasal &
 		        [ LOCAL.CAT [ MC na,
 				      VAL.SPEC < [ LOCAL.CONT [ TOP #top,
 								KEY #key ] ] >]],
-    C-CONT.LISZT <! !> ].
+    C-CONT [ LISZT <! !>,
+	     H-CONS <! !> ] ].
 
 #|
 ; The noncompositional head_spec is for making non-number phrases: 
@@ -1002,23 +1024,23 @@ bare_np_phrase := head_only & non_clause & phrasal &
 				    SPR < non_canonical &
 					  [ OPT -,
 					    LOCAL local &
-						[ CONT.KEY #quant &
-							   [ RESTR #arg  ] ],
+						[ CONT.KEY #quant ],
 					    NON-LOCAL [ SLASH 0-dlist,
 							REL 0-dlist,
 							QUE 0-dlist ] ] > ] ],
 			CONJ cnil,
-			CONT [ TOP #top,
+			CONT [ TOP #nhand,
 			       INDEX #index & [ DIVISIBLE + ],
 			       KEY basic_nom_rel,
 			       MESSAGE #msg ] ],
 		      NON-LOCAL.SLASH #slash ],
-    C-CONT [ TOP #top, 
-             INDEX #index,
+    C-CONT [ INDEX #index,
 	     LISZT <! udef_rel & #quant &
 		    [ BV #index,
-		      RESTR #arg ] !>,
-	     H-CONS <! !> ] ].
+		      RESTR #rhand ] !>,
+	     H-CONS <! qeq &
+		     [ SC-ARG #rhand,
+		       OUTSCPD #nhand ] !> ] ].
 
 ;; 
 ;; Noun-noun compounds
@@ -1048,7 +1070,8 @@ n_n_cmpnd_phr := head_final &
 			   VAL #valence &
 			       [ SPR < synsem & [ OPT - ] > ],
 			   MC #mc ],
-		     CONT [ MESSAGE #msg,
+		     CONT [ TOP #top,
+			    MESSAGE #msg,
 			    INDEX #hind & ref-ind ],
 		     CONJ cnil ],
 	     NON-LOCAL [ SLASH #slash,
@@ -1059,12 +1082,14 @@ n_n_cmpnd_phr := head_final &
 			   VAL [ COMPS *olist*,
 				 SPR *unexplist* ] ],
 		     AGR.PNG.PN 3sg,
-		     CONT [ INDEX #modind & ref-ind,
+		     CONT [ TOP #top,
+			    INDEX #modind & ref-ind,
 			    KEY nom_rel ] ],
 	     NON-LOCAL [ SLASH 0-dlist,
 			 QUE 0-dlist,
 			 REL 0-dlist ] ],
-    C-CONT [ LISZT <! unspec_rel & [ HINST #hind,
+    C-CONT [ LISZT <! unspec_rel & [ HANDEL #top,
+				     HINST #hind,
 				     NHINST #modind ] !>,
 	     H-CONS <! !> ] ].
 
@@ -1298,6 +1323,9 @@ free_rel_phrase := head_initial & head_compositional &
 ; agreement for plural NPs, since we only change INDEX in this hack, not AGR.
 ;   And we have to make sure that the SCOPE attributes of two conjoined 
 ; quantified phrases are identified, but not clear how to do this.
+; DPF (27-Apr-99) Both conjuncts have KEY constrained to independent_rel, since
+; they may be relations underspecified for use as particles - by doing this, we
+; exclude coordination of particles themselves, but this is probably okay.
 
 coord_phr := binary_phrase & non_headed_phrase & 
   [ SYNSEM [ LOCAL [ CAT #cat,
@@ -1309,13 +1337,13 @@ coord_phr := binary_phrase & non_headed_phrase &
     LCONJ-DTR sign & #left &
 		[ SYNSEM [ LOCAL [ CAT #cat,
 				   CONT [ INDEX individual,
-                                          MESSAGE #msg ] ],
-                           NON-LOCAL #non-local ] ],
+					  KEY independent_rel ] ],
+			   NON-LOCAL #non-local ] ],
     RCONJ-DTR sign & #right &
 		[ SYNSEM phr_synsem &
 			 [ LOCAL [ CAT #cat,
 				   CONT [ INDEX individual & #ind,
-					  KEY #key,
+					  KEY #key & independent_rel,
                                           MESSAGE #msg ],
                                    AGR #agr ],
 			   NON-LOCAL #non-local ] ],
@@ -1464,8 +1492,7 @@ filler_head_rule_wh_root := binary_rule_left_to_right &
 			    head_filler_phrase_fin & wh_interrog_fin & 
                             mc_phrase &
   [ SYNSEM.LOCAL.CAT.HEAD.INV +,
-    HEAD-DTR.SYNSEM.LOCAL.CONT.MESSAGE 1-dlist &
-			      <! message !> ].
+    HEAD-DTR.SYNSEM.LOCAL.CONT.MESSAGE 0-dlist ].
 
 ;; DPF (21-Apr-98) To block use of fill_head_wh_subj in "Kim knows who Sandy saw"
 ;; added constraint that filler must be [CASE NOM].
@@ -1511,8 +1538,9 @@ filler_head_rule_rel := binary_rule_left_to_right & rel_cl &
 ; serves to make nonroot phrases, such as the bracketed phrase in: "On Tuesday
 ; [plan to meet Kim]".
 
-;imperative_rule := rule & imp.
-imperative_rule := rule & head_only & imp.
+imperative_rule := rule & imp.
+
+yesno_rule := rule & yesno_phrase.
 
 ; The top_coord_rule is for building the top of a (potential iterated)
 ; coordinate structure and the mid_coord_rule is for building intermediate
@@ -1552,6 +1580,7 @@ imperative_rule := rule & head_only & imp.
 ; conjunct in a mid_coord_phrase.  For example, a LEFT value of < either, or >
 ; permits a coordinate structure like "either Kim or Sandy or Chris or Lee".
                                   
+#|
 top_coord_rule := binary_rule_right_to_left & coord_phr &
   [ SYNSEM.LOCAL.CONJ cnil,
     LCONJ-DTR.SYNSEM.LOCAL local &
@@ -1562,7 +1591,7 @@ top_coord_rule := binary_rule_right_to_left & coord_phr &
 		      [ CONT [ TOP #top,
 			       ALTKEY [ C-ARG #ind,
 					C-HANDELS *diff-list* &
-					      [ LIST < #arghand . #hands >,
+					      [ LIST < #lhand . #hands >,
 						LAST #hlast ],
 					C-INDICES *diff-list* &
 					      [ LIST < #lind . #inds >,
@@ -1578,15 +1607,14 @@ top_coord_rule := binary_rule_right_to_left & coord_phr &
     C-CONT [ TOP #top,
 	     INDEX #ind & event_or_index,
 	     LISZT <! !>,
-	     H-CONS <! qeq & [ SC-ARG #arghand,
-			       OUTSCPD #lhand ] !> ] ].
+	     H-CONS <! !> ] ].
 
 
 mid_coord_rule := binary_rule_right_to_left & coord_phr &
   [ SYNSEM.LOCAL [ CONJ complex-conj &
 		      [ CHEAD #chead,
 			HANDELS *diff-list* &
-			        [ LIST < #arghand . #hands >,
+			        [ LIST < #lhand . #hands >,
 				  LAST #hlast ],
 			INDICES *diff-list* &
 			        [ LIST < #lind . #inds >,
@@ -1607,8 +1635,97 @@ mid_coord_rule := binary_rule_right_to_left & coord_phr &
 			     CONT.ALTKEY #altkey ],
     C-CONT [ INDEX.PNG.PN non1sg,
 	     LISZT <! !>,
-	     H-CONS <! qeq & [ SC-ARG #arghand,
-			       OUTSCPD #lhand ] !> ] ].
+	     H-CONS <! !> ] ].
+|#
+
+top_coord_rule := binary_rule_right_to_left & coord_phr &
+  [ SYNSEM.LOCAL.CONJ cnil,
+    LCONJ-DTR.SYNSEM.LOCAL local &
+		      [ CONJ conj & #left,
+			CONT [ INDEX #lind ] ],
+    RCONJ-DTR.SYNSEM.LOCAL local &
+		      [ CONT [ TOP #top,
+			       ALTKEY [ C-ARG #ind,
+					C-INDICES *diff-list* &
+					      [ LIST < #lind . #inds >,
+						LAST #ilast ] ] ],
+			CONJ complex-conj &
+				  [ CHEAD [ LEFT <#left, ...> ], 
+				    INDICES *diff-list* &
+					    [ LIST #inds,
+					      LAST #ilast ] ] ],
+    C-CONT [ TOP #top,
+	     INDEX #ind & event_or_index,
+	     LISZT <! !>,
+	     H-CONS <! !> ] ].
+
+
+mid_coord_rule := binary_rule_right_to_left & coord_phr &
+  [ SYNSEM.LOCAL [ CONJ complex-conj &
+		      [ CHEAD #chead,
+			INDICES *diff-list* &
+			        [ LIST < #lind . #inds >,
+				  LAST #ilast ] ],
+		   CONT.ALTKEY #altkey ],
+    LCONJ-DTR.SYNSEM.LOCAL [ CONJ conj & #left,
+			     CONT [ INDEX #lind ] ],
+    RCONJ-DTR.SYNSEM.LOCAL [ CONJ complex-conj &
+				  [ CHEAD #chead & 
+					  [ LEFT < *top*, #left > ],
+				    INDICES *diff-list* &
+					    [ LIST #inds,
+					      LAST #ilast ] ],
+			     CONT.ALTKEY #altkey ],
+    C-CONT [ INDEX.PNG.PN non1sg,
+	     LISZT <! !>,
+	     H-CONS <! !> ] ].
+
+; Coordination of propositions, with non-empty MESSAGE.
+top_coord_prop_rule := top_coord_rule &
+  [ LCONJ-DTR.SYNSEM.LOCAL.CONT [ TOP #lhand,
+				  MESSAGE 1-dlist ],
+    RCONJ-DTR.SYNSEM.LOCAL [ CONT [ ALTKEY.C-HANDELS *diff-list* &
+						     [ LIST < #lhand . #hands >,
+						       LAST #hlast ],
+				    MESSAGE 1-dlist ],
+			     CONJ complex-conj & [ HANDELS *diff-list* &
+							   [ LIST #hands,
+							     LAST #hlast ] ] ] ].
+
+
+; Coordination of all non-propositions, including NPs, VPs, PPs, etc.
+mid_coord_prop_rule := mid_coord_rule &
+  [ SYNSEM.LOCAL.CONJ.HANDELS *diff-list* &
+			      [ LIST < #lhand . #hands >,
+				LAST #hlast ],
+    LCONJ-DTR.SYNSEM.LOCAL.CONT [ TOP #lhand,
+				  MESSAGE 1-dlist ],
+    RCONJ-DTR.SYNSEM.LOCAL [ CONJ.HANDELS *diff-list* &
+					  [ LIST #hands,
+					    LAST #hlast ],
+			     CONT.MESSAGE 1-dlist ] ].
+
+; In order to use the same lexical entries for both prop and nonprop coordination,
+; in the nonprop cases we unify the SYNSEM's TOP handle with the first of the
+; handles in the conjunction's HANDELS list.
+
+top_coord_nonprop_rule := top_coord_rule &
+  [ SYNSEM.LOCAL.CONT.TOP #hand,
+    LCONJ-DTR.SYNSEM.LOCAL.CONT [ TOP #hand,
+				  MESSAGE 0-dlist ],
+    RCONJ-DTR.SYNSEM.LOCAL [ CONT [ TOP #hand,
+				    ALTKEY.C-HANDELS 0-dlist,
+				    MESSAGE 0-dlist ],
+			     CONJ.HANDELS.LIST.FIRST #hand ] ].
+
+mid_coord_nonprop_rule := mid_coord_rule &
+  [ SYNSEM.LOCAL [ CONJ.HANDELS 0-dlist,
+		   CONT.TOP #hand ],
+    LCONJ-DTR.SYNSEM.LOCAL.CONT [ TOP #hand,
+				  MESSAGE 0-dlist ],
+    RCONJ-DTR.SYNSEM.LOCAL [ CONT [ TOP #hand,
+				    MESSAGE 0-dlist ],
+			     CONJ.HANDELS.LIST.FIRST #hand ] ].
 
 root_gap_rule_premod := binary_rule_left_to_right & root_gap_clause &
   [ MOD-DTR #left &

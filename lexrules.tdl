@@ -1,4 +1,4 @@
-;; -*- Mode: TDL; Package: DISCO -*-
+;;; -*- Mode: TDL; Package: DISCO -*-
 ;;;
 ;;;  lexrules.tdl
 ;;;
@@ -171,6 +171,7 @@ est_super_adj := local &
 ;;; but otherwise does inheritance
 ;;; everything else requires inflected forms
 
+#|
 lex_rule_supermost := phrase_or_lexrule & word_or_lexrule &
   [ DTR sign &
 	[ SYNSEM.LOCAL.CONT.LISZT [ LIST #middle,
@@ -179,8 +180,20 @@ lex_rule_supermost := phrase_or_lexrule & word_or_lexrule &
 			      LAST #last ],
     C-CONT.LISZT [ LIST #first,
 		   LAST #middle ] ].
+|#
 
-lex_rule_infl := lex_rule_supermost &
+lex_rule_supermost := phrase_or_lexrule & word_or_lexrule &
+  [ DTR sign ].
+
+lex_rule_compos := lex_rule_supermost &
+  [ DTR.SYNSEM.LOCAL.CONT.LISZT [ LIST #middle,
+				  LAST #last ],
+    SYNSEM.LOCAL.CONT.LISZT [ LIST #first,
+			      LAST #last ],
+    C-CONT.LISZT [ LIST #first,
+		   LAST #middle ] ].
+
+lex_rule_infl := lex_rule_compos &
   [ NEEDS-AFFIX bool,
     INFLECTED +,
     AFFIX #affix,
@@ -221,7 +234,9 @@ lex_rule_super := lex_rule_supermost &
 	  CONJ cnil ] ],
   status: lex-rule.
 
-lex_rule := lex_rule_super &
+lex_rule_super_compos := lex_rule_super & lex_rule_compos.
+
+lex_rule := lex_rule_super_compos &
   [ DTR #stem &
 	[ SYNSEM.LOCAL [ CAT.MC #mc,
 			 CONT.MESSAGE #msg ] ],
@@ -251,7 +266,48 @@ lex_rule := lex_rule_super &
 ; easier to fix once we have a) lexical threading and b) an implementation of
 ; the analysis of echo questions, so I am leaving it for later.
  
-sai := lex_rule_super &
+#|
+sai := lex_rule_super_compos &
+  [ STEM #orth,
+    DTR #stem &
+	[ STEM #orth,
+	  SYNSEM [ LOCAL [ CAT [ HEAD #head & verb &
+				      [ INV +,
+					VFORM fin ],
+				 VAL [ SUBJ < #subj >,
+					   COMPS #comps,
+					   SPR #spr,
+					   --KEYCOMP #keycomp ] ],
+			   CONT [ TOP #vhand,
+				  INDEX #ind,
+ 				  KEY #key,
+ 				  COMPKEY #ckey,
+				  OCOMPKEY #ockey ],
+			   ARG-S #arg-s ],
+		   NON-LOCAL #nonloc ] ],
+    SYNSEM sai_synsem &
+	 [ LOCAL [ CAT [ HEAD #head, 
+			 VAL [ COMPS < #subj & [ OPT - ]
+					   . #comps >,
+				   SPR #spr,
+				   --KEYCOMP #keycomp ] ],
+		   CONT [ TOP #mhand,
+			  INDEX #ind,
+			  KEY #key,
+			  COMPKEY #ckey,
+			  OCOMPKEY #ockey,
+			  MESSAGE <! #msg !>,
+			  H-CONS <! qeq &
+				  [ SC-ARG #soahand,
+				    OUTSCPD #vhand ] !> ],
+		   ARG-S #arg-s ],
+	   NON-LOCAL #nonloc ],
+    ARGS < #stem >,
+    C-CONT.LISZT <! #msg &
+		    [ HANDEL #mhand,
+		      SOA #soahand ] !> ].
+|#
+sai := lex_rule_super_compos &
   [ STEM #orth,
     DTR #stem &
 	[ STEM #orth,
@@ -266,8 +322,7 @@ sai := lex_rule_super &
 				  INDEX #ind,
  				  KEY #key,
  				  COMPKEY #ckey,
-				  OCOMPKEY #ockey,
-				  H-CONS #hcons ],
+				  OCOMPKEY #ockey ],
 			   ARG-S #arg-s ],
 		   NON-LOCAL #nonloc ] ],
     SYNSEM sai_synsem &
@@ -281,11 +336,13 @@ sai := lex_rule_super &
 			  KEY #key,
 			  COMPKEY #ckey,
 			  OCOMPKEY #ockey,
-			  H-CONS #hcons ],
+			  MESSAGE 0-dlist,
+			  H-CONS <! !> ],
 		   ARG-S #arg-s ],
 	   NON-LOCAL #nonloc ],
     ARGS < #stem >,
     C-CONT.LISZT <! !> ].
+
 
 tag := lex_rule_super &
   [ STEM #orth,
@@ -295,21 +352,21 @@ tag := lex_rule_super &
 	       [ LOCAL [ CAT [ HEAD [ TENSE #tense & strict_sort,
 				      MOOD indicative ],
 			       VAL.COMPS.FIRST #subj ],
-			 CONT [ KEY #key,
-				H-CONS #hcons ] ],
+			 CONT.KEY #key ],
 		 NON-LOCAL #nonloc & 
 		       [ SLASH 0-dlist,
 			 REL 0-dlist,
 			 QUE 0-dlist ] ] ],
     SYNSEM tag_synsem &
-	 [ LOCAL [ CAT [ HEAD [ TENSE #tense ],
+	 [ LOCAL [ CAT [ HEAD.TENSE #tense,
 			 VAL.COMPS.FIRST #subj ],
 		   CONT [ KEY #key,
-			  H-CONS #hcons,
-			  MESSAGE #msg ] ],
+			  LISZT #cliszt,
+			  MESSAGE <! #msg !> ] ],
 	   NON-LOCAL #nonloc ],
     ARGS < #stem >,
-    C-CONT.LISZT <! #msg !> ].
+    C-CONT.LISZT #cliszt & <! #msg !> ].
+
 
 neg_addition := lex_rule &
   [ STEM #orth,
