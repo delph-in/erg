@@ -180,6 +180,8 @@
 (defparameter %mrs-extras-defaults%
   (list
    (list (vsym "E") 
+         ;; FIX - should not have to specify these in underspecified MRS in
+         ;; order to get topicalization or passivization
 	(cons (vsym "--TPC") (vsym "-"))
 	(cons (vsym "--PSV") (vsym "-"))
 	(cons (vsym "E.ASPECT.PERF") (vsym "-"))
