@@ -119,9 +119,13 @@
    (cons (mrs::vsym "E.TENSE") (mrs::vsym "BASIC_TENSE"))
    (cons (mrs::vsym "E.ASPECT.PROGR") (mrs::vsym "LUK"))
    (cons (mrs::vsym "E.ASPECT.PERF") (mrs::vsym "LUK"))
+   (cons (mrs::vsym "E.ASPECT.STATIVE") (mrs::vsym "BOOL"))
    (cons (mrs::vsym "E.MOOD") (mrs::vsym "MOOD"))
    (cons (mrs::vsym "PNG.GEN") (mrs::vsym "REAL_GENDER"))
    (cons (mrs::vsym "DIVISIBLE") (mrs::vsym "BOOL"))
+   (cons (mrs::vsym "--TPC") (mrs::vsym "BOOL"))
+   (cons (mrs::vsym "--PSV") (mrs::vsym "BOOL"))
+   (cons (mrs::vsym "PNG.PN") (mrs::vsym "PERNUM"))
    (cons (mrs::vsym "PRONTYPE") (mrs::vsym "PRONTYPE"))))
 
 ;;;

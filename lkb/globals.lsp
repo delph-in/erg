@@ -83,6 +83,8 @@
 
 ;;; (setf *chart-packing-p* t)
 
+(setf *gen-packing-p* t)
+
 ;;;
 ;;; increase dag pool size
 ;;;
@@ -103,7 +105,7 @@
   #+:psql
   ;; bmw20 (16 Feb 04) - phase out use of :table
   ;;  '((:user "bmw20") (:db "erg") (:host "localhost") (:table "erg2"))
-  '((:user "bmw20") (:db "erg") (:host "localhost") (:table "erg"))
+  '((:db "lingo") (:host "localhost") (:table "erg"))
   #-:psql
   nil)
 
@@ -191,7 +193,8 @@
     be_it_cop_were_neg_subj_2 shall_aux_pos
     sunday_n2 monday_n2 tuesday_n2 wednesday_n2 thursday_n2 friday_n2
     saturday_n2 slash_punct_adv1 or_else_1
-    which_r whom2
+    which_r whom2 yours_truly_pn1 
+    numvaldet one_day_num_ersatz one_num_determiner
    )
   "temporary expedient to avoid generating dual forms")
 

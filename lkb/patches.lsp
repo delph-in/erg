@@ -22,7 +22,7 @@
     (or (is-top-type val1) (is-top-type val2)
         (null val1)
         (and (is-valid-type val1) (is-valid-type val2) 
-             (compatible-types val1 val2))
+	     (compatible-types val1 val2))
         (and (is-munge-type val1) (is-munge-type val2)
              (compatible-munge-types val1 val2))
         (cond ((and (symbolp val1) (symbolp val2))
@@ -48,6 +48,27 @@
 (defun is-munge-type (val)
   (declare (ignore val))
   t)
+
+(defparameter %mrs-extras-defaults%
+  (list
+   (list (vsym "E") 
+	(cons (vsym "--TPC") (vsym "-"))
+	(cons (vsym "--PSV") (vsym "-"))
+	(cons (vsym "E.ASPECT.PERF") (vsym "-"))
+	(cons (vsym "E.ASPECT.PROGR") (vsym "-"))
+	(cons (vsym "E.ASPECT.STATIVE") (vsym "-")))
+   (list (vsym "X")
+	(cons (vsym "PNG.PN") (vsym "unsp_pernum")))
+   (list (vsym "U")
+	(cons (vsym "PNG.PN") (vsym "unsp_pernum")))
+   ))
+
+(defun get-filled-mrs-string (edge)
+  (when (lkb::edge-p edge)
+    (let* ((*package* (find-package :lkb))
+	   (mrs (extract-mrs edge)))
+      (with-output-to-string (stream)
+	(output-mrs1 (fill-mrs (unfill-mrs mrs)) 'simple stream)))))
 
 ;;; 3. (show-gen-chart) breaks on adjectives since degree specifiers now have
 ;;; pred string names as values, and create-gen-chart-pointers() in
@@ -92,3 +113,17 @@
           (create-gen-chart-pointers-collapse
            (get (cadr pair) 'chart-edge-descendents)
            edge-symbols))))))
+
+; From mrs/mrstoplevel.lisp
+; Added unfilling and filling steps
+(defun really-generate-from-edge (parser-edge)    
+  (let* ((input-sem (mrs::extract-mrs parser-edge)))
+    (with-output-to-top ()
+      (if (and input-sem (mrs::psoa-p input-sem)
+               (mrs::psoa-liszt input-sem))
+	  (progn
+	    (close-existing-chart-windows)
+	    (generate-from-mrs (mrs::fill-mrs (mrs::unfill-mrs input-sem)))
+	    (show-gen-result))
+	(format t "~%Could not extract valid MRS from edge ~A"
+		(edge-id parser-edge))))))
