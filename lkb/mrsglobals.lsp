@@ -32,6 +32,7 @@
 (defparameter *mrs-for-language* 'english)
 
 (defparameter *mrs-scoping* nil)
+(setf *scoping-call-limit* 100000)
 
 (setf *initial-semantics-path* 
   `(,(vsym "SYNSEM") ,(vsym "LOCAL") ,(vsym "CONT") ))
@@ -177,3 +178,18 @@
     "_say_v_1_rel" "_suggest_v_rel" "_swear_v_rel" "_understand_v_by_rel"
     "_write_v_1_rel" "_figure_v_out_rel" "_find_v_out_rel"
     "_point_v_out_rel"))
+
+(defparameter %mrs-extras-defaults%
+  (list
+   (list (vsym "E") 
+	(cons (vsym "--TPC") (vsym "-"))
+	(cons (vsym "--PSV") (vsym "-"))
+	(cons (vsym "E.ASPECT.PERF") (vsym "-"))
+	(cons (vsym "E.ASPECT.PROGR") (vsym "-"))
+	(cons (vsym "E.ASPECT.STATIVE") (vsym "-")))
+   (list (vsym "X")
+	(cons (vsym "PNG.PN") (vsym "unsp_pernum")))
+   (list (vsym "I")
+	(cons (vsym "PNG.PN") (vsym "unsp_pernum")))
+   ))
+

@@ -1,8 +1,8 @@
 ;;; -*- Mode: TDL; Package: DISCO -*-
 ;;;
-;;;  Copyright Daniel Flickinger 1994-2002
-;;;  All Rights Reserved.
-;;;  No use or redistribution without permission.
+;;;  Copyright (c) 1994-2004
+;;;    Dan Flickinger, Rob Malouf, Emily M. Bender
+;;;    see erg/licence.txt for conditions
 ;;;
 ;;;  fundamentals.tdl
 ;;;
@@ -24,6 +24,7 @@ basic_sign := sign_min &
 
 ;; ROBUST used to enable ungrammatical phrases such as missing det for sg-noun
 ;; POSSCL marks whether sign contains a possessive clitic.
+;; IDIOM marks whether sign contains an idiomatic element.
 ;; --SEMIND is re-entrant with HOOK.INDEX, to help modularize path specs,
 ;; and to delay expansion of subcategorizations until necessary.
 sign := basic_sign &
@@ -33,7 +34,8 @@ sign := basic_sign &
     ARGS *list*,
     INFLECTED bool,
     ROBUST bool,
-    POSSCL bool ].
+    POSSCL bool,
+    IDIOM bool ].
 
 phrase_or_lexrule := sign &
   [ SYNSEM canonical_synsem &
@@ -516,13 +518,12 @@ luk :< *sort*.
 ; NA for Not Applicable.  
 na_or_+ :< luk.
 na_or_- :< luk.
-+_or_- :< luk.
-
-na := na_or_+ & na_or_-.
 bool :< luk.
+na := na_or_+ & na_or_-.
 
-+ := bool & na_or_+ & +_or_-.
-- := bool & na_or_- & +_or_-.
+
++ := bool & na_or_+.
+- := bool & na_or_-.
 
 ; Three-valued sort for distinguishing unmodified signs from both left-modified
 ; and right-modified signs
@@ -534,6 +535,7 @@ bool :< luk.
 xmod := *sort* &
   [ LPERIPH luk,
     RPERIPH luk ].
+
 notmod_or_rmod :< xmod.
 notmod_or_lmod :< xmod.
 notmod := notmod_or_rmod & notmod_or_lmod.
@@ -546,8 +548,6 @@ rmod := hasmod & notmod_or_rmod.
 ; 'animate' or 'time'
 
 semsort :< *sort*.
-
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; CONT types
@@ -823,7 +823,9 @@ meta := sign &
 
 case :< *sort*.
 nom :< case.
-acc :< case.
+non_nom :< case.
+acc :< non_nom.
+obliq :< non_nom.
 
 vform :< *sort*.
 non_fin :< vform.
@@ -1206,9 +1208,9 @@ request_ans_rel :< mod_rel.
 polite_rel :< mod_rel.
 |#
 
-basic_conj_relation := relation &
+basic_conj_relation := arg0_relation &
   [ PRED basic_conj_rel,
-    C-ARG conj-ind,
+    ARG0 conj-ind,
     L-INDEX non_expl,
     R-INDEX non_expl ].
 
@@ -1573,18 +1575,6 @@ gappro := pro_ss & gap.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; predkeys
 
-_place_n_i_rel :< reg_nom_rel.
-_quits_n_i_rel :< reg_nom_rel.
-_hold_n_i_rel :< reg_nom_rel.
-_ahold_n_i_rel :< reg_nom_rel.
-_note_n_i_rel :< reg_nom_rel.
-_advantage_n_i_rel :< reg_nom_rel.
-_care_n_i_rel :< reg_nom_rel.
-_charge_n_i_rel :< reg_nom_rel.
-_part_n_i_rel :< reg_nom_rel.
-_use_n_i_rel :< reg_nom_rel.
-_account_n_i_rel :< reg_nom_rel.
-
 abstr_sure_rel :< adj_rel.
 _sure_j_rel :< abstr_sure_rel.
 _certain_j_rel :< abstr_sure_rel.
@@ -1700,6 +1690,7 @@ _by+means+of_p_rel :< miscprep_rel.
 _by+way+of_p_rel :< miscprep_rel.
 _close+to_p_rel :< miscprep_rel.
 _concerning_p_rel :< miscprep_rel.
+_care_of_p_rel :< miscprep_rel.
 _despite_p_rel :< miscprep_rel.
 _down_p_rel :< dir_rel.
 _due+to_p_rel :< miscprep_rel.
@@ -1715,6 +1706,7 @@ _for+instance_p_rel :< miscprep_rel.
 _for+lack+of_p_rel :< miscprep_rel.
 _forth_p_rel :< miscprep_rel.
 _forward_p_rel :< miscprep_rel.
+_fore+and+aft_p_rel :< miscprep_rel.
 _from_p_rel :< miscprep_rel.
 _from_p_to_rel :< miscprep_inst_rel.
 _from_p_time+on_rel :< miscprep_rel.
@@ -1761,6 +1753,8 @@ _on+foot_p_rel :< miscprep_rel.
 _on+the+basis+of_p_rel :< miscprep_rel.
 _on+the+part+of_p_rel :< miscprep_rel.
 _onto_p_rel :< dir_rel.
+_onward_p_rel :< dir_rel.
+_onwards_p_rel :< dir_rel.
 _opposite_p_rel :< dir_rel.
 _other+than_p_rel :< miscprep_rel.
 _out_p_rel :< dir_or_state_rel.
@@ -1883,6 +1877,7 @@ like_mood_m_rel := prpstn_or_like_m_rel.
 ; pred sorts
 
 predsort := *sort*.
+
 non_number_rel := predsort.
 norm_rel := non_number_rel.
 event_or_degree_or_no_rel := predsort.
@@ -2132,6 +2127,15 @@ gen_numval_rel := non_temp_nonpro_rel.
 ; For X to Y constructions
 
 interval_rel := unspec_diadic_nom_rel.
+
+; For determinerless-PP nouns ('within range')
+bare_nom_rel := non_temp_nonpro_rel.
+; Disallow adjective modifiers ('at eye level' but '*at high level')
+bare_n_nmod_rel := bare_nom_rel.
+; Disallow noun-noun compounding ('at close range' but '*at cellphone range')
+bare_n_jmod_rel := bare_nom_rel.
+; Disallow any modification ('on top' 'of course')
+bare_n_nomod_rel := bare_nom_rel.
 
 ;; The relation event_or_mod_rel is designed to distinguish non-nominal signs, 
 ;; including verbs, adjectives, prepositions, and adverbs.  One use of this 
@@ -2428,3 +2432,27 @@ minute_rel :< card_rel.
 range_num_rel :< const_rel.
 fraction_rel :< const_rel.
 unknown_rel :< v_event_rel.
+
+idiom_expr := sign &
+  [ IDIOM + ].
+
+v_nbar_idiom := idiom_expr &
+  [ SYNSEM.LOCAL.CONT.RELS <! [ LBL handle,
+                                ARG0 event,
+                                ARG1 ref-ind,
+                                ARG2 ref-ind & #arg2 ],
+                              [ LBL handle,
+                                ARG0 #arg2 ] !> ].
+
+v_nbar_pp_idiom := idiom_expr &
+  [ SYNSEM.LOCAL.CONT.RELS <! [ LBL handle,
+                                ARG0 event,
+                                ARG1 ref-ind,
+                                ARG2 ref-ind & #arg2,
+                                ARG3 ref-ind & #arg3 ],
+                              [ LBL handle,
+                                ARG0 #arg2 ],
+                              [ LBL handle,
+                                ARG0 event,
+                                ARG1 individual,
+                                ARG2 #arg3 ] !> ].
