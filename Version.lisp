@@ -1,8 +1,8 @@
 (in-package :common-lisp-user)
 
 ;;;
-;;; set grammar version for both LKB and PAGE; this should substitute for all
+;;; set grammar version for the LKB and PET; this should substitute for all
 ;;; assignments in either `lkb/script' or `english.tdl'.  (2-feb-99  -  oe@eo)
 ;;;
 
-(defparameter *grammar-version* "LinGO (04-May-03)")
+(defparameter *grammar-version* "LinGO (28-May-03)")

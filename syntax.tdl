@@ -269,18 +269,23 @@ mc_phrase := phrase &
 ; head-adjunct rule for nouns says the adjunct must be [MC na], and the 
 ; thatless_rel rule says the dtr must be [MC +].
 ; DPF 28-Nov-02 - HOOK comes only from C-CONT
-; DPF 26-Mar-03 - Removed reentrancy of HD-DTR..LTOP and 
+; DPF 26-Mar-03 - Removed reentrancy with HD-DTR..LTOP
+; DPF 27-May-03 - Added reentrancy of HD-DTR's E-INDEX and C-CONT's, at least
+; for coordination of S's where we want to attend to precedence relations of
+; the coordinated events, which conjunctions pick up from E-INDEX not INDEX.
 
 non_rel_phrase := head_nexus_rel_phrase &
   [ SYNSEM [ LOCAL.KEYS.MESSAGE 1-dlist &
 			  <! message & #msg &
 				   [ LBL #mhand ] !>,
 	     NON-LOCAL.REL 0-dlist ],
-    HEAD-DTR.SYNSEM [ LOCAL.CONT.HOOK.INDEX #ind,
+    HEAD-DTR.SYNSEM [ LOCAL.CONT.HOOK [ INDEX #ind,
+                                        E-INDEX #eind ],
 		      NON-LOCAL [ QUE 0-dlist,
 				  REL 0-dlist ] ],
     C-CONT [ HOOK [ LTOP #mhand,
-                    INDEX #ind ],
+                    INDEX #ind,
+                    E-INDEX #eind ],
 	     RELS.LIST < #msg, ... > ] ].
 
 non_rel_clause := non_rel_phrase & clause.
@@ -291,7 +296,11 @@ non_rel_clause := non_rel_phrase & clause.
 ; DPF 28-Nov-02 - HOOK comes only from C-CONT
 
 decl_phrase := non_rel_phrase &
-  [ SYNSEM.LOCAL [ CAT [ HEAD.INV -*,
+  [ SYNSEM.LOCAL [ CAT [ HEAD v_or_g & strict_type &
+			      [ VFORM fin*,
+                                INV -*,
+				PRD -,
+                                TAM basic_ind_or_mod_subj_tam ],
 			 MC bool ],
 		   KEYS.MESSAGE 1-dlist &
 				<! prpstn_m_rel !> ],
@@ -722,11 +731,7 @@ head_filler_phrase_inf := head_filler_phrase & head_final_infl &
 ; imperatives which are SUBJ *olist* so they can coordinate with interrogs.
 
 head_subj_phrase := head_valence_phrase & head_final_infl &
-  [ SYNSEM.LOCAL [ CAT [ HEAD v_or_g & strict_type &
-			      [ VFORM fin*,
-				PRD -,
-                                TAM basic_ind_or_mod_subj_tam ],
-			 POSTHEAD +,
+  [ SYNSEM.LOCAL [ CAT [ POSTHEAD +,
 			 VAL [ SUBJ *olist* & < anti_synsem >,
 			       COMPS < >,
                                SPR #spr ] ],
@@ -1085,22 +1090,26 @@ head_spec_phrase := head_valence_phrase & head_final & non_clause &
                                                   canonical_synsem . #spr >,
                                             SPEC #spec ],
                                       MC na,
-                                      HS-LEX #lex ],
+                                      HS-LEX #lex,
+                                      POSTHEAD #hdph ],
 			      CONT.HOOK [ LTOP #hltop,
                                           INDEX #ind ],
 			      CONJ cnil,
 			      KEYS [ KEY #key,
                                      ALTKEY #altkey ] ],
-                        MODIFIED #hmodif ],
+                        MODIFIED #hmodif,
+                        --SEMIND #semind ],
                ROBUST #robust ],
     NON-HEAD-DTR [ SYNSEM #synsem &
 	 [ LOCAL [ CAT [ MC na,
                          VAL [ SPEC < [ LOCAL [ CAT [ HEAD #head,
-                                                      VAL.COMPS #comps ],
+                                                      VAL.COMPS #comps,
+                                                      POSTHEAD #hdph ],
                                                 KEYS.KEY #key,
                                                 CONT.HOOK [ LTOP #hltop,
                                                             INDEX #ind ] ],
-                                        MODIFIED #hmodif ] >,
+                                        MODIFIED #hmodif,
+                                        --SEMIND #semind ] >,
                                COMPS #spcomps ],
                          POSTHEAD #ph ],
                    CONT.HOOK #hook ],
@@ -1154,12 +1163,10 @@ head_mod_phrase := head_nexus_phrase &
                            HS-LEX -* ],
                      KEYS.ALTKEY #altkey ],
 	     MODIFIED hasmod ],
-    HEAD-DTR.SYNSEM [ LOCAL [ CAT.VAL [ SUBJ #subj,
-                                        SPR #spr,
-                                        COMPS *olist* ],
-                              CONT.HOOK.E-INDEX #event,
-                              KEYS.ALTKEY #altkey ] ],
-    C-CONT.HOOK.E-INDEX #event ].
+    HEAD-DTR.SYNSEM.LOCAL [ CAT.VAL [ SUBJ #subj,
+                                      SPR #spr,
+                                      COMPS *olist* ],
+                            KEYS.ALTKEY #altkey ] ].
 
 ; Added restriction on adjunct's specifier to prevent unsaturated nouns
 ; (like 'afternoon') from serving as modifiers before they pick up their
@@ -1215,6 +1222,17 @@ head_mod_phrase := head_nexus_phrase &
 ; scopal modifier rules, which was already done for the (non-nominal)
 ; intersective modifier rules - the adj_n_int_phrase cannot make this identity
 ; since nouns declare the XARG value to be 'nothing'.
+; DPF 28-May-03 - We started out thinking that all head-modifier phrases made
+; the modifier the semantic head (the dtr which identifies its HOOK with that
+; of the mother).  But this is patently not true for nouns modified by verbal
+; participles as in "managers hired by kim", where the INDEX of the phrase
+; cannot be that of the VP.  And it's not even true for VPs modified by verb
+; participles as in "Kim arrived singing", where the INDEX of the higher VP
+; must be the event of arriving, not of singing.  So short of introducing
+; non-branching rules that convert VP participial modifiers into adjectives
+; and adverbs respectively, it appears that we have to split along the scopal-
+; intersective dimension, making scopal modifiers be semantic heads, but not
+; intersective ones.
 
 basic_head_mod_phrase_simple := head_mod_phrase & binary_headed_phrase &
   [ SYNSEM [ LOCAL [ CAT.MC #mc,
@@ -1278,10 +1296,8 @@ basic_head_mod_phrase_simple := head_mod_phrase & binary_headed_phrase &
 
 head_mod_phrase_simple := basic_head_mod_phrase_simple &
   [ HEAD-DTR.SYNSEM.LOCAL.CONT.HOOK.LTOP #hltop,
-    NON-HEAD-DTR.SYNSEM.LOCAL [ CAT.HEAD.MOD < [ LOCAL.CONT.HOOK.LTOP #hltop]>,
-                                CONT.HOOK #hook ],
-    C-CONT [ HOOK #hook,
-             HCONS <! !> ] ].
+    NON-HEAD-DTR.SYNSEM.LOCAL.CAT.HEAD.MOD < [ LOCAL.CONT.HOOK.LTOP #hltop]>,
+    C-CONT.HCONS <! !> ].
 
 ;; DPF (12-Jul-98) Changed POSTHEAD on mother from that of head-dtr to simply -
 ;; since want to prevent this rule from feeding head-adj rule.
@@ -1322,13 +1338,15 @@ scopal_mod_phrase := head_mod_phrase_simple &
   [ HEAD-DTR.SYNSEM.LOCAL.CONT.HOOK.XARG #xarg,
     NON-HEAD-DTR.SYNSEM.LOCAL [ CAT.HEAD.MOD < [ LOCAL scopal_mod &
 						  [ CONT.HOOK.XARG #xarg ] ] >,
-				CONT.HOOK.XARG #xarg ] ].
+				CONT.HOOK #hook & [ XARG #xarg ] ],
+    C-CONT.HOOK #hook ].
 
 isect_mod_phrase := head_mod_phrase_simple &
-  [ HEAD-DTR.SYNSEM.LOCAL [ CONT.HOOK.LTOP #hand,
+  [ HEAD-DTR.SYNSEM.LOCAL [ CONT.HOOK #hook & [ LTOP #hand ],
 			    KEYS.MESSAGE 0-dlist ],
     NON-HEAD-DTR.SYNSEM.LOCAL [ CAT.HEAD.MOD < [ LOCAL intersective_mod ] >,
-				CONT.HOOK.LTOP #hand ] ].
+				CONT.HOOK.LTOP #hand ],
+    C-CONT.HOOK #hook ].
 
 adj_head_scop_phrase := adj_head_phrase & scopal_mod_phrase &
   [ NON-HEAD-DTR.SYNSEM.LOCAL.CAT.POSTHEAD - ].
@@ -1337,20 +1355,32 @@ head_adj_scop_phrase := head_adj_phrase & scopal_mod_phrase &
 ; DPF 29-Nov-02 - Removed NON-HEAD-DTR..HEAD..TENSE no_tense, since the adjunct
 ; now provides the HOOK for the mother, including E-INDEX, which must be
 ; unified with the head-dtr's E-INDEX.
+; DPF 26-May-03 - But that spurious re-entrancy with the head-dtr's index has
+; now been removed, so we can re-introduce this constraint on TENSE, crucial
+; for the generator, since the heuristics will introduce lots of spurious
+; auxiliaries if there is an event variable unconstrained for TENSE.
+
 adj_head_int_phrase := adj_head_phrase & isect_mod_phrase &
-  [ NON-HEAD-DTR.SYNSEM.LOCAL.CAT.POSTHEAD - ].
+  [ NON-HEAD-DTR.SYNSEM.LOCAL.CAT [ HEAD.TAM [ TENSE no_tense,
+                                               ASPECT no_aspect ],
+                                    POSTHEAD - ] ].
 
 ; DPF 19-Oct-02 - Try making the non-head dtr PRD +, to make VP-modifying
 ; PPs PRD + in order to avoid spurious ambiguity for 'a foot in front of ...'
 ; DPF 29-Nov-02 - Removed NON-HEAD-DTR..HEAD..TENSE no_tense, since the adjunct
 ; now provides the HOOK for the mother, including E-INDEX, which must be
 ; unified with the head-dtr's E-INDEX.
+; DPF 26-May-03 - But that spurious re-entrancy with the head-dtr's index has
+; now been removed, so we can re-introduce this constraint on TENSE, crucial
+; for the generator, since the heuristics will introduce lots of spurious
+; auxiliaries if there is an event variable unconstrained for TENSE.
 
 head_adj_int_phrase := head_adj_phrase & isect_mod_phrase &
   [ HEAD-DTR.SYNSEM.LOCAL [ CAT.HEAD adverbee,
 			    CONT.HOOK.XARG #xarg,
                             KEYS.KEY event_rel ],
-    NON-HEAD-DTR.SYNSEM [ LOCAL [ CAT.HEAD.PRD +,
+    NON-HEAD-DTR.SYNSEM [ LOCAL [ CAT.HEAD [ PRD +,
+                                             TAM.TENSE no_tense ],
 				  CONT.HOOK.XARG #xarg ],
                           NON-LOCAL.REL 0-dlist ] ].
 
@@ -1360,18 +1390,22 @@ head_adj_int_phrase := head_adj_phrase & isect_mod_phrase &
 ; DPF 29-Nov-02 - Removed NON-HEAD-DTR..HEAD..TENSE no_tense, since the adjunct
 ; now provides the HOOK for the mother, including E-INDEX, which must be
 ; unified with the head-dtr's E-INDEX.
+; DPF 26-May-03 - But that spurious re-entrancy with the head-dtr's index has
+; now been removed, so we can re-introduce this constraint on TENSE, crucial
+; for the generator, since the heuristics will introduce lots of spurious
+; auxiliaries if there is an event variable unconstrained for TENSE.
 
 adj_head_int_ques_phrase := adj_head_phrase & phrasal &
-  [ HEAD-DTR.SYNSEM.LOCAL [ CONT.HOOK [ LTOP #ltop,
-                                        INDEX #index ],
+  [ HEAD-DTR.SYNSEM.LOCAL [ CONT.HOOK #hook,
                             KEYS [ KEY.LBL #hand,
 				   MESSAGE <! int_m_rel !> ] ],
     NON-HEAD-DTR.SYNSEM [ LOCAL [ CAT [ HEAD prep &
-                                       [ MOD < [ LOCAL intersective_mod ] > ],
+                                       [ MOD < [ LOCAL intersective_mod ] >,
+                                         TAM [ TENSE no_tense,
+                                               ASPECT no_aspect ] ],
                                         POSTHEAD - ],
                                   CONT.HOOK.LTOP #hand ] ],
-    C-CONT [ HOOK [ LTOP #ltop,
-                    INDEX #index ],
+    C-CONT [ HOOK #hook,
 	     HCONS <! !> ] ].
 
 ; Further split the head_adj_int_phrase in order to enforce one aspect of the 
@@ -1435,12 +1469,11 @@ n_adj_relcl_phrase := n_adj_int_phrase & isect_mod_phrase &
                              < [ LOCAL.KEYS.KEY i_or_e_quant_or_deg_rel ] >,
                             KEYS.ALT2KEY no_rel ] ].
 
-; DPF 10-Oct-00 - HEAD-DTR.KEYS.KEY needs fixing
 ; DPF 27-Nov-02 - Added MOD..KEY basic_nom_rel to exclude measure-NPs from
 ; being modified by rel clauses.
 
 n_adj_redrel_phrase := n_adj_int_phrase & head_compositional &
-  [ HEAD-DTR.SYNSEM.LOCAL.KEYS.KEY.LBL #hand,
+  [ HEAD-DTR.SYNSEM.LOCAL.CONT.HOOK.LTOP #hand,
     NON-HEAD-DTR.SYNSEM 
        [ LOCAL [ CAT [ HEAD [ MOD < [ LOCAL intersective_mod & 
                                             [ KEYS.KEY basic_nom_rel ] ] >,
@@ -1448,7 +1481,7 @@ n_adj_redrel_phrase := n_adj_int_phrase & head_compositional &
                        VAL.SUBJ *olist* ],
                  CONT.HOOK.LTOP #hand ],
          NON-LOCAL.REL 0-dlist ],
-    C-CONT [ HCONS <! !> ] ].
+    C-CONT.HCONS <! !> ].
 
 n_adj_redrel_nontemp := n_adj_redrel_phrase &
   [ NON-HEAD-DTR.SYNSEM.LOCAL.KEYS [ KEY nontemp_rel,
@@ -1491,11 +1524,17 @@ adj_n_int_phrase := adj_head_int_phrase &
 ; DPF 29-Nov-02 - Removed NON-HEAD-DTR..HEAD..TENSE no_tense, since the adjunct
 ; now provides the HOOK for the mother, including E-INDEX, which must be
 ; unified with the head-dtr's E-INDEX.
+; DPF 26-May-03 - But that spurious re-entrancy with the head-dtr's index has
+; now been removed, so we can re-introduce this constraint on TENSE, crucial
+; for the generator, since the heuristics will introduce lots of spurious
+; auxiliaries if there is an event variable unconstrained for TENSE.
 
 adj_h_int_phrase := adj_head_int_phrase &
   [ HEAD-DTR.SYNSEM.LOCAL [ CAT.HEAD adverbee,
 			    CONT.HOOK.XARG #xarg ],
-    NON-HEAD-DTR.SYNSEM [ LOCAL.CONT.HOOK.XARG #xarg,
+    NON-HEAD-DTR.SYNSEM [ LOCAL [ CAT.HEAD.TAM [ TENSE no_tense,
+                                                 ASPECT no_aspect ],
+                                  CONT.HOOK.XARG #xarg ],
 			  NON-LOCAL.REL 0-dlist ] ].
 
 ; For now, restrict adjunct extraction to posthead modifiers of VPs (and the
@@ -1557,7 +1596,7 @@ extracted_adj_phrase := basic_extracted_adj_phrase &
                                                                  POSTHEAD #ph,
                                                                  HC-LEX #hclex,
                                                                  MC #mc ],
-                                                           CONT.HOOK
+                                                           CONT.HOOK 
                                                               [ LTOP #hltop,
                                                                 INDEX #hind ],
                                                            CONJ #conj,
@@ -1608,12 +1647,12 @@ extracted_adj_int_phrase := extracted_adj_phrase &
                                                   [ CONT.HOOK.E-INDEX #eind ],
                                                --SEMIND #index ] >,
                               CONT.HOOK [ LTOP #hand,
-                                          INDEX #index & [ SORT entity ] ]] !>,
+                                          INDEX #index & 
+                                               [ SORT entity ] ] ] !>,
     HEAD-DTR.SYNSEM.LOCAL.CONT.HOOK [ LTOP #hand,
                                       INDEX individual & #index,
                                       E-INDEX #eind ],
-    C-CONT [ HOOK.INDEX #index,
-             RELS <! !> ] ].
+    C-CONT.RELS <! !> ].
 
 extracted_adj_int_vp_phrase := extracted_adj_int_phrase &
   [ HEAD-DTR.SYNSEM.LOCAL [ CAT.VAL.SUBJ < synsem &
@@ -1782,14 +1821,19 @@ bare_np_sg_phrase_robust := generic_bare_np_phrase &
 ; be really [DIVISIBLE -] (alternatively, really [PN 3sg]) but we want the
 ; mother to be able to coordinate with unlikes, and yet we need the AGR
 ; reentrancy (really the INDEX reentrancy) for the semantics.
+; DPF 8-May-03 - Added identity of MODIFIED on mother and daughter (like most
+; of the other bare_np_phrase types, here to avoid "afternoon Monday" as a
+; temporal modifier.
 
 proper_np_phrase := generic_bare_np_phrase &
-  [ SYNSEM.LOCAL [ AGR #agr & [ DIVISIBLE -* ],
-                   KEYS.ALTKEY implicit_q_rel ],
+  [ SYNSEM [ LOCAL [ AGR #agr & [ DIVISIBLE -* ],
+                     KEYS.ALTKEY implicit_q_rel ],
+             MODIFIED #modif ],
     ARGS < [ SYNSEM [ LOCAL [ CAT.VAL.SPR < [ LOCAL.KEYS.KEY proper_q_rel ] >,
                               AGR #agr,
                               KEYS [ KEY abstr_named_np_rel,
-                                     ALTKEY implicit_q_rel ] ] ] ] >,
+                                     ALTKEY implicit_q_rel ] ],
+                      MODIFIED #modif ] ] >,
     C-CONT.RELS <! proper_q_rel !> ].
                       
 ; DPF 22-May-02 - Split proper_np_phrase into two, one for non-numbers and
@@ -1802,14 +1846,15 @@ proper_np_phrase := generic_bare_np_phrase &
 ; appearing in np_n_cmpnds.
 ; DPF 4-Feb-02 - Changed this never_unify_rel to number_q_rel to still keep
 ; them out of np_n_cmpnds, but allow them in measure phrases.
+; DPF 25-May-03 - Since num-nouns now LPERIPH + again, remove constraint from
+; ARGS, and see what has to be done to avoid overgeneration of "Toshiba 2000"
 
 num_np_phrase := generic_bare_np_phrase &
   [ SYNSEM.LOCAL [ AGR #agr & [ DIVISIBLE -* ],
                    KEYS.ALTKEY number_q_rel ],
     ARGS < [ SYNSEM [ LOCAL [ CAT.VAL.SPR < [ LOCAL.KEYS.KEY number_q_rel ] >,
                               AGR #agr,
-                              KEYS.KEY named_num_rel ],
-                      MODIFIED.LPERIPH - ] ] >,
+                              KEYS.KEY named_num_rel ] ] ] >,
     C-CONT.RELS <! number_q_rel !> ].
 
 ; Verbal gerunds with no (possessive) specifier.
@@ -2018,7 +2063,8 @@ np_n_cmpnd_phr := n_n_cmpnd_phr &
                            [ LEX +,
                              MODIFIED.LPERIPH na_or_-,
                              LOCAL.KEYS.ALTKEY no_rel ],
-    NON-HEAD-DTR.SYNSEM [ LOCAL [ CAT.VAL.SPR *unexpnull*,
+    NON-HEAD-DTR.SYNSEM [ LOCAL [ CAT.VAL [ SPR *unexpnull*,
+                                            SUBJ < > ],
                                   KEYS [ KEY abstr_named_rel,
                                          ALTKEY implicit_q_rel ] ],
                           LEX + ],
@@ -2035,9 +2081,10 @@ np_n_cmpnd_phr_2 := n_n_cmpnd_phr &
                     [ LEX +,
                       LOCAL.KEYS.ALTKEY no_rel ],
     NON-HEAD-DTR.SYNSEM lex_phr_synsem &
-                    [ LOCAL [ CAT.VAL.SPR *unexpcons* &
+                    [ LOCAL [ CAT.VAL [ SPR *unexpcons* &
                                               < [ OPT + ] >,
-                                  KEYS.KEY temp_abstr_rel ] ],
+                                        SUBJ < > ],
+                              KEYS.KEY temp_abstr_rel ] ],
     C-CONT [ RELS <! unspec_rel !>,
 	     HCONS <! !> ] ].
 
@@ -2067,9 +2114,12 @@ np_name_cmpnd_phr := n_n_cmpnd_phr &
 ; why we wanted to remove it in the first place.
 ; DPF 9-Oct-02 - Removed [OPT -] from NON-HEAD-DTR..VAL.SPR, since it prevented
 ; compounds like "three pm meeting", and it's not clear what it was needed for.
+; DPF 08-May-03 - Identified MODIFIED of mother and non-hd-dtr (see 24-Sept-01)
+; to preserve notmod or lmod status of the left member (not just the PERIPH
+; value).
 
 noun_n_cmpnd_phr := n_n_cmpnd_phr &
-  [ SYNSEM [ MODIFIED.LPERIPH #periph,
+  [ SYNSEM [ MODIFIED #modif,
              LOCAL.KEYS.ALTKEY #altkey ],
     HEAD-DTR.SYNSEM abstr_lex_synsem & [ MODIFIED.LPERIPH -,
                                          LOCAL.KEYS.ALTKEY #altkey,
@@ -2081,7 +2131,7 @@ noun_n_cmpnd_phr := n_n_cmpnd_phr &
                                  INDEX #nind ],
                      KEYS.ALTKEY no_rel ],
              LEX +,
-             MODIFIED.LPERIPH #periph ],
+             MODIFIED #modif ],
     C-CONT [ RELS <! unspec_rel, udef_q_rel & [ ARG0 #nind,
                                               RSTR #rhand ] !>,
 	     HCONS <! qeq & [ HARG #rhand,
@@ -2146,6 +2196,7 @@ appos_phr := head_initial & head_compositional &
 	   [ LOCAL [ CAT [ HEAD noun & [ PRD #prd & + ],
 			   VAL #valence &
 			       [ SPR *olist*,
+                                 SUBJ < >,
 				 COMPS < > ] ],
 		     CONT.HOOK [ LTOP #ltop,
                                  INDEX #hind & ref-ind ],
@@ -2160,6 +2211,7 @@ appos_phr := head_initial & head_compositional &
 	   [ LOCAL [ CAT [ HEAD noun &
                                 [ CASE nom ],
 			   VAL [ SPR *olist*,
+                                 SUBJ < >,
 				 COMPS < > ] ],
 		     CONT.HOOK [ LTOP #ltop,
                                  INDEX #modind & ref-ind ],
@@ -2217,6 +2269,21 @@ appos_phr := head_initial & head_compositional &
 ; (as is its head sister), and one for modified nominals, where "the" stamps
 ; [MODIFIED lmod] whether the nominal is right-modified or left-modified, so
 ; we still get "Kim arrived the week Sandy left".
+; DPF 13-May-02 - Added SLASH <! !> to prevent spurious ambiguity for "Kim
+; arrived when(ever) Sandy left". 
+; DPF 27-May-03 - Re 2-May-03: But those two "the" entries have the effect of
+; preventing us from using the intersective modification efficiency improvement
+; for generation, since "the consultant" uses a different "the" than "the tall
+; consultant", which means the generator's second-pass adjunction algorithm
+; will fail to enrich "the consultant" to "the tall consultant".  Since that
+; two-pass strategy depends on the phrase without modifiers being the "same"
+; as the phrase with modifiers (at least using the same lexical entries), it
+; seems to drive us back to just one entry for "the" which preserves the
+; MODIFIED value of its SPEC.  And then this rule requires that its dtr go back
+; to just [MODIFIED hasmod].  Not too troubling for this particular case, since
+; the above example with "time" was playing on an ambiguity between the count
+; and the mass senses, which we are treating as underspecification, perhaps
+; wrongly.
 
 temp_mod_phrase := unary_phrase & phrasal &
   [ SYNSEM [ LOCAL [ CAT [ HEAD modnp* &
@@ -2252,18 +2319,20 @@ temp_mod_phrase := unary_phrase & phrasal &
                                         PRED #pred ],
                             ALTKEY #argkey,
 			    MESSAGE 0-dlist ] ],
-	     NON-LOCAL #nonloc & [ REL 0-dlist ],
+	     NON-LOCAL #nonloc & [ REL 0-dlist,
+                                   SLASH 0-dlist ],
              ROOT - ],
     ARGS < [ INFLECTED +,
              SYNSEM [ LOCAL [ CAT [ HEAD noun & [ PRD #prd ],
 				    VAL [ SPR *olist*,
+                                          SUBJ < >,
 					  COMPS #comps & < > ] ],
 			      CONT.HOOK.INDEX #index & [ SORT #sort ],
 			      CONJ cnil,
 			      KEYS.KEY modable_rel & #argkey &
                                   [ WLINK #wlink ] ],
 		      NON-LOCAL #nonloc,
-		      MODIFIED lmod ],
+		      MODIFIED hasmod ],
              ROBUST - ] >,
     C-CONT [ HOOK [ LTOP #khand,
                     E-INDEX #event ],
@@ -2406,6 +2475,10 @@ measure_np_symbol_phrase := binary_measure_np_phrase &
 ; key integer relation to named_num_rel.
 ; DPF 01-Feb-03 - Required daughter's SPR to be saturated, to block e.g.
 ; "*hundred arrives".
+; DPF 23-May-03 - Returned to issue from 31-Oct-01, and put back constraint
+; preventing modification - getting too many spurious parses for "ten to three"
+; and that purported counterexample is presumably non-restrictive modification
+; of some kind (cf oddness of NP without title: "123 for a chair").
 
 num_noun_phrase := unary_phrase &
  [ SYNSEM [ LOCAL [ CAT nbar_cat & 
@@ -2423,7 +2496,8 @@ num_noun_phrase := unary_phrase &
                                  ARG0 #index ],
                            ALTKEY never_unify_rel ] ],
             NON-LOCAL #nonlocal,
-            LEX #lex ],
+            LEX #lex,
+            MODIFIED lmod & [ LPERIPH + ] ],
    ARGS < [ SYNSEM [ LOCAL [ CAT [ HEAD intadj & [ PRD - ],
                                    VAL [ SPR < >,
                                          COMPS < > ] ],
@@ -2604,6 +2678,8 @@ free_rel_fin_phrase := free_rel_phrase &
 ; and one for those with of-PP complement, as in "three of them arrive".  This
 ; is in fact parallel to what we've decided to do for ordinary partitives, so
 ; no real surprise.
+; DPF 13-May-03 - From 3-Jul-02, undid this since now using this rule instead
+; for "one" partitive.
 
 basic_partitive_num_phrase := unary_phrase & phrasal &
   [ SYNSEM [ LOCAL [ CAT [ HEAD partn &
@@ -2636,12 +2712,12 @@ basic_partitive_num_phrase := unary_phrase & phrasal &
              ROOT - ],
     ARGS < [ INFLECTED +,
              SYNSEM anycard_norm_num_synsem &
-                       [ LOCAL [ CAT [ HEAD.PRD -,
+                       [ LOCAL [ CAT [ HEAD [ PRD -,
+                                              MOD < [ LOCAL.AGR #index ] > ],
                                        VAL [ SPR *olist*,
                                              SUBJ < >,
                                              COMPS < > ] ],
                                  CONJ cnil,
-                                 CONT.HOOK.INDEX #index & [ PNG.PN 3pl ],
                                  KEYS [ ALTKEY.LBL #nhand,
                                         KEY.ARG0.E.TENSE no_tense ],
                                  AGR #index ],
@@ -2921,7 +2997,7 @@ coord_phr := basic_coord_phr &
 ; DPF 15-Apr-00 - Changed CONJ on nonmod-dtr from cnil to now identified
 ; with SYNSEM's CONJ, to allow "oh and Sandy".
 ; DPF 28-Nov-02 - HOOK comes only from C-CONT
-
+#|
 root_gap_clause := binary_phrase & phrasal &
   [ SYNSEM [ LOCAL [ CAT [ HEAD no_head &
 				[ MOD < > ],
@@ -2985,7 +3061,7 @@ root_gap_intersect := root_gap_clause &
                                       ARG0.E.TENSE no_tense ] ],
     C-CONT.RELS.LIST.FIRST [ LBL #hand,
                              ARG0 #arg ] ].
-
+|#
 ; [SPR..no_rel] prevented attachment of modifiers to no_cop phrases, but
 ; this incorrectly blocks "rain possible today".
 ; ARGS..SPR *olist* blocks e.g. "ago" as nocop_vp
@@ -3014,7 +3090,8 @@ no_copula_be_phrase := basic_unary_phrase & phrasal &
                                    QUE 0-dlist ] ],
     ARGS < [ INFLECTED +,
              SYNSEM [ LOCAL [ CAT [ VAL [ COMPS *olist*,
-                                          SPR *olist* ],
+                                          SPR *olist*,
+                                          SUBJ < > ],
                                     MC na ],
                               CONJ cnil,
                               KEYS.MESSAGE #msg  ],
@@ -3027,18 +3104,16 @@ no_copula_be_phrase := basic_unary_phrase & phrasal &
 ; DPF 28-Nov-02 - HOOK comes only from C-CONT
 
 no_copula_prd_phrase := no_copula_be_phrase &
-  [ SYNSEM.LOCAL [ CAT [ HEAD.MOD < [ LOCAL.CAT [ HEAD no_head,
-                                                  MC na_or_- ] ] >,
-                         VAL.SUBJ < [ LOCAL #loc,
-                                      NON-LOCAL #nonloc ] > ],
+  [ SYNSEM.LOCAL [ CAT.HEAD.MOD < [ LOCAL.CAT [ HEAD no_head,
+                                                MC na_or_- ] ] >,
+                   CONT.HOOK.XARG #xarg,
                    AGR #agr ],
-    ARGS < [ SYNSEM.LOCAL [ CAT [ HEAD [ PRD +,
-                                         MOD < [ LOCAL.KEYS.KEY event_rel ] >],
-                                  VAL.SUBJ < [ LOCAL #loc,
-                                               NON-LOCAL #nonloc ] > ],
+    ARGS < [ SYNSEM.LOCAL [ CAT.HEAD [ PRD +,
+                                       MOD < [ LOCAL.KEYS.KEY event_rel ] > ],
                             CONT.HOOK [ LTOP #hand,
                                         INDEX non_expl,
-                                        E-INDEX #event ],
+                                        E-INDEX #event,
+                                        XARG #xarg ],
                             AGR #agr,
                             KEYS.KEY.ARG0 #event ],
              ROBUST #robust ] >,
@@ -3112,6 +3187,15 @@ no_copula_nosubj_phrase := non_rel_clause & head_valence_phrase & head_only &
 
 subjh_rule_decl := binary_rule_right_to_left & head_subj_phrase & decl &
   [ SYNSEM.LOCAL.CAT.MC bool ].
+
+; DPF 25-May-03 - Currently used only for intervals like "two to three is good"
+subjh_rule_nonv := binary_rule_right_to_left & head_subj_phrase &
+  [ SYNSEM.LOCAL.CAT.HEAD noun*,
+    HEAD-DTR.SYNSEM.LOCAL [ CONT.HOOK #hook,
+                            KEYS.KEY interval_rel ],
+    C-CONT [ HOOK #hook,
+             RELS <! !>,
+             HCONS <! !> ] ].
 
 hcomp_rule := binary_rule_left_to_right & head_comp_phrase.
 
@@ -3208,7 +3292,8 @@ np_cp_rule := rule & np_cp_phrase.
 ; it back in (cf "*There is Kim Sandy")
 ; DPF 12-Apr-02 - Apparently INV - was put back on head-dtr (see 2-Apr-01) --
 ; this blocks non-wh PP-fronting for yes-no questions, as in "On Tuesday did
-; Kim arrive".  Maybe right not to treat these as unbounded dependencies.
+; Kim arrive".  Maybe right not to treat these as unbounded dependencies -
+; note lack of ambiguity for "tomorrow can you ask Sandy to call me?"
 ; DPF 1-Jun-02 - Added HEAD-DTR..MESSAGE prop_ques_m_rel to exclude imperatives
 ; since sometime between 22-Dec-98 and now (see above) the VFORM constraint was
 ; removed, but we still want to block "*kim hire".
@@ -3418,7 +3503,6 @@ top_coord_rule := binary_rule_right_to_left & coord_phr &
                                       ALTKEY #key ] ],
     C-CONT [ HOOK [ LTOP #cltop,
                     INDEX #ind & conj-ind ],
-	     RELS <! !>,
 	     HCONS <! !> ] ].
 
 ; DPF 10-Oct-00 - RCONJ..KEYS.ALTKEY needs fixing
@@ -3439,10 +3523,10 @@ mid_coord_rule := binary_rule_right_to_left & coord_phr &
                              KEYS.ALTKEY #altkey ],
     C-CONT [ HOOK [ LTOP #cltop,
                     INDEX #cind & conj-ind ],
-	     RELS <! basic_conj_rel & #key &
-		      [ C-ARG #cind & non_expl,
-			R-INDEX #ind ] !>,
-	     HCONS <! !> ] ].
+	     RELS.LIST < basic_conj_rel & #key &
+                         [ C-ARG #cind & non_expl,
+                           R-INDEX #ind ], ... >,
+             HCONS <! !> ] ].
 
 ; Coordination of non-nominal phrases (S's and VPs)
 ;; DPF 25-Feb-01 - Changed division of labor with these two rules, so the first now
@@ -3464,7 +3548,8 @@ top_coord_event_rule := top_coord_rule &
     RCONJ-DTR.SYNSEM.LOCAL [ CONT.HOOK.INDEX conj_event,
                              KEYS [ KEY [ L-HNDL #lhand,
                                           L-INDEX #lind ],
-                                    ALTKEY event_or_degree_or_no_rel ] ] ].
+                                    ALTKEY event_or_degree_or_no_rel ] ],
+    C-CONT.RELS <! !> ].
 
 mid_coord_event_rule := mid_coord_rule &
   [ SYNSEM.LOCAL.CONT.HOOK.INDEX conj_event,
@@ -3494,14 +3579,17 @@ nom_coord_rule := coord_phr &
                                     MESSAGE 0-dlist ],
                              AGR.DIVISIBLE #div ] ].
 
-top_coord_nom_rule := top_coord_rule & nom_coord_rule.
+top_coord_nom_rule := top_coord_rule & nom_coord_rule &
+  [ C-CONT.RELS <! !> ].
+
 
 mid_coord_nom_rule := mid_coord_rule & nom_coord_rule &
   [ LCONJ-DTR.SYNSEM.LOCAL [ KEYS.KEY basic_nom_rel,
                              CONT.HOOK.INDEX #lind ],
     RCONJ-DTR.SYNSEM.LOCAL.KEYS [ KEY.L-INDEX #lind,
                                   ALTKEY basic_nom_rel ],
-    C-CONT.HOOK.INDEX.PNG.PN non1sg ].
+    C-CONT [ HOOK.INDEX.PNG.PN non1sg,
+             RELS <! relation !> ] ].
 
 ; Make mother [ROBUST +]
 ; DPF 28-Nov-02 - HOOK comes only from C-CONT
@@ -3569,6 +3657,7 @@ punct_s_coord_rule := ternary_phrase & ternary_rule_left_to_right &
                                   R-HNDL #rhand ] !>,
              HCONS <! !> ] ].
 
+#|
 ; DPF 27-Jul-99 - Removed NONMOD-DTR..HEAD restriction (was n_or_a), since
 ; we want "perhaps in Berlin" with this rule.
 root_gap_rule_premod := binary_rule_left_to_right & root_gap_scopal &
@@ -3589,6 +3678,7 @@ root_gap_rule_postmod_intersect := binary_rule_right_to_left &
 	    [ SYNSEM.LOCAL.CAT.POSTHEAD + ],
     NONMOD-DTR #left,
     ARGS < #left, #right > ].
+|#
 
 no_copula_prd_vp_rule := no_copula_prd_phrase & rule.
 
@@ -3607,3 +3697,225 @@ partitive_num_ppof_rule := partitive_num_ppof_phrase & rule.
 possessed_np_rule := possessed_np_phrase & rule.
 
 partitive_np_rule := partitive_np_phrase & rule.
+
+basic_frag_rule := phrase & rule &
+  [ INFLECTED +,
+    SYNSEM [ LOCAL [ CAT [ HEAD frag,
+                           VAL [ SUBJ < >,
+                                 SPR < >,
+                                 COMPS < > ],
+                           MC na ],
+                     CONJ cnil,
+                     KEYS.MESSAGE <! #msg & [ MARG #marg ] !> ],
+             NON-LOCAL [ SLASH 0-dlist & [ LIST < > ],
+                         REL 0-dlist,
+                         QUE 0-dlist ] ],
+    C-CONT [ HOOK.LTOP #lbl,
+             RELS.LIST < prpstn_m_rel & #msg &
+                         [ LBL #lbl ], ... >,
+             HCONS.LIST < qeq & [ HARG #marg ], ... > ] ].
+
+norm_frag_rule := basic_frag_rule &
+  [ INFLECTED +,
+    SYNSEM.LOCAL.KEYS.KEY #key,
+    C-CONT [ HOOK.INDEX #event,
+             RELS <! relation,
+                     unknown_rel & #key &
+                     [ ARG0 #event ] !> ] ].
+
+unary_frag_rule := norm_frag_rule & basic_unary_phrase &
+  [ SYNSEM.LOCAL [ CAT.HEAD frag-r,
+                   KEYS.KEY.LBL #ulbl ],
+    ARGS < [ INFLECTED +,
+             SYNSEM [ LOCAL [ CAT.VAL [ COMPS *olist*,
+                                        SPR *olist* ],
+                              CONJ cnil ],
+                      NON-LOCAL.SLASH 0-dlist & [ LIST < > ] ] ] >,
+    C-CONT.HCONS.LIST < [ LARG #ulbl ], ... > ].
+
+frag_np_rule := unary_frag_rule &
+  [ INFLECTED +,
+    SYNSEM.LOCAL.KEYS.KEY.ARG #ind,
+    ARGS < [ SYNSEM.LOCAL [ CAT.HEAD noun,
+                            CONT.HOOK.INDEX #ind ],
+             POSSCL - ] >,
+    C-CONT.HCONS <! qeq !> ].
+
+frag_pp_ind_rule := unary_frag_rule &
+  [ INFLECTED +,
+    SYNSEM.LOCAL.KEYS.KEY [ LBL #klbl,
+                            ARG0 #arg ],
+    ARGS < [ SYNSEM.LOCAL [ CAT.HEAD prep & 
+                                     [ MOD < [ LOCAL intersective_mod ] > ],
+                            KEYS.KEY independent_rel &
+                                     [ LBL #klbl,
+                                       ARG1 #arg ] ] ] >,
+    C-CONT.HCONS <! qeq !> ].
+
+frag_pp_sel_rule := unary_frag_rule &
+  [ INFLECTED +,
+    SYNSEM.LOCAL.KEYS.KEY [ LBL #klbl,
+                            ARG #ind ],
+    ARGS < [ SYNSEM.LOCAL [ CAT.HEAD prep,
+                            KEYS.KEY selected_rel &
+                                     [ LBL #plbl,
+                                       ARG2 #ind] ] ] >,
+    C-CONT.HCONS <! qeq, geq & [ HARG #klbl,
+                                 LARG #plbl ] !> ].
+
+frag_adj_rule := unary_frag_rule &
+  [ INFLECTED +,
+    SYNSEM.LOCAL.KEYS.KEY [ LBL #klbl,
+                            ARG #ind ],
+    ARGS < [ SYNSEM.LOCAL [ CAT.HEAD adj,
+                            KEYS.KEY [ LBL #plbl,
+                                       ARG1 #ind] ] ] >,
+    C-CONT.HCONS <! qeq, geq & [ HARG #klbl,
+                                 LARG #plbl ] !> ].
+
+frag_adv_rule := unary_frag_rule &
+  [ INFLECTED +,
+    SYNSEM.LOCAL.KEYS.KEY.LBL #klbl,
+    ARGS < [ SYNSEM.LOCAL.CAT [ HEAD p_or_adv &
+                                     [ MOD < [ LOCAL scopal_mod &
+                                                [ CONT.HOOK.LTOP #klbl ] ] > ],
+                                POSTHEAD - ] ] >,
+    C-CONT.HCONS <! qeq !> ].
+
+binary_frag_rule := norm_frag_rule & basic_binary_phrase &
+  [ SYNSEM.LOCAL [ CAT.HEAD frag+,
+                   KEYS.KEY.LBL #ulbl ],
+    DTRA [ INFLECTED +,
+           SYNSEM [ LOCAL [ CAT [ HEAD.MOD 
+                                       < [ LOCAL [ CAT.HEAD adverbee,
+                                                   CONT.HOOK.LTOP #ulbl,
+                                                   KEYS.KEY relation ] ] >,
+                                  VAL [ SUBJ *olist*,
+                                        COMPS < > ] ],
+                            CONJ cnil,
+                            CONT.HOOK.LTOP #mlbl,
+                            KEYS.KEY independent_rel ],
+                    NON-LOCAL [ SLASH 0-dlist & [ LIST < > ],
+                                REL 0-dlist,
+                                QUE 0-dlist ] ] ],
+    DTRB [ INFLECTED +,
+           SYNSEM [ LOCAL [ CAT.VAL [ COMPS < >,
+                                      SPR *olist* ],
+                            KEYS.KEY independent_rel,
+                            CONJ cnil ],
+                    NON-LOCAL.SLASH 0-dlist & [ LIST < > ] ] ],
+    C-CONT [ HCONS.LIST < qeq & [ LARG #mlbl ], ... > ] ].
+
+binary_left_frag_rule := binary_frag_rule &
+  [ DTRA #dtr1 & [ SYNSEM.LOCAL.CAT [ HEAD.MOD < [ LOCAL scopal_mod ] >,
+                                      POSTHEAD - ] ],
+    DTRB #dtr2,
+    ARGS < #dtr1, #dtr2 > ].
+
+frag_l_mod_np_rule := binary_left_frag_rule &
+  [ INFLECTED +,
+    SYNSEM.LOCAL.KEYS.KEY.ARG #ind,
+    ARGS < sign,
+           [ SYNSEM.LOCAL [ CAT.HEAD noun,
+                            CONT.HOOK.INDEX #ind ],
+             POSSCL - ] >,
+    C-CONT.HCONS <! qeq !> ].
+
+frag_l_mod_pp_rule := binary_left_frag_rule &
+  [ INFLECTED +,
+    SYNSEM.LOCAL.KEYS.KEY [ LBL #klbl,
+                            ARG0 #kev ],
+    ARGS < sign & [ SYNSEM.LOCAL.CAT.HEAD.MOD < [ --SEMIND #kev ] > ],
+           [ SYNSEM.LOCAL [ CAT.HEAD prep & 
+                                [ MOD < [ LOCAL intersective_mod,
+                                          --SEMIND #kev ] > ],
+                            KEYS.KEY independent_rel &
+                                     [ LBL #klbl ] ] ] >,
+    C-CONT.HCONS <! qeq !> ].
+
+frag_l_mod_adv_rule := binary_left_frag_rule &
+  [ INFLECTED +,
+    SYNSEM.LOCAL.KEYS.KEY.LBL #klbl,
+    ARGS < sign,
+           [ SYNSEM.LOCAL.CAT.HEAD.MOD < [ LOCAL scopal_mod &
+                                             [ CONT.HOOK.LTOP #klbl ] ] > ] >,
+    C-CONT.HCONS <! qeq !> ].
+
+frag_l_mod_frag_rule := binary_left_frag_rule &
+  [ INFLECTED +,
+    SYNSEM.LOCAL.KEYS.KEY.ARG #dltop,
+    ARGS < sign,
+           [ SYNSEM.LOCAL [ CAT.HEAD frag+,
+                            CONT.HOOK.LTOP #dltop ] ] >,
+    C-CONT.HCONS <! qeq !> ].
+
+binary_right_frag_rule := binary_frag_rule &
+  [ DTRA #dtr1 & [ SYNSEM.LOCAL.CAT [ HEAD p_or_adv_or_dadv & strict_type,
+                                      POSTHEAD + ] ],
+    DTRB #dtr2,
+    ARGS < #dtr2, #dtr1 > ].
+
+
+frag_r_mod_np_rule := binary_right_frag_rule &
+  [ INFLECTED +,
+    SYNSEM.LOCAL.KEYS.KEY.ARG #ind,
+    ARGS < [ SYNSEM.LOCAL [ CAT.HEAD noun,
+                            CONT.HOOK.INDEX #ind ],
+             POSSCL - ],
+           sign >,
+    C-CONT.HCONS <! qeq !> ].
+
+
+frag_r_mod_int_pp_rule := binary_right_frag_rule &
+  [ INFLECTED +,
+    SYNSEM.LOCAL.KEYS.KEY [ LBL #klbl,
+                            ARG0 #kev ],
+    ARGS < [ SYNSEM.LOCAL [ CAT.HEAD p_or_adv & strict_type &
+                                     [ MOD < [ LOCAL intersective_mod,
+                                               --SEMIND #kev ] > ],
+                            KEYS.KEY independent_rel &
+                                     [ LBL #klbl ] ] ],
+           sign & [ SYNSEM.LOCAL.CAT.HEAD.MOD 
+                                  < [ LOCAL intersective_mod,
+                                      --SEMIND #kev ] > ] >,
+    C-CONT.HCONS <! qeq !> ].
+
+frag_r_mod_scop_pp_rule := binary_right_frag_rule &
+  [ INFLECTED +,
+    SYNSEM.LOCAL.KEYS.KEY.ARG0 #kev,
+    ARGS < [ SYNSEM.LOCAL [ CAT.HEAD p_or_adv & strict_type &
+                                     [ MOD < [ LOCAL intersective_mod,
+                                               --SEMIND #kev ] > ],
+                            KEYS.KEY independent_rel &
+                                     [ LBL #klbl ] ] ],
+           sign & [ SYNSEM.LOCAL.CAT.HEAD.MOD 
+                                  < [ LOCAL scopal_mod &
+                                            [ CONT.HOOK.LTOP #klbl ],
+                                      --SEMIND #kev ] > ] >,
+    C-CONT.HCONS <! qeq !> ].
+
+frag_finvp_rule := basic_frag_rule & basic_unary_phrase &
+  [ SYNSEM.LOCAL.KEYS.KEY #key,
+    ARGS < [ SYNSEM [ LOCAL [ CAT [ HEAD verb & [ VFORM fin,
+                                                  INV - ],
+                                    VAL [ SUBJ < unexpressed_reg >,
+                                          COMPS *olist* ] ],
+                              CONT.HOOK [ LTOP #ltop,
+                                          INDEX #event ],
+                              KEYS.KEY #key ],
+                      NON-LOCAL [ SLASH 0-dlist & [ LIST < > ],
+                                  REL 0-dlist,
+                                  QUE 0-dlist ] ] ] >,
+    C-CONT [ HOOK.INDEX #event,
+             RELS <! relation !>,
+             HCONS <! [ LARG #ltop ] !> ] ].
+
+frag_dadv_rule := basic_frag_rule & basic_unary_phrase &
+  [ SYNSEM.LOCAL.KEYS.KEY #key,
+    ARGS < [ SYNSEM.LOCAL [ CAT [ HEAD root-marker,
+                                  POSTHEAD - ],
+                            CONT.HOOK.LTOP #ltop,
+                            KEYS.KEY #key & [ ARG0 #ind ] ] ] >,
+    C-CONT [ HOOK.INDEX #ind,
+             RELS <! relation !>,
+             HCONS <! [ LARG #ltop ] !> ] ].

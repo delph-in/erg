@@ -135,7 +135,7 @@
 
 (setf *semantics-index-path* '(synsem local cont hook index))
 
-(setf *intersective-rule-names* '(adjh_i adjn_i nadj_i adjh_i_ques nadj_rc
+(setf *intersective-rule-names* '(adjn_i adjh_i adjh_i_ques nadj_rc
                                   nadj_rr_nt nadj_rr_t hadj_i_uns))
 
 (defparameter *chart-dependencies*

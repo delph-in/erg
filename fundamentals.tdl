@@ -52,11 +52,12 @@ word_or_lexrule := word_or_lexrule_min & sign &
 ; right). 
 ; Not all words have lex_synsem - e.g. lexical PPs like "tomorrow" are 
 ; phr_synsem since they can be post-nominal modifiers.
+; DPF 15-May-03 - This means we have to move the --TOPKEY constraint down to
+; abstract_lex_synsem since we otherwise force all words to be lex_synsem by
+; type inference.
 
 word := word_or_lexrule &
-  [ SYNSEM [ LOCAL.CONT.HOOK.LTOP #hand,
-             LKEYS.--TOPKEY.LBL #hand ],
-    POSSCL - ].
+  [ POSSCL - ].
 
 ; Not all phrases have SYNSEM phr_synsem, since we need to allow the head-comp
 ; rules to build signs which are still [ SYNSEM lex_synsem ], for constructions
@@ -104,8 +105,9 @@ phr_synsem := canonical_lex_or_phrase_synsem &
 ; LKEYS provide shortcuts to KEY values of a lex-entry's complements
 abstr_lex_synsem := canonical_lex_or_phrase_synsem &
   [ LEX +*,
-    LKEYS lexkeys ].
-
+    LOCAL.CONT.HOOK.LTOP #hand,
+    LKEYS lexkeys & [ --TOPKEY.LBL #hand ] ].
+    
 lex_synsem :< abstr_lex_synsem.
 
 ; For signs that are constructed by syntactic rule but have similar
@@ -285,7 +287,9 @@ det := func & poss-able.
 
 n_or_p_or_adv :< head.
 
-p_or_adv :< n_or_p_or_adv.
+p_or_adv_or_dadv :< head.
+
+p_or_adv := n_or_p_or_adv & p_or_adv_or_dadv.
 
 subst :< head.
 
@@ -365,7 +369,8 @@ reg_adv := basic_adv & disc_adverbee & p_or_adv &
 adv := reg_adv & mobile.
 adv_nonmob :< reg_adv.
 deg_adv :< basic_adv.
-root-marker := v_or_g & adverbee & a_or_p_or_adv & strict_type.
+root-marker := v_or_g & adverbee & a_or_p_or_adv & p_or_adv_or_dadv &
+               strict_type.
 wh_adv :< func.
 
 detspec :< func.
@@ -435,6 +440,11 @@ gerund_nom := gerund & [ CASE nom ].
 modnp := modnp* & strict_type.
 ; For tag questions, which can't be verbal in order to avoid being root S's.
 tagaux := head & strict_type.
+frag := head & [ MOD < > ].
+; Some fragment phrases can combine with another modifier
+frag+ := frag.
+; Others cannot, but must be root fragments.
+frag-r := frag.
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;  Sorts for atomic values
@@ -657,8 +667,6 @@ individual := individual_min &
  [ DIVISIBLE bool,
    SORT *sort* ].
 
-event_or_deg-ind :< individual.
-
 eventtime :< thing.
 
 ; Needed for VITs
@@ -680,6 +688,7 @@ full_index := index &
 non_expl :< individual.
 
 event_or_index :< non_expl.
+event_or_deg-ind :< event_or_index.
 
 tense :< *sort*.
 aspect :< *sort*.
@@ -742,7 +751,7 @@ past_tam := past_or_subj_tam & ind_or_mod_subj_tam &
  [ TENSE past*,
    MOOD indicative* ].
 
-event := event_or_index & event_or_deg-ind &
+event := event_or_deg-ind &
   [ E tam ].
 
 ; Once used to distinguish discourse adverbs, for VIT purposes - now obsolete?
@@ -835,11 +844,14 @@ mrs := mrs_min1 &
 ; Constrains handle of scopable argument HARG relative to one or more 
 ; handles
 scp_pr := *top* &
-  [ HARG handle ].       
+  [ HARG handle,
+    LARG handle ].        
 
 ; Constrains KEY handle to be less than or equal to the LTOP handle.
-qeq := scp_pr &
-  [ LARG handle ].        
+qeq := scp_pr.
+
+; Used at least in fragments
+geq := scp_pr.
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; CONJ type -
@@ -1039,12 +1051,13 @@ full_ref-ind := ref-ind & full_non_expl.
 full_deg-ind := deg-ind & full_non_expl.
 
 conj-ind :< event_or_index.
-conj_event := conj-ind & event.
+conj_event_or_deg-ind := event_or_deg-ind & conj-ind.
+conj_event := conj_event_or_deg-ind & event.
 conj_non_expl-ind := conj-ind & non_expl-ind.
 conj_full-ind := conj_non_expl-ind & full_non_expl.
 conj_ref-ind := conj_non_expl-ind & ref-ind.
 conj_full_ref-ind := conj_ref-ind & conj_full-ind & full_ref-ind.
-conj_deg-ind := conj_non_expl-ind & deg-ind.
+conj_deg-ind := conj_event_or_deg-ind & conj_non_expl-ind & deg-ind.
 conj_full_deg-ind := conj_deg-ind & conj_full-ind & full_deg-ind.
 
 ; The basic semantic structure, a CONT, is just something with a handle.
@@ -1250,12 +1263,13 @@ nom_rel := basic_nom_rel &
 nonpro_rel :< nom_rel.
 nom_nondim_rel :< nom_rel.
 
+non_temp_nom_rel := nom_nondim_rel & nontemp_rel.
+basic_non_temp_nonpro_rel := non_temp_nom_rel & nonpro_rel.
+
 ; DPF 25-Sep-01 - Added [SORT entity] contrasted with [SORT time] to enable
 ; blocking of e.g. "the book that kim arrived" but allow "the day that Kim
 ; arrived"
 
-non_temp_nom_rel := nom_nondim_rel & nontemp_rel.
-basic_non_temp_nonpro_rel := non_temp_nom_rel & nonpro_rel.
 non_temp_nonpro_rel := basic_non_temp_nonpro_rel &
   [ ARG0.SORT entity ].
 reg_nom_rel :< non_temp_nonpro_rel.
@@ -1369,16 +1383,19 @@ hour_or_time_rel :< relation.
 hour_rel := temp_abstr_rel & norm_dim_rel & hour_or_time_rel.
 
 ; a quarter till three  ("till" is head - cf "come at a quarter till.")
-hour_prep_rel := hour_rel &
-  [ HOUR-IND individual_min,
-    MINUTE-IND individual_min ].
+hour_prep_rel := hour_rel & basic_arg1_rel.
 
-numbered_hour_rel := hour_rel & abstr_named_rel & const_value_rel &
+; prep_rels that can modify hour times as in "ten minutes after five"
+minute_prep_rel := relation.
+
+; ARG1 is the minute_rel complement's ARG0, and ARG2 is the am_pm's ARG0.
+numbered_hour_rel := hour_rel & abstr_named_rel & const_value_rel & 
+                     basic_arg1_rel & arg2_rel &
   [ ARG0.PNG png & [ PN 3sg*,
 		     GEN neut* ],
     CARG string,
-    MIN non_expl-ind,
-    AM-PM non_expl-ind ].
+    ARG1 individual_min,
+    ARG2 individual_min ].
 
 ; DPF 31-Jul-99 - Changed minute_or_ampm_rel to be non-temp, since it cannot
 ; appear after temporal prepositions (ignoring the elliptical "I'll see you 
@@ -1399,10 +1416,10 @@ _hour_rel :< modable_hour_rel.
 _minute_rel :< modable_hour_or_time_rel.
 _second_n_rel :< non_day_diadic_modable_rel.
 
-am_pm_rel :< minute_or_ampm_rel.
-am_rel :< am_pm_rel.
-pm_rel :< am_pm_rel.
-hours_am_pm_rel :< am_pm_rel.
+;am_pm_rel :< minute_or_ampm_rel.
+am_pm_rel := const_value_rel & arg0_rel.
+am_rel := am_pm_rel & [ CARG "am"].
+pm_rel := am_pm_rel & [ CARG "pm"].
 
 ctime_rel :< numbered_hour_rel.
 
@@ -1456,7 +1473,9 @@ gen_numval_rel := modable_nom_rel & const_value_rel.
 gen_currency_rel :< reg_nom_rel.
 
 ; For X to Y constructions
-interval_rel :< diadic_modable_nom_rel.
+;interval_rel :< diadic_modable_nom_rel.
+
+interval_rel := unspec_diadic_nom_rel & nonpro_rel.
 
 ;; The relation event_or_mod_rel is designed to distinguish non-nominal signs, 
 ;; including verbs, adjectives, prepositions, and adverbs.  One use of this 
@@ -1471,9 +1490,9 @@ event_arg_dim_rel := event_mod_rel & basic_event_dim_rel.
 event_dim_rel := basic_event_dim_rel & nonaux_event_rel.
 independent_mod_rel := independent_rel & mod_rel.
 
-abstr_excl_rel := independent_mod_rel & const_value_rel & 
-                  basic_arg1_rel &
-  [ CARG symbol ].
+abstr_excl_rel := independent_mod_rel & const_value_rel & arg0_rel &
+  [ ARG0 event,
+    CARG symbol ].
 
 greet_rel :< abstr_excl_rel.
 
@@ -1734,8 +1753,7 @@ _as_comp_rel := miscprep_rel & selected_rel.
 
 ; Abstract relations, specialized below either to independent relations or to
 ; ones that appear in verb-particle constructions.
-to_dir_rel :< dir_rel.
-_to_rel_a :< to_dir_rel.
+_to_rel_a :< dir_rel.
 _for_rel_a :< miscprep_rel.
 _by_rel_a :< miscprep_rel.
 of_or_about_rel := prep_rel.
@@ -1891,6 +1909,11 @@ times_rel := integer_rel & [ FACTOR1 handle,
 ord_rel :< const_rel.
 card_rel :< const_rel.
 
+; DPF 23-May-03 - minute_rel is never in a predicative adjective lexeme, so
+; we can identify its ARG0 with its ARG1, to allow ordinary cardinal adjectives
+; to specialize to minute semantics and let hour-words get the ARG0 index of
+; the minute_rel by asking for the lexeme's HOOK.INDEX which is reentrant with
+; ARG1 like ordinary adjectives.
 minute_rel :< card_rel.
 
 range_num_rel :< const_rel.
@@ -2086,7 +2109,7 @@ _behind_rel_s := _behind_rel_a & selected_rel.
 _behind_rel := _behind_rel_a & independent_rel.
 _after_prepx_rel_a :< temp_loc_abstr_rel.
 _after_prepx_rel_s := _after_prepx_rel_a & selected_rel.
-_after_prepx_rel := _after_prepx_rel_a & independent_rel.
+_after_prepx_rel := _after_prepx_rel_a & independent_rel & minute_prep_rel.
 _into_rel_a :< dir_rel.
 _into_rel_s := _into_rel_a & selected_rel.
 _into_rel := _into_rel_a & independent_rel.
@@ -2102,7 +2125,7 @@ _open_rel_s := _open_rel_a & selected_rel.
 _open_rel := _open_rel_a & independent_rel.
 _until_rel_a :< prep_mod_rel.
 _until_rel_s := _until_rel_a & selected_rel.
-_until_rel := _until_rel_a & independent_rel.
+_until_rel := _until_rel_a & independent_rel & minute_prep_rel.
 _to_until_rel_a :< _until_rel_a.
 _to_until_rel_s := _to_until_rel_a & _until_rel_s.
 _to_until_rel := _to_until_rel_a & _until_rel.
@@ -2136,7 +2159,10 @@ _solid_adj_rel_s := _solid_adj_rel_a & selected_rel.
 _solid_adj_rel := _solid_adj_rel_a & independent_rel.
 
 
-_of_nbar_rel := miscprep_rel & independent_rel.
+_of_nbar_rel := miscprep_ind_rel.
+
+_past_prep_rel := miscprep_ind_rel & minute_prep_rel.
+
 
 ;;; these sorts are just used in the mrs-to-vit machinery
 
@@ -2204,6 +2230,10 @@ _today_rel :< adv_rel.
 _tomorrow_rel := adv_rel & dofw_or_poss_q_rel.
 _yesterday_rel := adv_rel & dofw_or_poss_q_rel.
 _tonight_rel := adv_rel & dofw_or_poss_q_rel.
+
+; For fragments
+unknown_rel := arg0_rel & independent_rel &
+  [ ARG thing ].
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;  Basic types
