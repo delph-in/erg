@@ -78,6 +78,11 @@
 (setf *top-pred-type* (vsym "PREDSORT"))
 
 ;;;
+;;; context condition in MRS munging rules
+;;; 
+(defparameter *mrs-rule-condition-path* (list (vsym "CONTEXT")))
+
+;;;
 ;;; add these to ERG `mrsglobals.lisp' (although they correspond to initial MRS
 ;;; defaults, so we can load the ERG on top of another grammar (and spare some
 ;;; debugging effort the day some of the MRS defaults changes :-).
