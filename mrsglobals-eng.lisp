@@ -7,6 +7,9 @@
 ;;   Language: Allegro Common Lisp
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; $Log$
+;; Revision 1.20  1999/07/09 04:33:29  aac
+;; changes to key path and for fragment detection
+;;
 ;; Revision 1.19  1999/06/19 18:32:44  danf
 ;; Improvements to cover VM CD6 data
 ;;
@@ -314,7 +317,9 @@
      ((:AND ,(vsym "IND_OR_MOD_SUBJ") ,(vsym "STRICT_SORT")) (vit_mood imp))
      ((:AND ,(vsym "STRICT_SORT") ,(vsym "WOULD_SUBJ*")) (vit_mood conj))
      (,(vsym "INDICATIVE") (vit_mood ind))
-     (,(vsym "INDICATIVE*") (vit_mood ind))
+;; DPF 31-Jul-99 - If the type is still underspecified, then it's a base
+;; form of the verb, and should be ignored here.
+     ;; (,(vsym "INDICATIVE*") (vit_mood ind))
      (,(vsym "MODAL_SUBJ") (vit_mood ind))
      (,(vsym "WOULD_SUBJ") (vit_mood conj))
      (,(vsym "SUBJUNCTIVE") (vit_mood conj))

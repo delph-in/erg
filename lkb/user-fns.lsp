@@ -170,6 +170,7 @@
     (vpellipsis_lr 100)
     (vgering 100)
     (temp_np 300)
+    (appos 200)
     (otherwise 
      (if (get-lex-rule-entry (rule-id rule))
 	 400
@@ -179,16 +180,17 @@
   (rule-priority rule))
 
 (defparameter *unlikely-le-types* '(DISC_ADV_MLE1 LETTER_NAME_LE
-			    MEALTIME_WORD_LE NUMADJ_NOUN_WORD_LE
-			    NP_ADV_LE SUBCONJ_INF_LE SUBCONJ_INF_3MLE2
-			    BE_TH_COP_IS_LE BE_TH_COP_ARE_LE
-			    BE_TH_COP_WAS_LE BE_TH_COP_WERE_LE
-			    INT_VP_ADV_POST_WORD_LE FREEREL_PRO_NP_WORD_LE
-			    MV_SORB_LE PDET_ONE_LE
-			    ))
+				    MEALTIME_WORD_LE NUMADJ_NOUN_WORD_LE
+				    NP_ADV_LE SUBCONJ_INF_LE SUBCONJ_INF_3MLE2
+				    BE_TH_COP_IS_LE BE_TH_COP_ARE_LE
+				    BE_TH_COP_WAS_LE BE_TH_COP_WERE_LE
+				    INT_VP_ADV_POST_WORD_LE FREEREL_PRO_NP_WORD_LE
+				    MV_SORB_LE PDET_ONE_LE
+				    ))
 (defparameter *likely-le-types* '(COORD_C_LE DISC_ADV_LE 
 				  QUASIMODAL_LE MV_POSS_LE
-				  HOUR_WORD_LE
+				  HOUR_WORD_LE DITRANS_PREP_LE
+				  MV_EXPL_IT_SUBJ_LIKE_LE
 				  ))
 
 (defun lex-priority (mrec)

@@ -2,35 +2,6 @@
 
 
 #|
-;; In /usr/local/page2.3/src/nutshell/protocols/call-eng-scanner
-;; Added special sentence boundary characters, to help with root types.
-;;
-;; 20-Sept-98 (DPF) No longer need these - now using unary rules for root types,
-;; along with useless-task-filter in tuneup-patches.lisp to block root edges
-;; which do not span the whole input.
-
-(in-package "MAIN")
-
-
-(defmethod call-component ((cpu controller)
-			   (target eng-scanner)
-			   &key direction)
-  (declare (ignore direction))
-  (let ((in (input-stream target)))
-    (setf (direction cpu)
-      (if (setf (output-stream target)
-	    (strings-to-typed-items 
-	     (cons "<" (nreverse 
-			 (cons ">" 
-			       (nreverse
-				(eng-scan-input in t nil)))))))
-	  :forward
-	:backward)))
-  nil)
-|#
-
-
-#|
 ;; In /usr/local/page2.3/src/nutshell/protocols/call-eng-scanner.lisp
 ;; Corrected top level scanner call to eliminate punctuation.
 
@@ -53,24 +24,35 @@
   nil)
 |#
 
-; In mrs-to-vit.lisp, adapt to new VIT checker's output format
+(progn
+  (in-package :cl-user)
+  (load (dir-and-name *source-grammar* "mrsglobals-eng"))
+  (setf mrs::*ordered-mrs-rule-list* nil) 
+  (with-open-file (istream (dir-and-name (dir-append tdl::*source-grammar* 
+						     "data/")
+					 "raw1.rules")
+		   :direction :input)
+    (loop (let ((rule (read istream nil nil)))
+	    (unless rule (return))
+	    (push rule mrs::*ordered-mrs-rule-list*))))
+  (setf mrs::*ordered-mrs-rule-list* 
+    (nreverse mrs::*ordered-mrs-rule-list*))
+  (load (dir-and-name (dir-append tdl::*source-grammar* 
+				  "data/")
+		      "page-db-eng.lisp"))
+  (setq mrs::%vit-indent% ",~%    ")
+  (setq mrs::*mrs-to-vit* t)
+  )
 
-(in-package "MRS")
+(setf trees::*label-names* 
+   '("CONJ" "S" "S-R" "ADV" "ADV-R" "ADV-D" "P-N" "P-I" "P-S" "PP-N" "PP-I" "PP-S" "N" "NP" "ADJ" "VP" "V" "DET" "COMP" "NEG" "XP" "B")
+;'("CONJ" "ADV" "PP" "NP" "ADJ" "VP" "V" "S" "P" "DET" "N" "COMP" "NEG" "XP" "B")
+   trees::*node-labels* (trees::ordered-label-list)
+   trees::*meta-symbols* (trees::get-instances :meta) foo nil)
 
-(defun check-vit (vit &optional (as-string nil) (stream *standard-output*))
-  #+(and :allegro :clim)
-  (progn
-   (with-open-file (vit-out "~/tmp/vitcheck" :direction :output
-	                                    :if-exists :supersede)
-    (format vit-out "ensure_loaded(vitADT).~%V = ")
-    (if as-string 
-	(format vit-out "~A" vit)
-      (write-vit vit-out vit))
-    (format vit-out ",vitCheck(V).~%~%halt.~%"))
-   (excl::run-shell-command "cd /eo/e1/vm2/vitADT/lib/Vit_Adt;/opt/quintus/bin3.2/sun4-5/prolog < ~/tmp/vitcheck" :output "~/tmp/vitout" :if-output-exists :supersede :error-output "~/tmp/viterror" :if-error-output-exists :supersede)
-   (excl::run-shell-command "tail +58 ~/tmp/viterror | tail -r | tail +2 | tail -r" :output stream :error-output "~/tmp/realerrorout" :if-output-exists :supersede :if-error-output-exists :supersede)
-   (format stream "~%"))
-  #-(and :allegro :clim)
-  (warn "function check-vit needs customising for this Lisp"))
 
 (in-package "MAIN")
+
+
+
+

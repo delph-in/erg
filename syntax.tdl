@@ -510,7 +510,7 @@ inf_non_wh_rel_cl := non_wh_rel_cl &
 
 ; ERB (17-10-96) in order to get "Kim knows who to ask" under the current
 ; hacks (i.e., no PRO), I need a head_filler_phrase that takes something like
-; "to ask" (i.e., VFORM in, SUBJ @nomp()) as its head.  So I am making a
+; "to ask" (i.e., VFORM in, SUBJ nomp) as its head.  So I am making a
 ; separate parallel type that will only be inherited by the embedded wh
 ; nonfinite questions.
 
@@ -604,7 +604,7 @@ head_subj_phrase := head_valence_phrase & head_final &
 ; specification from its head daughter.  Head/marker phrases takes the place
 ; of the P&S94 head/marker rule.  The head must be lexical (i.e., of type
 ; "word") and CONJ non-cnil. 
-
+;
 head_comp_or_marker_phrase := head_valence_phrase & head_compositional & 
 			      head_initial &
   [ SYNSEM canonical_synsem &
@@ -1000,9 +1000,10 @@ head_adj_int_phrase := head_adj_phrase & isect_mod_phrase.
 ; like S's.
 ;
 ; DPF 3-June-99 -- Further constrained nom_adj rule to make the modifier be
-; phrasal, to block "Kim met the consultant hired." May be too strong a
+; phrasal, to block "Kim met the consultant hired." It's too strong a
 ; constraint, but we'll revisit the question when we move to making post-nominal
-; modifiers attach at NP rather than N.
+; modifiers attach at NP rather than N.  Among the disadvantages is the fact
+; that we can't do "Get him something nice".
 
 n_adj_int_phrase := head_adj_int_phrase &
   [ HEAD-DTR.SYNSEM.LOCAL.CAT.HEAD noun,
@@ -1205,20 +1206,66 @@ n_n_cmpnd_phr := head_final &
 				     NHINST #modind ] !>,
 	     H-CONS <! !> ] ].
 
+;; Appositives
+;; For now, restrict this to temporal nouns, since it's an enthusiastic rule.
+
+appos_phr := head_initial &
+  [ SYNSEM canonical_synsem &
+	   [ LOCAL.CAT.VAL #valence,
+	     NON-LOCAL [ SLASH 0-dlist,
+			 QUE 0-dlist,
+			 REL 0-dlist ] ],
+    HEAD-DTR.SYNSEM canonical_synsem &
+	   [ LOCAL [ CAT [ HEAD noun,
+			   VAL #valence &
+			       [ SPR *olist*,
+				 COMPS *olist* ] ],
+		     CONT [ TOP #top,
+			    INDEX #hind & ref-ind ],
+		     KEYS.KEY temp_abstr_rel,
+		     CONJ cnil ],
+	     NON-LOCAL [ SLASH 0-dlist,
+			 QUE 0-dlist,
+			 REL 0-dlist ] ],
+    NON-HEAD-DTR.SYNSEM canonical_synsem &
+	   [ LOCAL [ CAT [ HEAD noun,
+			   VAL [ SPR *olist*,
+				 COMPS *olist* ] ],
+		     CONT [ TOP #top,
+			    INDEX #modind & ref-ind ],
+		     KEYS.KEY temp_abstr_rel ],
+	     NON-LOCAL [ SLASH 0-dlist,
+			 QUE 0-dlist,
+			 REL 0-dlist ] ],
+    C-CONT [ TOP #top,
+	     INDEX #hind,
+	     LISZT <! _equal_adj_rel & [ HANDEL #top,
+					 ARG #modind,
+					 ARG3 #hind ] !>,
+	     H-CONS <! !> ] ].
+
+
 ;;
 ;; Temporal NP modifiers
 ;;
 
 ; DPF 11-Jun-99 - Added SUBJ..OPT - to prevent these temporal NPs from filling
 ; ordinary NP argument positions.
+;
+; DPF 26-Jul-99 - Changed [HEAD noun] to [HEAD prep] to avoid double parse
+; for "Thursday the fourth" where "the fourth" attaches after "Thursday"
+; is itself a temp_mod phrase.
+
 temp_mod_phrase := unary_phrase & phrasal &
-  [ SYNSEM [ LOCAL [ CAT [ HEAD noun &
+  [ SYNSEM [ LOCAL [ CAT [ HEAD prep &
 				[ MOD < [ LOCAL intersective_mod &
 					  [ CAT n_or_v_cat,
 					    CONT.INDEX #ind ] ] > ],
 			   POSTHEAD +,
-			   VAL [ SUBJ < @nomp() &
-					[ LOCAL [ CONT.INDEX #ind,
+			   VAL [ SUBJ < synsem &
+					[ LOCAL [ CAT nomp_cat_min,
+						  CONJ cnil,
+						  CONT.INDEX #ind,
 						  THROLE arg1 ],
 					  NON-LOCAL [ SLASH 0-dlist,
 						      REL 0-dlist,
@@ -1459,9 +1506,12 @@ coord_phr := binary_phrase & non_headed_phrase &
 ; (Note "*Sandy bothered not Kim" but "Who did Sandy bother?  Not Kim.")
 ;
 ; Let's see if we can restrict this rule to only admit scopal adverb for MOD-DTR>
-
+;
 ; DPF 9-Jun-99 - Changed SYNSEM.HEAD to be 'root-marker' rather than 'verbal'
 ; since we don't want "so anytime before" as a head-mod phrase.
+;
+; DPF 27-Jul-99 - Changed MOD-DTR's SUBJ to be unconstrained, since e.g.
+; "perhaps" is now an S-modifier, and we need "perhaps on Tuesday".
 
 root_gap_clause := binary_phrase & non_headed_phrase & phrasal &
   [ SYNSEM [ LOCAL [ CAT [ HEAD root-marker &
@@ -1482,8 +1532,7 @@ root_gap_clause := binary_phrase & non_headed_phrase & phrasal &
     MOD-DTR sign &
       [ SYNSEM [ LOCAL [ CAT [ HEAD.MOD < [ LOCAL scopal_mod &
 						  [ CAT [ HEAD verb,
-							  VAL [ SUBJ <[ OPT - ]>,
-								COMPS *olist* ]],
+							  VAL.COMPS *olist* ],
 						    CONT.INDEX #event ] ] >,
 			       VAL.COMPS < >,
 			       MC na ],
@@ -1559,11 +1608,9 @@ bare_vger_rule := rule & bare_vger_phrase.
 
 n_n_cmpnd_rule := binary_rule_right_to_left & n_n_cmpnd_phr.
 
+appos_rule := binary_rule_right_to_left & appos_phr.
+
 temp_mod_rule := rule & temp_mod_phrase.
-
-;decl_rule := rule & decl_phrase.
-
-;; vocative_rule := rule & vocative_phrase.
 
 ;; DPF 22-Dec-98 - Modified filler_head_rule_non_wh to require head to be 
 ;; VFORM fin, in order to block "*Kim hire".  The VFORM used to be fin_or_imp,
@@ -1799,11 +1846,12 @@ mid_coord_nonprop_rule := mid_coord_rule &
 				    MESSAGE 0-dlist ],
 			     CONJ.HANDELS.LIST.FIRST #hand ] ].
 
+; DPF 27-Jul-99 - Removed NONMOD-DTR..HEAD restriction (was n_or_a), since
+; we want "perhaps in Berlin" with this rule.
 root_gap_rule_premod := binary_rule_left_to_right & root_gap_clause &
   [ MOD-DTR #left &
 	    [ SYNSEM.LOCAL.CAT.POSTHEAD - ],
-    NONMOD-DTR #right &
-	    [ SYNSEM.LOCAL.CAT.HEAD n_or_a ],
+    NONMOD-DTR #right,
     ARGS < #left, #right > ].
 
 root_gap_rule_postmod := binary_rule_right_to_left & root_gap_clause &
@@ -1867,186 +1915,5 @@ root_clause := root_phrase &
 				  QUE 0-dlist & [ LIST < > ] ] ] ] >,
     C-CONT [ LISZT <! !>,
              INDEX #index,
-	     H-CONS <! !> ] ].
-#|
-root_clause := root_phrase &
-  [ ARGS < [ SYNSEM [ LOCAL [ CAT [ HEAD verb &
-				        [ MOOD ind_or_mod_subj & strict_sort],
-				    VAL [ SUBJ *olist*,
-					  SPR *olist*,
-					  COMPS *olist* ],
-				    MC + ],
-			      CONT [ INDEX #index,
-				     TOP #mhand,
-				     TOP-H #mhand & handle,
-				     MESSAGE 1-dlist &
-					   <! relation !> ],
-			      CONJ cnil ],
-		      NON-LOCAL [ SLASH 0-dlist & [ LIST < > ],
-				  REL 0-dlist & [ LIST < > ],
-				  QUE 0-dlist & [ LIST < > ] ] ] ] >,
-    C-CONT [ LISZT <! !>,
-             INDEX #index,
-	     H-CONS <! !> ] ].
-|#
-
-#|
-frag := root_phrase &
-  [ ARGS < [ SYNSEM [ LOCAL [ CAT [ MC na,
-				    VAL [ SUBJ *unexplist*,
-					  SPR *olist*,
-					  COMPS *olist* ] ],
-			      CONT [ TOP-H #mhand & handle,
-				     TOP #top,
-				     MESSAGE 0-dlist,
-				     INDEX #index ],
-			      CONJ cnil ],
-		      NON-LOCAL [ REL 0-dlist & [ LIST < > ],
-				  SLASH 0-dlist & [ LIST < > ] ] ] ] >,
-    C-CONT [ TOP #top,
-	     LISZT <! message &
-		      [ HANDEL #mhand,
-			SOA #top ],
-		      abstr_e_rel &
-		      [ EVENT event ] !>,
-             INDEX #index & event_or_index ] ].
-
-frag_nomod := frag &
-  [ ARGS < [ SYNSEM.LOCAL.CAT.HEAD.MOD < > ] >,
-    C-CONT.H-CONS <! !> ].
-
-frag_mod_int := frag &
-  [ ARGS < [ SYNSEM.LOCAL [ CAT.HEAD [ PRD +,
-				       MOD < [ LOCAL intersective_mod ] > ],
-			    CONT.TOP #hand ] ] >,
-    C-CONT [ LISZT <! message,
-		      abstr_e_rel &
-		      [ HANDEL #hand ] !>,
-	     H-CONS <! !> ] ].
-
-frag_subord_cl := root_phrase &
-  [ ARGS < [ SYNSEM [ LOCAL [ CAT [ HEAD prep & [ PRD - ],
-				    VAL [ SPR *olist*,
-					  COMPS *olist* ] ],
-			      CONT [ TOP #shand,
-				     TOP-H #mhand & handle,
-				     INDEX #index,
-				     message 0-dlist ],
-			      CONJ cnil,
-			      KEYS.KEY subord_rel &
-				  [ MAIN #hand ] ],
-		      NON-LOCAL [ REL 0-dlist & [ LIST < > ],
-				  SLASH 0-dlist & [ LIST < > ] ] ] ] >,
-    C-CONT [ LISZT <! message &
-		      [ HANDEL #mhand,
-			SOA #shand ],
-		      abstr_e_rel &
-		      [ HANDEL #ahand,
-			EVENT event ] !>,
-             INDEX #index,
-	     H-CONS <! qeq &
-		       [ SC-ARG #hand,
-			 OUTSCPD #ahand ] !> ] ].
-
-; In VIT representation, don't want 'abstr_rel' if the only element in the
-; turn is an exclamative (or a sequence of them).
-
-frag_excl := root_phrase &
-  [ ARGS < [ SYNSEM [ LOCAL [ CAT [ HEAD root-marker,
-				    MC + ],
-			      CONT [ TOP #hand,
-				     TOP-H #mhand & handle,
-				     INDEX #index,
-				     MESSAGE 0-dlist ],
-			      CONJ cnil,
-			      KEYS.KEY excl_rel ],
-		      NON-LOCAL [ REL 0-dlist & [ LIST < > ],
-				  SLASH 0-dlist & [ LIST < > ] ] ] ]>,
-    C-CONT [ LISZT <! message &
-		      [ HANDEL #mhand,
-			SOA #hand ] !>,
-             INDEX #index & event_or_index,
-	     H-CONS <! !> ] ].
-
-; DPF (26-Jan-99) Removed newly-added lex_synsem constraint on ARGS.FIRST,
-; since it blocks e.g. "how about tomorrow", and it's not clear what it was
-; supposed to accomplish.
-
-frag_msg := root_phrase &
-  [ ARGS < [ SYNSEM [ LOCAL [ CAT [ HEAD root-marker,
-				    VAL [ SPR *olist*,
-					  COMPS *olist* ] ],
-			      CONT [ MESSAGE 1-dlist &
-					     <! relation &
-					      [ SOA #mhand ] !>,
-				     TOP #mhand ],
-			      CONJ cnil,
-			      KEYS.KEY arg_rel &
-				  [ ARG #index ] ],
-		      NON-LOCAL [ REL 0-dlist & [ LIST < > ],
-				  SLASH 0-dlist & [ LIST < > ] ] ] ] >,
-    C-CONT [ LISZT <! abstr_e_rel &
-		      [ EVENT #event & event ],
-		      abstr_rel &
-		      [ EVENT event,
-			ARG3 #index ] !>,
-	     INDEX #event,
-	     H-CONS <! !> ] ].
-
-; Restrict to third singular subjectless finite non-auxiliary VPs.
-
-frag_fin := root_phrase &
-  [ ARGS < [ SYNSEM [ LOCAL [ CAT [ HEAD verb &
-					 [ AUX -,
-					   VFORM fin,
-					   TENSE present,
-					   MOOD ind_or_mod_subj ],
-				    MC na,
-				    VAL [ SUBJ < unexpressed &
-						 [ LOCAL.CONT.INDEX #inst &
-						      [ PRONTYPE std_3 ] ] >,
-					  SPR *olist*,
-					  COMPS *olist* ] ],
-			      AGR.PNG.PN 3sg,
-			      CONT [ TOP #hand,
-				     TOP-H #mhand & handle,
-                                     INDEX #index,
-				     MESSAGE 0-dlist ],
-			      CONJ cnil ],
-		      NON-LOCAL [ REL 0-dlist & [ LIST < > ],
-				  SLASH 0-dlist & [ LIST < > ] ] ] ] >,
-    C-CONT [ LISZT <! prpstn_rel &
-		      [ HANDEL #mhand,
-			SOA #hand ],
-		      pron_rel &
-		      [ HANDEL #mhand,
-			INST #inst &
-			       [ PRONTYPE std_pron ] ] !>,
-             INDEX #index,
-	     H-CONS <! !> ] ].
-|#
-
-; Generalized ARG to be not only n_or_p, but subst, in order to allow, e.g.,
-; "And I guess we should meet."
-
-frag_coord := root_phrase &
-  [ ARGS < phrase &
-	   [ SYNSEM [ LOCAL [ CAT.HEAD subst,
-			      CONJ complex-conj &
-				       [ CHEAD.LEFT < cnil, ... >,
-					 HANDELS 1-dlist & <! #hand !>,
-					 INDICES #inds ],
-			      CONT [ TOP-H #chand & handle,
-				     TOP #chand,
-				     INDEX #ind & event_or_index ],
-			      KEYS.ALTKEY [ C-ARG #ind,
-					    C-HANDELS <! #hand !>,
-					    C-INDICES #inds ] ],
-		      NON-LOCAL [ SLASH 0-dlist & [ LIST < > ],
-				  REL 0-dlist & [ LIST < > ],
-				  QUE 0-dlist & [ LIST < > ] ] ] ] >,
-    C-CONT [ TOP #chand,
-	     LISZT <! !>,
-             INDEX #ind,
 	     H-CONS <! !> ] ].
 

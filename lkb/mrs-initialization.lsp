@@ -8,7 +8,7 @@
 ; (time (batch-check-lexicon))
 
 
-#|
+
 ; For MRS to VIT
 
 #+:mrs
@@ -28,12 +28,10 @@
          (merge-pathnames
             (make-pathname :name "new-rules.mrs")
             data-dir1)))))
-|#
-
-#|
 
 ; Use this version for VM, but not for generation.
 
+#|
 #+:mrs
 (in-package "MRS")
 #+:mrs
@@ -65,8 +63,8 @@
                                                       (fs-type (cdr feat-val))))
                                  feat-list)))))
         feat-list)))
-
 |#
+
 
 #+:mrs
 (in-package "CL-USER")

@@ -19,7 +19,8 @@
 
 (setf *result-rest*
   '( T .    ;;; this is an inverse restrictor: delete the specified paths
-    ((disco::args)
+    (
+     (disco::args)
      (disco::head-dtr)
      (disco::lconj-dtr)
      (disco::rconj-dtr)
@@ -27,8 +28,6 @@
      (disco::mod-dtr)
      (disco::nonmod-dtr)
      )))
-
-
 
 ;; 1. Prevent the other adjunct rules from feeding extradj
 ;; 2. Prevent adjh from feeding hadj, so first pick up post-head adjuncts,

@@ -400,9 +400,11 @@ astem :< stemhead.
 
 keys_min :< *avm*.
 
-keys := keys_min &
-  [ KEY mod_relation,
-    ALTKEY mod_relation,
+keys_k := keys_min &
+  [ KEY mod_relation ].
+
+keys := keys_k &
+  [ ALTKEY mod_relation,
     --COMPKEY mod_relation,
     --OCOMPKEY mod_relation ].
 
@@ -426,7 +428,8 @@ cat := cat_min &
 local_min := mod_local &
   [ CAT cat_min,
     CONT cont,
-    KEYS keys_min ].
+    AGR index,
+    THROLE throle ].
 
 no-affix :< mod_local.
 
@@ -499,13 +502,12 @@ anti_synsem_unexp := anti_synsem & unexpressed.
 ;; only types that introduce the feature LEX, namely lex_synsem and phr_synsem.
 
 local_basic := local_min &
-  [ CONJ conj,
-    AGR index ].
+  [ KEYS keys_min,
+    CONJ conj ].
 
 local := local_basic &
   [ CTXT ctxt_min,
     ARG-S *list*,
-    THROLE throle,
     STEMHEAD stemhead ].
 
 non-local := non-local_min &
@@ -532,9 +534,11 @@ whg-item := *avm* &
 ;; Same for ACCENT, SPMOOD, and FORM.
 
 ;; AAC - don't modify this without also changing lilpatch.tdl
-basic_sign := *avm* &
-  [ STEM *list*,
-    ACCENT bool,
+sign_min := *avm* &
+  [ STEM *list* ].
+
+basic_sign := sign_min &
+  [ ACCENT bool,
     SPMOOD symbol,
     FORM atom,
     KEY-ARG bool ].
@@ -544,7 +548,7 @@ sign := basic_sign &
     ARGS *list*,
     INFLECTED bool,
     ROOT bool,
-    -MORPHOLOGY basic_sign ],
+    -MORPHOLOGY sign_min ],
   status: root-node.
 
 phrase_or_lexrule := sign &
@@ -554,9 +558,11 @@ phrase_or_lexrule := sign &
     C-CONT mrs_min & [ TOP #hand,
 		       INDEX #index ] ].
 
-word_or_lexrule := sign &
+word_or_lexrule_min := sign_min &
   [ AFFIX mod_local,
     --FINAL-ARG *avm* ].
+
+word_or_lexrule := word_or_lexrule_min & sign.
 
 ; We use --TOPKEY rather than KEY because of negated auxiliaries, which have the
 ; neg_rel's HANDEL as TOP, rather than the KEY's HANDEL (where the KEY must still
@@ -605,7 +611,8 @@ basic_lex_entry := sign &
 ;; see lkbpatches
 lex_entry :< basic_lex_entry.
 infl_lex_entry := basic_lex_entry &
-  [ INFLECTED + ].
+  [ INFLECTED +,
+    ARGS < [ AFFIX no-affix ] > ].
 
 basic_multi_lex_entry := word &
   [ INFLECTED bool ],
@@ -826,9 +833,10 @@ mobile :< head.
 
 adj* := a_or_p & v_or_g_or_a & n_or_a & adverbee & mobile.
 
-;;; AAC - SUBST is redundant - it is an ancestor of ADVERBEE 
+; DPF 26-Jul-99 - Made prep* not inherit from adverbee, since in general
+; don't want adverbs modifying PPs.
 
-prep* := a_or_p & v_or_p & n_or_p & adverbee & mobile.
+prep* := a_or_p & v_or_p & n_or_p & subst & mobile.
 
 supnoun :< nominal.
 
@@ -988,7 +996,8 @@ message := norm_relation &
 imp_rel :< message.
 prop_ques_rel :< message.          ;for COMPS of e.g. 'know'
 propositional_rel :< prop_ques_rel.
-prpstn_rel :< propositional_rel.   ;propositions
+prpstn_or_like_rel :< message.
+prpstn_rel := propositional_rel & prpstn_or_like_rel.   ;propositions
 hypo_rel :< propositional_rel.     ;hypotheticals (PRO to go)
 
 ; For interrogatives; PARAMS value is a set of handles.
@@ -1002,7 +1011,7 @@ ne_rel :< abstr_int_rel.
 
 ; Subtype to distinguish complementizer "like" from "that", to block
 ; '*Kim said like Sandy left' and '*it looks that Sandy left"
-_like_c_rel :< message.
+_like_c_rel :< prpstn_or_like_rel.
 
 dim_rel := relation &
   [ DIM non_expl-ind ].
@@ -1082,7 +1091,7 @@ hcomp_nom_rel := nom_rel & arg3_rel &
 
 nominalize_rel :< diadic_nom_rel.
 
-gerund_rel := diadic_nom_rel & hcomp_nom_rel & reg_nom_rel.
+gerund_rel :< reg_nom_rel.
 
 temp_abstr_rel := nonpro_rel &
   [ INST.SORT time ].
@@ -1133,7 +1142,11 @@ numbered_hour_rel := hour_rel &
     MIN non_expl-ind,
     AM-PM non_expl-ind ].
 
-minute_or_ampm_rel :< temp_nondim_rel.
+; DPF 31-Jul-99 - Changed minute_or_ampm_rel to be non-temp, since it cannot
+; appear after temporal prepositions (ignoring the elliptical "I'll see you 
+; in ten"), and we also need to block "from ten to eleven o'clock" with
+; "ten" as minute.
+minute_or_ampm_rel :< reg_nom_rel.
 
 minute_rel := minute_or_ampm_rel &
   [ MINUTE string ].
@@ -1159,11 +1172,14 @@ non_day_modable_rel := non_day_rel & modable_rel.
 non_day_diadic_modable_rel := non_day_diadic_rel & modable_rel.
 
 ;; named_month_rel as in "January is fine"
-;; (cf. "let's get together every October / next October / some October")
 
-mofy_rel := non_day_diadic_modable_rel &
+abstr_mofy_rel := non_day_diadic_rel &
   [ MONTH symbol,
     YEAR-IND non_expl-ind ].
+
+mofy_rel :< abstr_mofy_rel.
+;; (cf. "let's get together every October / next October / some October")
+mofy_mod_rel := abstr_mofy_rel & modable_rel.
 
 yofc_rel := non_day_rel &
   [ YEAR string ].
@@ -1181,7 +1197,7 @@ _weekday_rel :< dofw_rel.
 _weekend_rel :< dofw_rel.
 _workday_rel :< dofw_rel.
 
-_week_rel :< non_day_diadic_modable_rel.
+_week_rel :< non_day_diadic_rel.
 _fortnight_rel :< non_day_modable_rel.
 _month_rel :< non_day_diadic_modable_rel.
 _moment_rel :< non_day_rel.
@@ -1350,8 +1366,8 @@ neg_rel := arg_rel & independent_rel.
 
 neg_polar_rel :< adv_rel.
 
-_from_to_rel :< miscprep_ind_rel.
-
+_from_to_rel := miscprep_ind_rel &
+  [ ARGX non_expl ].
 
 ; Degree relations
 
@@ -1398,7 +1414,6 @@ prpstn_to_prop_rel := prop_rel &
 
 _by_pass_rel :< miscprep_ind_rel.
 _from_time_on :< miscprep_ind_rel.
-until_rel :< prep_mod_ind_rel.
 
 ; Abstract relations, specialized below either to independent relations or to
 ; ones that appear in verb-particle constructions.
@@ -1468,7 +1483,7 @@ conj_rel := nondim_rel &
 
 airplane_rel :< reg_nom_rel.
 abstr_place_rel :< reg_nom_rel.
-place_rel :< abstr_place_rel.
+place_rel := abstr_place_rel & modable_rel.
 telephone_rel :< reg_nom_rel.
 person_rel :< reg_nom_rel.
 thing_rel :< reg_nom_rel.
@@ -1820,7 +1835,9 @@ _off_rel := _off_rel_a & independent_rel.
 _back_adv_rel_a :< abstr_adv_rel.
 _back_adv_rel_s := _back_adv_rel_a & selected_rel.
 _back_adv_rel := _back_adv_rel_a & independent_rel.
-_down_rel := dir_rel & selected_rel.
+_down_rel_a :< dir_rel.
+_down_rel_s := _down_rel_a & selected_rel.
+_down_rel := _down_rel_a & independent_rel.
 _across_rel_a :< dir_or_state_rel.
 _across_rel_s := _across_rel_a & selected_rel.
 _across_rel := _across_rel_a & independent_rel.
@@ -1873,6 +1890,12 @@ _apart_isect_rel := _apart_isect_rel_a & independent_rel.
 _open_rel_a :< abstr_adj_rel.
 _open_rel_s := _open_rel_a & selected_rel.
 _open_rel := _open_rel_a & independent_rel.
-_out_of_rel_a :< dir_indep_rel.
-_out_of_rel_s := _out_rel_a & selected_rel.
-_out_of_rel := _out_rel_a & independent_rel.
+_out_of_rel_a :< miscprep_rel.
+_out_of_rel_s := _out_of_rel_a & selected_rel.
+_out_of_rel := _out_of_rel_a & independent_rel.
+_until_rel_a :< prep_mod_rel.
+_until_rel_s := _until_rel_a & selected_rel.
+_until_rel := _until_rel_a & independent_rel.
+_to_until_rel_a :< _until_rel_a.
+_to_until_rel_s := _to_until_rel_a & _until_rel_s.
+_to_until_rel := _to_until_rel_a & _until_rel.
