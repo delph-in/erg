@@ -10,7 +10,9 @@
      ,(vsym "RSTR") ,(vsym "BODY")
      ,(vsym "MARG") ,(vsym "CARG")))
                                  
-(setf *ignored-sem-features* `(,(vsym "PARAMS") ,(vsym "WLINK")))
+(setf *ignored-sem-features* 
+  (append *ignored-sem-features* 
+  `(,(vsym "PARAMS") ,(vsym "WLINK"))))
 
 (setf *ignored-extra-features* 
   (cons (vsym "SORT") *ignored-extra-features*))
