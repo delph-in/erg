@@ -99,11 +99,9 @@
 ;;; `:host', `:db', `:table', and `:user' (optional) 
 ;;; if unset we fall back to .tdl lexicon files
 
-#|
 (defparameter *psql-lexicon-parameters* '((:db "lingo") 
                                           (:host "localhost")
                                           (:table "erg2")))
-|#
 
 ;;; Parse tree node labels
 
@@ -170,8 +168,21 @@
     mister missus mr_title_2 doctor_ttl dr_ttl_2 prof_title mrs_title_2
     ms_title_2 mount_ttl_2 number_abb_title number_abb_title_2 
     number_abb2_title number_abb2_title_2 order_abb_ttl order_abb_ttl_2
-    pound_sign_title pres_ttl pres_ttl_2 
-    gonna_v1 and_c_nonprop that_c_subj
+    pound_sign_title pres_ttl pres_ttl_2 aint_be_c_am_neg_2
+    aint_be_c_are_neg_2 aint_be_c_is_neg_2 aint_be_id_am_neg_2
+    aint_be_id_are_neg_2 aint_be_id_is_neg_2 aint_be_th_cop_are_neg_2
+    aint_be_th_cop_is_neg_2 aint_pl_have_aux_2 aint_sg_have_aux_2
+    be_c_am_neg_2 be_c_are_neg_2 be_c_is_neg_2 be_c_was_neg_2
+    be_c_was_neg_subj_2 be_c_were_neg_2 be_c_were_neg_subj_2
+    be_id_am_neg_2 be_id_are_neg_2 be_id_is_neg_2 be_id_was_neg_2
+    be_id_was_neg_subj_2 be_id_were_neg_2 be_id_were_neg_subj_2
+    be_th_cop_are_neg_2 be_th_cop_is_neg_2 be_th_cop_was_neg_2
+    be_th_cop_was_neg_subj_2 be_th_cop_were_neg_2 be_th_cop_were_neg_subj_2
+    can_aux_neg_2 could_aux_neg_2 dare_aux_neg_2 did1_neg_2 do1_neg_2
+    does1_neg_2 dont_2 hadnt_aux_2 hadnt_aux_subj_2 hasnt_aux_2
+    have_fin_aux_neg_2 might_aux_neg_2 must_aux_neg_2 need_aux_neg_2
+    ought_aux_neg_2 should_aux_neg_2 will_aux_neg_2 would_aux_neg_2
+    gonna_v1 and_c_nonprop that_c_subj wherein
    )
   "temporary expedient to avoid generating dual forms")
 
