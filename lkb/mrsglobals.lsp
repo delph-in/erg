@@ -72,11 +72,9 @@
 (defparameter *scope-feat* (vsym "BODY"))
 
 (setf *top-semantics-type* 
-  (vsym "RELATION"))
+  (vsym "predsort"))
 
 (setf *rel-name-path* `(,(vsym "PRED") ))
-
-(setf *top-pred-type* (vsym "PREDSORT"))
 
 ;;;
 ;;; context condition in MRS munging rules
