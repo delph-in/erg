@@ -70,12 +70,16 @@
   '(ARGS HEAD-DTR NON-HEAD-DTR LCONJ-DTR RCONJ-DTR DTR MOD-DTR NONMOD-DTR)
   "features pointing to daughters deleted on building a constituent")
 
-#+:packing
+;;;
+;;; to enable local ambiguity packing
+;;;
+
+#+:null
+(defparameter *chart-packing-p* t)
+
 (defparameter *packing-restrictor*
   '(RELS HCONS)
   "restrictor used when parsing with ambiguity packing")
-
-;;; (setf *chart-packing-p* :t)
 
 ;;;
 ;;; increase dag pool size
