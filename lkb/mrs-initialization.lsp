@@ -29,8 +29,17 @@
             (make-pathname :name "new-rules.mrs")
             data-dir1)))))
 
-; Use this version for VM, but not for generation.
+#+mrs(read-mrs-rule-file-aux 
+      (merge-pathnames
+       (make-pathname :directory 
+                      (pathname-directory
+                       (dir-append *grammar-directory* 
+                                   '(:relative "data"))))
+      (make-pathname 
+       :name "genrules.mrs"))
+      t)
 
+; Use the version below for VM rule generation for PAGE ONLY
 #|
 #+:mrs
 (in-package "MRS")
