@@ -78,10 +78,10 @@
 (defparameter *chart-packing-p* t)
 
 (defparameter *packing-restrictor*
-  '(RELS HCONS RULE-NAME)
+  '(STEM RELS HCONS RULE-NAME)
   "restrictor used when parsing with ambiguity packing")
 
-;;; (setf *chart-packing-p* :t)
+;;; (setf *chart-packing-p* t)
 
 ;;;
 ;;; increase dag pool size
@@ -129,7 +129,7 @@
 
 ;;; for the compare function 
 
-(defparameter *discriminant-path* '(synsem local keys key))
+(defparameter *discriminant-path* '(SYNSEM LOCAL KEYS KEY))
 
 ;;; Hide lexical rule nodes in parse tree
 ;;; (setf  *dont-show-lex-rules* t)
@@ -193,7 +193,7 @@
    )
   "temporary expedient to avoid generating dual forms")
 
-(setf *semantics-index-path* '(synsem local cont hook index))
+(setf *semantics-index-path* '(SYNSEM LOCAL CONT HOOK INDEX))
 
 ; DPF 27-Nov-03 - Finally noticed that on the current clever approach to
 ; intersective modification, we can't generate np-adverbial modifiers as
@@ -207,7 +207,17 @@
 
 ;(setf *intersective-rule-names* '(adjn_i adjh_i nadj_rc
 ;                                  nadj_rr_nt nadj_rr_t hadj_i_uns))
-(setf *intersective-rule-names* '(adjh_i nadj_rr_nt))
+;(setf *intersective-rule-names* '(adjh_i nadj_rr_nt))
+
+;;;
+;;; as of mid-december 2003, the generator allows specification of the non-foot
+;;; daughters in adjunction rules; make this conditional on LKB source version,
+;;; so the grammar still loads into older LKBs.                (18-dec-03; oe)
+;;; 
+(setf *intersective-rule-names* 
+  (if (find-symbol "%GENERATOR-LEXICAL-ITEMS%" :lkb)
+    '((adjh_i . (1)) (nadj_rr_nt . (2)))
+    '(adjh_i nadj_rr_nt)))
 
 (defparameter *chart-dependencies*
   '((SYNSEM LKEYS --+COMPKEY) (SYNSEM LOCAL CAT HEAD KEYS KEY)
