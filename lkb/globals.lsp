@@ -119,9 +119,7 @@
 
 (defparameter *psql-lexicon-parameters* 
   #+:psql
-  ;; bmw20 (16 Feb 04) - phase out use of :table
-  ;;  '((:user "bmw20") (:db "erg") (:host "localhost") (:table "erg2"))
-  '((:user "danf") (:db "erg") (:host "localhost") (:port "5432") (:table "erg"))
+  '((:db "erg") (:host "localhost"))
   #-:psql
   nil)
 
