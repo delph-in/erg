@@ -939,7 +939,7 @@ head_mod_phrase := head_nexus_phrase & phrasal &
 ;; the head-dtr, in order to make discourse adverbs like "yes" produce MC +
 ;; phrases. 
 
-head_mod_phrase_simple := head_mod_phrase & binary_headed_phrase &
+basic_head_mod_phrase_simple := head_mod_phrase & binary_headed_phrase &
   [ SYNSEM [ LOCAL [ CAT.MC #mc,
                      KEYS.MESSAGE #msg ],
 	     NON-LOCAL [ SLASH *diff-list* &
@@ -984,16 +984,17 @@ head_mod_phrase_simple := head_mod_phrase & binary_headed_phrase &
 					VAL [ COMPS *olist*,
 					      SPR *olist* ],
                                         MC #mc ],
-				  CONT.TOP #hand,
 				  CONJ cnil,
 				  KEYS [ KEY independent_rel,
 					 MESSAGE #msg ] ],
 			  NON-LOCAL [ SLASH *diff-list* &
 					    [ LIST #first,
 					      LAST #middle ],
-				      QUE 0-dlist & [ LIST *null* ] ] ],
-    C-CONT.TOP #hand ].
+				      QUE 0-dlist & [ LIST *null* ] ] ] ].
 
+head_mod_phrase_simple := basic_head_mod_phrase_simple &
+  [ NON-HEAD-DTR.SYNSEM.LOCAL.CONT.TOP #hand,
+    C-CONT.TOP #hand ].
 
 ;; DPF (12-Jul-98) Changed POSTHEAD on mother from that of head-dtr to simply -, 
 ;; since want to prevent this rule from feeding head-adj rule.
@@ -1035,8 +1036,9 @@ scopal_mod_phrase := head_mod_phrase_simple &
 	     H-CONS <! !> ] ].
 
 isect_mod_phrase := head_mod_phrase_simple &
-  [ HEAD-DTR.SYNSEM.LOCAL.CONT [ TOP #hand,
-				 INDEX #index ],
+  [ HEAD-DTR.SYNSEM.LOCAL [ CONT [ TOP #hand,
+				   INDEX #index ],
+			    KEYS.MESSAGE 0-dlist ],
     NON-HEAD-DTR.SYNSEM.LOCAL [ CAT.HEAD.MOD < [ LOCAL intersective_mod ] >,
 				CONT.TOP #hand ],
     C-CONT [ INDEX #index,
@@ -1051,17 +1053,23 @@ head_adj_int_phrase := head_adj_phrase & isect_mod_phrase.
 
 ; For "On Tuesday who won" where need S-initial PP rather than extracted PP.
 
-adj_head_wh_phrase := head_mod_phrase_simple & head_final &
+adj_head_ques_phrase := basic_head_mod_phrase_simple &
   [ SYNSEM [ LOCAL.CAT.POSTHEAD #ph,
 	     MODIFIED lmod* ],
     HEAD-DTR.SYNSEM.LOCAL [ CAT.POSTHEAD #ph,
-                            KEYS.MESSAGE <! int_rel !> ],
-    NON-HEAD-DTR.SYNSEM [ LOCAL.CAT [ HEAD prep,
-                                      VAL.COMPS < > ],
+			    CONT.INDEX #index,
+                            KEYS [ KEY.HANDEL #hand,
+				   MESSAGE <! int_rel !> ] ],
+    NON-HEAD-DTR.SYNSEM [ LOCAL [ CAT [ HEAD prep &
+					 [ MOD < [ LOCAL intersective_mod ] >],
+					VAL.COMPS < > ],
+				  CONT.TOP #hand ],
                           NON-LOCAL [ SLASH 0-dlist,
-				      REL 0-dlist ] ] ].
+				      REL 0-dlist ] ],
+    C-CONT [ INDEX #index,
+	     H-CONS <! !> ] ].
 
-adj_head_int_wh_phrase := adj_head_wh_phrase & isect_mod_phrase &
+adj_head_int_ques_phrase := adj_head_ques_phrase & head_final &
   [ NON-HEAD-DTR.SYNSEM.LOCAL.CAT.HEAD.TAM.TENSE no_tense ].
 
 ; Further split the head_adj_int_phrase in order to enforce one aspect of the 
@@ -1256,34 +1264,43 @@ bare_np_phrase := head_only & non_clause & phrasal &
 		     [ SC-ARG #rhand,
 		       OUTSCPD #nhand ] !> ] ].
 
-;; Verbal gerunds with no subject
+;; Verbal gerunds with no (possessive) specifier.
 ;; DPF 12-May-00 Block extraction from gerund NPs.
+;; DPF 07-Jan-01 Allow "Me hiring Sandy impressed Kim" as well as "Hiring 
+;; Sandy impressed Kim" by removing constraint that head-dtr be SPR < >,
+;; but then block spurious analysis for "My hiring Sandy impressed Kim"
+;; by requiring the head-dtr to be ALTKEY no_rel (the head-spr rule makes
+;; the mother's ALTKEY the quant_rel).  Also, block spurious analysis for
+;; "me hiring Sandy impressed kim" (failing to undergo this rule and hence
+;; leaving an unbound variable for the gerund_rel), by making this rule's
+;; output be MESSAGE 0-dlist, and (in lextypes.tdl and auxverbs.tdl) 
+;; requiring that subjects (only ever of finite verbs) be MESSAGE 0-dlist.
+;; This means sentential subjects will have to undergo a non-branching
+;; rule to make nominative NPs, but this is at least defensible, since we
+;; need to get the nominative case from somewhere, to prevent them from
+;; appearing as, say, objects of prepositions.
 
-bare_vger_phrase := head_only & non_clause & phrasal &
-  [ SYNSEM [ LOCAL [ CAT.VAL [ SUBJ < >,
-			       COMPS < >,
-			       SPR < > ],
-		     KEYS.MESSAGE #msg ],
+bare_vger_phrase := head_only & head_nexus_phrase & phrasal &
+  [ SYNSEM [ LOCAL [ CAT [ VAL [ SUBJ < >,
+				 COMPS < >,
+				 SPR < > ],
+			   MC na ],
+		     KEYS [ MESSAGE 0-dlist,
+			    ALTKEY #altkey ] ],
 	     NON-LOCAL.SLASH #slash ],
     HEAD-DTR.SYNSEM 
 	   [ LOCAL [ CAT [ HEAD gerund,
-			   VAL [ SUBJ < synsem & [ LOCAL.CONT.INDEX #sind ] >,
-				 SPR < synsem >,
-				 COMPS *olist* ] ],
+			   VAL.COMPS *olist* ],
 		     CONJ cnil,
 		     CONT [ TOP #hand,
 			    INDEX #index & [ DIVISIBLE + ],
                             E-INDEX #event ],
 		     KEYS [ KEY gerund_rel,
-			    MESSAGE #msg ] ],
+			    ALTKEY no_rel ] ],
 	     NON-LOCAL.SLASH #slash & 0-dlist ],
     C-CONT [ INDEX #index,
              E-INDEX #event,
-             TOP-H #top-h,
-	     LISZT <! pron_rel &
-		    [ HANDEL #top-h,
-		      INST #sind & [ PRONTYPE zero_pron ] ],
-		      udef_rel &
+	     LISZT <! udef_rel & #altkey &
 		    [ BV #index,
 		      RESTR #rhand ] !>,
 	     H-CONS <! qeq &
@@ -1794,6 +1811,7 @@ coord_phr := binary_phrase & non_headed_phrase &
 		[ SYNSEM [ LOCAL [ CAT #cat,
 				   CONT [ INDEX individual & #ind,
                                           E-INDEX #event ],
+				   CONJ complex-conj,
 				   AGR #agr & [ DIVISIBLE #div ],
 				   KEYS.KEY #key & independent_rel ],
 			   NON-LOCAL #non-local,
@@ -1890,7 +1908,7 @@ hspec_rule := binary_rule_right_to_left & head_spec_phrase.
 
 adjh_s_rule := binary_rule_left_to_right & adj_head_scop_phrase.
 adjh_i_rule := binary_rule_left_to_right & adj_head_int_phrase.
-adjh_i_wh_rule := binary_rule_left_to_right & adj_head_int_wh_phrase.
+adjh_i_ques_rule := binary_rule_left_to_right & adj_head_int_ques_phrase.
 
 hadj_s_rule := binary_rule_right_to_left & head_adj_scop_phrase.
 ;;hadj_i_n_rule := binary_rule_right_to_left & n_adj_int_phrase.
