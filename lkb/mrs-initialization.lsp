@@ -9,6 +9,7 @@
 ;; lexdb provides cached generator indices
 ;; but this is useful only if lexical and
 ;; grammar rules are indexed also (08-jun-04 - bmw)
+#+:psql
 (when
     (and
      *psql-lexicon*

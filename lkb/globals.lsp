@@ -118,7 +118,10 @@
 ;;; if unset we fall back to .tdl lexicon files
 
 (defparameter *psql-lexicon-parameters* 
-  '((:db "erg") (:semi t)))
+  #+:psql  
+  '((:db "erg") (:semi t))
+  #-:psql
+  nil)
 
 ;;; Parse tree node labels
 
