@@ -1,10 +1,19 @@
 (in-package :user)
 
 ;; A simple interface to comlex for the lingo gramamr
+;;
+;;  Loads a comlex database table from:
+;;
+;;    grammar/lkb/comlex
+;;
+;;  To build a new database:
+;;
+;;    (build-comlex "~malouf/comlex/comlex.raw")))
+;;
+
 
 (defparameter *comlex-db-file* 
-    (make-pathname :name "comlex" 
-		   :directory (pathname-directory (lkb-tmp-dir))))
+    (merge-pathnames #p"comlex" (this-directory)))
 
 ;;***************************************************************************
 ;; Utilities.
@@ -112,7 +121,7 @@
   (declare (ignore cache))
   (unless (comlex-db lexicon)
     (setf (comlex-db lexicon) 
-      (cdb:open-read "~/tmp/comlex")))
+      (cdb:open-read *comlex-db-file*)))
   (let ((record (cdb:read-record (comlex-db lexicon) orth))
 	(instances nil))
     (when record
@@ -172,11 +181,18 @@
     :lhs (make-path :typed-feature-list '(synsem local cont key))
     :rhs (make-u-value :types (list rel)))))
    
+
+
+
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(setf (extra-lexicons *lexicon*) (list (make-instance 'comlex-database)))
 
 (eval-when (:load-toplevel)
-  (unless (probe-file *comlex-db-file*)
-    (format t "~%Building comlex database.")
-    (build-comlex "~malouf/comlex/comlex.raw")))
+  (when (probe-file *comlex-db-file*)
+    (format t "~%Loading comlex database.")
+    (setf (extra-lexicons *lexicon*) 
+      (list (make-instance 'comlex-database)))))
+    
+    
+
