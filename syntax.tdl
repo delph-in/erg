@@ -756,10 +756,12 @@ head_comp_or_marker_phrase := head_valence_phrase & head_compositional &
 ; prenominal modifier  as in "twenty-one books".  So instead we use the PRED
 ; feature to distinguish prenominal from postnominal modifiers, and conspire to
 ; make all PRED - entries have an empty COMPS list.  
+; DPF 01-Feb-03 - Generalized CONJ value to cnil_or_numconj, to allow this
+; rule to build "and three" as in "two hundred and three".
 
 head_comp_phrase := head_comp_or_marker_phrase &
   [ SYNSEM [ LOCAL [ CAT.POSTHEAD #ph,
-		     CONJ cnil ],
+		     CONJ cnil_or_numconj ],
 	     LEX #lex ],
     HEAD-DTR [ SYNSEM.LOCAL.CAT [ POSTHEAD #ph,
                                   HC-LEX #lex ] ] ].
@@ -2288,6 +2290,8 @@ measure_np_symbol_phrase := basic_measure_np_phrase &
 ; prevent n-n-cmpnd participation.  Also make sign not phrasal.
 ; DPF 28-Nov-02 - HOOK comes only from C-CONT, since rule further specifies
 ; key integer relation to named_num_rel.
+; DPF 01-Feb-03 - Required daughter's SPR to be saturated, to block e.g.
+; "*hundred arrives".
 
 num_noun_phrase := unary_phrase &
  [ SYNSEM [ LOCAL [ CAT nbar_cat & 
@@ -2307,7 +2311,8 @@ num_noun_phrase := unary_phrase &
             NON-LOCAL #nonlocal,
             LEX #lex ],
    ARGS < [ SYNSEM [ LOCAL [ CAT [ HEAD intadj & [ PRD - ],
-                                   VAL.COMPS < > ],
+                                   VAL [ SPR < >,
+                                         COMPS < > ] ],
                              CONJ cnil,
                              CONT.HOOK.INDEX.PNG.PN 3pl,
                              KEYS [ KEY integer_rel,
@@ -2480,8 +2485,15 @@ free_rel_fin_phrase := free_rel_phrase &
 ; DPF 19-Oct-02 - Made SPR be LEX + to avoid getting complex measure-NPs
 ; as specifiers.
 ; DPF 28-Nov-02 - HOOK comes only from C-CONT
+; DPF 01-Feb-03 - Since we now require the COMPS list to be empty for all NPs,
+; and we also constrain the noptcomp rule to apply only to lexical heads (to
+; get the interaction with noun-noun compounds right), we have to have two
+; rules for partitive numbers, one for no-complement ones as in "three arrive"
+; and one for those with of-PP complement, as in "three of them arrive".  This
+; is in fact parallel to what we've decided to do for ordinary partitives, so
+; no real surprise.
 
-partitive_num_phrase := unary_phrase & phrasal &
+basic_partitive_num_phrase := unary_phrase & phrasal &
   [ SYNSEM [ LOCAL [ CAT [ HEAD partn &
                                 [ MOD < >,
                                   POSS - ],
@@ -2496,26 +2508,13 @@ partitive_num_phrase := unary_phrase & phrasal &
                                          NON-LOCAL [ QUE 0-dlist,
                                                      REL 0-dlist ],
                                          OPT +,
-                                         LEX + ] >,
-                                 COMPS < synsem &
-                                         [ LOCAL local_min &
-                                           [ CAT [ HEAD prep & 
-                                                     [ PRD -,
-                                                       TAM.TENSE no_tense ],
-                                                   VAL.COMPS *olist* ],
-                                             CONT.HOOK [ LTOP #nhand,
-                                                         INDEX #index ],
-                                             KEYS.KEY _of_rel &
-                                               [ ARG2 #arg ] ],
-                                           NON-LOCAL.SLASH 0-dlist,
-                                           OPT + ] > ] ],
+                                         LEX + ] > ] ],
                      CONT nom-obj,
                      CONJ cnil,
                      AGR #index,
 		     KEYS [ KEY #key & part_of_rel & 
                                 [ LBL #nhand,
-                                  ARG0 #index,
-                                  ARG1 #arg & non_expl-ind ],
+                                  ARG0 #index ],
                             ALTKEY #altkey & def_explicit_rel &
                                 [ ARG0 #index,
                                   RSTR #phand,
@@ -2542,6 +2541,26 @@ partitive_num_phrase := unary_phrase & phrasal &
 	     HCONS <! qeq & [ HARG #phand,
                               LARG #nhand ] !> ],
     ROBUST #robust ].
+
+partitive_num_nocomp_phrase := basic_partitive_num_phrase &
+  [ SYNSEM.LOCAL.CAT.VAL.COMPS < > ].
+
+partitive_num_ppof_phrase := basic_partitive_num_phrase &
+  [ SYNSEM.LOCAL [ CAT.VAL.COMPS < synsem &
+                                   [ LOCAL local_min &
+                                           [ CAT [ HEAD prep & 
+                                                     [ PRD -,
+                                                       TAM.TENSE no_tense ],
+                                                   VAL.COMPS *olist* ],
+                                             CONT.HOOK [ LTOP #nhand,
+                                                         INDEX #index ],
+                                             KEYS.KEY _of_rel &
+                                               [ ARG2 #arg ] ],
+                                           NON-LOCAL.SLASH 0-dlist,
+                                           OPT + ] >,
+		   KEYS.KEY [ LBL #nhand,
+                              ARG0 #index,
+                              ARG1 #arg & non_expl-ind ] ] ].
 
 ; DPF 11-Oct-02 - It seems that this rule is only used for robust parsing
 ; where a word like "covers" has to be analyzed as a possessive.  So let's
@@ -3409,7 +3428,9 @@ free_rel_inf_rule := binary_rule_left_to_right & free_rel_inf_phrase.
 
 free_rel_fin_rule := binary_rule_left_to_right & free_rel_fin_phrase.
 
-partitive_num_rule := partitive_num_phrase & rule.
+partitive_num_nocomp_rule := partitive_num_nocomp_phrase & rule.
+
+partitive_num_ppof_rule := partitive_num_ppof_phrase & rule.
 
 possessed_np_rule := possessed_np_phrase & rule.
 
