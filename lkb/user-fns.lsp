@@ -1,6 +1,13 @@
 ;;; LinGO big grammar specific functions
 
 
+(defun alphanumeric-or-extended-p (char)
+  (and (graphic-char-p char)
+       (not (member char '(#\space #\! #\" #\$ #\& #\' #\(
+                           #\) #\* #\+ #\, #\- #\. #\/ #\: #\;
+                           #\< #\= #\> #\? #\@ #\[ #\\ #\] #\^
+                           #\_ #\` #\{ #\| #\} #\~)))))
+
 (defun establish-linear-precedence (rule-fs)
    ;;;    A function which will order the features of a rule
    ;;;    to give (mother daughter1 ... daughtern)
@@ -123,6 +130,7 @@
     (vgering 100)
     (temp_np 300)
     (numadj_np 200)
+    (measure_np 200)
     (appos 200)
     (imper 300)
     (sailr 300)
