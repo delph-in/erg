@@ -2,6 +2,9 @@
 
 ;; A simple interface to comlex for the lingo gramamr
 
+(defparameter *comlex-db-file* 
+    (make-pathname :name "comlex" 
+		   :directory (pathname-directory (lkb-tmp-dir))))
 
 ;;***************************************************************************
 ;; Utilities.
@@ -98,10 +101,6 @@
 (defclass comlex-database (lex-database)
   ((comlex-db :initform nil :accessor comlex-db)))
 
-(defvar *comlex-db-file* 
-    (make-pathname :name "comlex" 
-		   :directory (pathname-directory (lkb-tmp-dir))))
-
 (defmethod clear-lex ((lexicon comlex-database) &optional no-delete)
   (declare (ignore no-delete))
   ;; Close temporary lexicon files
@@ -134,6 +133,10 @@
 				  :sense-id instname
 				  :id instname
 				  :unifs (make-unifs orth relname entry)))
+	  #+:mrs
+	  (let ((entry (get-psort-entry instname)))
+	    (when (lex-or-psort-full-fs entry)
+	      (mrs::extract-lexical-relations entry)))
 	  (push instname instances))))
     instances))
 
