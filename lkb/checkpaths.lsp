@@ -1,6 +1,12 @@
 #|
 Check paths from
-  (PARSE-SENTENCES "Macintosh HD:mylkb:checkpaths-sample.txt" "Macintosh HD:mylkb:checkpaths-out.txt")
+  (with-check-path-list-collection
+     (merge-pathnames (make-pathname :name "checkpaths" :type "lsp")
+        *current-grammar-load-file*)
+     (parse-sentences
+        (merge-pathnames (make-pathname :name "checkpaths-sample" :type "txt")
+           *current-grammar-load-file*)
+        nil))
 |#
 (DEFPARAMETER *CHECK-PATHS* (QUOTE
                              (((INFLECTED) . 125016)
