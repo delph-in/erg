@@ -1,5 +1,3 @@
-(in-package :cl-user)
-
 ;; A simple interface to comlex for the lingo gramamr
 ;;
 ;;  Loads a comlex database table from:

@@ -1,6 +1,5 @@
 ;;; LinGO big grammar specific functions
 
-(in-package :cl-user)
 
 (defun establish-linear-precedence (rule-fs)
    ;;;    A function which will order the features of a rule
@@ -91,68 +90,6 @@
       (when indef
         (setf indef (create-wffs indef))
         (make-tdfs :indef indef)))))
-#|
-(defparameter *infl-pos-record* nil)
-
-(defun find-infl-pos (unifs orth-string sense-id)
-  (declare (ignore orth-string))
-  (let ((types
-         (for unif in unifs
-              filter
-              (when (null (path-typed-feature-list (unification-lhs unif)))
-		(car (u-value-types (unification-rhs unif)))))))
-    (cond
-     ((null types) 
-      (format t 
-              "~%Warning ~A doesn't specify any types, no affix position found"
-              sense-id)
-      nil)
-     ((cdr types)
-      (format t 
-              "~%Warning ~A specifies multiple types, no affix position found"
-              sense-id))
-     (t
-      (let* ((type (car types))
-	     (res (assoc type *infl-pos-record*)))
-	(if res (cdr res)
-	  (progn
-	    (eval-possible-leaf-type *leaf-types* type)
-	    (let ((type-entry (get-type-entry type)))
-	      (cond (type-entry 
-		     (let ((pos
-			    (extract-infl-pos-from-fs 
-			     (tdfs-indef (type-tdfs type-entry)))))
-		       (unless (or pos 
-                                   (or (subtype-p type 'non_affix_bearing)
-                                       (subtype-p type 'infl_lex_entry)))
-			 (format t "~%No position identified for ~A" sense-id))
-		       (push (cons type pos) *infl-pos-record*)
-		       pos))
-		    (t
-		     (format t "~%Warning ~A specifies invalid type, no affix position found"
-			     sense-id)
-		     nil))))))))))
-
-
-(defun extract-infl-pos-from-fs (fs)  
-  (let ((current-path '(ARGS))
-         (coindexed-position 
-          (existing-dag-at-end-of fs '(--FINAL-ARG)))
-        (position 1))
-    (if coindexed-position
-        (loop (let* ((next-path 
-                      (append current-path '(FIRST)))
-                     (new-pos 
-                      (existing-dag-at-end-of 
-                       fs next-path)))
-                (unless new-pos
-                       (return nil))
-                (when (eq new-pos coindexed-position)
-                  (return position))
-                (incf position)
-                (setf current-path 
-                  (append current-path '(REST))))))))
-|#
 
 ;; Assign priorities to parser tasks
 (defun rule-priority (rule)
@@ -264,13 +201,13 @@
 
 
 (defun set-temporary-lexicon-filenames nil
-  (let ((prefix
-         (if (and (boundp '*grammar-version*) 
-                  (stringp (eval '*grammar-version*)))
-             ;; avoid warnings due to unbound variable on compilation
-             (remove-if-not #'alphanumericp 
-                            (eval '*grammar-version*))
-           "biglex")))
+  (let* ((version (or (find-symbol "*GRAMMAR-VERSION*" :common-lisp-user)
+                      (and (find-package :lkb)
+                           (find-symbol "*GRAMMAR-VERSION*" :lkb))))
+         (prefix
+          (if (and version (boundp version))
+            (remove-if-not #'alphanumericp (symbol-value version))
+            "biglex")))
     (setf *psorts-temp-file* 
       (make-pathname :name prefix 
                      :directory (pathname-directory (lkb-tmp-dir))))

@@ -1,4 +1,4 @@
-(in-package "COMMON-LISP-USER")
+(in-package :common-lisp-user)
 
 ;;;
 ;;; set grammar version for both LKB and PAGE; this should substitute for all

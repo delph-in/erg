@@ -71,8 +71,14 @@
    "The number of lexical rule applications which may be made
    before it is assumed that some rules are applying circularly")
 
-(defparameter *deleted-daughter-features* '(ARGS HEAD-DTR NON-HEAD-DTR LCONJ-DTR RCONJ-DTR DTR MOD-DTR NONMOD-DTR)
-   "features pointing to daughters deleted on building a constituent")
+(defparameter *deleted-daughter-features* 
+  '(ARGS HEAD-DTR NON-HEAD-DTR LCONJ-DTR RCONJ-DTR DTR MOD-DTR NONMOD-DTR)
+  "features pointing to daughters deleted on building a constituent")
+
+#+:packing
+(defparameter *packing-restrictor*
+  nil;'(CONT)
+  "restrictor used when parsing with ambiguity packing")
 
 ;;; Parse tree node labels
 
@@ -104,5 +110,11 @@
 ;;; (setf  *dont-show-lex-rules* t)
 ;;; this belongs in the user-prefs file, not here
 
-(defparameter *duplicate-lex-ids* '(AN will_aux_neg_1 would_aux_neg_1 do1_neg_1 hadnt_aux_1 hadnt_aux_subj_1 hasnt_aux_1 have_fin_aux_neg_1 be_c_is_neg_1  be_id_is_neg_1 be_th_cop_is_neg_1 might_aux_neg_1 must_aux_neg_1 need_aux_neg_1 ought_aux_neg_1 should_aux_neg_1 be_id_was_neg_1 be_th_cop_was_neg_1 be_c_was_neg_1 be_c_were_neg_1 be_id_were_neg_1 be_th_cop_were_neg_1 will_aux_neg_1 would_aux_neg_1)
+(defparameter *duplicate-lex-ids* 
+  '(AN will_aux_neg_1 would_aux_neg_1 do1_neg_1 hadnt_aux_1 hadnt_aux_subj_1
+    hasnt_aux_1 have_fin_aux_neg_1 be_c_is_neg_1  be_id_is_neg_1
+    be_th_cop_is_neg_1 might_aux_neg_1 must_aux_neg_1 need_aux_neg_1
+    ought_aux_neg_1 should_aux_neg_1 be_id_was_neg_1 be_th_cop_was_neg_1
+    be_c_was_neg_1 be_c_were_neg_1 be_id_were_neg_1 be_th_cop_were_neg_1
+    will_aux_neg_1 would_aux_neg_1)
   "temporary expedient to avoid generating dual forms")
