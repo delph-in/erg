@@ -68,6 +68,9 @@
 (setf *top-semantics-type* 
   (vsym "RELATION"))
 
+;;; the following are needed only for the detection of fragments
+;;; indicated in the LinGO gramar by the value of ROOT
+
 (setf *root-path* `(,(vsym "ROOT")))
 
 (setf *false-type* (vsym "-"))

@@ -53,7 +53,8 @@
 ;;; types are effectively spliced out
 
 (defun hide-in-type-hierarchy-p (type-name)
-   ;; starts with _, or ends with _[0-9][M]LE[0-9]
+  ;; starts with _, or ends with _[0-9][M]LE[0-9]
+  ;; or contains "GLBTYPE"
    (and (symbolp type-name)
       (or
          ;; graphs are pretty unreadable without glbtypes in there as well
@@ -90,7 +91,7 @@
       (when indef
         (setf indef (create-wffs indef))
         (make-tdfs :indef indef)))))
-
+#|
 (defparameter *infl-pos-record* nil)
 
 (defun find-infl-pos (unifs orth-string sense-id)
@@ -151,6 +152,7 @@
                 (incf position)
                 (setf current-path 
                   (append current-path '(REST))))))))
+|#
 
 ;; Assign priorities to parser tasks
 (defun rule-priority (rule)
@@ -283,8 +285,10 @@
 ;;; Function to run when batch checking the lexicon
 
 (defun lex-check-lingo (new-fs id)
+  #|
   (unless (extract-infl-pos-from-fs (tdfs-indef new-fs))
-    (format *lkb-background-stream* "~%No position identified for ~A" id))
+  (format *lkb-background-stream* "~%No position identified for ~A" id))
+  |#
   (when new-fs
     (let* ((inflbool 
            (existing-dag-at-end-of (tdfs-indef new-fs)

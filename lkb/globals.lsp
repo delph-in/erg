@@ -8,11 +8,7 @@
 
 ;;; Avoiding multiple inheritance on letypes
 
-(defparameter *templates* 
-'(lex_entry reg_lex_entry multi_lex_entry1 multi_lex_entry2
-two_space_lex_entry1 two_space_lex_entry2 two_space_lex_entry3
-three_space_lex_entry1 three_space_lex_entry2 
-three_space_lex_entry3 three_space_lex_entry4)
+(defparameter *templates* nil
    "types which are treated as templates to avoid excessive glbs")
 
 (defparameter *active-parsing-p* t)
@@ -75,7 +71,7 @@ three_space_lex_entry3 three_space_lex_entry4)
    "The number of lexical rule applications which may be made
    before it is assumed that some rules are applying circularly")
 
-(defparameter *deleted-daughter-features* '(ARGS HEAD-DTR NON-HEAD-DTR LCONJ-DTR RCONJ-DTR)
+(defparameter *deleted-daughter-features* '(ARGS HEAD-DTR NON-HEAD-DTR LCONJ-DTR RCONJ-DTR DTR MOD-DTR NONMOD-DTR)
    "features pointing to daughters deleted on building a constituent")
 
 ;;; Parse tree node labels
