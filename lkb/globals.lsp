@@ -285,3 +285,18 @@
 ; For LUI
 (defparameter *lsp-debug-p*
     nil)
+
+;;;
+;;; when loaded into an environment including [incr tsdb()] and the Redwoods
+;;; tools, enable selective unpacking against a Maximum Entropy model.
+;;;
+#+:tsdb
+(setf *unpacking-scoring-hook* #'tsdb::mem-score-configuration)
+
+;;;
+;;; for use in LOGON, set post-generation semantic equivalence check to filter
+;;; mode, i.e. prefer results that satisfy the test when available, but output
+;;; all complete generator results, in case none pass the equivalence test.
+;;;
+#+:logon
+(setf *bypass-equality-check* :filter)
