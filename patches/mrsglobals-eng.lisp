@@ -7,6 +7,9 @@
 ;;   Language: Allegro Common Lisp
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; $Log$
+;; Revision 1.4  1998/01/07 21:25:32  dan
+;; Further debugging of SLASH amalgamation, and Verbmobil extensions
+;;
 ;; Revision 1.3  1997/12/18 18:23:36  dan
 ;; Repairs to trees and MRS printing for tsdb machinery.
 ;;
@@ -79,8 +82,8 @@
 (setf main::*suppressed-VM-arg-roles* 
     '(disco::act disco::und disco::fig disco::gnd disco::ord disco::i-ord
       disco::preparg disco::thm disco::main disco::subord
-	 disco::id1 disco::id2 disco::params disco::nprep disco::varg
-	 disco::nomarg disco::expr disco::carg))
+      disco::id1 disco::id2 disco::params disco::nprep 
+      disco::nomarg disco::expr disco::carg disco::varg))
 
 (setf *do-not-convert-sort-list* '(DISCO::temp_prec_rel 
                                    DISCO::temp_over_rel))
@@ -224,7 +227,8 @@
     DISCO::named_rel DISCO::_vacation_rel DISCO::holiday_rel
     DISCO::ctime_rel DISCO::_hour_rel DISCO::_minute_rel DISCO::dim_rel
     DISCO::unspec_rel DISCO::_next_week_rel DISCO::_next_month_rel
-    DISCO::_next_year_rel DISCO::recip_pro_rel))
+    DISCO::_next_year_rel DISCO::recip_pro_rel DISCO::_tomorrow_rel
+    DISCO::_today_rel DISCO::_the_day_after_rel))
 
 (setf *vm-special-label-hack-list*
   '((DISCO::support_rel . 1)
@@ -271,9 +275,9 @@
 	(ostream dest-file :direction :output :if-exists :supersede)
       (do ((sent-num (read istream nil 'eof))
 	   (sent (read istream nil 'eof))
-	   (tree (read istream nil 'eof))
+	   (mrs (read istream nil 'eof))
 	   (sep (read-char istream nil 'eof))
-	   (mrs (read istream nil 'eof)))
+	   (tree (read istream nil 'eof)))
 	  ((eql sent-num 'eof) nil)
 	(format t "~%~A" sent)
 	(format ostream "~%~A~%" sent)
@@ -296,9 +300,9 @@
 	  (format ostream "~%~S" mrs))
 	(setf sent-num (read istream nil 'eof)
 	      sent (read istream nil 'eof)
-	      tree (read istream nil 'eof)
+	      mrs (read istream nil 'eof)
 	      sep (read-char istream nil 'eof)
-	      mrs (read istream nil 'eof)))))
+	      tree (read istream nil 'eof)))))
     (setf main::*raw-mrs-output-p* old-raw-mrs)))
 
 (defun extract-and-output (parse-list)

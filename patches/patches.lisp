@@ -39,4 +39,51 @@
 	     (combo-parser-syn-rules parser))
        (combo-parser-syn-rules parser)))))
 
+; in kh-tree.lisp
+; Fix tree drawing so it can be directed to a stream
+
+(in-package "TREES")
+
+(defun KH-Parse-Tree (nodelist &key (vspace 2) (hspace 2) (stream t))
+  (let ((*tree-node-id* -1)
+	(*tree-node-list* nil))
+    (let* ((pl   (Compute-Parse-List nodelist))
+	   (tree (Create-Tree pl :vspace vspace :hspace hspace)))
+      (setf *tree-node-list* (reverse *tree-node-list*))
+      (Tree-Draw-TTY tree *tree-node-list* stream))))
+
+;; In parse-tree.lisp
+
+(defun Fast-Tree-Draw (height layout stream)
+  (let ((cr (princ-to-string #\Newline))
+        (result ""))
+    (loop 
+     for i from 0 to height do
+     (let ((s (write-to-string (svref layout i) :escape nil)))
+       (setf result (concatenate 'string result s cr))))
+    (write result :escape nil :stream stream)))
+
+(defun Tree-Draw-Tty (tree tree-node-list &optional (stream t))
+  (let* ((height (Parse-Tree-Height tree))
+	 (width (Parse-Tree-Width tree))
+	 (layout (make-array (1+ height))))
+    (loop 
+     for i from 0 to height
+     do 
+     (setf 
+      (svref layout i)
+      (make-string (1+ width) :initial-element #\Space)))
+    (loop 
+     for n in (Parse-Tree-Nodes tree) 
+     do (Tree-Place-Node layout n tree-node-list))
+    (loop
+     for e in (Parse-Tree-Edges tree)
+     do (Draw-Stubs layout (first e) (second e) (third e) (fourth e)))
+    (loop for n in (Parse-Tree-Nodes tree) do (Connect-Stubs layout n))
+    (format stream "~%")
+    (Fast-Tree-Draw height layout stream)
+    (format stream "~%")
+    ))
+
 (in-package "TDL")
+
