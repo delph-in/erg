@@ -7,6 +7,9 @@
 ;;   Language: Allegro Common Lisp
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; $Log$
+;; Revision 1.7  1999/02/01 23:18:12  aac
+;; Removing unneeded references to VMargroles
+;;
 ;; Revision 1.6  1999/01/15 05:56:49  danf
 ;; Improvements for generation
 ;;
@@ -354,7 +357,7 @@
 
 ;;; features for extracting semantics from expanded lexical entries
 
-(setf *dummy-relations* `(,(vsym "NO_REL")))
+(setf *dummy-relations* `(,(vsym "NO_REL") ,(vsym "MESSAGE")))
 
 (setf *main-semantics-path* 
   `(,(vsym "SYNSEM") ,(vsym "LOCAL") ,(vsym "CONT") 
@@ -362,10 +365,6 @@
 
 (setf *construction-semantics-path*
   `(,(vsym "C-CONT") ,(vsym "LISZT") ,(vsym "LIST")))
-
-(setf *external-semantics-path*
-  `(,(vsym "SYNSEM") ,(vsym "LOCAL") ,(vsym "CONT")
-    ,(vsym "ECONT") ,(vsym "LISZT") ,(vsym "LIST")))
 
 (setf *message-semantics-path*
   `(,(vsym "SYNSEM") ,(vsym "LOCAL") ,(vsym "CONT") 
