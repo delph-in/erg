@@ -117,13 +117,13 @@
 
 ;; This is a USER-SPECIFIC PARAMETER (Options->Set options)
 ;; for example:
-(def-lkb-parameter *psql-lexicon-parameters* 
-    #+:psql
-    '((:db "erg") (:semi t))
-    #-:psql
-    nil
-  :user)
-;; optionally also: :host, :user, :port
+;;(def-lkb-parameter *psql-lexicon-parameters* 
+;;    #+:psql
+;;    '((:db "erg") (:semi t))
+;;    #-:psql
+;;    nil
+;;  :user)
+;; optionally also set :host :user :port
 
 ;;; Parse tree node labels
 
