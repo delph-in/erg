@@ -8,12 +8,7 @@
 
 ;;; Avoiding multiple inheritance on letypes
 
-(defparameter *templates* nil
-   "types which are treated as templates to avoid excessive glbs")
-
 (defparameter *active-parsing-p* t)
-
-(defparameter *hierarchy-only-p* nil)
 
 ;;; Strings
 

@@ -152,8 +152,6 @@
     (error "Attempt to add entry with invalid relation type ~A" supertype))
   (let ((entry (make-leaf-type :name rel 
 			       :parents (list supertype)
-			       :real-parents (list supertype)
-			       :template-parents nil
 			       :daughters nil
 			       :constraint-spec nil
 			       :default-spec nil
