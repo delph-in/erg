@@ -131,11 +131,13 @@ rel_word := nonque & non_affix_bearing &
 conj_word := word & non_affix_bearing.
 
 ; ERB (04-10-96) msg_word's have all the defaults EXCEPT nonmsg, nonslash,
-; and mcna. 
+; mcna, and topkey.
 msg_word := nonque & non_affix_bearing &
 	    nonrel &
 	    nonconj &
 	    hc-to-phr.
+
+norm_msg_word := msg_word & nonslash & mcna & topkey.
 
 ; hcons_amalg_word's have all the defaults EXCEPT non_affix_bearing,
 ; nonslash, nonrel, and nonque.
@@ -148,6 +150,12 @@ hcons_amalg_word := mcna &
 amalg_word := mcna & 
 	    nonconj &
 	    nonmsg &
+            non_affix_bearing &
+	    topkey &
+	    hc-to-phr.
+
+msg_amalg_word := mcna & 
+	    nonconj &
             non_affix_bearing &
 	    topkey &
 	    hc-to-phr.
@@ -411,7 +419,7 @@ s_cat := cat &
 
 n_or_v_cat := cat &
   [ HEAD n_or_v & strict_type,
-    VAL [ SPR < synsem >,
+    VAL [ SPR < synsem_min >,
 	  COMPS *olist* ] ].
 
 vp_cat := n_or_v_cat &
@@ -531,10 +539,12 @@ ditrans_lt := arg1_subj_lt &
 				    ARG3 #objind ] ] ].
 
 tritrans_lt := ditrans_lt &
-  [ LOCAL [ CAT.VAL.COMPS < *top*, *top*, [ LOCAL local &
-						  [ CONT.INDEX #obj3ind ] ],
+  [ LOCAL [ CAT.VAL.COMPS < *top*, *top*, 
+			    [ LOCAL local &
+				 [ CONT [ KEY event_rel,
+					  MESSAGE <! [ HANDEL #mhand ] !> ] ] ],
 				... >,
-	    CONT.KEY arg1234_rel & [ ARG4 #obj3ind ] ] ].
+	    CONT.KEY arg1234_rel & [ ARG4 #mhand ] ] ].
 
 prep_intrans_lt := arg1_subj_lt &
   [ LOCAL [ CAT.VAL.COMPS 
@@ -649,7 +659,7 @@ equi_prd_lt := linking_type &
 			      LABEL #label,
 			      EVENT #event & event ] !>,
 		   KEY.ARG4 #event,
-		   ALTKEY #altkey ] ] ].
+		   ALTKEY #altkey & support_gen_rel ] ] ].
 
 ; ERB (14-12-97) Subj_equi verbs now require that their complement have
 ; a pro_ss subject.  This might be redundant if some other supertye of
@@ -682,9 +692,7 @@ subj_equi_prd_lt := equi_prd_lt & s_equi_lt &
 				[ CAT.VAL.SUBJ < pro_ss &
 						 [ LOCAL local &
 						       [ CONT.INDEX #index ]]>,
-				  CONT.KEY.HANDEL #chand,
-				  THROLE arg3] ] > ],
-	    CONT.ALTKEY.HANDEL #chand ] ].
+				  THROLE arg3] ] > ] ] ].
 
 ; ERB (14-12-97) comp's subj is a pro_ss.  This is probably redundant since
 ; the to_c_prop will say that its subject is a pro_ss.
@@ -765,8 +773,7 @@ anom_equi_prd_lt := equi_prd_lt & s_equi_lt &
 						   [ LOCAL local &
 						      [ CONT.INDEX #index ] ] >,
 				    CONT.TOP #chand,
-                                    THROLE arg3 ] ] > ],
-	    CONT.ALTKEY.ARG4 #chand ] ].
+                                    THROLE arg3 ] ] > ] ] ].
 
 ; 'turn out to be red'
 anom_equi_particle_lt := s_equi_lt &
@@ -804,7 +811,7 @@ ssr_prdp_expr_lt := basic_ssr_expr_lt &
 	    CONT [ INDEX #ind,
 		   KEY #key & [ ARG2 #arg2 & non_expl-ind ],
 		   LISZT <! #key,
-			    support_rel &
+			    support_gen_rel &
 			    [ HANDEL #chand,
 			      LABEL #label,
 			      EVENT #ind ] !> ] ] ].
@@ -973,6 +980,10 @@ three_arg_trans_subst := unsat_three_arg_subst & three_arg & trans_subst.
 three_arg_trans_raising_subst := unsat_three_arg_subst & three_arg_obj_raising &
 				 trans_subst.
 
+three_arg_nontrans_raising_subst := unsat_three_arg_subst & 
+				    three_arg_obj_raising &
+  [ LOCAL.CAT.VAL.COMPS < @nomp_acc(), ... > ].
+
 prep_trans_subst := three_arg_trans_subst & 
   [ LOCAL.CAT.VAL.COMPS < @nomp_acc(), @pp() > ].
   
@@ -1032,7 +1043,9 @@ prp_intrans_subst := inf_or_prp_intrans_subst & two_arg &
   [ LOCAL.CAT.VAL.COMPS < [ LOCAL local &
 				  [ CAT.HEAD.VFORM prp ] ] > ].
 
-bse_trans_raising_subst := three_arg_trans_raising_subst & 
+; 'make, let, watch' don't passivize.  Some of these have an apparently
+; corresponding passive, but with an ordinary 'to-VP' complement, not vform bse.
+bse_nontrans_raising_subst := three_arg_nontrans_raising_subst & 
   [ LOCAL.CAT.VAL.COMPS < *top*, @vp($vform=bse) > ].
 
 ; want (doesn't passivize)
@@ -1127,7 +1140,7 @@ sor_inf_subst := inf_trans_raising_subst &
 					CONT.MESSAGE <! !> ],
 				OPT - ] > ].
 
-sor_bse_subst := bse_trans_raising_subst &
+sor_bse_subst := bse_nontrans_raising_subst &
   [ LOCAL.CAT.VAL.COMPS < [ LOCAL.CONT #subj,
 			    OPT - ], 
 			  [ LOCAL local &
@@ -1391,8 +1404,6 @@ obj_equi_prd_verb := verb_synsem & prd_trans_subst &
 obj_equi_non_trans_prd_verb := verb_synsem & prd_non_trans_subst & 
 			       obj_equi_prd_lt.
 
-anom_equi_prd_verb := verb_synsem & prd_trans_subst & anom_equi_prd_lt.
-
 ; ERB (07-10-96) I am working with the verb 'know' as a prototype for a verb
 ; that selects by the semantic type (for now expressed as a feature) of its
 ; sentential complement rather than by the value of CMP or some such hack.  In
@@ -1436,7 +1447,7 @@ cp_intrans_verb := fin_cp_prop+ques_verb & cp_intrans_subst & two_arg &
   [ LOCAL.CAT.VAL.COMPS < [ LOCAL.CAT.MC - ] > ].
 
 cp_prop_intrans_verb := cp_intrans_verb &
-  [ LOCAL.CAT.VAL.COMPS < [ LOCAL.CONT.MESSAGE <! propositional_rel !> ] > ].
+  [ LOCAL.CAT.VAL.COMPS < [ LOCAL.CONT.MESSAGE <! prpstn_rel !> ] > ].
 
 cp_ques_intrans_verb := cp_intrans_verb &
   [ LOCAL.CAT.VAL.COMPS < [ LOCAL.CONT.MESSAGE <! int_rel !> ] > ].
@@ -1445,7 +1456,7 @@ cp_ques_intrans_verb := cp_intrans_verb &
 cp_prop_raise_key_verb := fin_cp_prop+ques_verb & cp_intrans_subst & two_arg &
 			  alt_arg14_lt &
   [ LOCAL [ CAT.VAL.COMPS < [ LOCAL.CONT [ KEY #key,
-					   MESSAGE <! propositional_rel !> ] ] >,
+					   MESSAGE <! prpstn_rel !> ] ] >,
 	    CONT [ KEY #key & mod_role_rel,
 		   ALTKEY #altkey,
 		   LISZT.LIST < relation, #altkey, ... > ] ] ].
@@ -1463,7 +1474,7 @@ np_np_cp_verb := fin_cp_prop+ques_verb & np_np_cp_subst & tritrans_lt.
 ;; explain to Kim that S
 pp_cp_verb := fin_cp_prop+ques_verb & pp_cp_subst & pp_cp_lt &
   [ LOCAL.CAT.VAL.COMPS < synsem, 
-			  [ LOCAL.CONT.MESSAGE <! propositional_rel !> ] > ].
+			  [ LOCAL.CONT.MESSAGE <! prpstn_rel !> ] > ].
 
 ;; ask Kim whether S
 np_trans_cp_ques_verb := fin_cp_prop+ques_verb & cp_trans_subst & cp_trans_lt &
@@ -1474,7 +1485,7 @@ np_trans_cp_ques_verb := fin_cp_prop+ques_verb & cp_trans_subst & cp_trans_lt &
 np_trans_cp_prop_verb := fin_cp_prop+ques_verb & cp_trans_subst & cp_trans_lt &
 
   [ LOCAL.CAT.VAL.COMPS < synsem, 
-			  [ LOCAL.CONT.MESSAGE <! propositional_rel !> ] > ].
+			  [ LOCAL.CONT.MESSAGE <! prpstn_rel !> ] > ].
 
 subj_equi_verb := cp_prop+ques_verb & inf_intrans_subst & two_arg & subj_equi_inf_lt.
 
@@ -1540,12 +1551,12 @@ adv_verb := verb_synsem & adv_subst & arg1_subj_lt & two_arg &
 ; and a list of relations.  A pointer to the main or head relation in the list
 ; is kept in the KEY attribute.
 
-main_verb_sans_key := mcna & nonconj & nonmsg & affix_bearing &
+main_verb_sans_key := mcna & nonconj & nonmsg &
   [ SYNSEM.LOCAL [ CAT.HEAD verb & [ AUX -*,
 				     INV - ],
 		   CONT.LISZT.LIST < event_rel, ... > ] ].
 
-main_verb := main_verb_sans_key & topkey &
+main_verb := main_verb_sans_key & topkey & affix_bearing &
   [ SYNSEM.LOCAL.CONT [ LISZT.LIST < #key, ... >,
 			KEY #key ] ].
 
@@ -2157,7 +2168,7 @@ np_sing_word := np_word &
 			  LISZT <! basic_nom_rel &
 				   [ HANDEL #nhand,
 				     INST #ind ],
-				   def_rel &
+				   def_np_rel &
 				   [ HANDEL #dhand,
 				     BV #ind,
 				     RESTR #nhand ] !>,
@@ -2239,7 +2250,7 @@ poss_pro_np := norm_no_affix_word &
 				     [ HANDEL #phand,
 				       INST #eind &
 					      [ PRONTYPE std_pron ] ],
-				     def_rel & #key & 
+				     def_np_rel & #key & 
 				     [ HANDEL #hand,
 				       BV #index,
 				       RESTR #phand ],
@@ -2995,7 +3006,12 @@ lex_pp_one_arg_synsem := lex_pp_synsem & one_arg.
 
 ; Moved [ OPT - ] specification to subtypes, to allow "the day before" where
 ; the complement is missing.
-basic_prep_word := amalg_word &
+; DPF (9-Mar-99) Made basic_prep_word not inherit from nonmsg, since it has
+; its MESSAGE identified with that of its modifiee (via the head_modifier rule)
+; and that modifiee will sometimes have a non-empty message, as in
+; "Is kim happy in Berlin"
+
+basic_prep_word := msg_amalg_word &
   [ SYNSEM trans_prep_synsem &
 	 [ LOCAL.CAT.VAL.COMPS < @nomp_acc() > ] ].
 
@@ -3009,7 +3025,7 @@ reg_prep_word := prep_word &
 
 #|
 ; Used only for "from", presumably as in "from under the table" - ignore for now.
-prep_n_or_p_word := amalg_word &
+prep_n_or_p_word := msg_amalg_word &
   [ SYNSEM trans_prep_synsem &
 	 [ LOCAL [ CAT.VAL.COMPS < synsem &
 				   [ LOCAL local &
@@ -3023,19 +3039,19 @@ prep_n_or_p_word := amalg_word &
 |#
 
 ; 'from now on', maybe 'from two to four'
-ditrans_prep_word := norm_no_affix_word &
+ditrans_prep_word := norm_msg_word &
   [ SYNSEM ditrans_prep_synsem &
 	 [ LOCAL [ CAT.VAL.COMPS < @nomp_acc() & [ OPT - ], 
 				   synsem & [ LOCAL local &
 						    [ CAT [ HEAD.PRD -,
 							    MC na ] ] ] > ] ] ].
 
-prep_cp_word := amalg_word &
+prep_cp_word := msg_amalg_word &
   [ SYNSEM trans_prep_synsem &
       [ LOCAL [ CAT.VAL.COMPS < @cp($vform=fin) &
 				[ LOCAL [ CAT.HEAD.INV -,
 					  CONT [ TOP #chand,
-						 MESSAGE <! propositional_rel &
+						 MESSAGE <! prpstn_rel &
 							    [ HANDEL #mhand,
 							      SOA #chand ] !> ]],
 				  OPT - ] >,
@@ -3086,7 +3102,7 @@ prep_nomod_of_word := prep_nomod_word &
 
 ; Lexical PPs
 
-pp_decomp_word :=  norm_no_affix_word &
+pp_decomp_word := norm_msg_word &
   [ SYNSEM lex_pp_synsem &
 	   [ LOCAL.CONT [ TOP #top,
 			  INDEX #event,
@@ -3117,7 +3133,7 @@ pp_word := norm_no_affix_word &
 			  H-STORE <! !> ] ] ].
 
 ; 'tomorrow'
-pp_or_nom_word := norm_no_affix_word &
+pp_or_nom_word := norm_msg_word &
   [ SYNSEM lex_pp_nospec_synsem ].
 
 pp_nomod_word := norm_no_affix_word &
@@ -3125,7 +3141,7 @@ pp_nomod_word := norm_no_affix_word &
 
 ; Prepositions with lexically idiosyncratic complements:
 
-prep_idiom_word := amalg_word &
+prep_idiom_word := msg_amalg_word &
   [ SYNSEM trans_prep_synsem &
 	   [ LOCAL [ CAT.VAL.COMPS < [ OPT - ], ... > ] ] ].
 
@@ -3141,7 +3157,7 @@ prep_idiom_nomod_word := amalg_word &
 ;    'at five oclock'
 ;    'at fifteen to six'
 
-at_prep_word := amalg_word &
+at_prep_word := msg_amalg_word &
   [ SYNSEM trans_prep_synsem &
 	 [ LOCAL [ CAT.VAL.COMPS
 		       < @nomp_acc() & 
@@ -3151,7 +3167,7 @@ at_prep_word := amalg_word &
 ; Prepositions like "before" that take a prep_noun like "now, then".
 ;   'before now', 'since then'
 
-before_prep_word := norm_no_affix_word &
+before_prep_word := norm_msg_word &
   [ SYNSEM trans_prep_synsem &
 	 [ LOCAL [ CAT.VAL.COMPS 
 		 < [ LOCAL local &
@@ -3171,7 +3187,7 @@ before_prep_word := norm_no_affix_word &
 ;; distinction doesn't seem to work well here, but it's the only case, so perhaps
 ;; the analysis of "ten after three" should be reconsidered.
 
-hour_prep_word := norm_no_affix_word &
+hour_prep_word := norm_msg_word &
   [ SYNSEM nomod_onearg_synsem &
 	 [ LOCAL [ CAT [ HEAD noun* &
 			      [ POSS - ],
@@ -3398,7 +3414,7 @@ rel_adverb_word := rel_word &
 		      VAL.COMPS < > ],
 		CONT [ KEY #key,
 		       LISZT <! #key & [ ARG3 #objind ],
-			        def_rel & [ HANDEL #hand,
+			        def_np_rel & [ HANDEL #hand,
 					    BV #objind,
 					    RESTR #restr ],
 			        nom_rel & [ HANDEL #restr,
@@ -3636,7 +3652,7 @@ poss_clitic := mcna & nonconj & nonmsg & non_affix_bearing &
 			   COMPS < > ] ],
 	       CONT [ TOP #hand,
 		      INDEX #index,
-		      LISZT <! #key & def_rel & [ HANDEL #hand,
+		      LISZT <! #key & def_np_rel & [ HANDEL #hand,
 						  BV #index,
 						  RESTR #rhand ],
 			       #ckey & poss_rel & [ HANDEL #rhand,
@@ -3736,7 +3752,7 @@ subconj_synsem := nonprd_synsem & basic_one_arg & basic_nonzero_arg_synsem &
 					 CONT [ TOP #arg2,
 						KEY #ckey, 
 						INDEX event,
-					       MESSAGE <! propositional_rel &
+					       MESSAGE <! prpstn_rel &
 							  [ HANDEL #phand,
 							    SOA #arg2 ] !> ] ],
 				 NON-LOCAL [ SLASH 0-dlist,
@@ -4023,6 +4039,11 @@ for_compl_word := sor_compl_word &
   [ SYNSEM.LOCAL [ CAT.HEAD [ VFORM inf,
 			      AUX - ],
 		   CONT.MESSAGE <! hypo_rel !> ] ].
+
+like_compl_word := sor_compl_word & 
+  [ SYNSEM.LOCAL [ CAT.HEAD [ VFORM fin,
+			      AUX - ],
+		   CONT.MESSAGE <! _like_c_rel !> ] ].
 
 ; ERB (13-01-98) to_compl_word says SUBJ < unexpressed >, but I don't
 ; how that can be, unless the analysis of raising has changed drastically.
@@ -4499,7 +4520,7 @@ hour_word := hc_word_no_affix &
 				    AM-PM #ampm,
 				    LABEL #label,
 				    DIM #darg ],
-				  def_rel &
+				  def_np_rel &
 				  [ HANDEL #dethand,
 				    BV #index,
 				    RESTR #reshand ] !>,
@@ -4542,7 +4563,7 @@ mealtime_word := que_word & nonque &
 			 LISZT <! hour_rel & #key &
 				  [ HANDEL #nhand,
 				    INST #index ],
-				  def_rel &
+				  def_np_rel &
 				  [ HANDEL #hand,
 				    BV #index,
 				    RESTR #nhand ] !>,
@@ -4590,7 +4611,7 @@ month_year_synsem := noun_synsem & nomod_one_arg_with_quant &
 			      [ HANDEL #nhand,
 				INST #ind,
 			        YEAR-IND #year ],
-		   ALTKEY #altkey & def_rel &
+		   ALTKEY #altkey & def_np_rel &
 			     [ BV #ind,
 			       RESTR #nhand ],
 		   LISZT <! #key, #altkey !> ] ],
@@ -4664,7 +4685,7 @@ day_of_week_word := norm_no_affix_word &
 				       [ PNG png & [ PN 3sg*,
 						     GEN neut* ] ] ],
 			    ALTKEY #altkey &
-				   def_rel &
+				   def_np_rel &
 				     [ BV #ind,
 				       RESTR #nhand ],
 			    LISZT <! #key, #altkey !> ] ] ] ].
@@ -4719,7 +4740,7 @@ def_day_part_word := norm_no_affix_word &
 					  [ CAT [ HEAD det,
 						  VAL [ SUBJ < >,
 							COMPS *olist* ] ],
-					    CONT [ KEY def_rel &
+					    CONT [ KEY def_np_rel &
 						       [ BV #inst,
 							 RESTR #hand ],
 						   LISZT <! relation !> ] ],
@@ -4748,7 +4769,7 @@ next_last_temp_word := norm_no_affix_word &
 				[ INST #inst ],
 			    ALTKEY #altkey,
 			    LISZT <! #key,
-				     def_rel &
+				     def_np_rel &
 				     [ HANDEL #hand,
 				       BV #inst,
 				       RESTR #nhand ],

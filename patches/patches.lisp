@@ -182,7 +182,6 @@
     (case type
           (disco::event "e")
           (disco::event_or_index "e")
-          (disco::non_expl_e_or_i "e")
           (disco::eventtime "t")
           (disco::handle "h")
           (disco::hole "h")
