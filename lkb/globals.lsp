@@ -8,6 +8,8 @@
 
 ;;; Avoiding multiple inheritance on letypes
 
+(defparameter *active-parsing-p* t)
+
 ;;; Strings
 
 (defparameter *toptype* '*top*)
@@ -97,7 +99,11 @@
 ;;; `:host', `:user', `:password', `:db', and `:table' (and maybe `:encoding',
 ;;; one day).
 ;;;
-(defparameter *psql-lexicon-parameters* nil)
+
+(defparameter *psql-lexicon-parameters* '((:db "lingo") 
+                                          (:user "danf")
+                                          (:host "localhost")
+                                          (:table "erg2")))
 
 ;;; Parse tree node labels
 
@@ -175,5 +181,5 @@
                                   nadj_rr_nt nadj_rr_t hadj_i_uns))
 
 (defparameter *chart-dependencies*
-  '((SYNSEM LKEYS --+COMPKEY) (SYNSEM LOCAL KEYS KEY)
-    (SYNSEM LKEYS --+OCOMPKEY) (SYNSEM LOCAL KEYS KEY)))
+  '((SYNSEM LKEYS --+COMPKEY) (SYNSEM LOCAL CAT HEAD KEYS KEY)
+    (SYNSEM LKEYS --+OCOMPKEY) (SYNSEM LOCAL CAT HEAD KEYS KEY)))
