@@ -1,7 +1,14 @@
+(in-package "MRS")
+
+(defun vsym (str) 
+  ;;; allow mrsglobals file to be system independent
+  (intern (string-upcase str) "DISCO"))
+
 
 (load (dir-and-name tdl::*patches-dir* "mrsglobals-eng"))
+(load (dir-and-name tdl::*patches-dir* "mrsfns"))
 
-(excl:compile-file-if-needed (dir-and-name *patches-dir* "time-convert"))
+; (excl:compile-file-if-needed (dir-and-name *patches-dir* "time-convert"))
 (load (dir-and-name tdl::*patches-dir* "time-convert"))
 
 (in-package "MAIN")
@@ -15,6 +22,16 @@
   (when (and (boundp '*mrs-output-p*) *mrs-output-p*)
     (funcall (symbol-function (read-from-string "mrs::extract-and-output"))
              (output-stream from))))
+
+(defparameter proto-parser-fw
+   '((*channel* *scanner* :stop-bw)
+     (*scanner* *morphology* :stop-bw)
+     ((*morphology* :parse) *lexicon* *scanner*)
+     (*lexicon* *parser* *morphology*)
+     (*parser* *grounding* :stop-bw)
+     (*grounding* :stop-fw *channel*)))
+
+
 
 (in-package "PARSING")
 ; Allow lexical rules to apply to multi-word lexemes, e.g. to get
@@ -104,11 +121,18 @@
 
 ; Add munging of MRS to conform to VIT constraints
 
+; DPF 31-May-98: TEMPORARY PATCH:
+; For the moment, call the munging twice, since on the first pass, the munger 
+; overlooks the second occurrence of the same quantifier, for some reason.
+
 (defun mrs-to-vit-convert (mrs-psoa &optional (standalone t))
   (if (eq *mrs-for-language* 'english)
      (let ((mrsstruct
 	    (if (boundp '*ordered-mrs-rule-list*)
-		(first (munge-mrs-struct mrs-psoa *ordered-mrs-rule-list*))
+		(first (munge-mrs-struct 
+			(first
+			 (munge-mrs-struct mrs-psoa *ordered-mrs-rule-list*))
+			*ordered-mrs-rule-list*))
 	      mrs-psoa)))
        (multiple-value-bind 
           (vit binding-sets)
@@ -140,6 +164,64 @@
 	(write-vit-pretty t vit)
 	(format t "~%"))
       vit)))
+
+;; In mrs-to-vit.lisp
+;; Modify convert-mrs-rel-to-vit to allow for special roles like DIM which are
+;; treated Parsons-style with a shared label, but which do not include the
+;; instance variable of the predicate they come from.  Might also be used for
+;; stat_rel if we decide to include EVENT role in predicative PPs, APs, etc.
+
+(defun convert-mrs-rel-to-vit (rel vit groups labels)
+  ;;; returns a list, to allow for splitting of relations into multiple p-terms
+  ;;; e.g. for verbs
+  (let* ((label (convert-label-to-vit (rel-handel rel) 
+                                      groups 
+                                      labels 
+                                      (rel-label rel)))
+         (args (collect-args-and-values-from-rel rel))
+         (pred (make-p-term :predicate 
+               (get-vit-predicate-name (rel-sort rel))
+               :args 
+               (cons label
+                     (loop for val in (second args)
+                          collect
+                           (convert-mrs-val-to-vit val labels)))))
+         (inst (get-vit-instance-from-rel pred))
+         (semantics 
+          (cons pred
+                (loop for arg in (first args)
+                                 ;; arg is (argN . value)
+                    collect
+                      (make-p-term :predicate
+                                   (first arg)
+                                   :args (if (member (first arg) 
+						     *no-inst-arg-roles*)
+					     (list label
+                                               (convert-mrs-val-to-vit 
+                                                (rest arg)
+                                                labels))
+					   (list label
+						 inst
+						 (convert-mrs-val-to-vit 
+						  (rest arg)
+						  labels))))))))
+    (convert-mrs-var-extra (second args) vit inst groups labels)
+    (when (rel-extra rel)
+      (convert-mrs-rel-extra (rel-extra rel) vit inst label groups labels))
+    (when *relation-type-check*
+      (convert-relation-type-info-to-vit rel vit inst label))
+    semantics))
+
+;; In mrsoutput.lisp
+;; Changed create-type to convert string values to symbols, since VIT checker 
+;; does not like string value for attribute CONST-VALUE in numerals etc.
+
+(defun create-type (type)
+  (if (and (consp type) (eq (first type) :atom))
+      (if (stringp (second type))
+	  (read-from-string (second type))
+	(second type))
+    type))
 
 #|
 (in-package "LEXICON")

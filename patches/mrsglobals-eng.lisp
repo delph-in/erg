@@ -7,6 +7,9 @@
 ;;   Language: Allegro Common Lisp
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; $Log$
+;; Revision 1.7  1998/05/01 07:47:21  dan
+;; Grand release with all parses for test suite
+;;
 ;; Revision 1.6  1998/03/12 22:12:29  dan
 ;; More debugging of lexical threading, and further clean-up of well-formedness for types.
 ;;
@@ -37,353 +40,237 @@
 (setf *MRS-SCOPING* nil)
 
 (setf *initial-semantics-path* 
-  '(DISCO::SYNSEM DISCO::LOCAL DISCO::CONT))
+  `(,(vsym "SYNSEM") ,(vsym "LOCAL") ,(vsym "CONT")))
 
 ;;; DPF - Added more value-feats
 
-(setf *value-feats* '( DISCO::MONTH DISCO::DAY DISCO::HOUR DISCO::AMPM
-		       DISCO::MINUTE DISCO::ORD DISCO::I-ORD DISCO::CONST_VALUE
-		       DISCO::NAMED DISCO::PRED DISCO::DEMONTYPE 
-		       DISCO::EXCL))
+(setf *value-feats* `( ,(vsym "MONTH") ,(vsym "DAY") ,(vsym "HOUR") 
+		       ,(vsym "MINUTE") ,(vsym "YEAR") ,(vsym "SEASON") 
+                       ,(vsym "ORD") ,(vsym "I-ORD") ,(vsym "CONST_VALUE") 
+                       ,(vsym "NAMED") ,(vsym "EXCL")))
 
 (setf *feat-priority-list*  
-  '( DISCO::TOP DISCO::HANDEL DISCO::INDEX DISCO::EVENT DISCO::INST DISCO::ACT
-     DISCO::BV DISCO::RESTR DISCO::SOA DISCO::SCOPE DISCO::QUANT DISCO::XARG 
-     DISCO::CONST_VALUE))
+  `( ,(vsym "TOP") ,(vsym "HANDEL") ,(vsym "INDEX") ,(vsym "EVENT") 
+     ,(vsym "INST") ,(vsym "ACT") ,(vsym "BV") ,(vsym "RESTR") 
+     ,(vsym "SOA") ,(vsym "SCOPE") ,(vsym "QUANT") ,(vsym "XARG") 
+     ,(vsym "CONST_VALUE")))
 
 (setf *psoa-top-h-path* 
-  '(DISCO::TOP-H))
+  `(,(vsym "TOP-H")))
 
 (setf *psoa-handel-path* 
-  '(DISCO::TOP))
+  `(,(vsym "TOP")))
 
 (setf *rel-handel-path* 
-  '(DISCO::HANDEL))
+  `(,(vsym "HANDEL")))
 
 (setf *psoa-event-path* 
-  '(DISCO::INDEX))
+  `(,(vsym "INDEX")))
 
 (setf *psoa-liszt-path* 
-    '(DISCO::RLISZT DISCO::LIST))
+    `(,(vsym "RLISZT") ,(vsym "LIST")))
 
 (setf *psoa-rh-cons-path*
-    '(DISCO::RH-CONS DISCO::LIST))
+    `(,(vsym "RH-CONS") ,(vsym "LIST")))
 
 (setf *psoa-h-cons-path*
-    '(DISCO::RH-CONS DISCO::LIST))
+    `(,(vsym "H-CONS") ,(vsym "LIST")))
 
 (setf *psoa-constr-path* 
-  '(DISCO::SC-ARG))
+  `(,(vsym "SC-ARG")))
 
 (setf *liszt-first-path* 
-  '(DISCO::FIRST))
+  `(,(vsym "FIRST")))
 
 (setf *liszt-rest-path* 
-  '(DISCO::REST))
+  `(,(vsym "REST")))
 
 ;;; WK: I copy the *VM-arg-roles ... parameters from main-package into MRS
 ;; they appear to work without PAGE then
 (setf main::*VM-arg-roles-only-p* t)
-(setf main::*VM-arg-roles* '(disco::arg1 disco::arg2 disco::arg3))
+(setf main::*VM-arg-roles* `(,(vsym "arg1") ,(vsym "arg2") ,(vsym "arg3")))
 (setf main::*suppressed-VM-arg-roles* 
-    '(disco::act disco::und disco::fig disco::gnd disco::ord disco::i-ord
-      disco::preparg disco::thm 
-      disco::id1 disco::id2 disco::params disco::nprep 
-      disco::nomarg disco::expr disco::carg disco::varg))
+    `(,(vsym "act") ,(vsym "und") ,(vsym "fig") ,(vsym "gnd") 
+      ,(vsym "i-ord") ,(vsym "preparg") 
+      ,(vsym "thm") ,(vsym "id1") 
+      ,(vsym "id2") ,(vsym "params") ,(vsym "nprep") 
+      ,(vsym "nomarg") ,(vsym "expr") ,(vsym "carg") ,(vsym "varg")))
 
 (setf *do-not-convert-sort-list* nil)
+                                  
+(setf *relation-extra-feats* `(,(vsym "PNG") ,(vsym "PN") 
+                               ,(vsym "VITTENSE") ,(vsym "VITMOOD")
+                               ,(vsym "VIT")
+			       ,(vsym "PRONTYPE")
+			       ,(vsym "SPTYPE")
+                               ,(vsym "VREF") ,(vsym "VTYPE") 
+                               ,(vsym "FUN")))
 
-(setf *relation-extra-feats* '(DISCO::PNG
-			       DISCO::PN
-                               DISCO::VITTENSE
-                               DISCO::VITMOOD
-                               DISCO::VIT
-			       DISCO::PRONTYPE
-			       DISCO::SPTYPE
-                               DISCO::VREF DISCO::VTYPE 
-                               DISCO::FUN))
+(setf *complex-extra-feats* `(,(vsym "VIT") ,(vsym "PNG")))
 
-(setf *complex-extra-feats* '(DISCO::VIT DISCO::PNG))
-
-(setf *vit-sort-feature* 'DISCO::SORT)
+(setf *vit-sort-feature* (vsym "SORT"))
 
 (setf *index-feature-transform-table*
-  '((DISCO::SORT vit-sorts
-                 (DISCO::*SORT*)
-                 (DISCO::*TOP*)
+  `((,(vsym "SORT") vit-sorts
+                 (,(vsym "*SORT*"))
+                 (,(vsym "*TOP*"))
                  (t vit_sort))
-    (DISCO::PN vit-syntax 
-     (DISCO::2PER 
+    (,(vsym "PN") vit-syntax 
+     (,(vsym "2PER") 
       (vit_person 2))
-     (DISCO::3SG 
+     (,(vsym "3SG") 
       (vit_number sg)
       (vit_person 3))
-     (DISCO::2SG
+     (,(vsym "2SG")
       (vit_number sg)
       (vit_person 2))
-     (DISCO::1SG
+     (,(vsym "1SG")
       (vit_number sg)
       (vit_person 1))
-     (DISCO::3PL
+     (,(vsym "3PL")
       (vit_number pl)
       (vit_person 3))
-     (DISCO::2PL
+     (,(vsym "2PL")
       (vit_number pl)
       (vit_person 2))
-     (DISCO::1PL
+     (,(vsym "1PL")
       (vit_number pl)
       (vit_person 1))
-     (DISCO::3SG*
+     (,(vsym "3SG*")
       (vit_number sg)
       (vit_person 3))
-     (DISCO::2SG*
+     (,(vsym "2SG*")
       (vit_number sg)
       (vit_person 2))
-     (DISCO::1SG*
+     (,(vsym "1SG*")
       (vit_number sg)
       (vit_person 1))
-     (DISCO::3PL*
+     (,(vsym "3PL*")
       (vit_number pl)
       (vit_person 3))
-     (DISCO::2PL*
+     (,(vsym "2PL*")
       (vit_number pl)
       (vit_person 2))
-     (DISCO::1PL*
+     (,(vsym "1PL*")
       (vit_number pl)
       (vit_person 1))
-     ((:AND DISCO::3SG* DISCO::STRICT_PN)
+     ((:AND ,(vsym "3SG*") ,(vsym "STRICT_PN"))
       (vit_number sg)
       (vit_person 3))
-     ((:AND DISCO::2SG* DISCO::STRICT_PN)
+     ((:AND ,(vsym "2SG*") ,(vsym "STRICT_PN"))
       (vit_number sg)
       (vit_person 2))
-     ((:AND DISCO::1SG* DISCO::STRICT_PN)
+     ((:AND ,(vsym "1SG*") ,(vsym "STRICT_PN"))
       (vit_number sg)
       (vit_person 1))
-     ((:AND DISCO::3PL* DISCO::STRICT_PN)
+     ((:AND ,(vsym "3PL*") ,(vsym "STRICT_PN"))
       (vit_number pl)
       (vit_person 3))
-     ((:AND DISCO::2PL* DISCO::STRICT_PN)
+     ((:AND ,(vsym "2PL*") ,(vsym "STRICT_PN"))
       (vit_number pl)
       (vit_person 2))
-     ((:AND DISCO::1PL* DISCO::STRICT_PN)
+     ((:AND ,(vsym "1PL*") ,(vsym "STRICT_PN"))
       (vit_number pl)
       (vit_person 1)))
-    (DISCO::GEN vit-syntax
-      (DISCO::MASC (vit_gender masc))
-      (DISCO::FEM (vit_gender fem))
-      (DISCO::NEUT (vit_gender neut))
-      (DISCO::MASC* (vit_gender masc))
-      (DISCO::FEM* (vit_gender fem))
-      (DISCO::NEUT* (vit_gender neut)))
-    (DISCO::PRONTYPE vit-discourse
-     (DISCO::STD_1SG (vit_prontype sp std))
-     (DISCO::STD_1PL (vit_prontype sp_he std))
-     (DISCO::STD_2 (vit_prontype he std))
-     (DISCO::STD_3 (vit_prontype third std))
-     (DISCO::REFL (vit_prontype third refl))
-     (DISCO::RECIP (vit_prontype third recip))
-     (DISCO::IMPERS (vit_prontype third imp))
-     (DISCO::DEMON (vit_prontype third demon))
-     (DISCO::ZERO_PRON (vit_prontype top zero)))
-    (DISCO::VITTENSE vit-tenseandaspect
-     (DISCO::PRESENT (vit_tense pres) (vit_perf nonperf))
-     (DISCO::PRESENT* (vit_tense pres) (vit_perf nonperf))
-     (DISCO::PAST (vit_tense past) (vit_perf nonperf))
-     (DISCO::PAST* (vit_tense past) (vit_perf nonperf))
-     (DISCO::FUTURE (vit_tense future) (vit_perf nonperf))
-     (DISCO::FUTURE* (vit_tense future) (vit_perf nonperf))
-     (DISCO::PRESPERF (vit_tense pres) (vit_perf perf))
-     (DISCO::PRESPERF* (vit_tense pres) (vit_perf perf))
-     (DISCO::PASTPERF (vit_tense past) (vit_perf perf))
-     (DISCO::PASTPERF* (vit_tense past) (vit_perf perf))
-     (DISCO::TENSE (vit_perf nonperf))
-     (DISCO::BSE (vit_perf nonperf))
-     (DISCO::IMP_VFORM (vit_perf nonperf))
-     (DISCO::FIN (vit_tense pres) (vit_perf nonperf))
-      
 
-)
-    (DISCO::VITMOOD vit-tenseandaspect
-     ((:AND DISCO::INDICATIVE* DISCO::STRICT_MOOD) (vit_mood ind))
-     ((:AND DISCO::MODAL_SUBJ* DISCO::STRICT_MOOD) (vit_mood ind))
-     ((:AND DISCO::IND_OR_MOD_SUBJ DISCO::STRICT_MOOD) (vit_mood imp))
-     ((:AND DISCO::STRICT_MOOD DISCO::WOULD_SUBJ*) (vit_mood conj))
-     (DISCO::INDICATIVE (vit_mood ind))
-     (DISCO::MODAL_SUBJ (vit_mood ind))
-     (DISCO::WOULD_SUBJ (vit_mood conj))
-     (DISCO::SUBJUNCTIVE (vit_mood conj))
-     (DISCO::IND_OR_MOD_SUBJ (vit_mood imp))
+    (,(vsym "GEN") vit-syntax
+      (,(vsym "MASC") (vit_gender masc))
+      (,(vsym "FEM") (vit_gender fem))
+      (,(vsym "NEUT") (vit_gender neut))
+      (,(vsym "MASC*") (vit_gender masc))
+      (,(vsym "FEM*") (vit_gender fem))
+      (,(vsym "NEUT*") (vit_gender neut)))
+    (,(vsym "PRONTYPE") vit-discourse
+     (,(vsym "STD_1SG") (vit_prontype sp std))
+     (,(vsym "STD_1PL") (vit_prontype sp_he std))
+     (,(vsym "STD_2") (vit_prontype he std))
+     (,(vsym "STD_3") (vit_prontype third std))
+     (,(vsym "REFL") (vit_prontype third refl))
+     (,(vsym "RECIP") (vit_prontype third recip))
+     (,(vsym "IMPERS") (vit_prontype third imp))
+     (,(vsym "DEMON") (vit_prontype third demon))
+     (,(vsym "ZERO_PRON") (vit_prontype top zero)))
+    (,(vsym "VITTENSE") vit-tenseandaspect
+     (,(vsym "PRESENT") (vit_tense pres) (vit_perf nonperf))
+     (,(vsym "PRESENT*") (vit_tense pres) (vit_perf nonperf))
+     (,(vsym "PAST") (vit_tense past) (vit_perf nonperf))
+     (,(vsym "PAST*") (vit_tense past) (vit_perf nonperf))
+     (,(vsym "FUTURE") (vit_tense future) (vit_perf nonperf))
+     (,(vsym "FUTURE*") (vit_tense future) (vit_perf nonperf))
+     (,(vsym "PRESPERF") (vit_tense pres) (vit_perf perf))
+     (,(vsym "PRESPERF*") (vit_tense pres) (vit_perf perf))
+     (,(vsym "PASTPERF") (vit_tense past) (vit_perf perf))
+     (,(vsym "PASTPERF*") (vit_tense past) (vit_perf perf))
+     (,(vsym "*SORT*") (vit_perf nonperf))
+     (,(vsym "TENSE") (vit_perf nonperf))
+     (,(vsym "BSE") (vit_perf nonperf))
+     (,(vsym "IMP_VFORM") (vit_perf nonperf))
+     (,(vsym "FIN") (vit_tense pres) (vit_perf nonperf)))
+
+    (,(vsym "VITMOOD") vit-tenseandaspect
+     ((:AND ,(vsym "INDICATIVE*") ,(vsym "STRICT_MOOD")) (vit_mood ind))
+     ((:AND ,(vsym "MODAL_SUBJ*") ,(vsym "STRICT_MOOD")) (vit_mood ind))
+     ((:AND ,(vsym "IND_OR_MOD_SUBJ") ,(vsym "STRICT_MOOD")) (vit_mood imp))
+     ((:AND ,(vsym "STRICT_MOOD") ,(vsym "WOULD_SUBJ*")) (vit_mood conj))
+     (,(vsym "INDICATIVE") (vit_mood ind))
+     (,(vsym "MODAL_SUBJ") (vit_mood ind))
+     (,(vsym "WOULD_SUBJ") (vit_mood conj))
+     (,(vsym "SUBJUNCTIVE") (vit_mood conj))
+     (,(vsym "IND_OR_MOD_SUBJ") (vit_mood imp))
      )))
 
 ;;; this is very tentative
-(setf *mrs-arg-features* '((disco::arg1 . ARG1) 
-                           (disco::arg2 . ARG2)
-                           (disco::arg3 . ARG3)))
+
+(setf *mrs-arg-features* `((,(vsym "arg1") . ARG1) 
+                           (,(vsym "arg2") . ARG2)
+                           (,(vsym "arg3") . ARG3)
+			   (,(vsym "dim") . DIM)))
+
+;; These roles are pulled out of the predicate Parsons-style, but do not include
+;; the predicate's instance variable in the new role-predicate.
+
+(setf *no-inst-arg-roles* `(DIM))
 
 (setf *sem-relation-suffix* "_rel")
 
 (setf *sem-relation-prefix* "_")
 
 (setf *relation-type-check* 
-  '((DISCO::dir_rel vit-discourse (vit_dir yes))
-    (DISCO::prep_rel vit-discourse (vit_dir no))
-    (DISCO::poss_rel vit-discourse (vit_dir no))
-    (DISCO::meas_adj_rel vit-discourse (vit_dir no))
-    (DISCO::unspec_rel vit-discourse (vit_dir no))
+  `((,(vsym "dir_rel") vit-discourse (vit_dir yes))
+    (,(vsym "prep_rel") vit-discourse (vit_dir no))
+    (,(vsym "poss_rel") vit-discourse (vit_dir no))
+    (,(vsym "meas_adj_rel") vit-discourse (vit_dir no))
+    (,(vsym "unspec_rel") vit-discourse (vit_dir no))
     ))
 
 (setf *top-level-rel-types* 
-  '(DISCO::pron_rel DISCO::mofy_rel DISCO::the_afternoon_rel
-    DISCO::the_morning_rel DISCO::the_evening_rel
-    DISCO::numbered_hour_rel DISCO::minute_rel DISCO::dofw_rel 
-    DISCO::named_rel DISCO::_vacation_rel DISCO::holiday_rel
-    DISCO::ctime_rel DISCO::_hour_rel DISCO::_minute_rel DISCO::dim_rel
-    DISCO::unspec_rel DISCO::recip_pro_rel DISCO::_the_day_after_rel 
-    DISCO::dofm_rel
-
-    DISCO::_abroad_rel DISCO::_afterward_rel DISCO::_afterwards_rel 
-    DISCO::_ahead_rel DISCO::_all_day_rel DISCO::_anytime_rel 
-    DISCO::_as_soon_as_possible_rel DISCO::_aside_rel DISCO::_astray_rel 
-    DISCO::_away_rel DISCO::_back_adv_rel DISCO::_backward_rel 
-    DISCO::_backwards_rel DISCO::_beforehand_rel DISCO::_forth_rel 
-    DISCO::_forward_rel DISCO::_forwards_rel DISCO::_here_rel DISCO::_hither_rel
-    DISCO::_home_loc_rel DISCO::_last_time_rel DISCO::_maximum_adv_rel 
-    DISCO::_nearby_rel DISCO::_now_rel DISCO::_out_of_town_rel 
-    DISCO::_right_away_rel DISCO::_right_now_rel DISCO::_sometime_rel 
-    DISCO::_somewhere_rel DISCO::_then_temp_rel DISCO::_there_rel 
-    DISCO::_thereabouts_rel DISCO::_upstairs_rel
+  `(,(vsym "pron_rel") ,(vsym "mofy_rel") ,(vsym "the_afternoon_rel")
+    ,(vsym "the_morning_rel") ,(vsym "the_evening_rel")
+    ,(vsym "numbered_hour_rel") ,(vsym "minute_rel") ,(vsym "dofw_rel")
+    ,(vsym "named_rel") ,(vsym "_vacation_rel") ,(vsym "holiday_rel")
+    ,(vsym "ctime_rel") ,(vsym "_hour_rel") ,(vsym "_minute_rel") 
+    ,(vsym "dim_rel") ,(vsym "unspec_rel") ,(vsym "recip_pro_rel") 
+    ,(vsym "_the_day_after_rel") ,(vsym "dofm_rel")
+    ,(vsym "_abroad_rel") ,(vsym "_afterward_rel") 
+    ,(vsym "_afterwards_rel") ,(vsym "_ahead_rel") 
+    ,(vsym "_all_day_rel") ,(vsym "_anytime_rel") 
+    ,(vsym "_as_soon_as_possible_rel") ,(vsym "_aside_rel")
+    ,(vsym "_astray_rel") ,(vsym "_away_rel") 
+    ,(vsym "_back_adv_rel") ,(vsym "_backward_rel") 
+    ,(vsym "_backwards_rel") ,(vsym "_beforehand_rel") 
+    ,(vsym "_forth_rel") ,(vsym "_forward_rel") 
+    ,(vsym "_forwards_rel") ,(vsym "_here_rel") 
+    ,(vsym "_hither_rel") ,(vsym "_home_loc_rel") 
+    ,(vsym "_last_time_rel") ,(vsym "_maximum_adv_rel") 
+    ,(vsym "_nearby_rel") ,(vsym "_now_rel") 
+    ,(vsym "_out_of_town_rel") ,(vsym "_right_away_rel") 
+    ,(vsym "_right_now_rel") ,(vsym "_sometime_rel") 
+    ,(vsym "_somewhere_rel") ,(vsym "_then_temp_rel") 
+    ,(vsym "_there_rel") ,(vsym "_thereabouts_rel") 
+    ,(vsym "_upstairs_rel")
     ))
 
 (setf *vm-special-label-hack-list* nil)
 
-;  '((DISCO::nominalize_rel . 2))
+;  '((,(vsym "nominalize_rel . 2))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; Add access function used by TSDB machinery
-
-(defun get-mrs-strings (parse-list)
-  (loop for parse in parse-list
-        collecting
-        (let* ((fs (get-parse-fs parse))
-               (sem-fs (path-value fs *initial-semantics-path*)))
-          (if (is-valid-fs sem-fs)
-              (let ((mrs-struct (sort-mrs-struct (construct-mrs sem-fs))))
-                (with-output-to-string (stream) 
-		  (format stream "~%~S" mrs-struct)
-                  ;(output-mrs1 mrs-struct 'simple stream)
-		  ))))))
-
-(defun get-mrs-resolved-strings (parse-list)
-  (loop for parse in parse-list
-	collecting
-        (let* ((fs (get-parse-fs parse))
-               (sem-fs (path-value fs *initial-semantics-path*)))
-          (when (is-valid-fs sem-fs)
-              (let* ((mrs-struct (sort-mrs-struct (construct-mrs sem-fs)))
-		     (binding-sets (make-scoped-mrs mrs-struct)))
-		(when binding-sets
-		  (with-output-to-string (stream) 
-		    (setf *canonical-bindings* (canonical-bindings 
-						(first binding-sets)))
-		    (output-scoped-mrs mrs-struct :stream stream))))))))
-
-(defun get-parse-fs (parse)
-  (if (string-equal "1" (subseq user::*page-version* 0 1))
-      (lexicon::cfs-fs (pg::u-item-cfs parse))
-  (lexicon::cfs-fs (car (lex::typed-item-args parse)))))
-
-(defun get-vit-strings (parse-list)
-  (loop for parse in parse-list
-        collecting
-	(let* ((fs (get-parse-fs parse))
-               (sem-fs (path-value fs *initial-semantics-path*)))
-          (if (is-valid-fs sem-fs)
-              (let ((mrs-struct (sort-mrs-struct (construct-mrs sem-fs))))
-		 (multiple-value-bind (vit binding-sets)
-		     (mrs-to-vit mrs-struct)
-		   (with-output-to-string (stream) 
-		     (format nil "~S" (write-vit stream vit)))))))))
-
-(defun expand-tsdb-results (result-file dest-file &optional (vitp nil))
-  (excl::run-shell-command (format nil "sort -n < ~A | sed -f ~A > ~A" 
-				   result-file
-				   "~/grammar/tsdb/tsnlpsed"
-				   (concatenate 'string result-file ".out")))
-  (let ((old-raw-mrs main::*raw-mrs-output-p*))
-    (setf main::*raw-mrs-output-p* nil)
-    (with-open-file 
-	(istream (concatenate 'string result-file ".out") :direction :input)
-     (with-open-file 
-	(ostream dest-file :direction :output :if-exists :supersede)
-      (do ((sent-num (read istream nil 'eof))
-	   (sent (read istream nil 'eof))
-	   (mrs (read istream nil 'eof))
-	   (sep (read-char istream nil 'eof))
-	   (tree (read istream nil 'eof)))
-	  ((eql sent-num 'eof) nil)
-	(format t "~%~A" sent)
-	(format ostream "~%~A~%" sent)
-	(trees::kh-parse-tree tree :stream ostream)
-	(if vitp
-	    #|
-	    (progn
-	      (multiple-value-bind 
-		  (vit binding-sets)
-		  (mrs-to-vit mrs))
-	      (write-vit-pretty t (horrible-hack-2 vit))
-	      (format ostream "~%")
-	      (check-vit vit))
-	      |#
-	    (progn
-	      (format ostream "~A~%~%" mrs)
-	      (finish-output ostream)
-	      (check-vit mrs t ostream)
-	      (format ostream "~%"))
-	  (format ostream "~%~A~%" mrs))
-	(setf sent-num (read istream nil 'eof)
-	      sent (read istream nil 'eof)
-	      mrs (read istream nil 'eof)
-	      sep (read-char istream nil 'eof)
-	      tree (read istream nil 'eof)))))
-    (setf main::*raw-mrs-output-p* old-raw-mrs)))
-
-(defun extract-and-output (parse-list)
- (let ((*print-circle* nil))
-  (loop for parse in parse-list
-        do
-        (let* ((fs (get-parse-fs parse))
-               (sem-fs (path-value fs *initial-semantics-path*)))
-          (if (is-valid-fs sem-fs)
-              (let 
-                  ((mrs-struct (construct-mrs sem-fs)))
-		(unless *mrs-to-vit*
-		  (output-mrs mrs-struct 'simple))
-                (if *mrs-to-vit*
-                    (mrs-to-vit-convert mrs-struct)
-                  (if *mrs-scoping-p*
-                      (scope-mrs-struct mrs-struct)))
-                (when *mrs-results-check*
-                    (let ((sorted-mrs-struct (sort-mrs-struct mrs-struct))
-			  (previous-result
-                           (gethash (remove-trailing-periods
-                                     main::*last-sentence*)
-                                    *mrs-results-table*)))
-                      (if previous-result
-                         (unless (mrs-equalp sorted-mrs-struct previous-result)
-                                  (when 
-                                   (y-or-n-p "Differs from previous result.
-                                       Replace?")
-                                   (setf 
-                                    (gethash
-                                     (remove-trailing-periods
-                                     main::*last-sentence*)
-                                     *mrs-results-table*)
-                                    sorted-mrs-struct)))
-                        (when (y-or-n-p "No previous result.
-                                       Add?")
-                              (setf 
-                               (gethash
-                                (remove-trailing-periods
-                                main::*last-sentence*) *mrs-results-table*)
-                               sorted-mrs-struct)))))))))))

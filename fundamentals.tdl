@@ -174,6 +174,7 @@ valence := *avm* &
   [ SUBJ *list*,
     SPR *list*,
     COMPS *list*,
+    SPEC *list*,
     --KEYCOMP *avm* ].
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -200,6 +201,8 @@ index := individual &
 ; This is the type of the index of the phrase modified by predicative PPs, which
 ; can either modify a ref-ind nominal or an event VP.
 non_expl :< individual.
+
+; VITTENSE cannot have the default sort 'tense', due to our 
 
 vit := *avm* &
  [ VITTENSE *sort*,
@@ -238,7 +241,7 @@ norm_relation :< non_number_rel.
 
 cat := *avm* &
   [ HEAD head,
-    VALENCE valence,
+    VAL valence,
     ROOT luk,
     POSTHEAD bool,
     --SCOPEDARG *avm*,
@@ -249,11 +252,28 @@ cat := *avm* &
 ; All clauses are ROOT bool, and if they have a restricted distribution then
 ; they are ROOT + or ROOT -.
 
+
+;; Experimental use of subtypes of *diff-list* to enforce constraint of at
+;; most one element in SLASH (for efficiency, "violin/sonnet" examples
+;; notwithstanding).  Will only have effect in LKB version which does the
+;; necessary type inference.
+
+0-1-dlist := *diff-list* &
+  [ LIST 0-1-list ].
+0-dlist := 0-1-dlist &
+  [ LIST #list,
+    LAST #list ].
+1-dlist := 0-1-dlist &
+  [ LIST 1-list &
+	 [ REST #rest & *null* ],
+    LAST #rest ].
+    
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; MRS type
 ;
 ;   KEY mod_relation,      ; Pointer to the main relation in LISZT
-;   MESSAGE mod_relation,  ; Relation determining message type for propositions
+;   MESSAGE *diff-list*,   ; Message type for propositions
 ;   H-STORE *diff-list*,   ; Quantifier handle store
 ;   H-CONS *diff-list*     ; Scope constraints: list of scp_pr's
 ;   TOP-H handle,          ; Top handle of MRS expression
@@ -262,23 +282,28 @@ cat := *avm* &
 ;   COMPKEY mod_relation,  ; Pointer to the complement's main relation
 ;   OCOMPKEY mod_relation, ; Pointer to the oblique complement's main relation
 
-mrs := cont &
+
+basicmrs := cont &
   [ TOP handle,
     INDEX mod_individual,
     LISZT *diff-list*,
     KEY mod_relation,      
-    MESSAGE mod_relation,  
-    H-STORE *diff-list*,   
+    MESSAGE *diff-list*,  
     H-CONS *diff-list*,
-    TOP-H handle,
-    ECONT cont,
+    H-STORE *diff-list*,
+    ECONT cont ].
+
+econtmrs := basicmrs &
+  [ ECONT basicmrs ].
+
+mrs := econtmrs &
+  [ TOP-H handle,
     ALTKEY mod_relation,
     COMPKEY mod_relation,  
     OCOMPKEY mod_relation, 
-    --STEMLISZT *diff-list*,
     --H-CONS *diff-list*,
     --SP-H-CONS *diff-list*
-  ].
+    ].
 
 ; Constrains handle of scopable argument SC-ARG relative to one or more 
 ; handles
@@ -388,9 +413,9 @@ no-affix :< mod_local.
 no-mod :< mod_local.
 
 non-local := *avm* &
-  [ SLASH *diff-list*,
-    QUE *diff-list*,
-    REL *diff-list* ].
+  [ SLASH 0-1-dlist,
+    QUE 0-1-dlist,
+    REL 0-1-dlist ].
 
 synsem := *avm* & 
   [ LOCAL mod_local,
@@ -402,7 +427,8 @@ synsem := *avm* &
 
 expressed_synsem :< synsem.
 
-canonical_synsem :< expressed_synsem.
+canonical_synsem := expressed_synsem &
+  [ MODIFIED bool ].
 
 lex_synsem := canonical_synsem &
   [ LOCAL local ].
@@ -410,19 +436,21 @@ lex_synsem := canonical_synsem &
 phr_synsem := canonical_synsem &
   [ LOCAL local ].
 
-non_canonical :< synsem.
+non_canonical := synsem &
+  [ LOCAL.CONT.INDEX non_expl ].
 
 gap := non_canonical & expressed_synsem &
   [ LOCAL #local,
-    NON-LOCAL [ REL <! !>,
-		QUE <! !>,
-		SLASH <! #local !> ] ].
+    NON-LOCAL [ REL 0-dlist,
+		QUE 0-dlist,
+		SLASH 1-dlist & 
+		    [ LIST < #local > ] ] ].
 
 unexpressed := non_canonical &
   [ LOCAL.CONT.ECONT.LISZT <! !>, 
-    NON-LOCAL [ SLASH <! !>,
-		REL <! !>,
-		QUE <! !> ] ].
+    NON-LOCAL [ SLASH 0-dlist,
+		REL 0-dlist,
+		QUE 0-dlist ] ].
 
 #|
 ; Replace these defs with the ones below, to eliminate disjunction.
@@ -507,7 +535,7 @@ unexpressed := non_canonical &
 
 *prolist* := *list* &
   [ FIRST pro_ss &
-	  [ NON-LOCAL.SLASH <! !> ],
+	  [ NON-LOCAL.SLASH 0-dlist ],
     REST *null* ].
 
 *procons* := *prolist* & *cons*.
@@ -532,24 +560,23 @@ unexpressed := non_canonical &
 ; Types for Sign, Word, Phrase, and Lex-Entry
 
 sign := *avm* & 
-  [ STEM *list*,
-    AFFIX mod_local,
-    KEY-ARG bool,   
+  [ KEY-ARG bool,   
     SYNSEM synsem,
-    C-CONT cont,
     ARGS *list*,
     INFLECTED bool ],
   status: root-node.
 
 word := sign & 
-  [ SYNSEM lex_synsem ].
+  [ STEM *list*,
+    SYNSEM lex_synsem,
+    AFFIX mod_local ].
 
 phrase := sign &
   [ SYNSEM phr_synsem & [ LOCAL [ CONT [ TOP #hand,
 					 INDEX #index ],
 				  ARG-S < > ] ],
-    C-CONT mrs & [ TOP #hand,
-		   INDEX #index ] ].
+    C-CONT basicmrs & [ TOP #hand,
+			INDEX #index ] ].
 
 ; AAC - STEM must have a list value
 
@@ -562,6 +589,10 @@ lex_entry := word &
 basic_multi_lex_entry := word &
   [ INFLECTED bool ],
   status: c-lex-entry.
+
+; for the LKB version, INFLECTED has to be -
+; so lex_entry and basic_multi_lex_entry 
+; are redefined in the patches file
 
 multi_lex_entry := basic_multi_lex_entry &
   [ STEM < #stem1, #stem2 >,
@@ -615,6 +646,7 @@ label := *top*, status: label.
 
 meta := *top*, status: meta.
 
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;  CAT values
 
@@ -646,8 +678,9 @@ prp :< inf_or_prp.
 
 ; Since we've collapsed the entries for base and fin-non3rdsg verbs, we need to
 ; be able to unify e.g. the value PRESENT with the value BSE for examples like
-; "Kim doesn't sleep", so we adopt the hack of making the "tense" sort a subsort
-; of BSE rather than simply of *sort*.
+; "Kim doesn't sleep", since the two verbs constrain a single event.  So we 
+; adopt the hack of making the "tense" sort a subsort of BSE rather than 
+; simply of *sort*.
 
 tense :< bse_only.
 present* :< tense.
@@ -713,7 +746,9 @@ adverbee :< subst.
 
 adj* := particle & a_or_p & v_or_g_or_a & adverbee & mobile.
 
-prep* := particle & a_or_p & v_or_p & n_or_p & adverbee & subst & mobile.
+;;; AAC - SUBST is redundant - it is an ancestor of ADVERBEE 
+
+prep* := particle & a_or_p & v_or_p & n_or_p & adverbee & mobile.
 
 nsort :< *sort*.
 proper* :< nsort.
@@ -775,31 +810,21 @@ a_and_g := adj* & gerund*.
 ; in the LKB
 verb_or_comp := strict_head & verbal.
 
+; AAC - similarly for strict_nominal and strict_supnoun
+
+strict_nominal := strict_head & nominal.
+
+strict_supnoun := strict_nominal & supnoun.
+
 ; The following types are used to enable strict subcategorization (the usual 
 ; case)
 
 verb := verb* & verb_or_comp.
-noun := noun* & strict_head.
+noun := noun* & strict_supnoun.
 prep := prep* & strict_head.
 adj := adj* & strict_head.
 comp := comp* & verb_or_comp.
-gerund := gerund* & strict_head.
-
-;;; Junk slot used in lexrules.tdl and auxverbs.tdl 
-tmp := *avm* &
-[ FIN_VERB *diff-list*,
-  HAVE *diff-list*,
-  NEG *diff-list*,
-  BE *diff-list*,
-  BE_ID *diff-list*,
-  BE_ID_POS dl-append,
-  BE_ID_NEG dl-append,
-  BE_COP *diff-list*,
-  BE_COP_POS dl-append,
-  BE_COP_NEG dl-append,
-  BE_TH_COP *diff-list*,
-  BE_TH_COP_POS dl-append,
-  BE_TH_COP_NEG dl-append ].
+gerund := gerund* & strict_supnoun.
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;  CONT values (MRS semantics)
@@ -836,22 +861,18 @@ deg-ind :< non_expl-ind.
 ; forthcoming analysis of tags on imperatives, respectively.
 
 psoa := mrs &
-	[ INDEX event ].
-
-; Type to avoid introducing junk slot unless needed.
-psoa-tmp := psoa &
-        [ --TMP tmp ].
+  [ INDEX event ].
 
 nom-obj := mrs &
-	   [ INDEX index ].
+  [ INDEX index ].
 
 ; AAC - added further subtypes of mrs for root instance features
 
 root-mrs := mrs &
-           [ RLISZT *diff-list*,
-             RH-CONS *diff-list* ].
+  [ RLISZT *diff-list*,
+    RH-CONS *diff-list* ].
 
-root-mrs-psoa-tmp := psoa-tmp & root-mrs.
+root-mrs-psoa := psoa & root-mrs.
 
 root-mrs-nom-obj := nom-obj & root-mrs.
 
@@ -893,9 +914,6 @@ quant_or_wh_rel := dim_rel &
   [ BV ref-ind,
     RESTR handle ].
 
-demon_near_rel :< demonstrative_rel.
-demon_far_rel :< demonstrative_rel.
-
 quant_rel := quant_or_wh_rel & 
   [ SCOPE handle ].
 
@@ -903,6 +921,8 @@ udef_rel :< quant_rel.
 some_rel :< quant_rel.
 def_rel :< quant_rel.
 demonstrative_rel :< quant_rel.
+demon_near_rel :< demonstrative_rel.
+demon_far_rel :< demonstrative_rel.
 
 ;which_rel should not have a scope, but given for the moment to satisfy VIT
 ;which_rel :< quant_or_wh_rel.
@@ -948,7 +968,9 @@ diadic_nom_rel_vit := diadic_nom_rel & aac_arg3_rel &
 
 reg_diadic_nom_rel := diadic_nom_rel_vit & reg_nom_rel.
 
-hcomp_nom_rel := nom_rel & aac_arg3_rel & nondim_rel &
+;;;  NONDIM_REL is redundant - it is an ancestor of AAC_ARG3_REL
+
+hcomp_nom_rel := nom_rel & aac_arg3_rel & 
   [ NOMARG handle & #arg3,
     ARG3 #arg3 ].
 
@@ -975,7 +997,7 @@ non_day_rel :< temp_nondim_rel.
 
 ;; day_of_month_rel
 dofm_rel := named_day_rel & diadic_nom_rel &
-  [ DAY integer,
+  [ DAY string,
     NPREP non_expl-ind ].
 
 ;; only for VIT
@@ -1002,12 +1024,12 @@ hour_prep_rel := hour_rel &
 numbered_hour_rel := hour_rel &
   [ INST.PNG [ PN 3sg*,
 	       GEN neut* ],
-    HOUR integer,
+    HOUR string,
     MIN non_expl-ind,
     AM-PM non_expl-ind ].
 
 minute_rel := temp_nondim_rel &
-  [ MINUTE integer ].
+  [ MINUTE string ].
 
 am_pm_rel :< temp_nondim_rel.
 am_rel :< am_pm_rel.
@@ -1016,13 +1038,15 @@ pm_rel :< am_pm_rel.
 ; 'the morning', not 'some morning': 'in the morning' but 'on some morning'
 def_day_part_rel :< non_day_rel.
 
+non_day_diadic_rel := non_day_rel & diadic_nom_rel.
+
 ;; named_month_rel
-mofy_rel := non_day_rel &
+mofy_rel := non_day_diadic_rel &
   [ MONTH symbol,
     YEAR-IND non_expl-ind ].
 
 yofc_rel := non_day_rel &
-  [ YEAR integer ].
+  [ YEAR string ].
 
 season_rel := non_day_rel &
   [ SEASON symbol ].
@@ -1037,9 +1061,9 @@ _weekday_rel :< dofw_rel.
 _weekend_rel :< dofw_rel.
 _workday_rel :< dofw_rel.
 
-_week_rel :< non_day_rel.
+_week_rel :< non_day_diadic_rel.
 _fortnight_rel :< non_day_rel.
-_month_rel :< non_day_rel.
+_month_rel :< non_day_diadic_rel.
 _moment_rel :< non_day_rel.
 
 
@@ -1118,9 +1142,11 @@ arg_rel := event_arg_rel &
 	   [ ARG thing ].
 
 irrealis_rel :< arg_rel.
+_going_to_rel :< arg_rel.
 
-; Used to ensure tag question agreement, but does not appear in LISZT.
+; Used to ensure tag question agreement, but will not appear in LISZT.
 will_rel :< arg_rel.
+have_aux_rel :< arg_rel.
 
 support_rel :< event_rel.
 
@@ -1147,7 +1173,10 @@ und_rel := role_rel &
            [ UND thing ].
 act_und_rel := act_rel & und_rel.
 und_only_rel :< und_rel.
-prop_rel := role_rel &
+;;; AAC - added to cope with prpstn_to_prop_rel
+over_prop_rel := norm_relation &
+	   [ PROP non_expl ].
+prop_rel := over_prop_rel & role_rel &
 	   [ PROP event ].
 act_prop_rel := act_rel & prop_rel.
 
@@ -1258,7 +1287,11 @@ comp_q_rel := quant_rel &
 
 property_rel :< reg_nom_rel.
 
-prpstn_to_prop_rel := norm_relation &
+;;; AAC - uses PROP so has to inherit from prop_rel
+;;; but can't because prop_rel assumes EVENT, so make 
+;;; a new type - over_prop_rel which makes PROP take non_expl
+
+prpstn_to_prop_rel := over_prop_rel &
   [ PRPSTN handle,
     PROP non_expl-ind ].
 
@@ -1352,7 +1385,8 @@ vit_arg := varg_rel & arg_rel &
 vit_parg := preparg_rel & arg_rel &
   [ PREPARG #arg,
     ARG #arg ].
-vit_expr_2 := expr_rel &
+;;; AAC - has to inherit from arg2_rel
+vit_expr_2 := expr_rel & arg2_rel &
   [ EXPR #expr,
     ARG2 #expr ].
 
@@ -1408,7 +1442,10 @@ adj_preparg_rel_arg := adj_preparg_rel & vit_parg.
 
 _equal_adj_rel :< adj_preparg_rel_arg.
 
+;; Relations needed for VIT conversion
 
+abstr_apply := arg_rel &
+  [ PROPERTY index ].
 
 ; Discourse functions
 
@@ -1463,7 +1500,7 @@ manner_rel :< reg_nom_rel.
 reason_rel :< reg_nom_rel.
 
 ord_rel := adj_rel &
-  [ ORD integer ].
+  [ ORD string ].
 
 title_rel :< basic_nom_rel.
 
@@ -1473,8 +1510,9 @@ cop_id_rel := arg1_rel & arg3_rel &
 		ARG1 #id1,
 		ARG3 #id2 ].
 
-_there_cop_rel := event_rel & aac_arg3_rel &
-  [ ARG3 non_expl-ind ].
+_there_cop_rel := event_rel & varg_rel & aac_arg3_rel &
+  [ ARG3 non_expl-ind & #arg,
+    VARG #arg ].
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Number relations
@@ -1484,7 +1522,7 @@ number_rel := dim_rel &
 
 integer_rel := number_rel &
   [ I-ORD bool ].
-const_rel := integer_rel & [ CONST_VALUE integer].
+const_rel := integer_rel & [ CONST_VALUE string].
 plus_rel := integer_rel & [ TERM1 handle,
 			    TERM2 handle].
 times_rel := integer_rel & [ FACTOR1 handle,
@@ -1561,8 +1599,7 @@ intadj1  := intadj2- & digit1.
 
 ; ERB (14-12-97) I am adding the pron_rel to pro_ss, so that in the
 ; types like common_noun_vpcomp_synsem I don't have to put it in.  I
-; can just take the KEY.  I'm assuming --STEMLISZT is not a relevant
-; feature here as this guy won't ever undergo inflection.
+; can just take the KEY.
 
 ; ERB (14-12-97) No pron_rel for pro_ss.
 
@@ -1577,19 +1614,19 @@ intadj1  := intadj2- & digit1.
 ; because hadj requires SUBJ *olist*.
 
 ; ERB (21-01-98) In order for PRO to be extractable, it can't be
-; SLASH <! !>, and thus can't be a subtype of unexpressed.  With
+; SLASH 0-dlist, and thus can't be a subtype of unexpressed.  With
 ; PRO underspecified for SLASH, something will always have to fill
 ; in that value.  In the case of subject non_wh_rels (e.g., 
 ; "Kim found a person to fix the sink") it is extracted, i.e., resolved
 ; to gappro by extrasubj.  In the cases where the PRO is the subject of
-; a selected complement, the selector will impose SLASH <! !> on the
+; a selected complement, the selector will impose SLASH 0-dlist on the
 ; PRO (this case includes equi constructions, embedded infinitival
 ; wh questions, and the complement of 'way' as in "Kim found a way
 ; to leave early").  In the case of the (as yet unimplemented) CP[to]
 ; subjects, the NP -> CP rule will probably do the work.  Alternatively,
 ; the selecting category could do it.  Finally, in the case of
 ; non-subject non_wh_rels (e.g., "Kim found a cheeseburger to devour"),
-; the PRO must be SLASH <! !> because the non_wh_rel_rule limits
+; the PRO must be SLASH 0-dlist because the non_wh_rel_rule limits
 ; the SLASH list to length one.
 ;
 ; On a related note, we want the distribution of gappro (i.e., of
@@ -1600,7 +1637,7 @@ intadj1  := intadj2- & digit1.
 ; an empty value for SLASH on the PROs in their complements' subjects
 ; to keep us from getting in trouble on this one.
 ;
-; Finally, rather than make a subtype of pro_ss that says SLASH <! !>,
+; Finally, rather than make a subtype of pro_ss that says SLASH 0-dlist,
 ; I have opted to include that information on the type *prolist*.
 
 ; ERB (03-23-98) We need a way to identify indices introduced by a PRO
@@ -1616,10 +1653,9 @@ intadj1  := intadj2- & digit1.
 ; ECONT.LISZT.
 
 pro_ss := non_canonical &
-  [ LOCAL [ CAT.HEAD.CASE acc,
-	    CONT.INDEX non_expl ],
-    NON-LOCAL [ REL <! !>,
-		QUE <! !> ],
+  [ LOCAL.CAT.HEAD.CASE acc,
+    NON-LOCAL [ REL 0-dlist,
+		QUE 0-dlist ],
     OPT - ].
 
 ; ERB (19-01-98) We need a subtype of pro and gap so that to_c_prop

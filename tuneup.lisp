@@ -41,16 +41,13 @@
 ;; 5. Prevent imperative from feeding extracted-adj - any extraction should come
 ;;    from within the VP.  Same for imperative and head-adj.
 ;; 6. Prevent extracomp from feeding itself (the constraints in the rule are not
-;;    yet adequate to do so.
+;;    yet adequate to do so}.
 
   (lex::augment-filter 
-   '((extradj (:forbid hadj))
-     (extradj (:forbid adjh))
-     (extradj (:forbid fin_non_wh_rel))
+   '((extradj (:forbid fin_non_wh_rel))
      (extradj (:forbid imper))
-     (hadj (:forbid adjh))
-     (hadj (:forbid imper))
-     (hadj (:forbid extrasubj))
+     (nnomadj (:forbid imper))
+     (nnomadj (:forbid extrasubj))
      (imper (:forbid extracomp))
      (extracomp (:forbid extracomp))
      )))
