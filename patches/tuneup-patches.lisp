@@ -3,9 +3,9 @@
 (in-package "PARSING")
 
 (setf *unlikely-le-types* '(DISCO::DISC_ADV_MLE1 DISCO::LETTER_NAME_LE
-			    DISCO::MEALTIME_WORD_LE ))
+			    DISCO::MEALTIME_WORD_LE DISCO::NUMADJ_NOUN_WORD_LE))
 (setf *likely-le-types* '(DISCO::COORD_C_LE))
-
+(setf *unlikely-lexrule-types* '(DISCO::VP_ELLIPSIS))
 
 ;; Assign a priority to a task, or return NIL if it's bound to fail
 
@@ -31,7 +31,10 @@
 	       800)
 	;; Lower ranking for derived words
 	      ((eq (combo-item-itype rule-item) :lex-rule)
-	       400)
+	       (if (member (fs-type (cfs-fs (combo-item-cfs rule-item)))
+			   *unlikely-lexrule-types*)
+		   -200
+		 400))
 	;; Otherwise assign same preference to each lex entry (for now)
 	      (t 600))
       (case (intern (get-item-rule-name rule-item) "DISCO")
@@ -48,6 +51,7 @@
 	(disco::hoptcomp 200)
 	(disco::rootgap_l 100)
 	(disco::rootgap_r 100)
+	(disco::voc_np 100)
 	(otherwise (+ 500 (* (item-span rule-item) 500)))))))
 
 (defun csli-useless-task-filter (rule-item item parser)

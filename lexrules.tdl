@@ -327,14 +327,14 @@ neg_addition := lex_rule &
 				      AUX +,
 				      VFORM fin ],
 			       VAL [ SUBJ #subj,
-				     COMPS #comps,
+				     COMPS #comps & *substlist*,
 				     SPR #spr,
 				     --KEYCOMP #keycomp ] ],
 			 CONT [ TOP #vhand,
 				INDEX #vindex,
 				KEY #vkey,
+				H-CONS #hcons,
 				H-STORE #hstore,
-				H-CONS <! *top*, *top* !>,
 				LISZT #vliszt ],
 			 CTXT #ctxt,
 			 ARG-S #arg-s ],
@@ -346,7 +346,8 @@ neg_addition := lex_rule &
 						[ CAT.HEAD neg,
 						  CONT [ TOP #negtop,
 							 KEY.ARG #vhand,
-							 H-STORE #hstore ] ],
+							 H-STORE #hstore,
+							 MESSAGE <! !> ] ],
 					  OPT - ] . #comps >,
 				     SPR #spr,
 				     --KEYCOMP #keycomp ] ],
@@ -354,18 +355,24 @@ neg_addition := lex_rule &
 			    INDEX #vindex,
 			    LISZT #vliszt,
 			    H-STORE #hstore,
-			    H-CONS <! !>,
+			    H-CONS #hcons,
 			    KEY #vkey & [ HANDEL #vhand ] ],
 		     CTXT #ctxt,
 		     ARG-S #arg-s ],
 	     NON-LOCAL #nonloc ] ].
 
 ;; VP Ellipsis
+;; We can't let this rule apply to the infinitival "to", since we would then
+;; have no way of blocking the NP "the book to", where "to" first underwent
+;; this rule, then the subject-extraction rule (needed for ordinary infinitival
+;; relatives), and then the usual infinitival relative rule.  So instead we
+;; create a separate lexical entry for the elided form of "to", and make its
+;; MOD value no-mod.
 
 vp_ellipsis := lex_rule &
   [ STEM #orth,
     DTR [ STEM #orth,
-	  SYNSEM [ LOCAL [ CAT [ HEAD #head & verb_or_comp &
+	  SYNSEM [ LOCAL [ CAT [ HEAD #head & verb &
 				      [ AUX +,
 					INV - ],
 				 VAL [ SUBJ #subj,
@@ -377,6 +384,7 @@ vp_ellipsis := lex_rule &
 			   CONT [ TOP #hand,
 				  H-STORE #hstore,
 				  H-CONS #hcons,
+				  KEY.LABEL #label,
 				  LISZT [ LIST #llist,
 					  LAST #llast ] ],
 			   CTXT #ctxt ],
@@ -391,6 +399,7 @@ vp_ellipsis := lex_rule &
 			    H-CONS #hcons,
 			    LISZT [ LIST < ellipsis_rel & #key &
 					   [ HANDEL #chand,
+					     LABEL #label,
 					     ROLE #index ] . #llist >,
 				    LAST #llast ],
 			    KEY #key ],
@@ -467,9 +476,13 @@ particle_lr := lex_rule &
     DTR [ STEM #orth,
 	  SYNSEM mod_n_or_vp_synsem &
                [ LOCAL [ CAT.VAL #val &
-				 [ COMPS.FIRST.LOCAL.CONT [ TOP #top,
-							    INDEX #ind ] ],
-			 CONT [ KEY #key,
+				 [ COMPS.FIRST.LOCAL.CONT 
+						     [ TOP #top,
+						       INDEX #ind,
+						       KEY [ HANDEL #khand,
+							     LABEL #klabel ] ] ],
+			 CONT [ KEY #key & [ HANDEL #khand,
+					     LABEL #klabel ],
 				H-STORE #hstore ],
 			 CTXT #ctxt ],
 		   NON-LOCAL #nonloc & [ QUE <! !>,
@@ -696,6 +709,50 @@ weekday_det_lr := date_det_lr &
   [ SYNSEM.LOCAL.CAT.VAL.SPEC < [ LOCAL.CONT.KEY day_part_rel ] >,
     DTR.SYNSEM.LOCAL.CONT.KEY dofw_rel ].
 
+;; "January" ==> "every January"
+;; Note "*Let's meet January" but "Let's meet every/next/some January"
+
+month_unsat_lr := lex_rule &
+  [ STEM #orth,
+    DTR [ STEM #orth,
+	  SYNSEM [ LOCAL [ STEMHEAD nstem,
+                           CAT [ HEAD #head,
+				 VAL [ SPR < >,
+				       COMPS < [ LOCAL.CAT.HEAD noun ] > ] ],
+			   CONT [ TOP #top,
+				  KEY mofy_rel &
+				      [ HANDEL #hand,
+					MONTH #month ],
+				  H-CONS #hcons ],
+			   CTXT #ctxt ],
+		   NON-LOCAL #nonloc ] ],
+    SYNSEM nomod_synsem &
+	   [ LOCAL [ CAT [ HEAD #head,
+			   VAL [ SUBJ < >,
+				 SPR < synsem &
+				       [ LOCAL local &
+					       [ CAT [ HEAD det,
+						       VAL [ SUBJ < >,
+							     SPR *olist*,
+							     COMPS *olist* ] ],
+						 CONT [ KEY [ BV #index,
+							      RESTR #top ],
+							H-STORE #hstore ] ],
+					 OPT - ]>,
+				 COMPS < > ] ],
+		     CONT [ TOP #top,
+			    INDEX #index & [ DIVISIBLE - ],
+			    LISZT <! #key !>,
+			    KEY mofy_unsat_rel & #key &
+				[ HANDEL #hand,
+				  MONTH #month ],
+			    H-STORE #hstore,
+			    H-CONS #hcons ],
+		     CTXT #ctxt ],
+	     NON-LOCAL #nonloc ] ].
+
+
+
 adj_noun_lr := lex_rule &
   [ STEM #orth,
     DTR [ STEM #orth,
@@ -730,7 +787,6 @@ adj_noun_personal_lr := adj_noun_lr &
 adj_noun_abstract_lr := adj_noun_lr &
   [DTR.SYNSEM.LOCAL.CONT.KEY adj_abstract_rel,
    SYNSEM adj_noun_abstract_synsem].
-
 
 ; Relate transitive predicative adjectives to their intransitive attributive
 ; counterparts
@@ -792,18 +848,16 @@ part_constr := lex_rule &
  [ STEM #orth,
    DTR [ STEM #orth,
          SYNSEM part_det_synsem & 
-	  [ LOCAL.CONT [ TOP #hand,
-			 KEY #relation,
+	  [ LOCAL.CONT [ KEY #relation,
 			 H-CONS #hcons ],
 	    NON-LOCAL #nonlocal ] ],
    SYNSEM partitive_noun_synsem & 
      [ LOCAL [ CAT.VAL.COMPS < [ LOCAL.CONT.H-STORE [ LIST #hslist,
 						      LAST #hslast ] ] >,
-	       CONT [ TOP #hand,
-		      H-STORE [ LIST < #hand . #hslist >,
+	       CONT [ H-STORE [ LIST < #qhand . #hslist >,
 				LAST #hslast ],
 		      H-CONS #hcons,
-		      ALTKEY #relation ] ],
+		      ALTKEY #relation & [ HANDEL #qhand ] ] ],
        NON-LOCAL #nonlocal ] ].
 
 
@@ -881,6 +935,10 @@ simple_agent_nominal := lex_rule & norm_word & affix_bearing &
 
 |#
 
+#|
+;; Unfortunately, this rule is not easily generalized to get both "a two fifteen
+;; meeting" and "a two p.m. meeting" (as well as "a two fifteen p.m. meeting").
+
 specific_hour_adj := two_dtr_lex_rule &
   [ STEM < #lorth, #rorth >,
     LDTR [ STEM #lorth,
@@ -933,4 +991,44 @@ specific_hour_adj := two_dtr_lex_rule &
 				  [ SC-ARG #tophand,
 				    OUTSCPD #thand ] !> ] ], 
 	   NON-LOCAL #nonloc ] ].
+|#
 
+#|
+lex_head_complement_rule := two_dtr_lex_rule &
+  [ STEM < #lorth, #rorth >,
+    LDTR [ STEM #lorth,
+	   SYNSEM lex_synsem &
+		  [ LOCAL [ CAT [ HEAD #head,
+				  VAL [ SUBJ #subj,
+					SPR #spr,
+					COMPS < #comp . #rest > ] ],
+			    CONT [ TOP #top,
+				   INDEX #index,
+				   KEY #key,
+				   LISZT [ LIST #lfirst,
+					   LAST #lmiddle ],
+				   H-CONS [ LIST #hcfirst,
+					    LAST #hcmiddle ],
+				   H-STORE #hstore ] ],
+		    NON-LOCAL #nonloc ] ],
+    RDTR [ STEM #rorth,
+	   SYNSEM lex_synsem & #comp &
+		[ LOCAL.CONT [ LISZT [ LIST #lmiddle,
+				       LAST #llast ],
+			       H-CONS [ LIST #hcmiddle,
+					LAST #hclast ] ] ] ],
+    SYNSEM lex_synsem &
+	 [ LOCAL [ CAT [ HEAD #head,
+			 VAL [ SUBJ #subj,
+			       SPR #spr,
+			       COMPS #rest ] ],
+		   CONT [ TOP #top,
+			  INDEX #index,
+			  KEY #key,
+			  LISZT [ LIST #lfirst,
+				  LAST #llast ],
+			  H-CONS [ LIST #hcfirst,
+				   LAST #hclast ],
+			  H-STORE #hstore ] ], 
+	   NON-LOCAL #nonloc ] ].
+|#

@@ -136,10 +136,13 @@ zero_pron :< prontype.
 luk :< *sort*.
 ; NA for Not Applicable.  A strictly-typed implementation would obviate need
 ; for this subtype, and we could just employ bool.
-na :< luk.
+na_or_+ :< luk.
+na_or_- :< luk.
+
+na := na_or_+ & na_or_-.
 bool :< luk.
-+* :< bool.
--* :< bool.
++* := bool & na_or_+.
+-* := bool & na_or_-.
 
 ; To enable coordination of unlike values, we add the intermediate types +* and
 ; -+, along with the conjoined type.
@@ -261,26 +264,28 @@ non_number_rel :< relation.
 
 norm_relation :< non_number_rel.
 
-; Used for underspecifying word sense.
-
-appointment_rel :< reg_nom_rel.
-
-
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; CAT type
+
+;; The feature MC has three possible values: +, -, and na.  Non-clauses are
+;; always MC na, since they can't really be said to be root or non-root.
+;; All clauses are MC bool, and if they have a restricted distribution then
+;; they are MC + or MC -.
+
+;; DPF (22-Oct-98) Added feature HCTYPE on CAT, to identify the type of synsem
+;; that results from combining the word with its complements.  We distinguish
+;; lex_synsem from phr_synsem, and recognize at least the head-complement 
+;; structures  "thirty-two" and "two o'clock" as still being lexical signs, not
+;; phrasal ones, since they can appear as prenominal adjectives and in noun-
+;; noun compound constructions, respectively.  The head-complement rule unifies
+;; its SYNSEM type with the value of this feature HCTYPE. 
 
 cat := *avm* &
   [ HEAD head_min,
     VAL valence,
     MC luk,
-    POSTHEAD bool ].
-
-; The feature MC has three possible values: +, -, and na.  Non-clauses are
-; always MC na, since they can't really be said to be root or non-root.
-; All clauses are MC bool, and if they have a restricted distribution then
-; they are MC + or MC -.
-
+    POSTHEAD bool,
+    HCTYPE canonical_synsem ].
 
 ;; Experimental use of subtypes of *diff-list* to enforce constraint of at
 ;; most one element in SLASH (for efficiency, "violin/sonnet" examples
@@ -310,7 +315,6 @@ cat := *avm* &
 ;   ALTKEY mod_relation,   ; Pointer to an alternate relation in LISZT
 ;   COMPKEY mod_relation,  ; Pointer to the complement's main relation
 ;   OCOMPKEY mod_relation, ; Pointer to the oblique complement's main relation
-
 
 mrs_min := cont &
   [ TOP handle,
@@ -529,7 +533,7 @@ unexpressed := non_canonical &
 
 #| 
 ;;; LKB complains because of multiple introduction of FIRST and REST -
-;;; so the definition above is overwritten by the following in the patches.tdl
+;;; so the definition above is overwritten by the following in the lkbpatches.tdl
 ;;; file in the directory <grammardir>/lkb/. 
 
 *olist* :< *list*.
@@ -578,6 +582,19 @@ unexpressed := non_canonical &
 *unexpnull* := *unexplist* & *null*.
 
 
+;; *substlist* is used in the neg_addition lexical rule, to prevent spurious
+;; re-application of the rule to its own output by requiring the input to
+;; be a (possibly empty) list of substantive synsems.
+
+*substlist* := *list* &
+  [ FIRST.LOCAL.CAT.HEAD subst,
+    REST  *list* & [ FIRST.LOCAL.CAT.HEAD subst ] ].
+
+*substcons* := *substlist* & *cons*.
+
+*substnull* := *substlist* & *olist* & *null*.
+
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Type for Verbmobil word-hypothesis-graph data
 
@@ -598,22 +615,32 @@ sign := *avm* &
     ROOT bool ],
   status: root-node.
 
+;; DPF (14-Oct-98) --FINAL-ARG points to the final element in a word with 
+;; spaces, since that element bears any inflection.
+
 word := sign & 
   [ SYNSEM lex_synsem,
     AFFIX mod_local,
-    ROOT - ].
+    ROOT -,
+    --FINAL-ARG *top* ].
+
+;; Not all phrases have SYNSEM phr_synsem, since we need to allow the head-comp
+;; rules to build signs which are still [ SYNSEM lex_synsem ], for constructions
+;; like "twenty-two" and "five fifteen p.m.".  So most phrases will assign the
+;; type phr_synsem to the value of SYNSEM, but not all.
 
 phrase := sign &
-  [ SYNSEM phr_synsem & [ LOCAL [ CONT [ TOP #hand,
-					 INDEX #index ],
-				  ARG-S < > ] ],
+  [ SYNSEM canonical_synsem & 
+	   [ LOCAL [ CONT [ TOP #hand,
+			    INDEX #index ],
+		     ARG-S < > ] ],
     ROOT bool,
     C-CONT basicmrs & [ TOP #hand,
 			INDEX #index ] ].
 
 ; AAC - STEM must have a list value
 
-lex_entry := word &
+lex_entry := sign &
   [ STEM < #stem >,
     SYNSEM.LOCAL.CONT [ KEY.LABEL #label,
 			WGLISZT <! whg-item & [ WG-HNDLS < #label > ] !> ],
@@ -637,6 +664,16 @@ multi_lex_entry := basic_multi_lex_entry &
     ARGS < [ STEM < #stem1 > ],
 	   [ STEM < #stem2 >,
 	     AFFIX no-affix ] > ].
+
+multi_lex_entry_affixed := basic_multi_lex_entry &
+  [ STEM < #stem1, #stem2 >,
+    SYNSEM.LOCAL.CONT [ KEY.LABEL #label,
+			WGLISZT <! whg-item & [ WG-HNDLS < #label > ],
+				   whg-item & [ WG-HNDLS < #label > ] !> ],
+    ARGS < [ STEM < #stem1 >,
+	     AFFIX no-affix ],
+	   [ STEM < #stem2 >,
+	     AFFIX local_min ] > ].
 
 key_first := basic_multi_lex_entry &
   [ ARGS < [ KEY-ARG + ], ... > ].
@@ -687,7 +724,7 @@ three_space_lex_entry4 := three_space_lex_entry & key_fourth.
 
 ;;; AAC moved reg_lex_entry from letypes.tdl
 
-reg_lex_entry := lex_entry &
+reg_lex_entry := lex_entry & word &
   [ SYNSEM.LOCAL.CONT.LISZT <! *top* !> ].
 
 
@@ -991,6 +1028,12 @@ nongeo_location :< nominal-sort.
 
 nondim_rel :< norm_relation.
 
+; modable_rel distinguishes those relations whose nominal lexical entries can 
+; undergo a syntactic rule to produce a modifier phrase, as in "we'll meet
+; next week" or "I'll do it my way".
+
+modable_rel :< norm_relation.
+
 ; AAC - fix for ARG3 introduction
 
 aac_arg3_rel := nondim_rel &
@@ -1007,6 +1050,7 @@ nom_rel := basic_nom_rel &
 nom_nondim_rel := nom_rel & nondim_rel.
 non_temp_nom_rel :< nom_nondim_rel.
 reg_nom_rel :< non_temp_nom_rel.
+modable_nom_rel := non_temp_nom_rel & modable_rel.
 
 diadic_nom_rel := nom_nondim_rel &
   [ NPREP thing ].
@@ -1032,23 +1076,21 @@ temp_rel := nom_rel &
 
 temp_nondim_rel := temp_rel & nondim_rel.
 
-; The class of predicates whose lexical entries can be made into modifiers
-temp_modable_rel :< temp_nondim_rel.
+; The class of temporal predicates whose lexical entries can be made into 
+; modifiers
+temp_modable_rel := temp_nondim_rel & modable_rel.
 
 day_rel :< temp_modable_rel.
 
 named_day_rel := day_rel &
   [ DAY atom ].
 
-non_day_rel :< temp_modable_rel.
+non_day_rel :< temp_nondim_rel.
 
 ;; day_of_month_rel
 dofm_rel := named_day_rel & diadic_nom_rel &
   [ DAY string,
     NPREP non_expl-ind ].
-
-;; only for VIT
-dofm_aux_rel :< diadic_nom_rel_vit.
 
 ;; day_of_week_rel
 dofw_rel := named_day_rel &
@@ -1061,26 +1103,28 @@ day_part_rel := day_rel &
   [ OF-DAY non_expl-ind ].
 
 ; dim_rel: 'almost three o'clock'
-hour_rel := temp_rel & dim_rel.
+hour_rel := temp_rel & dim_rel & modable_rel.
 
 ; a quarter till three  ("till" is head - cf "come at a quarter till.")
 hour_prep_rel := hour_rel &
   [ HOUR-IND individual,
     MINUTE-IND individual ].
 
-Numbered_hour_rel := hour_rel &
+numbered_hour_rel := hour_rel &
   [ INST.PNG png & [ PN 3sg*,
 		     GEN neut* ],
     HOUR string,
     MIN non_expl-ind,
     AM-PM non_expl-ind ].
 
-minute_rel := temp_nondim_rel &
+minute_or_ampm_rel :< temp_nondim_rel.
+
+minute_rel := minute_or_ampm_rel &
   [ MINUTE string ].
 
 _time_rel :< hour_rel.
 
-am_pm_rel :< temp_nondim_rel.
+am_pm_rel :< minute_or_ampm_rel.
 am_rel :< am_pm_rel.
 pm_rel :< am_pm_rel.
 
@@ -1090,16 +1134,23 @@ ctime_rel :< numbered_hour_rel.
 def_day_part_rel :< non_day_rel.
 
 non_day_diadic_rel := non_day_rel & diadic_nom_rel.
+non_day_modable_rel := non_day_rel & modable_rel.
+non_day_diadic_modable_rel := non_day_diadic_rel & modable_rel.
 
-;; named_month_rel
-mofy_rel := non_day_diadic_rel &
+generic_mofy_rel := relation &
   [ MONTH symbol,
     YEAR-IND non_expl-ind ].
+
+;; named_month_rel as in "January is fine"
+mofy_rel := generic_mofy_rel & non_day_diadic_rel.
+
+;; for "let's get together every October / next October / some October"
+mofy_unsat_rel := generic_mofy_rel & non_day_diadic_modable_rel.
 
 yofc_rel := non_day_rel &
   [ YEAR string ].
 
-season_rel := non_day_rel &
+season_rel := non_day_modable_rel &
   [ SEASON symbol ].
 
 age_rel :< non_day_rel.
@@ -1112,11 +1163,10 @@ _weekday_rel :< dofw_rel.
 _weekend_rel :< dofw_rel.
 _workday_rel :< dofw_rel.
 
-_week_rel :< non_day_diadic_rel.
-_fortnight_rel :< non_day_rel.
-_month_rel :< non_day_diadic_rel.
+_week_rel :< non_day_diadic_modable_rel.
+_fortnight_rel :< non_day_modable_rel.
+_month_rel :< non_day_diadic_modable_rel.
 _moment_rel :< non_day_rel.
-
 
 named_rel := reg_nom_rel &
   [ NAMED symbol ].
@@ -1126,7 +1176,14 @@ excl_rel := nondim_rel &
 
 greet_rel :< excl_rel.
 
-arg_rel := relation &
+
+;; The relation event_or_arg_rel is designed to distinguish non-nominal signs, 
+;; including verbs, adjectives, prepositions, and adverbs.  One use of this 
+;; distinction is for the conjuncts accepted by "but": "*Kim but Sandy left."
+
+event_or_arg_rel :< relation.
+
+arg_rel := event_or_arg_rel &
   [ ARG thing ].
 
 ; Pronouns
@@ -1164,8 +1221,6 @@ adj_preparg_rel := adj_rel & preparg_rel.
 meas_adj_rel := adj_preparg_rel &
   [ PREPARG ref-ind ].
 
-temp_span_rel :< meas_adj_rel.
-
 adj_personal_rel :< adj_rel.
 adj_abstract_rel :< adj_rel.
 
@@ -1173,7 +1228,7 @@ verb_aspect_rel :< norm_relation.
 
 prog_rel :< verb_aspect_rel.
 
-event_rel := verb_aspect_rel & nondim_rel &
+event_rel := verb_aspect_rel & nondim_rel & event_or_arg_rel &
   [ EVENT event ].
 
 mod_role_rel :< event_rel.
@@ -1275,11 +1330,7 @@ temp_loc_rel :< loc_rel.
 
 miscprep_rel :< prep_mod_rel.
 
-diadic_nom_rel_vit_prep := reg_diadic_nom_rel & prep_rel &
-  [ NPREP #prep,
-    PREP #prep ].
-
-part_of_rel :< diadic_nom_rel_vit_prep.
+part_of_rel :< reg_diadic_nom_rel.
 
 ;;; AAC - adv_rel also may have DIM
 
@@ -1362,13 +1413,15 @@ dative_to_rel :< transfer_dative_rel.
 ; bet
 act_und_thm_prop_rel := act_und_thm_rel & prop_rel.
 
-_to_rel :< dir_rel.
+to_dir_rel :< dir_rel.
+_to_rel :< to_dir_rel.
 _for_rel :< miscprep_rel.
 _by_rel :< miscprep_rel.
 _by_pass_rel :< miscprep_rel.
 _of_rel :< prep_mod_rel.
 _in_rel :< dir_or_state_rel.
 until_rel :< prep_mod_rel.
+_from_time_on :< miscprep_rel.
 
 subord_rel := nondim_rel &
   [ MAIN handle,
@@ -1432,9 +1485,6 @@ vit_arg_3 := varg_rel & arg3_rel &
 vit_arg := varg_rel & arg_rel &
   [ VARG #arg,
     ARG #arg ].
-vit_parg := preparg_rel & arg_rel &
-  [ PREPARG #arg,
-    ARG #arg ].
 vit_parg3 := preparg_rel & arg3_rel &
   [ PREPARG #arg,
     ARG3 #arg ].
@@ -1442,6 +1492,10 @@ vit_parg3 := preparg_rel & arg3_rel &
 vit_expr_2 := expr_rel & arg2_rel &
   [ EXPR #expr,
     ARG2 #expr ].
+
+vit_prop_3 := prop_rel & arg3_rel &
+  [ PROP #prop,
+    ARG3 #prop ].
 
 vit_fg_31 := vit_f_3 & vit_g_1.
 vit_fg_32 := vit_f_3 & vit_g_2.
@@ -1451,6 +1505,7 @@ vit_au_13 := vit_a_1 & vit_u_3.
 vit_au_12 := vit_a_1 & vit_u_2.
 vit_au_23 := vit_a_2 & vit_u_3.
 vit_au_32 := vit_a_3 & vit_u_2.
+vit_au_31 := vit_a_3 & vit_u_1.
 vit_ap_12 := vit_a_1 & vit_pa_2.
 vit_ap_13 := vit_a_1 & vit_pa_3.
 vit_ap_32 := vit_a_3 & vit_pa_2.
@@ -1460,8 +1515,10 @@ vit_aup_132 := vit_au_12 & vit_pa_3.
 vit_aut_123 := vit_au_12 & vit_t_3.
 vit_aut_132 := vit_au_13 & vit_t_2.
 vit_autp_123 := vit_au_13 & vit_t_2 & vit_pa_2.
+vit_auprop_123 := vit_au_12 & vit_prop_3.
 vit_afg_123 := vit_a_1 & vit_fg_23.
 vit_afg_132 := vit_a_1 & vit_fg_32.
+vit_fgu_312 := vit_u_2 & vit_fg_31.
 vit_expr_arg_23 := vit_expr_2 & vit_arg_3.
 act_rel_a_1 :< vit_a_1.
 act_rel_a_3 :< vit_a_3.
@@ -1471,6 +1528,7 @@ act_und_rel_au_13 := act_und_rel & vit_au_13.
 act_und_rel_au_12 := act_und_rel & vit_au_12.
 act_und_rel_au_23 := act_und_rel & vit_au_23.
 act_und_rel_au_32 := act_und_rel & vit_au_32.
+act_und_rel_au_31 := act_und_rel & vit_au_31.
 act_prep_rel_ap_13 :< vit_ap_13.
 act_prep_rel_ap_12 :< vit_ap_12.
 act_prep_rel_ap_32 :< vit_ap_32.
@@ -1483,20 +1541,30 @@ act_und_thm_rel_aut_123 := act_und_thm_rel & vit_aut_123.
 act_und_thm_rel_aut_132 := act_und_thm_rel & vit_aut_132.
 act_fig_gnd_rel_afg_132 := act_fig_gnd_rel & vit_afg_132.
 act_fig_gnd_rel_afg_123 := act_fig_gnd_rel & vit_afg_123.
+fig_gnd_und_rel_fgu_312 := fig_gnd_und_rel & vit_fgu_312.
 act_und_thm_prep_rel_autp_123 := act_und_thm_prep_rel & vit_autp_123.
+act_und_thm_prop_rel_autp_123 := act_und_thm_prop_rel & vit_auprop_123.
 support_main_rel_arg := support_main_rel & vit_arg.
 support_main_rel_arg_3 := support_main_rel & vit_arg_3.
 support_expr_rel_arg_23 := support_expr_rel & vit_expr_arg_23.
 support_rel_arg := support_rel & vit_arg.
 it_adj_varg_expr_rel_arg_3 := it_adj_varg_expr_rel & vit_arg_3.
-adj_varg_rel_arg_3 := adj_varg_rel & vit_arg_3.
+adj_varg_rel_arg_3 := adj_varg_rel & aac_arg3_rel &  
+  [ VARG #varg,
+    ARG3 #varg ].
 adj_parg_rel_arg_3 := adj_preparg_rel & vit_parg3.
 ;; Relations needed in lexical types
 
 adj_preparg_event_rel := adj_preparg_rel & event_rel.
 _equal_id_rel := adj_preparg_event_rel & vit_parg3.
-equal_rel :< prep_mod_rel.
 temp_span_rel := meas_adj_rel & vit_parg3.
+_equal_adj_rel :< adj_parg_rel_arg_3.
+
+
+
+; Used for underspecifying word sense.
+
+appointment_rel :< reg_nom_rel.
 
 ;; Relations needed for VIT conversion
 
@@ -1504,7 +1572,7 @@ abstr_apply := over_prop_rel & event_rel.
 
 _get_somewhere_rel :< act_rel_a_1.
 _get_together_rel :< act_rel_a_1.
-
+_enough_isect_rel :< adj_rel.
 
 
 
@@ -1565,7 +1633,7 @@ airplane_rel :< reg_nom_rel.
 place_rel :< reg_nom_rel.
 telephone_rel :< reg_nom_rel.
 person_rel :< reg_nom_rel.
-nonperson_rel :< reg_nom_rel.
+thing_rel :< reg_nom_rel.
 next_prev_rel :< adj_rel.
 manner_rel :< reg_nom_rel.
 reason_rel :< reg_nom_rel.

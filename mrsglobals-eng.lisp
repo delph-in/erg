@@ -7,6 +7,9 @@
 ;;   Language: Allegro Common Lisp
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; $Log$
+;; Revision 1.3  1998/10/09 23:12:00  danf
+;; Completed semantics through VIT for old VM dialogues
+;;
 ;; Revision 1.2  1998/09/29 19:45:16  danf
 ;; More VM semantics and bug fixes
 ;;
@@ -98,6 +101,9 @@
 
 (setf *psoa-handel-path* 
   `(,(vsym "TOP")))
+
+(setf *key-handel-path* 
+  `(,(vsym "KEY") ,(vsym "HANDEL")))
 
 (setf *rel-handel-path* 
   `(,(vsym "HANDEL")))
@@ -294,6 +300,7 @@
   `((,(vsym "dir_rel") vit-discourse (vit_dir yes))
     (,(vsym "prep_rel") vit-discourse (vit_dir no))
     (,(vsym "poss_rel") vit-discourse (vit_dir no))
+    (,(vsym "part_of_rel") vit-discourse (vit_dir no))
     (,(vsym "meas_adj_rel") vit-discourse (vit_dir no))
     (,(vsym "unspec_rel") vit-discourse (vit_dir no))
     (,(vsym "abstr_apply") vit-discourse (vit_dir no))
@@ -326,9 +333,10 @@
     ,(vsym "_upstairs_rel")
     ))
 
-(setf *vm-special-label-hack-list* nil)
+(setf *vm-special-label-hack-list* 
+  `((,(vsym "support_rel") ,(vsym "equal_rel"))))
 
-;  '((,(vsym "nominalize_rel . 2))
+;  `((,(vsym "nominalize_rel" . 2))
 
 
 ;;; display of extra features in an MRS
@@ -362,7 +370,11 @@
     ,(vsym "ECONT") ,(vsym "LISZT") ,(vsym "LIST")))
 
 (setf *message-semantics-path*
-  `(,(vsym "SYNSEM") ,(vsym "LOCAL") ,(vsym "CONT") ,(vsym "MESSAGE")
+  `(,(vsym "SYNSEM") ,(vsym "LOCAL") ,(vsym "CONT") 
+    #+(and :page :allegro-v5.0)
+    tdl::MESSAGE
+    #-(and :page :allegro-v5.0)
+    ,(vsym "MESSAGE")
     ,(vsym "LIST")))
 
 (setf *non-expl-ind-type* (vsym "non_expl-ind"))
