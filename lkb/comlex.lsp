@@ -178,7 +178,7 @@
     :rhs (make-u-value :types (list '*null*)))
    ;; Content
    (make-unification
-    :lhs (make-path :typed-feature-list '(synsem local cont key))
+    :lhs (make-path :typed-feature-list '(synsem local keys key))
     :rhs (make-u-value :types (list rel)))))
    
 
