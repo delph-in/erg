@@ -7,6 +7,9 @@
 ;;   Language: Allegro Common Lisp
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; $Log$
+;; Revision 1.16  1999/06/09 05:58:53  aac
+;; added comments regarding patches, added lilfes identifier patch, added global for compare
+;;
 ;; Revision 1.15  1999/06/05 00:03:15  aac
 ;; giving-demo-p should be nil
 ;;
@@ -409,3 +412,8 @@
 ;;; (setq main::*vm-arg-roles-only-p* nil)
 (setq mrs::*raw-mrs-output-p* nil)
 (setq mrs::%vit-indent% ",~%    ")
+
+(setf *root-path* '`(,(vsym "ROOT")))
+
+(setf *false-type* (vsym "-"))
+
