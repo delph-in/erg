@@ -125,12 +125,37 @@
 ;;; this belongs in the user-prefs file, not here
 
 (defparameter *duplicate-lex-ids* 
-  '(AN will_aux_neg_1 would_aux_neg_1 do1_neg_1 hadnt_aux_1 hadnt_aux_subj_1
-    hasnt_aux_1 have_fin_aux_neg_1 be_c_is_neg_1  be_id_is_neg_1
-    be_th_cop_is_neg_1 might_aux_neg_1 must_aux_neg_1 need_aux_neg_1
-    ought_aux_neg_1 should_aux_neg_1 be_id_was_neg_1 be_th_cop_was_neg_1
-    be_c_was_neg_1 be_c_were_neg_1 be_id_were_neg_1 be_th_cop_were_neg_1
-    will_aux_neg_1 would_aux_neg_1)
+  '(an_det will_aux_neg_1 will_aux_neg_2 would_aux_neg_1 
+    would_aux_neg_1 do1_neg_1 do1_neg_2 hadnt_aux_1 hadnt_aux_2
+    hadnt_aux_subj_1 hadnt_aux_subj_2 hasnt_aux_1 hasnt_aux_2
+    aint_sg_have_aux_1 aint_sg_have_aux_2 have_fin_aux_neg_1
+    have_fin_aux_neg_2 be_c_is_neg_1  be_c_is_neg_2
+    aint_be_c_is_neg_1 aint_be_c_is_neg_2 be_id_is_neg_1 be_id_is_neg_2
+    aint_be_id_is_neg_1 aint_be_id_is_neg_2 be_th_cop_is_neg_1 
+    be_th_cop_is_neg_2 aint_be_th_cop_is_neg_1 aint_be_th_cop_is_neg_2 
+    might_aux_neg_1 might_aux_neg_2 must_aux_neg_1 must_aux_neg_2
+    need_aux_neg_1 need_aux_neg_2 ought_aux_neg_1 ought_aux_neg_2
+    should_aux_neg_1 should_aux_neg_2 be_id_was_neg_1 be_id_was_neg_2 
+    be_th_cop_was_neg_1 be_th_cop_was_neg_2
+    be_c_was_neg_1 be_c_was_neg_2 be_id_was_neg_subj_1 be_id_was_neg_subj_2
+    be_th_cop_was_neg_subj_1 be_th_cop_was_neg_subj_2 be_c_was_neg_subj_1
+    be_c_was_neg_subj_2 be_c_were_neg_1 be_c_were_neg_2
+    be_id_were_neg_1 be_id_were_neg_2 be_th_cop_were_neg_1
+    be_th_cop_were_neg_2 be_c_were_neg_subj_1 be_c_were_neg_subj_2
+    be_id_were_neg_subj_1 be_id_were_neg_subj_2 be_th_cop_were_neg_subj_1
+    be_th_cop_were_neg_subj_2 will_aux_neg_1 will_aux_neg_2 would_aux_neg_1
+    would_aux_neg_2
+    be_c_am_cx be_c_am_cx_2 be_id_am_cx be_id_am_cx_2 be_c_are_cx be_c_are_cx_2
+    be_id_are_cx be_id_are_cx_2 had_aux_cx had_aux_cx_2 has_aux_cx has_aux_cx_2
+    have_fin_aux_cx have_fin_aux_cx_2 have_bse_aux_cx_1 have_bse_aux_cx_2 
+    be_c_is_cx be_c_is_cx_2 be_id_is_cx be_id_is_cx_2 be_th_cop_is_cx 
+    be_th_cop_is_cx_2 will_aux_pos_cx will_aux_pos_cx_2 would_aux_pos_cx 
+    would_aux_pos_cx_2 had_better_cx had_better_cx_2
+    not_really not_quite still_not rather_not
+    u_pro you_guys you_people yall yall_2 yall_3 you_all
+    and_conj_slash and_then_1 and_conj_2 and_or_conj_1 and_or_conj_2
+    and_or_conj_3 and_conj_amp and_conj_2_amp
+   )
   "temporary expedient to avoid generating dual forms")
 
 (setf *semantics-index-path* '(synsem local cont hook index))
