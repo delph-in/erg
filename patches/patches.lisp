@@ -98,9 +98,48 @@
       (write-vit vit-out vit))
     (format vit-out ",vitCheck(V).~%~%halt.~%"))
   (excl::run-shell-command "cd /eo/e1/vm2/vitADT/lib/Vit_Adt;/opt/quintus/bin3.2/sun4-5/prolog < ~/tmp/vitcheck" :output "~/tmp/vitout" :if-output-exists :supersede :error-output "~/tmp/viterror" :if-error-output-exists :supersede)
-  (excl::run-shell-command "tail -2 ~/tmp/vitout" :output stream)
+  (excl::run-shell-command "tail +56 ~/tmp/viterror | tail -r | tail +2 | tail -r" :output stream)
   (format stream "~%"))
 
+
+; Add munging of MRS to conform to VIT constraints
+
+(defun mrs-to-vit-convert (mrs-psoa &optional (standalone t))
+  (if (eq *mrs-for-language* 'english)
+     (let ((mrsstruct
+	    (if (boundp '*ordered-mrs-rule-list*)
+		(first (munge-mrs-struct mrs-psoa *ordered-mrs-rule-list*))
+	      mrs-psoa)))
+       (multiple-value-bind 
+          (vit binding-sets)
+          (mrs-to-vit mrsstruct)
+        (setf *canonical-bindings* nil)
+        (when standalone
+          (format t "~%Unscoped form")
+          (output-mrs mrsstruct 'indexed)
+            ;;; then try and find sets of bindings which will give a fully scoped 
+            ;;; structure, and output the results
+          (if binding-sets
+              (format t "~%Scoped form(s)")
+            (format t "~%WARNING: Invalid MRS structure"))
+          (for binding in binding-sets
+               do
+               (setf *canonical-bindings* (canonical-bindings binding))
+               (output-connected-mrs mrsstruct 'indexed)
+               (output-scoped-mrs mrsstruct)))
+        (when (and vit standalone)
+          (write-vit-pretty t (horrible-hack-2 vit))
+          (format t "~%"))
+	  (check-vit vit)
+          vit))
+    (let ((vit (german-mrs-to-vit mrsstruct)))
+      (when standalone
+	(format t "~%Unscoped form")
+	(output-mrs mrsstruct 'indexed))
+      (when (and vit standalone)
+	(write-vit-pretty t vit)
+	(format t "~%"))
+      vit)))
 
 #|
 (in-package "LEXICON")
@@ -242,6 +281,85 @@ Output:
                                     var)))))))
     (format stream ")")))
 
+;; In mrsresolve.lisp, remove constraint preventing holes and labels from 
+;; unifying (as seen in "my book" where poss_rel's handle has to unify with
+;; restrictor, which is a hole).
+
+(defun create-scoped-structures (top-handel bvs bindings rels scoping-handels)
+  ;;; AAC Sept 17 - changed behaviour so no rels can be added to
+  ;;; an existing set of relations which are known to fill a hole
+  ;;;
+  ;;; we have a top-handel (i.e. a current `top-handel' - this function
+  ;;; is called recursively) and a set of rels, some of which may have the
+  ;;; same handel as the top-handel.  We have to generate all possibilities
+  ;;; for combinations of rels which COULD have the same handel
+  ;;; bindings - current bindings
+  ;;; bvs - a list of the variables which are bound by quantifiers we've
+  ;;;       already dealt with (nil on first call)
+  ;;; rels - rels we haven't incorporated yet (all rels on first call)
+  ;;; scoping-handels - handels which will outscope the handels we're
+  ;;;        about to incorporate (nil on first call) - added for outscopes
+  ;;;        constraint
+  (if rels
+    ; fail immediately if we're going to be left with
+    ; an unsatisfiable handel arg
+    (let* ((handel-args (for rel in rels
+                                    append (get-handel-args rel)))
+           (impossible-top-rels 
+            ; the list of rels which introduce variables which are
+            ; currently free or which have a handel which is coindexed with a handel
+            ; argument of one of the rels
+            ; or which are `outscoped' by top-handel
+            ; or which are outscoped by a handel which is not on the list
+            ; of scoping-handels
+            (for rel in rels
+                 filter 
+                 (let ((vars (collect-unbound-vars-from-rel rel)))
+                   (if (or (and vars (not (subsetp vars bvs)))
+                           (member (get-var-num (rel-handel rel)) handel-args)
+                           (violates-outscopes-p  (get-var-num (rel-handel rel)) 
+                                                  top-handel scoping-handels bindings))
+                     ; violates-outscopes-p is in mrscons.lsp
+                     rel))))
+           (impossible-handels 
+            (remove-duplicates (for rel in impossible-top-rels
+                                    collect (get-var-num (rel-handel rel)))))
+           (possible-top-rels 
+            ; the list of rels which wouldn't introduce any free variables
+            ; and which don't have sisters (i.e. rels with the same handel)
+            ; which introduce free variables
+            (for rel in (set-difference rels impossible-top-rels)
+                 filter 
+                 (unless (member (get-var-num (rel-handel rel)) impossible-handels)
+                   rel)))
+           (top-rels ; the list of rels which have the same handel as the
+                     ; top handel
+            (for rel in rels
+                          filter (if (eql (get-var-num (rel-handel rel)) top-handel)
+                                   rel))))
+      (if (and possible-top-rels (subsetp top-rels possible-top-rels))
+        ; unless there are some possible rels and all the top rels
+        ; are possible, we fail
+        (for rel-comb-and-bindings in 
+             (make-combinations-with-is-one-ofs top-handel top-rels
+                           ;;;  (if top-rels nil
+                           ;;;    possible-top-rels)
+                           ;;; AAC - modification to avoid abstr rels
+                           ;;; turning up all over the place
+			       (set-difference possible-top-rels top-rels)
+						bindings)
+             ;;; for each possible set of rels which can have their handels
+             ;;; bound to the top-handel, generate a set of results
+             append
+             (sister-structure-scope 
+              (car (bindings-and-sisters-sisters rel-comb-and-bindings))
+              (cdr (bindings-and-sisters-sisters rel-comb-and-bindings)) 
+              bvs 
+              (bindings-and-sisters-bindings rel-comb-and-bindings) 
+              (set-difference rels 
+                              (bindings-and-sisters-sisters rel-comb-and-bindings))
+              (cons top-handel scoping-handels)))))))
+
 (in-package "CSLI")
 
 ;; In engmorph/english-morphology.lisp, modify EXPAND-ENGL-INFL to remove the
@@ -259,6 +377,57 @@ Output:
 	(t (list affix))))
 
 
+(in-package "MRS")
+
+;; In mrsoutput.lisp, modified EVENT-ABBREV since we're no longer encoding
+;; event/speech/reference time in the event FS.
+
+(defun event-abbrev (fs gen)
+  (let ((eventtime (path-value fs '(disco::time)))
+        (reftime (path-value fs '(disco::reference)))
+	(sptime (path-value fs '(disco::spch))))
+    (when (and eventtime sptime)
+      (if (not (eql sptime 'unify::*fail*))
+	  (format nil "(E:~A, R:~A, S:~A)" 
+		  (var-name (create-variable eventtime gen))
+		  (var-name (create-variable reftime gen))
+		  (var-name (create-variable sptime gen)))
+	(format nil "(E:~A, R:~A)" (var-name (create-variable eventtime gen))
+		(var-name (create-variable reftime gen)))))))
+
+;; In mrsoutput.lisp, modify CONSTRUCT-CANDS-LIST to accommodate now treating
+;; CANDS attribute as taking a diff-list, so we can distinguish local from
+;; non-local values for the attribute.
+
+(defun construct-cands-list (fs cands-list variable-generator)
+  (let ((real-list-fs (path-value fs '(DISCO::LIST)))
+        (last-pointer (path-value fs '(DISCO::LAST))))
+    #-pagelite
+    (when (is-valid-fs real-list-fs)
+      (setf real-list-fs (deref real-list-fs)))
+    (construct-cands-list-aux real-list-fs cands-list variable-generator 
+                              last-pointer)))
+
+(defun construct-cands-list-aux (real-list-fs cands-list variable-generator
+				 last-pointer)
+  (if (and (is-valid-fs real-list-fs)
+           (not (eql real-list-fs last-pointer)))
+      (let ((label-list (fs-arcs real-list-fs)))
+        (if label-list
+            (let ((first-part (assoc (car *liszt-first-path*)
+                                     label-list))
+                  (rest-part (assoc (car *liszt-rest-path*)
+                                    label-list)))
+              (if (and first-part rest-part)
+                  (progn
+                    (push (create-variable (cdr first-part) variable-generator)
+                          cands-list)
+                    (construct-cands-list-aux
+                     (cdr rest-part)
+                     cands-list variable-generator last-pointer))
+                cands-list))
+          cands-list))
+    cands-list))
 
 (in-package "TDL")
 

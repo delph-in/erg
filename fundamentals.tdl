@@ -288,7 +288,7 @@ scp_pr := *top* &
 ; Pairs handle of scopable argument with a list of candidate handles to unify  
 ; with that handle.
 is-one-of := scp_pr &      
-  [ CANDS *list* ].        
+  [ CANDS *diff-list* ].        
 
 ; Constrains handle of scopable argument to outscope argument whose handle is
 ; value of CANDS.
@@ -443,21 +443,21 @@ unexpressed := non_canonical &
   [ FIRST.OPT +, 
     REST *olist* ].
 *onull* := *olist* & *null*.
-|#
-
-; In addition, add constraint on optional arguments that their ECONT.LISZT
-; must be empty, since lexical heads selecting for arguments will append this
-; LISZT to their own in order to allow, eg., meaning-bearing PP complements.
 
 *olist* := *list* &
   [ FIRST unexpressed & [ OPT + ],
     REST  *list* & [ FIRST unexpressed & [ OPT + ],
 		     REST.FIRST unexpressed & [ OPT + ] ] ].
+|#
 
   ;; The REST of *olist* should of course be *olist*, but TDL won't allow
   ;; recursive type definition, so add hack of making REST.FIRST.OPT +,
-  ;; taking advantage of the fact that no lexical entry introduces three
+  ;; taking advantage of the fact that no lexical entry introduces two
   ;; optional complements followed by obligatory ones.
+
+*olist* := *list* &
+  [ FIRST unexpressed & [ OPT + ],
+    REST  *list* & [ FIRST unexpressed & [ OPT + ] ] ].
 
 *ocons* := *olist* & *cons*.
 
@@ -476,6 +476,10 @@ unexpressed := non_canonical &
 ;;; so the definition above is overwritten by the following in the patches.tdl
 ;;; file in the directory <grammardir>/lkb/. 
 
+; Add constraint on optional arguments that their ECONT.LISZT must be empty, 
+; since lexical heads selecting for arguments will append this
+; LISZT to their own in order to allow, eg., meaning-bearing PP complements.
+
 *olist* :< *list*.
 *ocons* := *olist* & *cons* &
   [ FIRST [ OPT +,
@@ -493,7 +497,7 @@ unexpressed := non_canonical &
 
 *gapcons* := *gaplist* & *cons*.
 
-*gapnull* := *gaplist* & *null*.
+*gapnull* := *gaplist* & *onull*.
 
 ; ERB (14-12-97) Here's another one where we know there's only ever
 ; one.
@@ -507,6 +511,7 @@ unexpressed := non_canonical &
     REST *null* ].
 
 *procons* := *prolist* & *cons*.
+
 *pronull* := *prolist* & *null*.
 
 ;; *unexplist* is used for common nouns whose specifier is possibly obligatory,
@@ -681,8 +686,9 @@ poss-able := *avm* &
 n_or_p :< head.
 a_or_p :< head.
 v_or_p :< head.
-v_or_g :< head.
 n_or_v :< head.
+v_or_g_or_a :< head.
+v_or_g :< v_or_g_or_a.
 
 strict_head :< head.
 
@@ -705,9 +711,9 @@ mobile :< head.
 ; Adverbs modify adverbees.
 adverbee :< subst.
 
-adj* := particle & a_or_p & adverbee & mobile.
+adj* := particle & a_or_p & v_or_g_or_a & adverbee & mobile.
 
-prep* := particle & a_or_p & v_or_p & n_or_p & subst & mobile.
+prep* := particle & a_or_p & v_or_p & n_or_p & adverbee & subst & mobile.
 
 nsort :< *sort*.
 proper* :< nsort.
@@ -741,7 +747,7 @@ neg :< func.
 
 adv := func & particle & mobile.
 
-root-marker := subst & strict_head.
+root-marker := subst & v_or_g_or_a & strict_head.
 
 detspec :< func.
 
@@ -910,6 +916,10 @@ time :< nominal-sort.
 info_bearer :< nominal-sort.
 nongeo_location :< nominal-sort.
 
+; nondim_rel is used to determine whether the specifier that combines with its
+; head provides the semantics (nonhead-compositional) or whether the head does:
+; nondim_rel entries are head-compositional.
+
 nondim_rel :< norm_relation.
 
 ; AAC - fix for ARG3 introduction
@@ -919,22 +929,17 @@ aac_arg3_rel := nondim_rel &
 
 ; Nominal relations
 
-basic_nom_rel := nondim_rel &
+basic_nom_rel := norm_relation &
   [ INST individual ].
 
 nom_rel := basic_nom_rel &
   [ INST non_expl-ind ].
 
-non_temp_nom_rel :< nom_rel.
+nom_nondim_rel := nom_rel & nondim_rel.
+non_temp_nom_rel :< nom_nondim_rel.
 reg_nom_rel :< non_temp_nom_rel.
 
-#|
-diadic_nom_rel := nom_rel & aac_arg3_rel &
-  [ NPREP thing & #arg3,
-    ARG3 #arg3 ].
-|#
-
-diadic_nom_rel := nom_rel &
+diadic_nom_rel := nom_nondim_rel &
   [ NPREP thing ].
 
 diadic_nom_rel_vit := diadic_nom_rel & aac_arg3_rel &
@@ -943,7 +948,7 @@ diadic_nom_rel_vit := diadic_nom_rel & aac_arg3_rel &
 
 reg_diadic_nom_rel := diadic_nom_rel_vit & reg_nom_rel.
 
-hcomp_nom_rel := nom_rel & aac_arg3_rel &
+hcomp_nom_rel := nom_rel & aac_arg3_rel & nondim_rel &
   [ NOMARG handle & #arg3,
     ARG3 #arg3 ].
 
@@ -959,12 +964,14 @@ gerund_rel := diadic_nom_rel_vit & hcomp_nom_rel.
 temp_rel := nom_rel &
   [ INST.SORT time ].
 
-day_rel :< temp_rel.
+temp_nondim_rel := temp_rel & nondim_rel.
+
+day_rel :< temp_nondim_rel.
 
 named_day_rel := day_rel &
   [ DAY atom ].
 
-non_day_rel :< temp_rel.
+non_day_rel :< temp_nondim_rel.
 
 ;; day_of_month_rel
 dofm_rel := named_day_rel & diadic_nom_rel &
@@ -984,7 +991,8 @@ holiday_rel := named_day_rel &
 day_part_rel := day_rel &
   [ OF-DAY non_expl-ind ].
 
-hour_rel :< temp_rel.
+; dim_rel: 'almost three o'clock'
+hour_rel := temp_rel & dim_rel.
 
 ; a quarter till three  ("till" is head - cf "come at a quarter till.")
 hour_prep_rel := hour_rel &
@@ -998,10 +1006,10 @@ numbered_hour_rel := hour_rel &
     MIN non_expl-ind,
     AM-PM non_expl-ind ].
 
-minute_rel := temp_rel &
+minute_rel := temp_nondim_rel &
   [ MINUTE integer ].
 
-am_pm_rel :< temp_rel.
+am_pm_rel :< temp_nondim_rel.
 am_rel :< am_pm_rel.
 pm_rel :< am_pm_rel.
 
@@ -1111,11 +1119,12 @@ arg_rel := event_arg_rel &
 
 irrealis_rel :< arg_rel.
 
+; Used to ensure tag question agreement, but does not appear in LISZT.
+will_rel :< arg_rel.
+
 support_rel :< event_rel.
 
-support_arg_rel := support_rel & varg_rel.
-
-support_main_rel := support_arg_rel & mod_role_rel.
+support_main_rel := support_rel & mod_role_rel.
 
 ;;; AAC - added support_expr_rel
 
@@ -1202,17 +1211,14 @@ neg_polar_rel :< adv_rel.
 
 ; Degree relations
 
-;;; AAC - DEGINST was only in lextypes.tdl - may be bogus
-
-degree_rel := dim_rel &
-  [ DARG thing,
-    DEGINST individual ].
+degree_rel := norm_relation &
+  [ DARG thing ].
 
 comp_degree_rel :< degree_rel.
 non_comp_degree_rel :< degree_rel.
 
 ; For specifiers of adjectives
-deg_rel :< non_comp_degree_rel.
+deg_rel := non_comp_degree_rel & dim_rel.
 
 ; For specifiers of positive adjectives
 very_deg_rel :< deg_rel.
@@ -1247,6 +1253,14 @@ comp_q_rel := quant_rel &
     BV #index,
     CQ-INST index ].
 |#
+
+;; For "how" adjective, which quantifies over properties.
+
+property_rel :< reg_nom_rel.
+
+prpstn_to_prop_rel := norm_relation &
+  [ PRPSTN handle,
+    PROP non_expl-ind ].
 
 act_prep_rel := act_rel & preparg_rel.
 
@@ -1338,6 +1352,9 @@ vit_arg := varg_rel & arg_rel &
 vit_parg := preparg_rel & arg_rel &
   [ PREPARG #arg,
     ARG #arg ].
+vit_expr_2 := expr_rel &
+  [ EXPR #expr,
+    ARG2 #expr ].
 
 vit_fg_31 := vit_f_3 & vit_g_1.
 vit_fg_32 := vit_f_3 & vit_g_2.
@@ -1350,12 +1367,15 @@ vit_au_32 := vit_a_3 & vit_u_2.
 vit_ap_12 := vit_a_1 & vit_pa_2.
 vit_ap_13 := vit_a_1 & vit_pa_3.
 vit_ap_32 := vit_a_3 & vit_pa_2.
+vit_ap_23 := vit_a_2 & vit_pa_3.
 vit_aup_123 := vit_au_13 & vit_pa_2.
 vit_aup_132 := vit_au_12 & vit_pa_3.
 vit_aut_123 := vit_au_12 & vit_t_3.
+vit_aut_132 := vit_au_13 & vit_t_2.
 vit_autp_123 := vit_au_13 & vit_t_2 & vit_pa_2.
 vit_afg_123 := vit_a_1 & vit_fg_23.
 vit_afg_132 := vit_a_1 & vit_fg_32.
+vit_expr_arg_23 := vit_expr_2 & vit_arg_3.
 act_rel_a_1 :< vit_a_1.
 act_rel_a_3 :< vit_a_3.
 und_only_rel_u_3 := und_only_rel & vit_u_3.
@@ -1367,15 +1387,18 @@ act_und_rel_au_32 := act_und_rel & vit_au_32.
 act_prep_rel_ap_13 :< vit_ap_13.
 act_prep_rel_ap_12 :< vit_ap_12.
 act_prep_rel_ap_32 :< vit_ap_32.
+act_prep_rel_ap_23 :< vit_ap_23.
 fig_gnd_rel_fg_31 :< vit_fg_31.
 fig_gnd_rel_fg_32 :< vit_fg_32.
 act_und_prep_rel_aup_123 := act_und_prep_rel & vit_aup_123.
 act_und_prep_rel_aup_132 := act_und_prep_rel & vit_aup_132.
 act_und_thm_rel_aut_123 := act_und_thm_rel & vit_aut_123.
+act_und_thm_rel_aut_132 := act_und_thm_rel & vit_aut_132.
 act_fig_gnd_rel_afg_132 := act_fig_gnd_rel & vit_afg_132.
 act_fig_gnd_rel_afg_123 := act_fig_gnd_rel & vit_afg_123.
 act_und_thm_prep_rel_autp_123 := act_und_thm_prep_rel & vit_autp_123.
 support_main_rel_arg_3 := support_main_rel & vit_arg_3.
+support_expr_rel_arg_23 := support_expr_rel & vit_expr_arg_23.
 support_rel_arg := support_rel & vit_arg.
 adj_varg_expr_rel_arg := adj_varg_expr_rel & vit_arg.
 it_adj_varg_expr_rel_arg := it_adj_varg_expr_rel & vit_arg.
@@ -1587,10 +1610,14 @@ intadj1  := intadj2- & digit1.
 ; This will unify with the indices introduced by (appropriate) controllers,
 ; and (hopefully) be identifiable if it is not controlled.
 
+; pro_ss used to have CONT.ECONT.LISZT <! !> but this runs afoul of its use
+; in wh_filler_head constructions such as "how does the seventeenth seem"
+; where "the seventeenth" is unified with the SUBJ of "how", but has a non-empty
+; ECONT.LISZT.
+
 pro_ss := non_canonical &
   [ LOCAL [ CAT.HEAD.CASE acc,
-	    CONT [ INDEX non_expl,
-		   MODCONT.LISZT <! !> ] ],
+	    CONT.INDEX non_expl ],
     NON-LOCAL [ REL <! !>,
 		QUE <! !> ],
     OPT - ].

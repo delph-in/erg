@@ -7,6 +7,9 @@
 ;;   Language: Allegro Common Lisp
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; $Log$
+;; Revision 1.6  1998/03/12 22:12:29  dan
+;; More debugging of lexical threading, and further clean-up of well-formedness for types.
+;;
 ;; Revision 1.5  1998/01/09 23:41:49  dan
 ;; Minor changes for Verbmobil
 ;;
@@ -84,7 +87,7 @@
 (setf main::*VM-arg-roles* '(disco::arg1 disco::arg2 disco::arg3))
 (setf main::*suppressed-VM-arg-roles* 
     '(disco::act disco::und disco::fig disco::gnd disco::ord disco::i-ord
-      disco::preparg disco::thm disco::main disco::subord
+      disco::preparg disco::thm 
       disco::id1 disco::id2 disco::params disco::nprep 
       disco::nomarg disco::expr disco::carg disco::varg))
 
@@ -196,6 +199,7 @@
      (DISCO::PASTPERF* (vit_tense past) (vit_perf perf))
      (DISCO::TENSE (vit_perf nonperf))
      (DISCO::BSE (vit_perf nonperf))
+     (DISCO::IMP_VFORM (vit_perf nonperf))
      (DISCO::FIN (vit_tense pres) (vit_perf nonperf))
       
 
@@ -215,8 +219,7 @@
 ;;; this is very tentative
 (setf *mrs-arg-features* '((disco::arg1 . ARG1) 
                            (disco::arg2 . ARG2)
-                           (disco::arg3 . ARG3)
-			   (disco::dim  . DIM)))
+                           (disco::arg3 . ARG3)))
 
 (setf *sem-relation-suffix* "_rel")
 
