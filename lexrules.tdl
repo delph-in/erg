@@ -1,6 +1,6 @@
 ;;; -*- Mode: TDL; Package: DISCO -*-
 ;;;
-;;;  Copyright (c) 1994-2004
+;;;  Copyright (c) 1994-2005
 ;;;    Dan Flickinger, Rob Malouf, Emily M. Bender
 ;;;    see erg/licence.txt for conditions
 ;;;
@@ -114,23 +114,6 @@ bse_verb := non_fin_verb & non_perf &
 ; DPF 4-Mar-01 - Removed [CONT.MSG no_msg] from SUBJ, to allow e.g.
 ; "me hiring you bothered him"
 ; 21-apr-04 - Removed STATIVE - from INDEX
-
-#|
-basic_fin_verb := non_perf &
-  [ CAT [ HEAD verb &
-               [ PRD -,
-                 VOICE active,
-		 TAM [ TENSE #tense,
-		       ASPECT #aspect ],
-		 VFORM fin ],
-	  POSTHD +,
-	  VAL.SUBJ < synsem & [ LOCAL [ CAT nomp_cat_nom_min,
-					CONJ cnil ] ] > ],
-    CONT psoa & 
-             [ HOOK.INDEX #event & [ E [ TENSE #tense,
-                                         ASPECT #aspect ] ],
-	       RELS.LIST.FIRST.ARG0 #event ] ].
-|#
 
 basic_fin_verb := non_perf &
   [ CAT [ HEAD verb &
@@ -391,36 +374,13 @@ basic_sai := lex_rule &
     ARGS < #stem >,
     C-CONT.RELS <! !> ].
 
+; DPF 28-mar-05 - Now propagate AUX from daughter, since we need cop-id to
+; be unmarked for AUX, so it can be modified by PPs, as in "where is Kim the
+; king?"
 sai := basic_sai &
-  [ SYNSEM sai_synsem,
-    DTR.SYNSEM.LOCAL.CAT.HEAD [ INV + ] ].
-
-
-#|
-tag := lex_rule_super &
-  [ STEM #orth,
-    DTR #stem &
-	[ STEM #orth,
-	  SYNSEM sai_synsem &
-	       [ LOCAL [ CAT [ HEAD [ TAM #tam,
-                                      KEYS #keys ],
-			       VAL.COMPS < #subj, [ LOCAL.CAT.HEAD subst ], ... >,
-                               HC-LEX #hclex ] ],
-		 NONLOC #nonloc & 
-		       [ SLASH 0-dlist,
-			 REL 0-dlist,
-			 QUE 0-dlist ] ] ],
-    SYNSEM tag_synsem &
-	 [ LOCAL [ CAT [ HEAD [ TAM #tam,
-                                KEYS #keys ],
-			 VAL.COMPS.FIRST #subj,
-                         HC-LEX #hclex ],
-		   CONT [ RELS #cliszt,
-                          MSG #msg ] ],
-           NONLOC #nonloc ],
-    ARGS < #stem >,
-    C-CONT.RELS #cliszt & <! #msg !> ].
-|#
+  [ SYNSEM basic_sai_synsem & [ LOCAL.CAT.HEAD.AUX #aux ],
+    DTR.SYNSEM.LOCAL.CAT.HEAD [ INV +,
+                                AUX #aux ] ].
 
 tag := lex_rule_super &
   [ STEM #orth,
@@ -536,11 +496,12 @@ basic_adv_addition := lex_rule &
 		     COMPS *cons* &
 			  < [ LOCAL local &
 			     [ CAT [ HEAD basic_lexadv &
-                                     [ MOD < [ LOCAL.CONT.HOOK.LTOP #vltop ] >,
-                                       TAM.TENSE no_tense ],
+                                     [ MOD < [ LOCAL.CONT.HOOK 
+                                                         [ LTOP #vltop,
+                                                           INDEX #vindex ] ] >,
+                                       TAM #tam ],
                                      VAL.COMPS < > ],
-                               CONT [ HOOK [ LTOP #advltop,
-                                             INDEX #vindex ],
+                               CONT [ HOOK.LTOP #advltop,
                                       MSG no_msg ] ],
                               LEX +,
 			      OPT - ] . #comps >,
@@ -569,6 +530,8 @@ adv_addition := basic_adv_addition &
 ;; fin_or_bse.
 ;; DPF 28-Nov-03 - But then we don't get "Kim has been", so removed it; now
 ;; we should block "kim is being with the ASPECT.PROGR - constraint.
+;; DPF 11-mar-05 - Removed AUX + since now restricting PPs to modify only
+;; [AUX -] VPs.
 
 vp_ellipsis := lex_rule &
   [ STEM #orth,
@@ -604,7 +567,6 @@ vp_ellipsis := lex_rule &
                               [ MOD #mod,
                                 PRD #prd,
                                 INV #inv,
-                                AUX +,
                                 TAM #tam,
                                 VFORM #vform,
                                 VOICE #voice,
@@ -635,14 +597,17 @@ vp_ellipsis_ref := vp_ellipsis &
                              ARG1 #sind ] ] ].
                    
 vp_ellipsis_expl := vp_ellipsis &
-  [ DTR.SYNSEM [ LOCAL [ CAT.HEAD.KEYS.KEY _be_v_there_rel,
+  [ DTR.SYNSEM [ LOCAL [ CAT [ HEAD.KEYS.KEY _be_v_there_rel,
+                               VAL.COMPS < synsem, unexpressed > ],
                          CONT.HOOK.XARG there-ind & #ind ],
                  LKEYS.--+SUBJIND #subjind ],
     SYNSEM verb_synsem &
-	 [ LOCAL.CONT.HOOK [ INDEX #event,
+	 [ LOCAL.CONT.HOOK [ LTOP #ltop,
+                             INDEX #event,
                              XARG #ind ],
            NONLOC.QUE 0-dlist,
-           LKEYS [ ALTKEYREL.ARG0 #event,
+           LKEYS [ ALTKEYREL [ LBL #ltop,
+                               ARG0 #event ],
                    --+SUBJIND #subjind ] ] ].
 
 ;; Need to work on generalizing the semantics - since we derive this entry
@@ -702,42 +667,16 @@ basic_passive_verb_lr := lex_rule_compos &
     POSSCL -,
     ARGS < #dtr > ].
 
-#|
-; it-extraposition
-
-it-extraposition := lex_rule &
-  [ STEM #orth,
-    DTR [ STEM #orth,
-	  SYNSEM extraposable_synsem &
-	       [ LOCAL [ CAT [ HEAD #head,
-			       VAL [ SUBJ < [ --SIND #subjind ] >,
-					 COMPS #comps ] ] ],
-			 CONT #cont,
-			 CTXT #ctxt ],
-		   NONLOC #nonloc ] ],
-    SYNSEM expl_it_subj_synsem &
-	 [ LOCAL [ CAT [ HEAD #head,
-                         VAL [ SUBJ < synsem &
-					[ LOCAL [ CAT nomp_cat_min,
-						  CONJ cnil ],
-                                          --SIND it-ind ] >,
-                               COMPS < synsem & 
-					   [ LOCAL [ CAT s_cat_fin_v_c,
-						     CONJ cnil ],
-                                             --SIND #subjind,
-					     OPT - ]
-					   . #comps > ] ],
-		   CONT #cont,
-		   CTXT #ctxt ],
-	   NONLOC #nonloc ],
-   C-CONT.RELS <! !>  ].
-|#
-
 ;; This has the same problem as the passive lexical rule.  Since we derive the
 ;; gerund from the present particple, we somehow have to filter out the
 ;; progressive relation.
 
 ;; DPF 27-May-99 - We block extraction from gerunds, at least for efficiency.
+;; DPF 27-May-99 - POSS-ING gerunds are given a non-empty SUBJ value so they
+;; can be modified by ordinary PPs and non-sentential adverbs, but the synsem
+;; value is the hack 'anti_synsem' which is also used for the SPR value of 
+;; verbs, for similar reasons.
+;; DPF 27-May-99 - Try combining the two verbal gerund rules into one.
 ;; DPF 02-June-99 - We also block the auxiliary verbs "being, having, doing",
 ;; to avoid identity copula analyses for "Kim is being good" or "Kim is having
 ;; hired Sandy".
@@ -757,14 +696,19 @@ it-extraposition := lex_rule &
 ;; SORT to block spurious analysis for "kim is being good", just like for
 ;; "Kim is arriving", so we remove the [AUX -] constraint, which means we
 ;; once again can get "after being hired, Kim smiled"
+;; Changed SYNSEM nonpro_onearg_synsem to SYNSEM basic_one_arg so as to
+;; leave the LEX value underspecified, so we can avoid bare-vger for 
+;; unadorned verbal gerunds.
 
-verbal_gerund := lex_rule &
+vger_ing := lex_rule &
   [ STEM #orth,
     DTR [ STEM #orth,
 	  SYNSEM verb_synsem &
 	       [ LOCAL [ CAT [ HEAD verb &
                                     [ VFORM prp ],
-			       VAL.COMPS #comps ],
+			       VAL [ SUBJ < [ --SIND #subj,
+                                              NONLOC #snonloc ] >,
+                                     COMPS #comps ] ],
 			 CONT [ HOOK.LTOP #vhand,
                                 HCONS [ LIST #hclist,
                                         LAST #hclast ] ],
@@ -774,16 +718,31 @@ verbal_gerund := lex_rule &
                          --COMPKEY #ckey,
                          --OCOMPKEY #ockey ],
 		 NONLOC #nonloc ] ],
-    SYNSEM nonpro_onearg_synsem &
+    SYNSEM basic_one_arg &
 	   [ LOCAL [ AGR #ind,
 		     CAT [ HEAD gerund &
 				[ MOD < >,
 				  PRD -,
+                                  POSS -,
                                   KEYS.KEY gerund_rel ],
-			   VAL [ SUBJ < [ LOCAL.CAT.HEAD noun ] >,
-                                 SPR < [ OPT - ] >,
+			   VAL [ SUBJ < synsem &
+				    [ LOCAL [ CAT nomp_cat_acc_min &
+                                                  [ HEAD noun ],
+					      CONJ cnil,
+                                              CONT.MSG no_msg ],
+                                      --SIND #subj ] >,
+                                 SPR < [ LOCAL local &
+					   [ CAT [ HEAD det & 
+						    [ POSS + ],
+                                                   VAL [ SUBJ < >,
+							 SPR *olist*,
+							 COMPS < > ] ],
+                                             CONT.HOOK.INDEX #subj ],
+                                         NONLOC #snonloc,
+                                         OPT - ] >,
                                  COMPS #comps ] ],
-		     CONT [ HOOK [ LTOP #hand,
+		     CONT nom-obj &
+                          [ HOOK [ LTOP #hand,
                                    INDEX #ind &
                                        [ PNG png & [ PN 3sg,
                                                      GEN neut ],
@@ -804,32 +763,6 @@ verbal_gerund := lex_rule &
     C-CONT.RELS <! #key, message & [ LBL #arghand,
                                      PRED prpstn_m_rel,
                                      MARG #marghand ] !> ].
-
-; DPF 27-May-99 - POSS-ING gerunds are given a non-empty SUBJ value so they
-; can be modified by ordinary PPs and non-sentential adverbs, but the synsem
-; value is the hack 'anti_synsem' which is also used for the SPR value of verbs,
-; for similar reasons.
-
-; DPF 27-May-99 - Try combining the two verbal gerund rules into one.
-
-vger_ing := verbal_gerund &
-  [ DTR.SYNSEM.LOCAL.CAT.VAL.SUBJ < [ --SIND #subj,
-                                      NONLOC #snonloc ] >,
-    SYNSEM.LOCAL [ CAT.VAL [ SUBJ < synsem &
-				    [ LOCAL [ CAT nomp_cat_acc_min,
-					      CONJ cnil,
-                                              CONT.MSG no_msg ],
-                                      --SIND #subj ] >,
-                             SPR < [ LOCAL local &
-					   [ CAT [ HEAD det & 
-						    [ POSS + ],
-                                                   VAL [ SUBJ < >,
-							 SPR *olist*,
-							 COMPS < > ] ],
-                                             CONT.HOOK [ INDEX #subj,
-                                                         XARG #ind ] ],
-                                     NONLOC #snonloc ] > ],
-		   CONT.HOOK.INDEX #ind ] ].
 
 ;; DPF (12-Jul-98) In order to allow prenominal adjectives for nominal gerunds,
 ;; as in "regular tasting of wine is healthy", we have to treat the specifier
@@ -910,6 +843,7 @@ nominal_gerund := lex_rule_compos &
                                       [ HARG #marghand,
                                         LARG #vhand ] . #hclist >,
                                LAST #hclast ] ],
+               CONJ cnil,
 	       CTXT #ctxt ],
              LKEYS [ KEYREL #key & nominalize_relation &
                               [ LBL #hand,
@@ -917,7 +851,8 @@ nominal_gerund := lex_rule_compos &
                                 ARG1 #arghand ],
                      --COMPKEY #ckey,
                      --OCOMPKEY #ockey ],
-	     NONLOC #nonloc & [ SLASH 0-dlist ] ],
+	     NONLOC #nonloc & [ SLASH 0-dlist ],
+             MODIFD notmod ],
     C-CONT.RELS <! #key, message & [ LBL #arghand,
                                      PRED prpstn_m_rel,
                                      MARG #marghand ] !>,
@@ -930,7 +865,7 @@ intrans_nominal_gerund := nominal_gerund &
     SYNSEM.LOCAL.CAT.VAL.COMPS #comps ].
 
 intrans_pp_nominal_gerund := nominal_gerund &
-  [ DTR.SYNSEM two_arg_subst &
+  [ DTR.SYNSEM unsat_two_arg_subst &
 	       [ LOCAL.CAT.VAL.COMPS #comps &
                                      < [ LOCAL.CAT.HEAD prep ], ... > ],
     SYNSEM.LOCAL.CAT.VAL.COMPS #comps ].
@@ -1099,7 +1034,7 @@ attr_adj_lr := lex_rule &
                                        COMPS *olist* ] ],
                            CTXT #ctxt ],
 		   NONLOC #non-local ] ],
-    SYNSEM attr_adj_synsem &
+    SYNSEM basic_attr_adj_synsem &
 	  [ LOCAL [ CAT [ HEAD [ MOD #mod,
                                  KEYS.KEY #key ],
 			  VAL [ SUBJ #subj,
@@ -1132,6 +1067,9 @@ attr_adj_lr := lex_rule &
 ;; DPF 3-Jan-02 - Added hack unary length limit on RELS for input, to block 
 ;; application of rule to v-np-pp verbs like "send" (cf. 'Do you offer a 
 ;; printed catalog')
+;; For now, allow only intransitive and transitive verb participles to appear
+;; as attributive modifiers - block e.g. subj-equi variants to avoid spurious
+;; ambiguity for 'the starting point'
 ;; DPF 14-dec-03 - Consider removing LPERIPH na, since it prevents NPs with
 ;; one of these guys from appearing in appositive constructions: "the singing 
 ;; bear Kim".  Not clear what work it does.  FIX.
@@ -1141,6 +1079,12 @@ attr_adj_lr := lex_rule &
 ;; appositive analyses for examples like "Kim interviewed Sandy".
 ;; DPF 21-aug-04 - Added SPEC < > to prevent these from being modified by
 ;; posthead PP - always a dead-end attachment.
+;; DPF 10-mar-05 - Re 25-Nov-01: Now allowing adverbs to modify adjectives as
+;; well, so make output be HEAD adj, which also allows us now to coordinate
+;; these as in "the admired and hated politicians" (didn't parse before).
+;; DPF 28-mar-05 - Restored LPERIPH bool in order to prevent these inside
+;; N-Adj-N compounds, since there is an alternative analysis of e.g.
+;; 'company tracking number' where 'tracking number' is an N-N compound.
 
 basic_attr_verb_part_lr := lex_rule &
   [ STEM #orth,
@@ -1153,15 +1097,16 @@ basic_attr_verb_part_lr := lex_rule &
 				 VAL [ SUBJ #subj,
                                        SPR #spr ] ],
                            CONT [ HOOK [ LTOP #ltop,
-                                         INDEX.E [ TENSE no_tense,
-                                                   ASPECT.PERF - ] ],
+                                         INDEX #event &
+                                              [ E [ TENSE no_tense,
+                                                    ASPECT.PERF - ] ] ],
                                   RELS <! relation !>,
                                   HCONS #hcons,
                                   MSG #msg ],
                            CTXT #ctxt ],
                    NONLOC #non-local ] ],
     SYNSEM canonical_synsem &
-	  [ LOCAL [ CAT [ HEAD verb &
+	  [ LOCAL [ CAT [ HEAD adj &
                                [ MOD < synsem &
                                        [ LOCAL intersective_mod &
                                          [ CAT nbar_cat &
@@ -1169,7 +1114,6 @@ basic_attr_verb_part_lr := lex_rule &
                                            CONJ cnil,
                                            AGR #ind ],
                                          --SIND #ind ] >,
-                                 VFORM psp_adj,
                                  PRD -,
                                  KEYS.KEY #key ],
                           VAL [ SUBJ #subj &
@@ -1177,13 +1121,16 @@ basic_attr_verb_part_lr := lex_rule &
                                 SPR #spr,
                                 COMPS < >,
                                 SPEC < > ],
+                          POSTHD -,
                           MC na ],
                     CONT [ HOOK [ LTOP #ltop,
-                                  INDEX #ind ],
+                                  INDEX #event,
+                                  XARG #ind ],
                            HCONS #hcons,
                            MSG #msg ],
                     CTXT #ctxt ],
-	    NONLOC #non-local ],
+	    NONLOC #non-local,
+            MODIFD.LPERIPH bool ],
     C-CONT.RELS <! !> ].
 
 attr_verb_part_lr := basic_attr_verb_part_lr &
@@ -1193,9 +1140,6 @@ attr_verb_part_tr_lr := basic_attr_verb_part_lr &
   [ DTR.SYNSEM.LOCAL.CAT.VAL.COMPS < unexpressed &
                                      [ LOCAL.CAT.HEAD n_or_p ] . *olist* > ].
 
-; For now, allow only intransitive and transitive verb participles to appear
-; as attributive modifiers - block e.g. subj-equi variants to avoid spurious
-; ambiguity for 'the starting point'
 
 ;; The partitive construction rule introduces a new type of relation: 
 ;; part_of_rel, which contains the semantic information of the partitive.
@@ -1259,22 +1203,20 @@ part_nocomp_constr := basic_part_constr &
                       AGR.DIVISIBLE #div ] ].
 
 part_ppof_agr_constr := basic_part_constr &
- [ DTR.SYNSEM [ LOCAL.CAT [ HEAD.KEYS.KEY explicit_quant_agr_q_rel,
-                            VAL [ KCMP #kcomp,
-                                  COMPS #comps ] ],
-                LKEYS.KEYREL.PRED explicit_quant_agr_q_rel ],
+ [ DTR.SYNSEM.LOCAL.CAT [ HEAD.KEYS.KEY explicit_quant_agr_q_rel,
+                          VAL [ KCMP #kcomp,
+                                COMPS #comps ] ],
    SYNSEM basic_partitive_noun_ppof_synsem &
         [ LOCAL [ CAT.VAL [ KCMP #kcomp & [ LOCAL.AGR.PNG.PN #pn ],
                             COMPS < #kcomp . #comps > ],
                   AGR.PNG.PN #pn ] ] ].
           
 part_ppof_noagr_constr := basic_part_constr &
- [ DTR.SYNSEM [ LOCAL [ CAT [ HEAD.KEYS.KEY explicit_quant_or_udef_noagr_q_rel,
-                              VAL [ KCMP #kcomp &
-                                         [ LOCAL.CAT.HEAD.KEYS.ALTKEY #key ],
-                                    COMPS #comps ] ],
-                        AGR #agr ],
-                LKEYS.KEYREL.PRED explicit_quant_or_udef_noagr_q_rel ],
+ [ DTR.SYNSEM.LOCAL [ CAT [ HEAD.KEYS.KEY explicit_quant_or_udef_noagr_q_rel,
+                            VAL [ KCMP #kcomp &
+                                       [ LOCAL.CAT.HEAD.KEYS.ALTKEY #key ],
+                                  COMPS #comps ] ],
+                      AGR #agr ],
    SYNSEM basic_partitive_noun_ppof_synsem &
         [ LOCAL [ AGR #agr,
                   CAT [ HEAD.KEYS.KEY #key,
@@ -1324,17 +1266,24 @@ NP_particle_lr := lex_rule &
 
 ; --OCOMPKEY is not the same for ditrans and to-trans.
 
-dative_shift_lr := lex_rule &
+dative_shift_lr := lex_rule_compos &
  [ STEM #orth,
-   DTR [ STEM #orth,
+   INFLECTD -,
+   DTR #dtr & 
+       [ STEM #orth,
+         INFLECTD -,
          SYNSEM ditrans_verb &
 	  [ LOCAL [ CAT [ HEAD #head,
-			  VAL.SUBJ #subj ],
-		    CONT [ HOOK [ LTOP #ltop,
+                          VAL.SUBJ #subj,
+                          MC #mc,
+                          HC-LEX #hclex ],
+                    CONT [ HOOK [ LTOP #ltop,
                                   INDEX #ind ],
-			   RELS #liszt,
-			   HCONS #hcons ],
-		    CTXT #ctxt ],
+                           MSG #msg,
+                           RELS #liszt,
+                           HCONS #hcons ],
+                    CONJ cnil,
+                    CTXT #ctxt ],
             LKEYS [ KEYREL #key,
                     ALTKEYREL #altkey,
                     --COMPKEY #ckey ],
@@ -1342,61 +1291,23 @@ dative_shift_lr := lex_rule &
    SYNSEM empty_to_trans_verb &
 	  [ LOCAL [ CAT [ HEAD #head,
 			  VAL [ SUBJ #subj,
-				COMPS < [ OPT - ], [ OPT - ] > ] ],
-		    CONT [ HOOK [ LTOP #ltop,
+				COMPS < [ OPT - ], [ OPT - ] > ],
+                          MC #mc,
+                          HC-LEX #hclex ],
+                    CONT [ HOOK [ LTOP #ltop,
                                   INDEX #ind ],
+                           MSG #msg,
 			   RELS #liszt,
 			   HCONS #hcons ],
+                    CONJ cnil,
 		    CTXT #ctxt ],
             LKEYS [ KEYREL #key,
                     ALTKEYREL #altkey,
                     --COMPKEY #ckey ],
 	    NONLOC #nonlocal ],
-   C-CONT.RELS <! !> ].
-
-; 20-jun-04 - This rule is a hack needed because PET does not currently allow 
-; (non-spell-changing) derivational rules to apply before inflectional rules.
-; Instead of the inflectional/derivational split we would need, PET groups 
-; lexical rules into two sets: spell-changing (assigned 'INFL-TRAIT') and
-; non-spell-changing (assigned 'LEXRULE-TRAIT').  Should get fixed someday.
-
-dative_shift_passive_lr := lex_rule &
- [ STEM #orth,
-   DTR [ STEM #orth,
-         SYNSEM passive_synsem &
-	  [ LOCAL [ CAT [ HEAD #head,
-			  VAL [ COMPS < synsem & [ LOCAL.CAT #cat,
-                                                   --SIND #byind ],
-                                        [ LOCAL.CAT nomp_cat_acc_min,
-                                          OPT #opt ] > ] ],
-		    CONT [ HOOK [ LTOP #ltop,
-                                  INDEX #ind ],
-			   RELS #liszt,
-			   HCONS #hcons ],
-		    CTXT #ctxt ],
-            LKEYS [ KEYREL #key,
-                    ALTKEYREL #altkey,
-                    --COMPKEY #ckey ],
-            NONLOC #nonlocal ] ],
-   SYNSEM double_empty_pp_verb &
-	  [ LOCAL [ CAT [ HEAD #head,
-			  VAL [ SUBJ < [ --SIND #subjind ] >,
-                                COMPS < synsem &
-                                        [ LOCAL.CAT #cat ], 
-                                        synsem & [ OPT #opt ] > ] ],
-		    CONT [ HOOK [ LTOP #ltop,
-                                  INDEX #ind,
-                                  XARG #subjind ],
-			   RELS #liszt,
-			   HCONS #hcons ],
-		    CTXT #ctxt ],
-            LKEYS [ KEYREL #key & [ ARG1 #byind,
-                                    ARG2 #subjind ],
-                    ALTKEYREL #altkey,
-                    --COMPKEY #ckey,
-                    --OCOMPKEY _to_p_sel_rel ],
-	    NONLOC #nonlocal ],
-   C-CONT.RELS <! !> ].
+   ARGS < #dtr >,
+   C-CONT.RELS <! !>,
+   POSSCL - ].
 
 possessed_word_lexrule := 
   lex_rule_compos &

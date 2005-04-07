@@ -326,3 +326,32 @@
   (and fs
        (let ((fs-type (type-of-fs fs)))
          (eql fs-type '-))))
+
+#-:lui 
+(defun lui-status-p (foo)
+  (declare (ignore foo))
+  nil)
+
+;;;
+;;; try a new approach to post-parsing filtering of idioms, building on the new
+;;; MRS transfer machinery.  essentially, the idiom phrases have been recast as
+;;; MRS transfer rules (MTRs), each of them matching an idiom configuration 
+;;; and replacing the idiomatic parts of the MRS with a synthesized relation 
+;;; (or nothing, for the time being).  post-transfer, the filter can then just
+;;; require that no idiomatic relation remain.  (20-feb-05; dan & oe phx - sfo)
+;;;
+(defun idiom-complete-p (tdfs)
+  (let* ((mrs (and (tdfs-p tdfs)
+                   (mrs::extract-mrs-from-fs (tdfs-indef tdfs))))
+         (transfers (and (mrs::psoa-p mrs) (mt:transfer-mrs mrs))))
+    (loop
+        for transfer in transfers
+        for mrs = (mt::edge-mrs transfer)
+        thereis (loop
+                    for ep in (mrs:psoa-liszt mrs)
+                    when (idiom-rel-p ep) return nil
+                    finally (return t)))))
+
+(eval-when #+:ansi-eval-when (:load-toplevel :execute)
+	   #-:ansi-eval-when (load eval)
+  (setf *additional-root-condition* #'idiom-complete-p))

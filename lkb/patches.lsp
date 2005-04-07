@@ -6,10 +6,10 @@
 (in-package :mrs)
 
 ;;; 1. The generator munging rules now make use of an early version of a
-;;; grammar-external rels hierarchy supplied by Ann last week, in order to
-;;; identify the class of predicates which require expletive "it".  This new
-;;; functionality is called in a changed version of
-;;; compatible-types-or-values(), as below:
+;;; grammar-external rels hierarchy supplied by Ann, in order to
+;;; identify the class of predicates which require expletive "it".  This
+;;; revised functionality is called in a changed version of
+;;; compatible-types-or-values():
 
 (defun compatible-types-or-values (val1 val2)
   ;;
@@ -86,5 +86,76 @@
       ))
     (nreverse res)))
 
-(in-package :cl-user)
+;;; Correction to PostgreSQL Emacs interface:
 
+; 07-apr-05 In psql-emacs.lsp, need to add 'get-value-set and 'set-lex-entry
+; to *lexdb-emacs-lexdb-fns*, or get error when try to save a changed entry
+; within Emacs
+
+(defconstant *lexdb-emacs-lexdb-fns*
+    '(complete
+      connection
+      dbname
+      empty-cache
+      fields
+      get-field-size-map
+      id-to-tdl-str
+      lookup
+      new-entries
+      record-to-tdl
+      retrieve-head-record-str
+      set-lex-entry-from-record
+      get-value-set
+      set-lex-entry
+      scratch-records))
+
+;;; Correction to PostgreSQL generator interface
+
+; 07-apr-05 - In mrs/semi-psql.lsp, get error when call (index-for-generator): 
+; within the function lkb::semi-setup-pre(), get the following error:
+; >> PSQL ERROR:  index "semi_pred_lex_id" does not exist
+; so making calling function vacuous until fixed.
+
+(in-package :mrs)
+(defmethod dump-semi-to-psql ((semi semi) &key (lexicon lkb::*psql-lexicon*))
+  (declare (ignore lexicon))
+  t)  
+
+;;; Old correction to setup for postgres:
+;;; 02-mar-05 - Probably now fixed? 
+; Earlier, had to change lkb/lexdb/fns_plpgsql.sql to rename function 
+; "dump_db_su" to "public.dump_db_su" since that's now how it's defined in 
+; su-setup.sql. Same for "dump_db_dfn_fld" => "public.dump_db_dfn_fld".
+; Now seems to be unnecessary.
+
+
+;;; For better batch testing of MRS quality, esp produce-one-scope()
+
+; In lkb/src/mrs/mrsresolve.lsp, modified chain-down-margs() to also allow
+; for top-level conjunctions (including discourse relation) - clearly
+; grammar-specific, so should probably be in user-fns.lsp, or should
+; have global in this function bound to list of grammar-specific feature
+; names.
+
+(in-package :mrs)
+(defun chain-down-margs (rel mrsstruct)
+  (let* ((marg-fvp (dolist (fvpair (rel-flist rel))
+		    (when (or (eq (fvpair-feature fvpair) 'lkb::marg)
+                              (eq (fvpair-feature fvpair) 'lkb::r-hndl)
+                              (eq (fvpair-feature fvpair) 'lkb::main))
+		      (return fvpair))))
+	(marg-value 
+	 (if marg-fvp
+	       (get-var-num (fvpair-value marg-fvp)))))
+    (if marg-value
+	(let ((top-rels
+	       (get-rels-with-label-num marg-value mrsstruct)))
+	  (if top-rels
+	      (if (cdr top-rels)
+		  nil
+		(chain-down-margs (car top-rels) mrsstruct))
+	    (dolist (qeq (psoa-h-cons mrsstruct))
+	      (when (eq marg-value (var-id (hcons-scarg qeq)))
+		(return (values qeq marg-fvp)))))))))
+
+(in-package :cl-user)

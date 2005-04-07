@@ -1,4 +1,4 @@
-;;; Copyright (c) 1991--2004
+;;; Copyright (c) 1991--2005
 ;;;   John Carroll, Ann Copestake, Robert Malouf, Stephan Oepen;
 ;;;   see LKB `licence.txt' for conditions.
 
@@ -149,6 +149,9 @@
 
 ;;; for the compare function 
 
+; For character encoding
+(defparameter cdb::*cdb-ascii-p* nil)
+
 (defparameter *discriminant-path* '(SYNSEM LOCAL KEYS KEY))
 
 ;;; Hide lexical rule nodes in parse tree
@@ -221,6 +224,7 @@
     september_abb_n2 september_abb_n3 september_abb_n4
     lets_2 lets_3 a_det_2 i_2 
     whether_or_not_c_fin whether_or_not_c_inf
+    thee thou thy thine ye aught threescore fourscore
    )
   "temporary expedient to avoid generating dual forms")
 

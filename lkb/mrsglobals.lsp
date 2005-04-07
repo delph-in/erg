@@ -14,12 +14,12 @@
   (append 
    *ignored-sem-features* 
    (list (vsym "IDIOMP") (vsym "PARAMS") (vsym "WLINK")
-         (vsym "CFROM") (vsym "CTO"))))
+         (vsym "CFROM") (vsym "CTO") (vsym "PSV") (vsym "TPC"))))
 
 (setf *ignored-extra-features* 
   (append
    *ignored-extra-features*
-   (list (vsym "SORT") (vsym "INSTLOC"))))
+   (list (vsym "SORT") (vsym "INSTLOC") (vsym "MOOD"))))
 
 (setf *top-level-rel-types*  nil)
 
