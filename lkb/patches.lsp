@@ -92,6 +92,7 @@
 ; to *lexdb-emacs-lexdb-fns*, or get error when try to save a changed entry
 ; within Emacs
 
+#+:psql
 (defconstant *lexdb-emacs-lexdb-fns*
     '(complete
       connection
@@ -117,6 +118,7 @@
 ; so making calling function vacuous until fixed.
 
 (in-package :mrs)
+#+:psql
 (defmethod dump-semi-to-psql ((semi semi) &key (lexicon lkb::*psql-lexicon*))
   (declare (ignore lexicon))
   t)  
