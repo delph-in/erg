@@ -86,30 +86,6 @@
       ))
     (nreverse res)))
 
-;;; Correction to PostgreSQL Emacs interface:
-
-; 07-apr-05 In psql-emacs.lsp, need to add 'get-value-set and 'set-lex-entry
-; to *lexdb-emacs-lexdb-fns*, or get error when try to save a changed entry
-; within Emacs
-
-#+:psql
-(defconstant *lexdb-emacs-lexdb-fns*
-    '(complete
-      connection
-      dbname
-      empty-cache
-      fields
-      get-field-size-map
-      id-to-tdl-str
-      lookup
-      new-entries
-      record-to-tdl
-      retrieve-head-record-str
-      set-lex-entry-from-record
-      get-value-set
-      set-lex-entry
-      scratch-records))
-
 ;;; Correction to PostgreSQL generator interface
 
 ; 07-apr-05 - In mrs/semi-psql.lsp, get error when call (index-for-generator): 
