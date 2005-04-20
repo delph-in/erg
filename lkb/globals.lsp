@@ -304,7 +304,8 @@
 ;;; grammar has to supply among its user functions :-{).        (7-apr-05; oe)
 ;;;
 (defparameter *generic-lexical-entries*
-  '((named :generate) (card :generate) (yofc :generate)))
+  '((named_gle :generate)
+    (card_gle :generate) (ord_gle :generate) (yofc_gle :generate)))
 
 (defparameter *non-idiom-root*
     'root_non_idiom )
