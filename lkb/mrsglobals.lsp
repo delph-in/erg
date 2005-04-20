@@ -202,6 +202,15 @@
    (list (vsym "X")
          (cons (vsym "PNG.PN") (vsym "unsp_pernum")))))
 
+;;;
+;;; to make generation from profiles a bit more realistic (for TLT 2004)
+;;;
+#|
+(push (vsym "E.ASPECT.STATIVE") *ignored-extra-features*)
+(push (vsym "TPC") *ignored-sem-features*)
+(push (vsym "PSV") *ignored-sem-features*)
+|#
+
 (defparameter *var-extra-conversion-table*
 '(
   ((png.gen fem) . (gender f))
@@ -242,3 +251,4 @@
  ;;; case.  We therefore need to translate the RMRS `u'
  ;;; into `basic_tense'
 ))
+

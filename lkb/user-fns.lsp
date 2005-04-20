@@ -88,6 +88,26 @@
           (create-path-from-feature-list '(SYNSEM LKEYS KEYREL CARG))
           :rhs (make-u-value :type (string-downcase word-string))))))
 
+
+(defun instantiate-generic-lexical-entry (gle surface)
+  (let ((tdfs (copy-tdfs-elements (lex-entry-full-fs (if (gle-p gle)
+                                                       (gle-le gle)
+                                                       gle)))))
+    (loop
+        with dag = (tdfs-indef tdfs)
+        for path in '((STEM FIRST) (SYNSEM LKEYS KEYREL CARG))
+        for foo = (existing-dag-at-end-of dag path)
+        do (setf (dag-type foo) *string-type*))
+    (let* ((unifications (make-unknown-word-sense-unifications surface))
+           (indef (process-unifications unifications))
+           (indef (and indef (create-wffs indef)))
+           (overlay (and indef (make-tdfs :indef indef))))
+      (when indef
+        (with-unification-context (ignore)
+          (let ((foo (yadu tdfs overlay)))
+            (when foo (copy-tdfs-elements foo))))))))
+
+
 (defun make-orth-tdfs (orth)
   (let ((unifs nil)
         (tmp-orth-path *orth-path*))

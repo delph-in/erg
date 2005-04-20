@@ -1,3 +1,5 @@
+;;; -*- Mode: Common-Lisp; Package: LKB; -*-
+
 ;;; Copyright (c) 1991--2005
 ;;;   John Carroll, Ann Copestake, Robert Malouf, Stephan Oepen;
 ;;;   see LKB `licence.txt' for conditions.
@@ -63,12 +65,15 @@
   #+:arboretum
   '(root_strict root_strict_robust)
    "specifing valid parses")
-;; Use the following for parsing fragments as well as full clauses:
-#|
-(defparameter *start-symbol* '(root_strict root_lex root_phr root_conj root_subord)
-  "specifing valid parses including fragments")
-|#
 
+;;;
+;;; _fix_me_
+;;; now that the old `root_lex' et al. are no longer available, we may need to
+;;; do something in addition for LOGON fragment generation.
+;;;                                                      (dan & oe; 20-apr-05)
+(setf *fragment-start-symbols*
+  '(root_strict root_frag))
+  
 ;;; Set to true for arboretum, enabling parsing with robust rules and lexicon
 ;;; (this assumes that :arboretum was pushed onto *features* before compiling
 ;;; the LKB and loading the grammar).  Then (after indexing lexicon for 
@@ -225,7 +230,12 @@
     lets_2 lets_3 a_det_2 i_2 
     whether_or_not_c_fin whether_or_not_c_inf
     thee thou thy thine ye aught threescore fourscore
-   )
+    wanna_v1 wanna_v2 gotta_v1 cuz_subconj less_than_a_one_adj
+    a+little_det_2 a_bit_adv2 a_couple_det2 a_det_2 a_few_det2 a_half_deg_2
+    a_little_bit_adv2 a_little_deg_3 a_little_deg_4 a_lot_deg_2 a_np1
+    a_one_adj_2 a_quarter_adj2 i_2 i_guess_disc_2 i_guess_disc_4
+    i_mean_disc_2 i_must_say_root_2 i_must_say_root_4 i_think_disc_2
+    or_conj_1a or_conj_2a order_n1a order_n2a order_ttla oregon_n2)
   "temporary expedient to avoid generating dual forms")
 
 ;; be_th_cop_is_cx_2 be_id_is_cx_2 be_c_is_cx_2 be_c_am_cx_2 
@@ -283,12 +293,24 @@
 ;;; to the word string (downcased)
 ;;; (defparameter *unknown-word-types* '(n_proper_le))
 
+;;;
+;;; a new facility as of April 2005: initially for use in the generator only, 
+;;; provide a set of generic lexical entries (i.e. actual instances) that get
+;;; specialized according to their `surface' form, i.e. the value for STEM and
+;;; CARG (or the equivalent in non-ERG grammars); specialization is triggered
+;;; by unknown (singleton) relations in the generator input that actually have
+;;; a CARG.  a new, temporary lexical entry is created and has the CARG value 
+;;; destructively inserted (using instantiate-generic-lexical-entry(), which a
+;;; grammar has to supply among its user functions :-{).        (7-apr-05; oe)
+;;;
+(defparameter *generic-lexical-entries*
+  '((named :generate) (card :generate) (yofc :generate)))
+
 (defparameter *non-idiom-root*
     'root_non_idiom )
 
 ; For LUI
-(defparameter *lsp-debug-p*
-    nil)
+(defparameter *lsp-debug-p* nil)
 
 ;;;
 ;;; when loaded into an environment including [incr tsdb()] and the Redwoods
@@ -304,3 +326,6 @@
 ;;;
 #+:logon
 (setf *bypass-equality-check* :filter)
+
+#+:logon
+(setf *translate-other-p* t)
