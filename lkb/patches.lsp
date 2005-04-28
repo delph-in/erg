@@ -124,6 +124,7 @@
 
 (in-package :lkb)
 ; Related patch - comment out check for semi in order to keep generator index
+#+:psql
 (defmethod build-lex ((lexicon psql-lex-database))
   (build-lex-aux lexicon)
 #|
@@ -148,6 +149,7 @@
 ;;; can be very time-intensive, so disable for now
 
 (in-package :lkb)
+#+:psql
 (defmethod build-lex-aux ((lexicon psql-lex-database))
   (reconnect lexicon) ;; work around server bug
   (cond 
