@@ -196,7 +196,6 @@
          (cons (vsym "--PSV") (vsym "-"))
          (cons (vsym "E.ASPECT.PERF") (vsym "-"))
          (cons (vsym "E.ASPECT.PROGR") (vsym "-"))
-         #-:logon
          (cons (vsym "E.ASPECT.STATIVE") (vsym "-")))
    #-:logon
    (list (vsym "X")
