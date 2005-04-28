@@ -19,7 +19,7 @@
 (setf *ignored-extra-features* 
   (append
    *ignored-extra-features*
-   (list (vsym "SORT") (vsym "INSTLOC") (vsym "MOOD"))))
+   (list (vsym "SORT") (vsym "INSTLOC"))))
 
 (setf *top-level-rel-types*  nil)
 

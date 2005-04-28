@@ -86,6 +86,29 @@
       ))
     (nreverse res)))
 
+;;; Correction to PostgreSQL Emacs interface:
+
+; 07-apr-05 In psql-emacs.lsp, need to add 'get-value-set and 'set-lex-entry
+; to *lexdb-emacs-lexdb-fns*, or get error when try to save a changed entry
+; within Emacs
+
+(defconstant *lexdb-emacs-lexdb-fns*
+    '(complete
+      connection
+      dbname
+      empty-cache
+      fields
+      get-field-size-map
+      id-to-tdl-str
+      lookup
+      new-entries
+      record-to-tdl
+      retrieve-head-record-str
+      set-lex-entry-from-record
+      get-value-set
+      set-lex-entry
+      scratch-records))
+
 ;;; Correction to PostgreSQL generator interface
 
 ; 07-apr-05 - In mrs/semi-psql.lsp, get error when call (index-for-generator): 
@@ -98,6 +121,48 @@
 (defmethod dump-semi-to-psql ((semi semi) &key (lexicon lkb::*psql-lexicon*))
   (declare (ignore lexicon))
   t)  
+
+(in-package :lkb)
+; Related patch - comment out check for semi in order to keep generator index
+(defmethod build-lex ((lexicon psql-lex-database))
+  (build-lex-aux lexicon)
+#|
+  (cond
+   ((null (semi lexicon))
+    nil)
+   ((semi-up-to-date-p lexicon)
+    (format t "~%(loading SEM-I into memory)")
+    (unless (mrs::semi-p 
+	     (catch :sql-error
+	       (mrs::populate-*semi*-from-psql)))
+      (format t "~% (unable to retrieve database SEM-I)"))
+    (index-lexical-rules)
+    (index-grammar-rules))
+   (t
+    (format t "~%WARNING: no lexical entries indexed for generator")))
+|#
+  lexicon)
+
+;;; Modification to psql-lex-database.lsp: build-lex-aux() makes call to
+;;; sql-fn-get-val to get the current size of the lexicon, but this call
+;;; can be very time-intensive, so disable for now
+
+(in-package :lkb)
+(defmethod build-lex-aux ((lexicon psql-lex-database))
+  (reconnect lexicon) ;; work around server bug
+  (cond 
+   ((not (user-read-only-p lexicon (user lexicon)))
+    (sql-fn-get-raw-records lexicon 
+			    :initialize_current_grammar 
+			    :args (list (get-filter lexicon))))
+   (t
+    (format t "~%(user ~a has read-only privileges)" (user lexicon))))    
+  (format t "~%(LexDB filter: ~a )" (get-filter lexicon))
+  ;(let ((size (sql-fn-get-val lexicon :size_current_grammar)))
+  ;  (if (string= "0" size)
+  ;	(format t "~%WARNING: 0 entries passed the LexDB filter" size)
+  ;    (format t "~%(active lexical entries: ~a )" size)))
+  (empty-cache lexicon))
 
 ;;; Old correction to setup for postgres:
 ;;; 02-mar-05 - Probably now fixed? 
