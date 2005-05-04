@@ -14,7 +14,7 @@
   (append 
    *ignored-sem-features* 
    (list (vsym "IDIOMP") (vsym "PARAMS") (vsym "WLINK")
-         (vsym "CFROM") (vsym "CTO") (vsym "PSV") (vsym "TPC"))))
+         (vsym "CFROM") (vsym "CTO"))))
 
 (setf *ignored-extra-features* 
   (append
