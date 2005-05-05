@@ -222,7 +222,8 @@
     a_one_adj_2 a_quarter_adj2 i_2 i_guess_disc_2 i_guess_disc_4
     i_mean_disc_2 i_must_say_root_2 i_must_say_root_4 i_think_disc_2
     or_conj_1a or_conj_2a order_n1a order_n2a order_ttla oregon_n2
-    one_adj_digit his_her_poss_2 his_her_poss)
+    one_adj_digit his_her_poss_2 his_her_poss backcountry_n1
+    )
   "temporary expedient to avoid generating dual forms")
 
 ;; be_th_cop_is_cx_2 be_id_is_cx_2 be_c_is_cx_2 be_c_am_cx_2 
