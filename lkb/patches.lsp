@@ -115,4 +115,31 @@
 	      (when (eq marg-value (var-id (hcons-scarg qeq)))
 		(return (values qeq marg-fvp)))))))))
 
+; In lkb/src/tsdb/lisp/lkb-interface.lisp
+; Redefine tsdb::finalize-run to comment out uncache-lexicon() since it
+; results in uninitializing the generator lexicon, which is annoying:
+;   uncache-lexicon
+;     clear-expanded-lex
+;       empty-cache
+;         clear-generator-lexicon
+(in-package :lkb)
+(defun tsdb::finalize-run (context &key custom)
+  (declare (ignore custom))
+  ;; called after completion of test run
+  (let ((lexicon 0)
+        (*package* *lkb-package*))
+    (loop 
+        for id in (collect-expanded-lex-ids *lexicon*)
+        do 
+          (pushnew id *lex-ids-used*)
+          (incf lexicon)) 
+    (clear-type-cache)
+    ;;(uncache-lexicon)
+    (loop
+        for (variable . value) in context do
+          (case variable
+            (:first-only-p 
+             (setf *first-only-p* value))))
+    (pairlis '(:lexicon) (list lexicon))))
+
 (in-package :cl-user)
