@@ -123,6 +123,7 @@
 ;       empty-cache
 ;         clear-generator-lexicon
 (in-package :lkb)
+#+:tsdb
 (defun tsdb::finalize-run (context &key custom)
   (declare (ignore custom))
   ;; called after completion of test run
