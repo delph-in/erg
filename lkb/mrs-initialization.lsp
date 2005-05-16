@@ -12,7 +12,7 @@
 #+:psql
 (when
     (and
-     *psql-lexicon*
+     *lexdb*
      (fboundp 'index-lexical-rules)
      (fboundp 'index-grammar-rules))
   (index-lexical-rules)
