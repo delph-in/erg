@@ -258,12 +258,20 @@
                                   N_TITLE_LE
 				  ))
 
+
 (defun lex-priority (mrec)
-  (let ((lex-type (dag-type 
-		   (tdfs-indef 
-		    (if (mrecord-history mrec)
-			(mhistory-fs (car (mrecord-history mrec)))
-		      (mrecord-fs mrec))))))
+  (let ((lex-type 
+	 ;;bmw - newer LKB versions have no function mrecord-history
+	 (cond
+	  ((fboundp 'mrecord-history)
+	   (dag-type 
+	    (tdfs-indef 
+	     (if (mrecord-history mrec)
+		 (mhistory-fs (car (mrecord-history mrec)))
+	       (mrecord-fs mrec)))))
+	  (t
+	   (edge-category mrec)))
+		  ))
     (cond ((member lex-type *unlikely-le-types* :test #'eq)
 	   200)
 	  ((member lex-type *likely-le-types* :test #'eq) 
