@@ -266,9 +266,9 @@
 	  ((fboundp 'mrecord-history)
 	   (dag-type 
 	    (tdfs-indef 
-	     (if (mrecord-history mrec)
-		 (mhistory-fs (car (mrecord-history mrec)))
-	       (mrecord-fs mrec)))))
+	     (if (funcall 'mrecord-history mrec)
+		 (funcall 'mhistory-fs (car (funcall 'mrecord-history mrec)))
+	       (funcall 'mrecord-fs mrec)))))
 	  (t
 	   (edge-category mrec)))
 		  ))
