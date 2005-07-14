@@ -72,7 +72,7 @@
 ;;; do something in addition for LOGON fragment generation.
 ;;;                                                      (dan & oe; 20-apr-05)
 (setf *fragment-start-symbols*
-  '(root_strict root_frag))
+  '(root_strict root_lex root_phr root_conj root_subord))
   
 ;;; Set to true for arboretum, enabling parsing with robust rules and lexicon
 ;;; (this assumes that :arboretum was pushed onto *features* before compiling
@@ -223,6 +223,7 @@
     i_mean_disc_2 i_must_say_root_2 i_must_say_root_4 i_think_disc_2
     or_conj_1a or_conj_2a order_n1a order_n2a order_ttla oregon_n2
     one_adj_digit his_her_poss_2 his_her_poss backcountry_n1
+    i_stutter i_stutter_2
     )
   "temporary expedient to avoid generating dual forms")
 
