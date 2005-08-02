@@ -13,7 +13,7 @@
 (setf *ignored-sem-features* 
   (append 
    *ignored-sem-features* 
-   (list (vsym "IDIOMP") (vsym "PARAMS") (vsym "WLINK")
+   (list (vsym "IDIOMP") (vsym "WLINK") (vsym "PARAMS")
          (vsym "CFROM") (vsym "CTO"))))
 
 (setf *ignored-extra-features* 
@@ -121,61 +121,11 @@
    (cons (mrs::vsym "E.ASPECT.STATIVE") (mrs::vsym "BOOL"))
    (cons (mrs::vsym "E.MOOD") (mrs::vsym "MOOD"))
    (cons (mrs::vsym "PNG.GEN") (mrs::vsym "REAL_GENDER"))
-   (cons (mrs::vsym "DIVISIBLE") (mrs::vsym "BOOL"))
+   (cons (mrs::vsym "DIV") (mrs::vsym "BOOL"))
    (cons (mrs::vsym "--TPC") (mrs::vsym "BOOL"))
    (cons (mrs::vsym "--PSV") (mrs::vsym "BOOL"))
    (cons (mrs::vsym "PNG.PN") (mrs::vsym "PERNUM"))
    (cons (mrs::vsym "PRONTYPE") (mrs::vsym "PRONTYPE"))))
-
-;;;
-;;; yet another (i believe) interim solution: while there is no way of having
-;;; a (possibly grammar-external) hierarchy of predicates, enumerate the set of
-;;; predicates that require explitive arguments.
-;;;
-(defparameter *munge-expl-preds* 
-  '("_rain_v_rel" "_drizzle_v_rel" "_hail_v_rel" "_snow_v_rel"
-    "_sprinkle_v_rel" "_annoy_v_2_rel" "_appear_v_rel" "_arrange_v_expl_rel"
-    "_bother_v_expl_rel" "_breezy_a_expl_rel" "_blustery_a_expl_rel"
-    "_chilly_a_expl_rel" "_cloudy_a_expl_rel" "_cold_a_eexpl_rel"
-    "_cool_a_expl_rel" "_cost_v_x_rel" "_damp_a_expl_rel" "_dry_a_expl_rel"
-    "_exist_v_expl_rel" "_feel_v_seem_rel" "_foggy_a_expl_rel"
-    "_frigid_a_expl_rel" "_gusty_a_expl_rel" "_hot_a_expl_rel"
-    "_leave_v_to_rel" "_look_v_seem_rel" "_make_v_1_rel" "_mild_a_expl_rel"
-    "_prefer_v_expl_rel" "_rainy_a_expl_rel" "_seem_v_rel" "_sound_v_seem_rel"
-    "_sunny_a_expl_rel" "_take_v_expl_rel" "_time_a_expl_rel" "_turn_v_out_rel"
-    "_warm_a_expl_rel" "_wet_a_expl_rel" "_windy_a_expl_rel"
-    "_be_v_itcleft_rel" "_acceptable_a_rel" "_available_a_rel" "_clear_a_rel"
-    "_complicated_a_rel" "_crucial_a_rel" "_difficult_a_rel" "_dreadful_a_rel"
-    "_easier_a_rel" "_easiest_a_rel" "_easy_a_rel" "_emphasized_a_rel"
-    "_encouraging_a_rel" "_good_a_rel" "_hard_a_rel" "_horrendous_a_rel"
-    "_horrible_a_rel" "_imperative_a_rel" "_important_a_rel"
-    "_impossible_a_rel" "_incredible_a_rel" "_interesting_a_rel"
-    "_liberating_a_rel" "_likely_a_rel" "_lucky_a_rel" "_necessary_a_rel"
-    "_nice_a_rel" "_obvious_a_rel" "_okay_a_accept_rel" "_optional_a_rel"
-    "_possible_a_rel" "_profitable_a_rel" "_promising_a_rel"
-    "_reasonable_a_rel" "_relieving_a_rel" "_remarkable_a_rel"
-    "_satisfactory_a_rel" "_stupendous_a_rel" "_suffice_v_rel" "_tough_a_rel"
-    "_true_a_rel" "_unlikely_a_rel" "_unnecessary_a_rel"
-    "_unsatisfactory_a_rel" "_urgent_a_rel" "_vital_a_rel" "_check_v_1_rel"
-    "_decide_v_1_rel" "_determine_v_rel" "_discover_v_rel" "_forget_v_1_rel"
-    "_guarantee_v_rel" "_guess_v_rel" "_imagine_v_rel" "_investigate_v_rel"
-    "_know_v_1_rel" "_learn_v_rel" "_recall_v_rel" "_remember_v_rel"
-    "_see_v_understand_rel" "_tell_v_1_rel" "_verify_v_rel" "_wonder_v_rel"
-    "_acknowledge_v_rel" "_admit_v_rel" "_assume_v_rel" "_believe_v_1_rel"
-    "_claim_v_rel" "_complain_v_1_rel" "_conclude_v_rel" "_declare_v_rel"
-    "_demand_v_rel" "_deny_v_rel" "_desire_v_rel" "_emphasize_v_rel"
-    "_ensure_v_rel" "_exhibit_v_rel" "_feel_v_1_rel" "_forecast_v_rel"
-    "_fret_v_rel" "_hope_v_1_rel" "_maintain_v_rel" "_mean_v_rel"
-    "_note_v_1_rel" "_predict_v_rel" "_presume_v_rel" "_pretend_v_rel"
-    "_promise_v_rel" "_propose_v_rel" "_realize_v_rel" "_regret_v_rel"
-    "_report_v_1_rel" "_sense_v_rel" "_stress_v_rel" "_suspect_v_rel"
-    "_think_v_1_rel" "_trust_v_rel" "_wish_v_rel" "_argue_v_1_rel"
-    "_insist_v_1_rel" "_joke_v_rel" "_reckon_v_1_rel" "_remark_v_rel"
-    "_suppose_v_rel" "_find_v_1_rel" "_suppose_v_rel" "_agree_v_1_rel"
-    "_confirm_v_rel" "_explain_v_rel" "_reconfirm_v_rel" "_reply_v_rel"
-    "_say_v_1_rel" "_suggest_v_rel" "_swear_v_rel" "_understand_v_by_rel"
-    "_write_v_1_rel" "_figure_v_out_rel" "_find_v_out_rel"
-    "_point_v_out_rel" "_relief_n_rel" "_pleasure_n_rel" ))
 
 ;;;
 ;;; _fix_me_

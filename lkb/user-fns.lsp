@@ -126,7 +126,6 @@
         (setf indef (create-wffs indef))
         (make-tdfs :indef indef)))))
 
-
 (defun set-temporary-lexicon-filenames nil
   (let* ((version (or (find-symbol "*GRAMMAR-VERSION*" :common-lisp-user)
                       (and (find-package :lkb)
@@ -197,11 +196,6 @@
        (let ((fs-type (type-of-fs fs)))
          (eql fs-type '-))))
 
-#-:lui 
-(defun lui-status-p (foo)
-  (declare (ignore foo))
-  nil)
-
 ;;;
 ;;; try a new approach to post-parsing filtering of idioms, building on the new
 ;;; MRS transfer machinery.  essentially, the idiom phrases have been recast as
@@ -226,3 +220,27 @@
 (eval-when #+:ansi-eval-when (:load-toplevel :execute)
 	   #-:ansi-eval-when (load eval)
   (setf *additional-root-condition* #'idiom-complete-p))
+
+;;;
+;;; the following two functions allow customization of how edges are displayed
+;;; in the LUI chart browser (not the traditional LKB chart window).  for each
+;;; edge, two properties are relevant: (a) its `name' and (b) its `label'; both
+;;; should be strings, where name should be a relatively short, yet contentful
+;;; identifier used as the primary representation of edges in chart cell, and
+;;; label can be a longer string shown in the pop-up area on mouse-over.
+;;;
+(defun lui-chart-edge-name (edge)
+  (let ((rname (existing-dag-at-end-of 
+                (tdfs-indef (edge-dag edge)) '(RNAME))))
+    (format 
+     nil 
+     "~a[~a]"
+     (cond (rname (dag-type rname))
+           ((not (edge-children edge)) 
+            (let ((le (get-lex-entry-from-id (first (edge-lex-ids edge)))))
+              (dag-type (tdfs-indef (lex-entry-full-fs le)))))
+           (t (tree-node-text-string 
+               (find-category-abb (edge-dag edge)))))
+     (edge-id edge))))
+
+

@@ -18,8 +18,8 @@
   (index-lexical-rules)
   (index-grammar-rules))
 
-   
-
+#|
+; Test example generation from SEM-I
 #+mrs(read-mrs-rule-file-aux 
       (merge-pathnames
        (make-pathname :directory 
@@ -27,9 +27,6 @@
                        (dir-append *grammar-directory*
                                    '(:relative "data"))))
       (make-pathname 
-       :name "genrules.mrs"))
+       :name "semiout.mrs"))
       t)
-
-
-
-
+|#
