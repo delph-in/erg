@@ -115,17 +115,18 @@
   ;; even without the full SEMI, we should compute these.  (21-nov-03; oe)
   ;;
   (list
-   (cons (mrs::vsym "E.TENSE") (mrs::vsym "BASIC_TENSE"))
-   (cons (mrs::vsym "E.ASPECT.PROGR") (mrs::vsym "LUK"))
-   (cons (mrs::vsym "E.ASPECT.PERF") (mrs::vsym "LUK"))
-   (cons (mrs::vsym "E.ASPECT.STATIVE") (mrs::vsym "BOOL"))
-   (cons (mrs::vsym "E.MOOD") (mrs::vsym "MOOD"))
-   (cons (mrs::vsym "PNG.GEN") (mrs::vsym "REAL_GENDER"))
-   (cons (mrs::vsym "DIV") (mrs::vsym "BOOL"))
-   (cons (mrs::vsym "--TPC") (mrs::vsym "BOOL"))
-   (cons (mrs::vsym "--PSV") (mrs::vsym "BOOL"))
-   (cons (mrs::vsym "PNG.PN") (mrs::vsym "PERNUM"))
-   (cons (mrs::vsym "PRONTYPE") (mrs::vsym "PRONTYPE"))))
+   (cons (mrs::vsym "E.TENSE") (mrs::vsym "basic_tense"))
+   (cons (mrs::vsym "E.ASPECT.PROGR") (mrs::vsym "luk"))
+   (cons (mrs::vsym "E.ASPECT.PERF") (mrs::vsym "luk"))
+   (cons (mrs::vsym "E.ASPECT.STATIVE") (mrs::vsym "bool"))
+   (cons (mrs::vsym "E.MOOD") (mrs::vsym "mood"))
+   (cons (mrs::vsym "PNG.GEN") (mrs::vsym "real_gender"))
+   (cons (mrs::vsym "DIV") (mrs::vsym "bool"))
+   (cons (mrs::vsym "--TPC") (mrs::vsym "bool"))
+   (cons (mrs::vsym "--PSV") (mrs::vsym "bool"))
+   (cons (mrs::vsym "PNG.PN") (mrs::vsym "pernum"))
+   (cons (mrs::vsym "PRONTYPE") (mrs::vsym "prontype"))))
+
 
 ;;;
 ;;; _fix_me_
@@ -144,6 +145,7 @@
          (cons (vsym "--TPC") (vsym "-"))
          #-:logon
          (cons (vsym "--PSV") (vsym "-"))
+         (cons (mrs::vsym "E.MOOD") (mrs::vsym "indicative"))
          (cons (vsym "E.ASPECT.PERF") (vsym "-"))
          (cons (vsym "E.ASPECT.PROGR") (vsym "-"))
          (cons (vsym "E.ASPECT.STATIVE") (vsym "-")))
@@ -151,14 +153,6 @@
    (list (vsym "X")
          (cons (vsym "PNG.PN") (vsym "unsp_pernum")))))
 
-;;;
-;;; to make generation from profiles a bit more realistic (for TLT 2004)
-;;;
-#|
-(push (vsym "E.ASPECT.STATIVE") *ignored-extra-features*)
-(push (vsym "TPC") *ignored-sem-features*)
-(push (vsym "PSV") *ignored-sem-features*)
-|#
 
 (defparameter *var-extra-conversion-table*
 '(

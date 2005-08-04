@@ -17,16 +17,3 @@
      (fboundp 'index-grammar-rules))
   (index-lexical-rules)
   (index-grammar-rules))
-
-#|
-; Test example generation from SEM-I
-#+mrs(read-mrs-rule-file-aux 
-      (merge-pathnames
-       (make-pathname :directory 
-                      (pathname-directory
-                       (dir-append *grammar-directory*
-                                   '(:relative "data"))))
-      (make-pathname 
-       :name "semiout.mrs"))
-      t)
-|#

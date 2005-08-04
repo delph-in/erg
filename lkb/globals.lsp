@@ -363,9 +363,6 @@
 (defparameter *non-idiom-root*
     'root_non_idiom )
 
-; For LUI
-(defparameter *lsp-debug-p* nil)
-
 ;;;
 ;;; when loaded into an environment including [incr tsdb()] and the Redwoods
 ;;; tools, enable selective unpacking against a Maximum Entropy model.
@@ -381,5 +378,22 @@
 #+:logon
 (setf *bypass-equality-check* :filter)
 
-#+:logon
-(setf *translate-other-p* t)
+;;;
+;;; with recent LKB versions (as of 23-jul-05), there is now better support for
+;;; the (still primitive) `remote' generation mode: a `translation grid' can be
+;;; configured from any number of LKB processes, each potentially prepared to
+;;; act as a generator server.  the following, for example:
+;;;
+;;;  (setf *translate-grid* '(:ja . (:ja)))
+;;;
+;;; indicates that we can act as a generator server for japanese ourselves and
+;;; will send of generation requests (from selection `Rephrase' on the parse
+;;; summary view or `Generate' on the LOGON MRS browser) to a japanese server,
+;;; i.e. ourselves.  likewise,
+;;;
+;;;   (setf *translate-grid* '(:ja . (:ja :en :no)))
+;;;
+;;; will send requests to three servers, which is something emily has long
+;;; wanted (using an array of Matrix grammars and an interlingua semantics).
+;;;
+(setf *translate-grid* '(:en . (:en)))
