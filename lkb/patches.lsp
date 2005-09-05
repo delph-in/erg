@@ -118,5 +118,31 @@
     (and relname
          (equal "_i_rel" (subseq relname (- (length relname) 6))))))
 
+
+; Comment out vacuuming when not changing lexicon - too time-consuming
+(defmethod update-lex ((lex psql-lex-database))
+  ;(vacuum lex)
+  ;(lexdb-time ("updating 'lex' table" "done updating 'lex' table")
+  ;	      (update-lex-aux lex))
+  ;(vacuum lex)
+  (cond
+   ((null (semi lex))
+    nil)
+   ((semi-up-to-date-p lex)
+    (unless 
+	    (lexdb-time ("loading SEM-I into memory" "done loading SEM-I into memory")
+			(mrs::semi-p 
+			 (catch :sql-error
+			   (mrs::populate-*semi*-from-psql)
+			   )))
+      (format t "~&(LexDB) unable to retrieve database SEM-I"))
+    (index-lexical-rules)
+    (index-grammar-rules))
+   (t
+    (format t "~&(LexDB) WARNING:  no lexical entries indexed for generator")))
+  lex)
+
+
+
 (in-package :cl-user)
 

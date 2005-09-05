@@ -72,7 +72,7 @@
                (if (eql (char name cur) #\E) (<= (incf cur) end))
                (or (= cur end)
                    (and (digit-char-p (char name cur)) (= (incf cur) end))))))))
-(defun make-unknown-word-sense-unifications (word-string)
+(defun make-unknown-word-sense-unifications (word-string &optional stem)
   ;;; this assumes we always treat unknown words as proper names
   ;;; uncomment the *unknown-word-types* in globals.lsp
   ;;; to activate this
@@ -80,7 +80,7 @@
     (list 
        (make-unification :lhs
           (create-path-from-feature-list '(STEM FIRST))
-          :rhs (make-u-value :type word-string))
+          :rhs (make-u-value :type (or stem word-string)))
        (make-unification :lhs
           (create-path-from-feature-list '(STEM REST))
           :rhs (make-u-value :type 'lkb::*null*))
@@ -98,7 +98,12 @@
         for path in '((STEM FIRST) (SYNSEM LKEYS KEYREL CARG))
         for foo = (existing-dag-at-end-of dag path)
         do (setf (dag-type foo) *string-type*))
-    (let* ((unifications (make-unknown-word-sense-unifications surface))
+    (let* ((unifications (make-unknown-word-sense-unifications
+                          surface
+                          #+:logon
+                          (if (eq (gle-id gle) 'guess_n_gle)
+                            (format nil "/~a/" surface)
+                            surface)))
            (indef (process-unifications unifications))
            (indef (and indef (create-wffs indef)))
            (overlay (and indef (make-tdfs :indef indef))))
@@ -148,7 +153,20 @@
       (make-pathname :name (concatenate 'string prefix ".lts")
 		     :host (pathname-host (lkb-tmp-dir))
 		     :device (pathname-device (lkb-tmp-dir))
+                     :directory (pathname-directory (lkb-tmp-dir))))
+    #+:logon
+    (setf *predicates-temp-file* 
+      (make-pathname :name (concatenate 'string prefix ".ric")
+		     :host (pathname-host (lkb-tmp-dir))
+		     :device (pathname-device (lkb-tmp-dir))
+                     :directory (pathname-directory (lkb-tmp-dir))))
+    #+:logon
+    (setf *semantics-temp-file* 
+      (make-pathname :name (concatenate 'string prefix ".stc")
+		     :host (pathname-host (lkb-tmp-dir))
+		     :device (pathname-device (lkb-tmp-dir))
                      :directory (pathname-directory (lkb-tmp-dir))))))
+    
 
 ;;;
 ;;; used in lexicon compilation for systems like PET and CHiC: when we compile
@@ -243,4 +261,48 @@
                (find-category-abb (edge-dag edge)))))
      (edge-id edge))))
 
+;;;
+;;; the following temporary expedient attempts to get capitalization more right
+;;; than we used to do in generator outputs.  still, for acronyms like `IBM' or
+;;; complex names including lower case elements, i see no alternative to using
+;;; STEM to spell out the actual (canonical) surface form.  that would seem to
+;;; require that we re-view assumptions about capitalization across the lexicon
+;;; et al.  but the LKB should probably do that one day!        (30-aug-05; oe)
+;;;
+(defun gen-extract-surface (edge &optional (initialp t))
+  (let ((daughters (edge-children edge)))
+    (if daughters
+      (loop
+          for daughter in daughters
+          for foo = initialp then nil
+          append (gen-extract-surface daughter foo))
+      (let* ((entry (get-lex-entry-from-id (first (edge-lex-ids edge))))
+             (tdfs (and entry (lex-entry-full-fs entry)))
+             (type (and tdfs (type-of-fs (tdfs-indef tdfs))))
+             (string (string-downcase (copy-seq (first (edge-leaves edge)))))
+             (capitalizep
+              (ignore-errors
+               (loop
+                   for match in '(basic_n_proper_lexent
+                                  n_month_year_le
+                                  n_day_of_week_le
+                                  n_pers_pro_i_le)
+                   thereis (or (eq type match)
+                               (subtype-p type match))))))
+        (when capitalizep
+          (loop
+              with spacep = t
+              for i from 0 to (- (length string) 1)
+              for c = (schar string i)
+              when (char= c #\Space) do (setf spacep t)
+              else do
+                (when (and spacep (alphanumericp c))
+                  (setf (schar string i) (char-upcase c)))
+                (setf spacep nil)))
+        (when (and initialp (alphanumericp (schar string 0)))
+          (setf (schar string 0) (char-upcase (schar string 0))))
+        (list string)))))
 
+(eval-when #+:ansi-eval-when (:load-toplevel :compile-toplevel :execute)
+	   #-:ansi-eval-when (load eval compile)
+  (setf *gen-extract-surface-hook* 'gen-extract-surface))

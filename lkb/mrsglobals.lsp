@@ -21,6 +21,9 @@
    *ignored-extra-features*
    (list (vsym "SORT") (vsym "INSTLOC"))))
 
+(setf *infstr-extra-features* 
+  (list (list (vsym "TPC")) (list (vsym "PSV"))))
+
 (setf *top-level-rel-types*  nil)
 
 ;;; features for extracting semantics from expanded lexical entries
@@ -121,9 +124,9 @@
    (cons (mrs::vsym "E.ASPECT.STATIVE") (mrs::vsym "bool"))
    (cons (mrs::vsym "E.MOOD") (mrs::vsym "mood"))
    (cons (mrs::vsym "PNG.GEN") (mrs::vsym "real_gender"))
+   (cons (mrs::vsym "TPC") (mrs::vsym "basic_semarg"))
+   (cons (mrs::vsym "PSV") (mrs::vsym "basic_semarg"))
    (cons (mrs::vsym "DIV") (mrs::vsym "bool"))
-   (cons (mrs::vsym "--TPC") (mrs::vsym "bool"))
-   (cons (mrs::vsym "--PSV") (mrs::vsym "bool"))
    (cons (mrs::vsym "PNG.PN") (mrs::vsym "pernum"))
    (cons (mrs::vsym "PRONTYPE") (mrs::vsym "prontype"))))
 
@@ -139,15 +142,10 @@
 (defparameter %mrs-extras-defaults%
   (list
    (list (vsym "E") 
-         ;; FIX - should not have to specify these in underspecified MRS in
-         ;; order to get topicalization or passivization
-         #-:logon
-         (cons (vsym "--TPC") (vsym "-"))
-         #-:logon
-         (cons (vsym "--PSV") (vsym "-"))
          (cons (mrs::vsym "E.MOOD") (mrs::vsym "indicative"))
          (cons (vsym "E.ASPECT.PERF") (vsym "-"))
          (cons (vsym "E.ASPECT.PROGR") (vsym "-"))
+         #-:logon
          (cons (vsym "E.ASPECT.STATIVE") (vsym "-")))
    #-:logon
    (list (vsym "X")

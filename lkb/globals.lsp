@@ -61,10 +61,11 @@
 
 (defparameter *start-symbol* 
   #-:arboretum
-  '(root_strict)
+  ;'(root_strict)
   ;'(root_strict root_informal)
-  ;'(root_strict root_frag)
+  '(root_strict root_frag)
   ;'(root_strict root_informal root_frag)
+  ;'(root_strict root_informal root_frag root_robust)
   #+:arboretum
   '(root_strict root_strict_robust)
    "specifing valid parses")
@@ -75,7 +76,8 @@
 ;;; do something in addition for LOGON fragment generation.
 ;;;                                                      (dan & oe; 20-apr-05)
 (setf *fragment-start-symbols*
-  '(root_strict root_informal root_frag))
+  '(root_strict root_informal root_frag 
+    root_lex root_phr root_conj root_subord))
   
 ;;; Set to true for arboretum, enabling parsing with robust rules and lexicon
 ;;; (this assumes that :arboretum was pushed onto *features* before compiling
@@ -154,7 +156,7 @@
 
 (defparameter *duplicate-lex-ids* 
   '(will_aux_neg_2 would_aux_neg_2 do1_neg_2 hadnt_aux_1 hadnt_aux_2
-    hadnt_aux_subj_1 hadnt_aux_subj_2 hasnt_aux_1 hasnt_aux_2 be_c_is_neg_2
+    hadnt_aux_subj_1 hadnt_aux_subj_2 hasnt_aux_2 be_c_is_neg_2
     aint_sg_have_aux_1 aint_sg_have_aux_2 have_fin_aux_neg_2 
     aint_be_c_is_neg_1 aint_be_c_is_neg_2 be_id_is_neg_2
     aint_be_id_is_neg_1 aint_be_id_is_neg_2 
@@ -183,6 +185,7 @@
     ms_title_2 mount_ttl_2 number_abb_title number_abb_title_2 
     number_abb2_title number_abb2_title_2 order_abb_ttl order_abb_ttl_2
     pound_sign_title pres_ttl pres_ttl_2 aint_be_c_am_neg_2 aint_be_c_are_neg_1
+    aint_be_c_am_neg_1
     aint_be_c_are_neg_2 aint_be_c_is_neg_2 aint_be_id_am_neg_2
     aint_be_id_are_neg_2 aint_be_id_is_neg_2 aint_be_th_cop_are_neg_2
     aint_be_th_cop_is_neg_2 aint_pl_have_aux_2 aint_sg_have_aux_2
@@ -278,10 +281,16 @@
     centimeter_abb_n1 comparative_abb_n1 customer_abb_n1 customer_abb_n2
     diameter_abb_n1 foot_abb_n1 geometry_abb_n1 illustration_abb_n1
     illustration_abb_n3 imp_abb_n1 meter_abb_n1 milliliter_abb_n1
+    okay_s_adv2 mhm_root_pre2 sure_root_pre2 yeah_root_pre2
     millimeter_abb_n1 minute_abb_n1 minute_abb_n2 noun_abb_n1
     number_abb_n1 number_abb_n2 number_abb_n3 number_abb_n4 order_abb_n1
     plural_abb_n1 prep_abb_n1 scripture_abb_n1 singular_abb_n1 st_abb_n1
     st_abb_n2 with_p_abb
+    be_c_am_cx_neg_1 be_c_are_cx_neg_1 be_c_is_cx_neg_1 be_id_am_cx_neg_1
+    be_id_are_cx_neg_1 be_id_is_cx_neg_1 be_nv_is_cx_neg_1
+    be_th_cop_is_cx_neg_1 had_aux_cx_neg_1 had_better_cx_neg_1
+    has_aux_cx_neg_1 have_aux_cx_neg_1
+
     )
   "temporary expedient to avoid generating dual forms")
 
@@ -357,7 +366,7 @@
 ;;; grammar has to supply among its user functions :-{).        (7-apr-05; oe)
 ;;;
 (defparameter *generic-lexical-entries*
-  '((named_gle :generate)
+  '((named_gle :generate) (guess_n_gle :generate)
     (card_gle :generate) (ord_gle :generate) (yofc_gle :generate)))
 
 (defparameter *non-idiom-root*
