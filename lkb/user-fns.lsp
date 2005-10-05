@@ -154,13 +154,11 @@
 		     :host (pathname-host (lkb-tmp-dir))
 		     :device (pathname-device (lkb-tmp-dir))
                      :directory (pathname-directory (lkb-tmp-dir))))
-    #+:logon
     (setf *predicates-temp-file* 
       (make-pathname :name (concatenate 'string prefix ".ric")
 		     :host (pathname-host (lkb-tmp-dir))
 		     :device (pathname-device (lkb-tmp-dir))
                      :directory (pathname-directory (lkb-tmp-dir))))
-    #+:logon
     (setf *semantics-temp-file* 
       (make-pathname :name (concatenate 'string prefix ".stc")
 		     :host (pathname-host (lkb-tmp-dir))
@@ -269,39 +267,53 @@
 ;;; require that we re-view assumptions about capitalization across the lexicon
 ;;; et al.  but the LKB should probably do that one day!        (30-aug-05; oe)
 ;;;
-(defun gen-extract-surface (edge &optional (initialp t))
-  (let ((daughters (edge-children edge)))
-    (if daughters
-      (loop
-          for daughter in daughters
-          for foo = initialp then nil
-          append (gen-extract-surface daughter foo))
-      (let* ((entry (get-lex-entry-from-id (first (edge-lex-ids edge))))
-             (tdfs (and entry (lex-entry-full-fs entry)))
-             (type (and tdfs (type-of-fs (tdfs-indef tdfs))))
-             (string (string-downcase (copy-seq (first (edge-leaves edge)))))
-             (capitalizep
-              (ignore-errors
-               (loop
-                   for match in '(basic_n_proper_lexent
-                                  n_month_year_le
-                                  n_day_of_week_le
-                                  n_pers_pro_i_le)
-                   thereis (or (eq type match)
-                               (subtype-p type match))))))
-        (when capitalizep
-          (loop
-              with spacep = t
-              for i from 0 to (- (length string) 1)
-              for c = (schar string i)
-              when (char= c #\Space) do (setf spacep t)
-              else do
-                (when (and spacep (alphanumericp c))
-                  (setf (schar string i) (char-upcase c)))
-                (setf spacep nil)))
-        (when (and initialp (alphanumericp (schar string 0)))
-          (setf (schar string 0) (char-upcase (schar string 0))))
-        (list string)))))
+(defun gen-extract-surface (edge &optional (initialp t) &key stream)
+  (if stream
+    (let ((daughters (edge-children edge)))
+      (if daughters
+        (loop
+            for daughter in daughters
+            for foo = initialp then nil
+            append (gen-extract-surface daughter foo :stream stream))
+        (let* ((entry (get-lex-entry-from-id (first (edge-lex-ids edge))))
+               (tdfs (and entry (lex-entry-full-fs entry)))
+               (type (and tdfs (type-of-fs (tdfs-indef tdfs))))
+               (string (string-downcase (copy-seq (first (edge-leaves edge)))))
+               (capitalizep
+                (ignore-errors
+                 (loop
+                     for match in '(basic_n_proper_lexent
+                                    n_month_year_le
+                                    n_day_of_week_le
+                                    n_pers_pro_i_le)
+                     thereis (or (eq type match)
+                                 (subtype-p type match)))))
+               (cliticp (and (> (length string) 0)
+                             (char= (char string 0) #\'))))
+          (when capitalizep
+            (loop
+                with spacep = t
+                for i from 0 to (- (length string) 1)
+                for c = (schar string i)
+                when (char= c #\Space) do (setf spacep t)
+                else when (char= c #\_)
+                do
+                  (setf spacep t)
+                  (setf (schar string i) #\Space)
+                else do
+                  (when (and spacep (alphanumericp c))
+                    (setf (schar string i) (char-upcase c)))
+                  (setf spacep nil)))
+          (when (and initialp (alphanumericp (schar string 0)))
+            (setf (schar string 0) (char-upcase (schar string 0))))
+          (format
+           stream
+           "~@[ ~*~]~a"
+           (and (not initialp) (not cliticp)) string))))
+    (let ((stream (make-string-output-stream)))
+      (gen-extract-surface edge initialp :stream stream)
+      (get-output-stream-string stream))))
+
 
 (eval-when #+:ansi-eval-when (:load-toplevel :compile-toplevel :execute)
 	   #-:ansi-eval-when (load eval compile)
