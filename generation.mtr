@@ -1,0 +1,166 @@
+;;; Hey, emacs(1), this is -*- Mode: TDL; Coding: utf-8; -*- got it?
+
+; Special case of subordinating conjunctions, where the main clause is
+; topicalized, but the outermost message introduced by the subord conjunction
+; is not marked for --TPC, so propagate the --TPC value up to top message.
+
+tpc_default_gcr0 := monotonic_mtr &
+[ INPUT.RELS <! [ PRED prpstn_m_rel,
+                  ARG0 [ --TPC - ], MARG #h ] !>,
+  CONTEXT [ RELS <! [ LBL #l & handle, MAIN #m & handle ], 
+                    [ LBL #m, ARG0 [ --TPC + ] ] !>,
+            HCONS <! qeq & [ HARG #h, LARG #l ] !> ],
+  OUTPUT.RELS <! +copy+ & [ ARG0 [ --TPC + ] ] !>,
+  FLAGS [ EQUAL < #h, #l, #m > ] ].
+
+; Same for PSV:
+; Special case of subordinating conjunctions, where the main clause is
+; topicalized, but the outermost message introduced by the subord conjunction
+; is not marked for PSV, so assign non-empty PSV value to top message.  This
+; ensures that the trigger rules will not be falsely filtered by the presence 
+; of a message for a given event (the top message) with an unmarked PSV value.
+
+psv_default_gcr0 := monotonic_mtr &
+[ INPUT.RELS <! [ PRED message_m_rel, ARG0 #e,
+                  PSV #u & semarg, MARG #h ] !>,
+  CONTEXT [ RELS <! [ LBL #h & handle, MAIN #m & handle ], 
+                    [ LBL #m, ARG0 #e, PSV #i & individual ] !> ],
+  OUTPUT.RELS <! +copy+ & [ PSV ref-ind ] !>,
+  FLAGS [ EQUAL < #h, #m, #u, #e >,
+          SUBSUME < #i > ] ].
+
+; Set --TPC to - for all messages whose TPC is explicitly unbound,
+; unless the sentence contains a relative clause, in which case we can't
+; safely block any extraction - cf. 'The consultant Abrams knew we hired fell.'
+
+tpc_default_gcr1 := monotonic_mtr &
+[ INPUT.RELS <! [ PRED message_m_rel,
+                  ARG0 #e & [ --TPC na ], TPC #u1 & semarg ] !>,
+  FILTER.RELS <! [ PRED "~_n_", LBL #h ], 
+                 [ PRED message_m_rel, LBL #h ] !>,
+  OUTPUT.RELS <! +copy+ & [ ARG0 #e & [ --TPC - ] ] !>,
+  FLAGS [ EQUAL < #u1 > ] ].
+
+; Since the above rule's filter fails to notice the usual case of the 
+; top-level message in a relative clause (effectively where the message in 
+; INPUT above would be the same one as in FILTER), it erroneously stamps 
+; [--TPC -] on simple relative clauses.  We correct this (awkwardly) in
+; in the following rule, stamping [--TPC bool] on the message which shares 
+; its label with a noun relation, so we allow for extraction in the top 
+; message within a relative clause.
+; NB: The "mark_rel" is used as a hack to prevent this rule from feeding
+; itself - the spring_cleaning_gcr below will remove these spurious eps
+; at the end.
+
+tpc_default_gcr2 := monotonic_mtr &
+[ INPUT.RELS <! [ PRED message_m_rel, LBL #h,
+                  ARG0 #e & [ --TPC - ] ] !>,
+  CONTEXT.RELS <! [ ARG0 ref-ind, LBL #h ] !>,
+  FILTER.RELS <! [ PRED "mark2_rel", LBL #h, ARG0 #e ] !>,
+  OUTPUT.RELS <! +copy+ & [ ARG0 [ --TPC bool ] ],
+                 [ PRED "mark2_rel", LBL #h, ARG0 #e ] !> ].
+
+; Similarly, the message arguments to tough-adjectives and the too-degree
+; specifier must also allow extraction even though there is no TPC marked,
+; as in 'Abrams is difficult to hire' or 'Browne is too young to hire'
+; So again we undo the over-enthusiastic results of the first rule, by
+; generically removing the [--TPC -] on all message arguments of any
+; adjective.  FIX: Would be better to only do this for the subclass of
+; tough-adjectives, but we don't yet have a hierarchy of such predicates
+; to appeal to.
+
+; adjectives with propositional arguments
+tpc_default_gcr3 := monotonic_mtr &
+[ INPUT.RELS <! [ PRED message_m_rel, LBL #h,
+                  ARG0 #e & [ --TPC - ] ]!>,
+  CONTEXT.RELS <! [ PRED "~_a_", ARG2 #h & handle ] !>,
+  FILTER.RELS <! [ PRED "mark3_rel", LBL #h, ARG0 #e ] !>,
+  OUTPUT.RELS <! +copy+ & [ ARG0 [ --TPC bool ] ],
+                 [ PRED "mark3_rel", LBL #h, ARG0 #e ] !>,
+  FLAGS [ EQUAL < #h > ] ].
+
+; too-degree specifier
+tpc_default_gcr4 := monotonic_mtr &
+[ INPUT.RELS <! [ PRED message_m_rel, LBL #h,
+                  ARG0 [ --TPC - ] ] !>,
+  CONTEXT.RELS <! [ PRED "_too_x_deg_rel", ARG1 #x ],
+                  [ PRED comp_rel, ARG1 #x, ARG2 #h ] !>,
+  FILTER.RELS <! [ PRED "mark4_rel", LBL #h ] !>,
+  OUTPUT.RELS <! +copy+ & [ ARG0 [ --TPC + ] ],
+                 [ PRED "mark4_rel", LBL #h ] !>,
+  FLAGS [ EQUAL < #h > ] ].
+
+; Sentential complements: We also have to undo the [--TPC -] marking for
+; messages of embedded clauses containing a gap, as in "Who do you think
+; Sandy hired?'.  So we check for the four cases of ARG1-4.  Note that we
+; currently just undo --TPC on any message that is an argument N of some
+; predicate, since we can't easily make this work recursively, and we
+; want to generate e.g. "Who did you say he thought we hired?"
+; FIX: At the least, we should define a common type for these four.  
+
+tpc_default_gcr5a := monotonic_mtr &
+[ INPUT.RELS <! [ PRED message_m_rel, LBL #h & handle,
+                  ARG0 [ --TPC - ] ] !>,
+  CONTEXT.RELS <! [ PRED message_m_rel, TPC #x & event_or_index ],
+                  [ ARG1 #h ] !>,
+  FILTER.RELS <! [ PRED "mark5_rel", LBL #h ] !>,
+  OUTPUT.RELS <! +copy+ & [ ARG0 [ --TPC bool ] ],
+                 [ PRED "mark5_rel", LBL #h ] !>,
+  FLAGS [ EQUAL < #h >,
+          SUBSUME < #x > ] ].
+
+tpc_default_gcr5b := monotonic_mtr &
+[ INPUT.RELS <! [ PRED message_m_rel, LBL #h & handle,
+                  ARG0 [ --TPC - ] ] !>,
+  CONTEXT.RELS <! [ PRED message_m_rel, TPC #x & event_or_index ],
+                  [ ARG2 #h ] !>,
+  FILTER.RELS <! [ PRED "mark5_rel", LBL #h ] !>,
+  OUTPUT.RELS <! +copy+ & [ ARG0 [ --TPC bool ] ],
+                 [ PRED "mark5_rel", LBL #h ] !>,
+  FLAGS [ EQUAL < #h >,
+          SUBSUME < #x > ] ].
+
+tpc_default_gcr5c := monotonic_mtr &
+[ INPUT.RELS <! [ PRED message_m_rel, LBL #h & handle,
+                  ARG0 [ --TPC - ] ] !>,
+  CONTEXT.RELS <! [ PRED message_m_rel, TPC #x & event_or_index ],
+                  [ ARG3 #h ] !>,
+  FILTER.RELS <! [ PRED "mark5_rel", LBL #h ] !>,
+  OUTPUT.RELS <! +copy+ & [ ARG0 [ --TPC bool ] ],
+                 [ PRED "mark5_rel", LBL #h ] !>,
+  FLAGS [ EQUAL < #h >,
+          SUBSUME < #x > ] ].
+
+tpc_default_gcr5d := monotonic_mtr &
+[ INPUT.RELS <! [ PRED message_m_rel, LBL #h & handle,
+                  ARG0 [ --TPC - ] ] !>,
+  CONTEXT.RELS <! [ PRED message_m_rel, TPC #x & event_or_index ],
+                  [ ARG4 #h ] !>,
+  FILTER.RELS <! [ PRED "mark5_rel", LBL #h ] !>,
+  OUTPUT.RELS <! +copy+ & [ ARG0 [ --TPC bool ] ],
+                 [ PRED "mark5_rel", LBL #h ] !>,
+  FLAGS [ EQUAL < #h >,
+          SUBSUME < #x > ] ].
+
+;pp_default_gcr := monotonic_mtr &
+;[ INPUT.RELS <! [ PRED "~_p_", LBL #h & handle,
+;                  ARG2 #u & semarg ] !>,
+;  OUTPUT.RELS <! +copy+ & [ ARG2 event ] !>,
+;  FLAGS.EQUAL < #h, #u > ].
+
+spring_cleaning_gcr1 := monotonic_mtr &
+[ INPUT.RELS <! [ PRED "mark1_rel" ] !>,
+  OUTPUT.RELS <! !> ].
+spring_cleaning_gcr2 := monotonic_mtr &
+[ INPUT.RELS <! [ PRED "mark2_rel" ] !>,
+  OUTPUT.RELS <! !> ].
+spring_cleaning_gcr3 := monotonic_mtr &
+[ INPUT.RELS <! [ PRED "mark3_rel" ] !>,
+  OUTPUT.RELS <! !> ].
+spring_cleaning_gcr4 := monotonic_mtr &
+[ INPUT.RELS <! [ PRED "mark4_rel" ] !>,
+  OUTPUT.RELS <! !> ].
+spring_cleaning_gcr5 := monotonic_mtr &
+[ INPUT.RELS <! [ PRED "mark5_rel" ] !>,
+  OUTPUT.RELS <! !> ].
+
