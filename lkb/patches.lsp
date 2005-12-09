@@ -3,19 +3,6 @@
 ;;;                                                           (9-dec-03; oe)
 ;;;
 
-(in-package :mrs)
-
-;;;
-;;; since, for fragments at least, we use `geq' handle constraints, need to at
-;;; least enable construction of MRS objects; presumably, there is no way for
-;;; these to scope without work on the algorithm, but alas.     (5-jun-04; oe)
-;;;
-
-(defun create-hcons-relation (type)
-  (cond ((eql type *qeq-type*) "qeq")
-        ((eql type (vsym "geq")) "geq")
-        (t (error "Unknown relation type ~A"))))
-
 (in-package :lkb)
 
 ; From lkb/src/mrs/spell.lisp:
@@ -70,8 +57,7 @@
 	      (when (eq marg-value (var-id (hcons-scarg qeq)))
 		(return (values qeq marg-fvp)))))))))
 
-(in-package :lkb)
-
+#|
 ; In lkb/src/tsdb/lisp/lkb-interface.lisp
 ; Redefine tsdb::finalize-run to comment out uncache-lexicon() since it
 ; results in uninitializing the generator lexicon, which is annoying:
@@ -99,6 +85,7 @@
             (:first-only-p 
              (setf *first-only-p* value))))
     (pairlis '(:lexicon) (list lexicon))))
+|#
 
 ; In mrs/idioms.lisp
 ; Added check in idiom_rel-p() since mt::transfer-mrs() is surprised at
@@ -117,36 +104,6 @@
                     (string relpred))))
     (and relname
          (equal "_i_rel" (subseq relname (- (length relname) 6))))))
-
-
-;;; (bmw - 14sep05)
-;;; NEW: set :QUICK-LOAD to T in *lexdb-params* to disable checks on lex/lex_key tables
-;;;      when opening db connection (if you do this consistency between rev/lex and 
-;;;      between lex/lex_key tables is not guaranteed)
-
-;; Comment out vacuuming when not changing lexicon - too time-consuming
-;(defmethod update-lex ((lex psql-lex-database))
-;  ;(vacuum lex)
-;  ;(lexdb-time ("updating 'lex' table" "done updating 'lex' table")
-;  ;	      (update-lex-aux lex))
-;  ;(vacuum lex)
-;  (cond
-;   ((null (semi lex))
-;    nil)
-;   ((semi-up-to-date-p lex)
-;    (unless 
-;	    (lexdb-time ("loading SEM-I into memory" "done loading SEM-I into memory")
-;			(mrs::semi-p 
-;			 (catch :sql-error
-;			   (mrs::populate-*semi*-from-psql)
-;			   )))
-;      (format t "~&(LexDB) unable to retrieve database SEM-I"))
-;    (index-lexical-rules)
-;    (index-grammar-rules))
-;   (t
-;    (format t "~&(LexDB) WARNING:  no lexical entries indexed for generator")))
-;  lex)
-
 
 
 (in-package :cl-user)

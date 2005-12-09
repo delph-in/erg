@@ -100,10 +100,14 @@
         do (setf (dag-type foo) *string-type*))
     (let* ((unifications (make-unknown-word-sense-unifications
                           surface
-                          #+:logon
-                          (if (eq (gle-id gle) 'guess_n_gle)
-                            (format nil "/~a/" surface)
-                            surface)))
+                          (or
+                           #+:logon
+                           (case (gle-id gle)
+                             (guess_n_gle 
+                              (format nil "/~a/" surface))
+                             (decade_gle
+                              (format nil "~as" surface)))
+                           surface)))
            (indef (process-unifications unifications))
            (indef (and indef (create-wffs indef)))
            (overlay (and indef (make-tdfs :indef indef))))
@@ -318,3 +322,7 @@
 (eval-when #+:ansi-eval-when (:load-toplevel :compile-toplevel :execute)
 	   #-:ansi-eval-when (load eval compile)
   (setf *gen-extract-surface-hook* 'gen-extract-surface))
+
+#+:null
+(defun preprocess-sentence-string (str)
+  (x-preprocess str :format :chared))

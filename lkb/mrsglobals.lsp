@@ -21,9 +21,6 @@
    *ignored-extra-features*
    (list (vsym "SORT") (vsym "INSTLOC"))))
 
-(setf *infstr-extra-features* 
-  (list (list (vsym "TPC")) (list (vsym "PSV"))))
-
 (setf *top-level-rel-types*  nil)
 
 ;;; features for extracting semantics from expanded lexical entries
@@ -121,7 +118,6 @@
    (cons (mrs::vsym "E.TENSE") (mrs::vsym "basic_tense"))
    (cons (mrs::vsym "E.ASPECT.PROGR") (mrs::vsym "luk"))
    (cons (mrs::vsym "E.ASPECT.PERF") (mrs::vsym "luk"))
-   (cons (mrs::vsym "E.ASPECT.STATIVE") (mrs::vsym "bool"))
    (cons (mrs::vsym "E.MOOD") (mrs::vsym "mood"))
    (cons (mrs::vsym "PNG.GEN") (mrs::vsym "real_gender"))
    (cons (mrs::vsym "TPC") (mrs::vsym "basic_semarg"))
@@ -141,12 +137,12 @@
 ;;;                                                            (26-nov-04; oe)
 (defparameter %mrs-extras-defaults%
   (list
+   (list (vsym "U") 
+         (cons (mrs::vsym "--TPC") (vsym "-")))
    (list (vsym "E") 
          (cons (mrs::vsym "E.MOOD") (mrs::vsym "indicative"))
          (cons (vsym "E.ASPECT.PERF") (vsym "-"))
-         (cons (vsym "E.ASPECT.PROGR") (vsym "-"))
-         #-:logon
-         (cons (vsym "E.ASPECT.STATIVE") (vsym "-")))
+         (cons (vsym "E.ASPECT.PROGR") (vsym "-")))
    #-:logon
    (list (vsym "X")
          (cons (vsym "PNG.PN") (vsym "unsp_pernum")))))

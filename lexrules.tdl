@@ -23,8 +23,7 @@
 ;; Verbal inflections
 
 non_fin_verb := local & 
-  [ CAT.HEAD verb & [ VOICE active ],
-    CONT.MSG.PSV nothing ].
+  [ CAT.HEAD verb & [ VOICE active ] ].
 
 ; Need to constrain MOD value for PRP verbs.  Also for passive participles.
 
@@ -55,12 +54,11 @@ non_fin_verb := local &
 
 verb_participle_affix := local &
   [ CAT [ HEAD verb & [ PRD + ],
-	  VAL.SUBJ < [ --SIND #agr,
+	  VAL.SUBJ < [ LOCAL.AGR #agr,
                        NONLOC.SLASH 0-dlist ] >,
 	  HC-LEX - ],
     AGR #agr ].
 
-; DPF 21-apr-04 Let's try making this underspecified for STATIVE, not STATIVE +
 prp_verb := non_fin_verb & verb_participle_affix &
   [ CAT.HEAD [ VFORM prp,
                TAM.ASPECT [ PROGR + ] ] ].
@@ -103,7 +101,6 @@ bse_verb := non_fin_verb & non_perf &
 ; adjuncts, through constraints on the head-adjunct phrase type.
 ; DPF 4-Mar-01 - Removed [CONT.MSG no_msg] from SUBJ, to allow e.g.
 ; "me hiring you bothered him"
-; 21-apr-04 - Removed STATIVE - from INDEX
 
 basic_fin_verb := non_perf &
   [ CAT [ HEAD verb &
@@ -112,8 +109,7 @@ basic_fin_verb := non_perf &
 		 VFORM fin ],
 	  POSTHD +,
 	  VAL.SUBJ < synsem & [ LOCAL [ CAT.HEAD.CASE nom,
-                                        CONJ cnil ] ] > ],
-    CONT.MSG.PSV nothing ].
+                                        CONJ cnil ] ] > ] ].
 
 fin_verb := basic_fin_verb & 
   [ CAT.VAL.SUBJ < [ OPT - ] > ].
@@ -125,10 +121,23 @@ pres_verb := fin_verb &
 		   MOOD indicative ] ].
 
 past_or_subj_verb := fin_verb &
-  [ CAT.HEAD.TAM past_or_subj_tam ].
+  [ CAT.VAL.SUBJ < [ --SIND.PNG.PN #pn,
+                     LOCAL.AGR.PNG.PN #pn ] >,
+    CAT.HEAD.TAM past_or_subj_tam ].
+
+; DPF 30-Sept-05 - Tempted to make --SIND..PN 3sg to improve generator 
+; efficiency (not proposing 3sg verb when argument is plural).  But this
+; desire clashes with assumption that syntactic AGR and semantic INDEX are
+; not always identical, e.g. for treatment of numerals as in "Six is even."
+; where the semantics of the adjective "six" has a plural index, but the
+; num_noun rule makes a syntactically singular nominal out of it.  So we
+; (currently) have to live with the extra work in generation.  Or maybe
+; we add PNG to restrictor, since it rarely helps given above assumption
+; about potential mismatch.
 
 third_sg_fin_verb := pres_verb &
-  [ AGR.PNG png & [ PN 3sg ] ].
+  [ CAT.VAL.SUBJ < [ LOCAL.AGR.PNG.PN 3sg ] >,
+    AGR.PNG png & [ PN 3sg ] ].
 
 non_third_sg_fin_verb := pres_verb &
   [ CAT.VAL.SUBJ < [ LOCAL local & [ CONT nom-obj ] ] >,
@@ -218,8 +227,7 @@ lex_rule_supermost := phrase_or_lexrule & word_or_lexrule &
                               [ CONT [ RELS [ LIST #rfirst,
                                               LAST #rmiddle ],
                                        HCONS [ LIST #hcfirst,
-                                               LAST #hcmiddle ] ],
-                                CONJ cnil ] ],
+                                               LAST #hcmiddle ] ] ] ],
     ALTS #alts,
     IDIOM #idiom,
     SYNSEM abstr_lex_synsem & 
@@ -227,8 +235,7 @@ lex_rule_supermost := phrase_or_lexrule & word_or_lexrule &
                    [ CONT [ RELS [ LIST #rfirst,
                                    LAST #rlast ],
                             HCONS [ LIST #hcfirst,
-                                    LAST #hclast ] ],
-                     CONJ cnil ] ],
+                                    LAST #hclast ] ] ] ],
     C-CONT [ RELS [ LIST #rmiddle,
                     LAST #rlast ],
              HCONS [ LIST #hcmiddle,
@@ -247,10 +254,12 @@ lex_rule_supermost := phrase_or_lexrule & word_or_lexrule &
 ; treatment of scope holes in fragments for later solutions.
 
 lex_rule_basic := lex_rule_supermost &
-  [ DTR [ SYNSEM.PUNCT #punct & [ LPUNCT no_punct,
-                                  RPUNCT no_punct ],
+  [ DTR [ SYNSEM [ LOCAL.CONJ cnil,
+                   PUNCT #punct & [ LPUNCT no_punct,
+                                    RPUNCT no_punct ] ],
           GENRE #genre ],
-    SYNSEM.PUNCT #punct,
+    SYNSEM [ LOCAL.CONJ cnil,
+             PUNCT #punct ],
     GENRE #genre ].
 
 lex_rule_infl_affixed := lex_rule_basic &
@@ -472,48 +481,36 @@ loc_inv := lex_rule_basic &
 ; DPF 19-apr-05 - Block adv_addition rule from applying to negated auxiliaries,
 ; since these (uniquely) have ALT2KEYREL.PRED neg_rel, while the positive ones
 ; are unconstrained.
+; DPF 25-nov-05 - Removed AUX + from mother, since it was preventing adjunct-
+; extraction for e.g. "In Berlin, Browne is also Abrams"
 
-basic_adv_addition := lex_rule &
+adv_addition := lex_rule &
   [ STEM #orth,
     DTR [ STEM #orth,
-	  SYNSEM 
-               [ LOCAL [ CAT [ HEAD verb &
-				    [ VFORM fin,
-                                      MOD #mod,
-                                      PRD #prd,
-                                      INV #inv,
-                                      TAM #tam,
-                                      VOICE #voice,
-                                      KEYS #keys ],
+          ALTS.ADVADD +,
+	  SYNSEM aux_verb &
+               [ LOCAL [ CAT [ HEAD verb & #head &
+				    [ VFORM fin ],
 			       VAL [ SUBJ #subj & < synsem >,
 				     COMPS #comps & *substlist*,
 				     SPR #spr ],
 			       POSTHD #ph ],
-			 CONT [ HOOK [ LTOP #vltop,
-                                       INDEX #vindex,
+			 CONT [ HOOK #hook &
+                                     [ INDEX #vindex,
                                        XARG #xarg ],
                                 MSG #msg ],
                          CTXT #ctxt ],
 		 NONLOC #nonloc,
                  LKEYS.ALT2KEYREL.PRED never_unify_rel ] ],
-    SYNSEM basic_aux_verb &
+    SYNSEM aux_verb &
 	 [ LOCAL 
 	   [ CAT 
-	     [ HEAD verb &
-                    [ AUX +,
-                      VFORM fin,
-                      MOD #mod,
-                      PRD #prd,
-                      INV #inv,
-                      TAM #tam,
-                      VOICE #voice,
-                      KEYS #keys ],
+	     [ HEAD #head & [ TAM #tam ],
                VAL [ SUBJ #subj,
 		     COMPS *cons* &
 			  < [ LOCAL local &
 			     [ CAT [ HEAD basic_lexadv &
-                                     [ MOD < [ LOCAL.CONT.HOOK 
-                                                         [ LTOP #vltop ] ] >,
+                                     [ MOD < [ LOCAL.CONT.HOOK #hook ] >,
                                        TAM #tam ],
                                      VAL.COMPS < > ],
                                CONT [ HOOK.LTOP #advltop,
@@ -530,9 +527,6 @@ basic_adv_addition := lex_rule &
 	   NONLOC #nonloc ],
     C-CONT [ RELS <! !>,
              HCONS <! !> ] ].
-
-adv_addition := basic_adv_addition &
-  [ DTR.SYNSEM.LOCAL.CAT.HEAD.AUX + ].
 
 ;; VP Ellipsis
 ;; We can't let this rule apply to the infinitival "to", since we would then
@@ -553,14 +547,13 @@ vp_ellipsis := lex_rule &
   [ STEM #orth,
     DTR [ STEM #orth,
           ALTS.VPELLIP +,
-	  SYNSEM basic_verb_synsem &
+	  SYNSEM aux_verb &
 	   [ LOCAL 
              [ CAT 
                [ HEAD verb &
                       [ MOD #mod,
                         PRD #prd,
                         INV #inv,
-                        AUX +,
                         TAM #tam & [ ASPECT.PROGR - ],
                         VFORM #vform,
                         VOICE #voice,
@@ -580,7 +573,7 @@ vp_ellipsis := lex_rule &
              LKEYS [ KEYREL.PRED #keyrelpred,
                      ALT2KEYREL #alt2keyrel ],
              NONLOC #nonloc ] ],
-    SYNSEM verb_synsem &
+    SYNSEM aux_verb &
 	 [ LOCAL [ CAT [ HEAD verb & 
                               [ MOD #mod,
                                 PRD #prd,
@@ -658,9 +651,7 @@ basic_passive_verb_lr := lex_rule_basic &
                                       TAM [ TENSE #tense,
                                             MOOD #mood ],
                                       KEYS.KEY #key ],
-                               VAL [ SUBJ < [ --SIND #subjind, 
-                                              NONLOC #snonloc ] >,
-                                     SPR #spr ] ],
+                               VAL.SPR #spr ],
 			 CONT.HOOK [ LTOP #hand,
                                      INDEX #index ],
                          CONJ cnil,
@@ -670,14 +661,12 @@ basic_passive_verb_lr := lex_rule_basic &
                          --OCOMPKEY #ockey,
                          --+OCOMPKEY #plusockey ],
                  NONLOC #nonloc ] ],
-    SYNSEM passive_synsem &
+    SYNSEM basic_passive_synsem &
 	 [ LOCAL verb_participle_affix &
 		 [ CAT [ HEAD verb & [ TAM [ TENSE #tense,
                                              MOOD #mood ],
                                        KEYS.KEY #key ],
-			 VAL [ SPR #spr,
-                               COMPS < [ LOCAL.CONT.HOOK.INDEX #subjind,
-                                         NONLOC #snonloc ], ... > ] ],
+			 VAL.SPR #spr ],
                    CONT.HOOK [ LTOP #hand,
                                INDEX #index ],
 		   CTXT #ctxt ],
@@ -690,6 +679,13 @@ basic_passive_verb_lr := lex_rule_basic &
              HCONS <! !> ],
     POSSCL -,
     ARGS < #dtr > ].
+
+norm_passive_verb_lr := basic_passive_verb_lr &
+  [ DTR.SYNSEM.LOCAL.CAT.VAL.SUBJ < [ --SIND #subjind, 
+                                      NONLOC #snonloc ] >,
+    SYNSEM passive_synsem &
+           [ LOCAL.CAT.VAL.COMPS < [ LOCAL.CONT.HOOK.INDEX #subjind,
+                                     NONLOC #snonloc ], ... > ] ].
 
 ;; This has the same problem as the passive lexical rule.  Since we derive the
 ;; gerund from the present particple, we somehow have to filter out the
@@ -908,6 +904,21 @@ intrans_pp_nominal_gerund := nominal_gerund &
 ;; Long-standing bug.  Sigh.
 ;; DPF 22-Jul-03 - Added constraint COMPS <expressed_synsem> to remove spurious
 ;; ambiguity for "My hiring" as we do for ordinary n_ppcomp lexical entries.
+;; DPF 11-oct-05 - Try preserving optionality of complement from dtr to mother.
+;; DPF 4-nov-05 - But this prevents N-N compounds where the first is notionally
+;; an argument of the second (from a strictly transitive verb), as in 
+;; "cat chasing is popular."  So let's try another approach, where we allow
+;; transitive verbs to undergo this rule as long as there is not an alternative
+;; entry like a v_prep_dir_le which would compete.  The underlying idea is
+;; that there should be a single lexical entry with an underspecification 
+;; for prep-dir and strict-transitive, but we currently have to express this 
+;; as an explicit disjunction with two lexical entries.  This approach doesn't
+;; yet do so well with causative/inchoative alternations, where the two verbs
+;; introduce different predicates, and we can't easily get to the underspecified
+;; sense.  For now, we'll exclude the causative variant here, and expect some 
+;; post-processing to do the right thing with the semantics of e.g. "cat 
+;; shipping" to get from the overly specific "_ship_v_1_rel" to one possible 
+;;reading where there is a "_ship_v_cause_rel".
 
 trans_nominal_gerund := nominal_gerund &
   [ DTR.SYNSEM trans_subst & 
@@ -921,8 +932,7 @@ trans_nominal_gerund := nominal_gerund &
                                              CONT.HOOK [ LTOP #ltop,
                                                          INDEX #index ],
                                              CONJ cnil ],
-                                     NONLOC #nonloc,
-                                     OPT + ] >,
+                                     NONLOC #nonloc ] >,
                    CONT.HOOK.LTOP #ltop ] ].
 
 ; DPF 13-Oct-02 - Added COMPS < > to SPEC..SYNSEM, to avoid spurious ambiguity
@@ -1111,6 +1121,16 @@ attr_adj_lr := lex_rule &
 ;; DPF 28-mar-05 - Restored LPERIPH bool in order to prevent these inside
 ;; N-Adj-N compounds, since there is an alternative analysis of e.g.
 ;; 'company tracking number' where 'tracking number' is an N-N compound.
+;; DPF 16-sept-05 - Try blocking SPR for these, to avoid e.g. "*a very hired
+;; consultant"
+;; DPF 5-nov-05 - It's tempting to relax SYNSEM..MOD..KEY from nom_nbar_rel to 
+;; reg_nom_rel in order to also allow "the retired Abrams", but this leads to
+;; unpleasant spurious ambiguity as in "Abrams has hired Browne."  Could try
+;; a specialized variant of this rule for proper names which requires that
+;; they then have a non-empty specifier.
+;; DPF 13-nov-05 - Re: 16-sept-05, but this also prevents "most visited",
+;; so instead constrain SPR to only allow this-that ones, which include
+;; comparative/superlative deg-specs.
 
 basic_attr_verb_part_lr := lex_rule &
   [ STEM #orth,
@@ -1130,7 +1150,7 @@ basic_attr_verb_part_lr := lex_rule &
                    NONLOC #non-local ] ],
     SYNSEM canonical_synsem &
      [ LOCAL 
-        [ CAT [ HEAD adj &
+        [ CAT [ HEAD basic_adj &
                      [ MOD < synsem &
                              [ LOCAL intersective_mod &
                                      [ CAT nbar_cat &
@@ -1141,9 +1161,8 @@ basic_attr_verb_part_lr := lex_rule &
                        PRD -,
                        KEYS.KEY norm_adj_rel ],
                 VAL [ SUBJ < >,
-                      SPR < synsem_min &
-                            [ LOCAL local_min &
-                              [ CAT [ HEAD.KEYS.KEY degree_rel,
+                      SPR < [ LOCAL local_min &
+                              [ CAT [ HEAD.KEYS.KEY much_or_very_deg_rel,
                                       VAL [ SPR *olist*,
                                             SPEC < [ LOCAL.CAT.HS-LEX 
                                                                 #hslex ] > ],
@@ -1177,10 +1196,23 @@ basic_attr_verb_part_lr := lex_rule &
 attr_verb_part_lr := basic_attr_verb_part_lr &
   [ DTR.SYNSEM.LOCAL.CAT.VAL.COMPS < > ].
 
-attr_verb_part_tr_lr := basic_attr_verb_part_lr &
-  [ DTR.SYNSEM.LOCAL.CAT.VAL.COMPS < unexpressed &
-                                     [ LOCAL.CAT.HEAD n_or_p ] . *olist* > ].
+; transitive -ing verbs
 
+attr_verb_part_tr_lr := basic_attr_verb_part_lr &
+  [ DTR.SYNSEM.LOCAL.CAT [ HEAD.VFORM prp,
+                           VAL.COMPS 
+                              < unexpressed &
+                                [ LOCAL.CAT.HEAD n_or_p &
+                                  [ KEYS.KEY independent_rel ] ] . *olist* >]].
+
+attr_verb_part_psv_lr := basic_attr_verb_part_lr &
+  [ DTR.SYNSEM.LOCAL [ CAT [ HEAD.VFORM pas,
+                             VAL.COMPS 
+                              < unexpressed &
+                                [ LOCAL.CAT.HEAD.KEYS.KEY 
+                                               selected_rel ] . *olist* > ],
+                       CONT.MSG.PSV #psv ],
+    C-CONT.RELS <! [ PSV #psv ] !>].
 
 ;; The partitive construction rule introduces a new type of relation: 
 ;; part_of_rel, which contains the semantic information of the partitive.
@@ -1446,7 +1478,8 @@ basic_punctuation_rule := lex_rule_supermost &
                       --SIND #sind,
                       PHON #phon,
                       PUNCT.LPUNCT pair_or_no_punct,
-                      LKEYS #lkeys ] ] >,
+                      LKEYS #lkeys ],
+             POSSCL #posscl ] >,
     SYNSEM lex_punct_synsem &
            [ OPT #opt,
              LEX #lex,
@@ -1457,7 +1490,8 @@ basic_punctuation_rule := lex_rule_supermost &
              --SIND #sind,
              PHON #phon,
              LKEYS #lkeys ],
-    C-CONT.RELS <! !> ].
+    C-CONT.RELS <! !>,
+    POSSCL #posscl ].
 
 punctuation_rule := basic_punctuation_rule &
   [ INFLECTD +,
@@ -1468,7 +1502,7 @@ punctuation_period_rule := punctuation_rule &
   [ SYNSEM.PUNCT [ LPUNCT #lpunct,
                    PAIRED no_ppair,
                    RPUNCT clause_punct &
-                          [ MSGPRED prop_imp_m_rel ] ],
+                          [ MSGPRED punct_prop_imp_m_rel ] ],
     ARGS < [ SYNSEM.PUNCT [ LPUNCT #lpunct & no_punct,
                             RPUNCT pair_or_no_punct ] ] >,
     RNAME "LPP" ].  
@@ -1486,7 +1520,7 @@ punctuation_semicol_rule := punctuation_rule &
   [ SYNSEM.PUNCT [ LPUNCT #lpunct,
                    PAIRED no_ppair,
                    RPUNCT semicol_punct &
-                          [ MSGPRED prop_imp_m_rel ] ],
+                          [ MSGPRED punct_prop_imp_m_rel ] ],
     ARGS < [ SYNSEM.PUNCT [ LPUNCT #lpunct & no_punct,
                             RPUNCT pair_or_no_punct ] ] >,
     RNAME "LPSC" ].
@@ -1510,18 +1544,24 @@ punctuation_comma_rule := basic_punctuation_comma_rule &
                    RPUNCT comma_punct ],
     RNAME "LPCM" ].
 
-punctuation_rparen_rule := punctuation_rule &
+punctuation_rparen_rule := basic_punctuation_rule &
   [ SYNSEM.PUNCT [ LPUNCT #lpunct,
                    RPUNCT rparen_punct & [ MSGPRED #msgpred ] ],
     ARGS < [ SYNSEM.PUNCT [ LPUNCT #lpunct & no_punct,
                             RPUNCT clause_or_pair_or_no_punct &
-                                   [ MSGPRED #msgpred ] ] ] >,
+                                   [ MSGPRED #msgpred ] ],
+             GENRE #genre ] >,
+    GENRE #genre,
     RNAME "LPRP" ].
 
-punctuation_lparen_rule := punctuation_rule &
+punctuation_lparen_rule := basic_punctuation_rule &
   [ SYNSEM.PUNCT [ LPUNCT lparen_punct,
-                   RPUNCT #rpunct ],
-    ARGS < [ SYNSEM.PUNCT.RPUNCT #rpunct ] >,
+                   RPUNCT #rpunct,
+                   PNCTPR #pnctpr ],
+    ARGS < [ SYNSEM.PUNCT [ RPUNCT #rpunct,
+                            PNCTPR #pnctpr ],
+             GENRE #genre ] >,
+    GENRE #genre,
     RNAME "LPLP" ].
 
 punctuation_dqright_rule := basic_punctuation_rule &
@@ -1545,7 +1585,7 @@ punctuation_sqright_rule := basic_punctuation_rule &
                                    [ MSGPRED #msgpred ] ] ] >,
     RNAME "LPSR" ].
 
-punctuation_sqleft_rule := punctuation_rule &
+punctuation_sqleft_rule := basic_punctuation_rule &
   [ SYNSEM.PUNCT [ LPUNCT sq_punct,
                    RPUNCT #rpunct ],
     ARGS < [ SYNSEM.PUNCT.RPUNCT #rpunct,
@@ -1564,7 +1604,7 @@ punctuation_bang_rule := punctuation_rule &
   [ SYNSEM.PUNCT [ LPUNCT #lpunct,
                    PAIRED no_ppair,
                    RPUNCT clause_punct &
-                          [ MSGPRED prop_imp_m_rel ] ],
+                          [ MSGPRED punct_prop_imp_m_rel ] ],
     ARGS < [ SYNSEM.PUNCT [ LPUNCT #lpunct & no_punct,
                             RPUNCT clause_or_no_punct ] ] >,
     RNAME "LPX" ].

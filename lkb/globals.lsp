@@ -39,14 +39,15 @@
 
 (defparameter *diff-list-last* 'last)
 
-(defparameter *lex-rule-suffix* "_INFL_RULE"
+;(defparameter *lex-rule-suffix* "_INFL_RULE"
+; "creates the inflectional rule name from the information
+;   in irregs.tab - for PAGE compatability")
+
+(defparameter *lex-rule-suffix* ""
  "creates the inflectional rule name from the information
    in irregs.tab - for PAGE compatability")
 
-; While waiting for better interaction of punctuation and irregs
-; we'll substitute the regular form
-; (defparameter *irregular-forms-only-p* t)
-(defparameter *irregular-forms-only-p* nil)
+(defparameter *irregular-forms-only-p* t)
 
 (defparameter *display-type-hierarchy-on-load* nil)
 
@@ -62,8 +63,8 @@
 (defparameter *start-symbol* 
   #-:arboretum
   ;'(root_strict)
-  ;'(root_strict root_informal)
-  '(root_strict root_frag)
+  '(root_strict root_informal)
+  ;'(root_strict root_frag)
   ;'(root_strict root_informal root_frag)
   ;'(root_strict root_informal root_frag root_robust)
   #+:arboretum
@@ -105,7 +106,8 @@
 (defparameter *chart-packing-p* t)
 
 (defparameter *packing-restrictor*
-  '(STEM RELS HCONS RNAME PUNCT)
+  ;'(STEM RELS HCONS RNAME PUNCT)
+  '(STEM RELS HCONS RNAME)
   "restrictor used when parsing with ambiguity packing")
 
 ;;; (setf *chart-packing-p* t)
@@ -148,6 +150,9 @@
 ; For character encoding
 (defparameter cdb::*cdb-ascii-p* nil)
 
+; Turn on characterization in preprocessor
+(setf *characterize-p* t)
+
 (defparameter *discriminant-path* '(SYNSEM LOCAL KEYS KEY))
 
 ;;; Hide lexical rule nodes in parse tree
@@ -179,7 +184,7 @@
     would_aux_pos_cx_2 had_better_cx had_better_cx_2
     u_pro you_guys you_people yall yall_2 yall_3 you_all
     and_conj_slash and_then_1 and_or_conj_1 and_or_conj_2
-    and_or_conj_3 and_conj_amp and_conj_2_amp then_conj_1
+    and_or_conj_3 and_conj_amp and_conj_2_amp
     apostrophe_s_lex apostrophe_s_3_lex
     mister missus mr_title_2 doctor_ttl dr_ttl_2 prof_title mrs_title_2
     ms_title_2 mount_ttl_2 number_abb_title number_abb_title_2 
@@ -209,21 +214,26 @@
     saturday_n2 sunday_n3 monday_n3 tuesday_n3 wednesday_n3 thursday_n3 
     friday_n3 saturday_n3 slash_punct_adv1 or_else_1
     whom2 yours_truly_pn1 hour_n2 couple_adj
-    april_abb_n1 april_abb_n2 august_abb_n1 august_abb_n2 customer_abb_n1
-    customer_abb_n2 december_abb_n1 december_abb_n2
-    february_abb_n1 february_abb_n2 january_abb_n1 january_abb_n2 july_abb_n1
-    july_abb_n2 july_abb_n3 july_abb_n4
-    june_abb_n1 june_abb_n2 june_abb_n3 june_abb_n4 march_abb_n1
-    march_abb_n2 november_abb_n1 november_abb_n2 number_abb_n1 number_abb_n2
-    number_abb_n3 number_abb_n4 number_abb_title number_abb_title_2
-    october_abb_n1 october_abb_n2 order_abb_n1 order_abb_ttl september_abb_n1
-    september_abb_n2 september_abb_n3 september_abb_n4 
+    customer_abb_n1 customer_abb_n2 
+    april_abb_n1 april_abb_n2 april_abb_n3 april_abb_n4 
+    august_abb_n1 august_abb_n22 august_abb_n3 august_abb_n4
+    december_abb_n1 december_abb_n2 december_abb_n3 december_abb_n4 
+    february_abb_n1 february_abb_n2 february_abb_n3 february_abb_n4
+    january_abb_n1 january_abb_n2 january_abb_n3 january_abb_n4
+    july_abb_n1 july_abb_n2 july_abb_n3 july_abb_n4
+    june_abb_n1 june_abb_n2 june_abb_n3 june_abb_n4 
+    march_abb_n1 march_abb_n2 march_abb_n3 march_abb_n4
+    november_abb_n1 november_abb_n2 november_abb_n3 november_abb_n4 
+    october_abb_n1 october_abb_n2 october_abb_n3 october_abb_n4
+    september_abb_n1 september_abb_n2 september_abb_n3 september_abb_n4 
+    number_abb_n1 number_abb_n2 number_abb_n3 number_abb_n4 number_abb_title 
+    number_abb_title_2 order_abb_n1 order_abb_ttl 
     april_the_det august_the_det december_the_det february_the_det 
     january_the_det july_the_det june_the_det march_the_det may_the_det 
     november_the_det october_the_det september_the_det 
     km_abb_n1 lets_2 lets_3 a_det_2 i_2
     whether_or_not_c_fin whether_or_not_c_inf
-    thee thou thy thine ye aught threescore fourscore
+    thee thou thy thine thine_nq ye aught threescore fourscore
     am_temp 
     noon_min pm_temp pm_temp_3
     clocktime-ersatz_2
@@ -233,7 +243,7 @@
     a_one_adj_2 a_quarter_adj2 i_2 i_guess_disc_2 i_guess_disc_4
     i_mean_disc_2 i_must_say_root_2 i_must_say_root_4 i_think_disc_2
     or_conj_1a or_conj_2a order_n1a order_n2a order_ttla oregon_n2
-    one_adj_digit his_her_poss_2 his_her_poss backcountry_n1
+    one_adj_digit his_her_poss_2 backcountry_n1
     3d_adj eight_day_num eight_day_num_yofc eighteen_day_num 
     eighteen_day_num_yofc eighteenth_day_num eighth_day_num eleven_day_num 
     eleven_day_num_yofc eleventh_day_num fifteen_day_num 
@@ -276,7 +286,7 @@
     twentythree_day twentythree_day_2 twentythree_day_2_yofc twentytwo_day
     twentytwo_day_2 two_day number_char_n1
     i_2 i_stutter i_stutter_2
-;; be_th_cop_is_cx_2 be_id_is_cx_2 be_c_is_cx_2 be_c_am_cx_2
+    be_th_cop_is_cx_2 be_id_is_cx_2 be_c_is_cx_2 be_c_am_cx_2
     telephone_abb_n1 telephone_abb_n2 adj_abb_n1 adv_abb_n1 anat_abb_n1
     centimeter_abb_n1 comparative_abb_n1 customer_abb_n1 customer_abb_n2
     diameter_abb_n1 foot_abb_n1 geometry_abb_n1 illustration_abb_n1
@@ -289,20 +299,34 @@
     be_c_am_cx_neg_1 be_c_are_cx_neg_1 be_c_is_cx_neg_1 be_id_am_cx_neg_1
     be_id_are_cx_neg_1 be_id_is_cx_neg_1 be_nv_is_cx_neg_1
     be_th_cop_is_cx_neg_1 had_aux_cx_neg_1 had_better_cx_neg_1
-    has_aux_cx_neg_1 have_aux_cx_neg_1
-
+    has_aux_cx_neg_1 have_aux_cx_neg_1 both_conj either_conj first_conj
+    till_cp_p1 till_cp_p2 till_p1 till_p2 thru_p thru_a1
+    how_bout how_bout_s how_bout_vp brine_cured_a2 account_n3 account_n4
+    first_day_num ord1ersatz second_day_num ord2ersatz ord3ersatz
+    1000s_n1 100s_n1 100s_n2 more_or_less_nc_deg
+    oslofjorden_n1 like_minded_a2 like_minded_a3 quick_adv1
+    bc_temp_1 bc_temp_2 ad_temp_1 ad_temp_2 x_to_y_adj_- x_to_y_nbar_hyphen
+    x_to_y_np_pl_- x_to_y_np_sg_- x_to_y_np_sg_through x_to_y_np_until
+    colour_n1 round anyplace_n2 anywhere_n2 everywhere_n2 nowhere_n2 
+    someplace_n2 sometime_n2 somewhere_n2 en_route_pp_2 round_trip_n2
+    hour_n2 hour_n3 hour_n4 approximately_abb seaside_n2
+    gallon_abb_n1 gallon_abb_n2 millimeter_abb_n2 milliliter_abb_n2
+    foot_abb_n2 centimeter_abb_n2 meter_abb_n2 with_p_abb2
     )
   "temporary expedient to avoid generating dual forms")
 
 (setf *gen-ignore-rules*
-  '(punct_bang_rule punct_semicol_rule punct_colon_rule
-    punct_rparen_rule punct_lparen_rule punct_dqright_rule punct_dqleft_rule
-    punct_sqright_rule punct_sqleft_rule punct_hyphen_rule
-    punct_comma_informal_rule))
-
+  '(punct_bang_orule punct_semicol_orule punct_colon_orule
+    punct_rparen_orule punct_lparen_orule punct_rbracket_orule 
+    punct_lbracket_orule punct_dqright_orule punct_dqleft_orule 
+    punct_sqright_orule punct_sqleft_orule 
+    punct_sqleft2_orule punct_hyphen_orule punct_comma_informal_orule 
+    paren_float_s paren_float_n
+    ; This rule is relatively expensive and of marginal benefit in generation
+    adjh_i_ques
+   ))
 
 (setf *semantics-index-path* '(SYNSEM LOCAL CONT HOOK INDEX))
-
 
 ;;;
 ;;; turn on packing in the generator, index accessibility filtering, and the
@@ -367,7 +391,8 @@
 ;;;
 (defparameter *generic-lexical-entries*
   '((named_gle :generate) (guess_n_gle :generate)
-    (card_gle :generate) (ord_gle :generate) (yofc_gle :generate)))
+    (card_gle :generate) (ord_gle :generate) 
+    (yofc_gle :generate) (decade_gle :generate)))
 
 (defparameter *non-idiom-root*
     'root_non_idiom )
@@ -406,3 +431,4 @@
 ;;; wanted (using an array of Matrix grammars and an interlingua semantics).
 ;;;
 (setf *translate-grid* '(:en . (:en)))
+
