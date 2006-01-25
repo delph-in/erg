@@ -322,7 +322,3 @@
 (eval-when #+:ansi-eval-when (:load-toplevel :compile-toplevel :execute)
 	   #-:ansi-eval-when (load eval compile)
   (setf *gen-extract-surface-hook* 'gen-extract-surface))
-
-#+:null
-(defun preprocess-sentence-string (str)
-  (x-preprocess str :format :chared))
