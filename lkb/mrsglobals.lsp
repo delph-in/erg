@@ -91,6 +91,7 @@
 (defparameter *non_expl-ind-type* (vsym "non_expl-ind"))
 (defparameter *handle-type* (vsym "handle"))
 (defparameter *ref-ind-type* (vsym "ref-ind"))
+(defparameter *non_event-type* (vsym "non_event"))
 
 ;;; the following are needed only for the detection of fragments
 ;;; indicated in the LinGO gramar by the value of ROOT

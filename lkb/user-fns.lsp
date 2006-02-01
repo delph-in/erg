@@ -206,10 +206,11 @@
 (setf *grammar-specific-batch-check-fn* #'lex-check-lingo)
 
 
-(defun bool-value-true (fs)
-  (and fs
-       (let ((fs-type (type-of-fs fs)))
-         (eql fs-type '+))))
+(defun bool-value-true (fs &key unifiablep)
+  (when fs
+    (let ((type (type-of-fs fs)))
+      (or (eql type '+)
+          (and unifiablep (unifiable-dags-p fs (make-dag :type '+)))))))
   
 (defun bool-value-false (fs)
   (and fs
@@ -240,6 +241,73 @@
 (eval-when #+:ansi-eval-when (:load-toplevel :execute)
 	   #-:ansi-eval-when (load eval)
   (setf *additional-root-condition* #'idiom-complete-p))
+
+#+:logon
+(defun determine-argument-optionality (sign arguments)
+  ;;
+  ;; there appear to be (at least) two ways of linking arguments in the
+  ;; semantics to syntactic dependents, either by grabbing the LTOP (or maybe
+  ;; sometimes INDEX) of an argument synsem, or just by grabbing its --SIND.
+  ;;
+  (if (and (dag-p sign)
+           (loop for argument in arguments always (dag-p argument)))
+    (let* ((cat (existing-dag-at-end-of sign '(SYNSEM LOCAL CAT)))
+           (synsems (find-substructures-subsumed-by cat 'synsem_min)))
+      ;;
+      ;; for all substructures subsumed by `synsem_min' (candidate arguments)
+      ;; below CAT, see whether their index or handle corresponds to one of the
+      ;; variables we are looking for; if so, determine optionality by looking
+      ;; at the OPT value.
+      ;;
+      (loop
+          for argument in arguments
+          collect
+            (loop
+                for (path . synsem) in synsems
+                do (setf path path)
+                thereis
+                  (loop
+                      for path in '((--SIND)
+                                    (LOCAL CONT HOOK INDEX)
+                                    (LOCAL CONT HOOK LTOP))
+                      for value = (existing-dag-at-end-of synsem path)
+                      when (and value (eq argument (deref-dag value)))
+                      return (bool-value-true
+                              (existing-dag-at-end-of synsem '(OPT))
+                              :unifiablep t)
+                      finally (return nil)))))
+    (loop repeat (length arguments) collect nil)))
+
+(defun determine-derived-forms (le)
+  (loop
+      with patterns
+      = '((:plural plur_noun_orule)
+          (:present third_sg_fin_verb_orule)
+          (:past past_verb_orule)
+          (:passive passive_orule dative_passive_orule)
+          (:gerund prp_verb_orule))
+      with le = (typecase le
+                  (lex-entry le)
+                  (symbol (get-lex-entry-from-id le)))
+      with tdfs = (if (lex-entry-p le)
+                    (lex-entry-full-fs le)
+                    (return-from determine-derived-forms))
+      for (tag . ids) in patterns
+      for rules = (loop for id in ids collect (gethash id *lexical-rules*))
+      for mrs::*number-of-lrule-applications* = 0
+      for outputs
+      = (ignore-errors
+         (mrs::apply-instantiated-lexical-rules
+          (list (cons nil tdfs))
+          rules))
+      when outputs
+      collect (cons
+               tag
+               (loop
+                   for output in outputs
+                   collect (string-downcase
+                            (extract-orth-from-fs (rest output)))))))
+
 
 ;;;
 ;;; the following two functions allow customization of how edges are displayed

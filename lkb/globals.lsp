@@ -10,6 +10,11 @@
 ;;; should go in user-fns.lsp
 ;;; patches in lkb-code-patches.lsp
 
+;;; For Unicode
+
+(when (lkb-version-after-p "2005/10/28 00:00:00")
+  (grammar-encoding 'utf-8))
+
 ;;; Avoiding multiple inheritance on letypes
 
 (defparameter *active-parsing-p* t)
@@ -62,8 +67,8 @@
 
 (defparameter *start-symbol* 
   #-:arboretum
-  ;'(root_strict)
-  '(root_strict root_informal)
+  '(root_strict)
+  ;'(root_strict root_informal)
   ;'(root_strict root_frag)
   ;'(root_strict root_informal root_frag)
   ;'(root_strict root_informal root_frag root_robust)
@@ -298,8 +303,9 @@
     st_abb_n2 with_p_abb
     be_c_am_cx_neg_1 be_c_are_cx_neg_1 be_c_is_cx_neg_1 be_id_am_cx_neg_1
     be_id_are_cx_neg_1 be_id_is_cx_neg_1 be_nv_is_cx_neg_1
-    be_th_cop_is_cx_neg_1 had_aux_cx_neg_1 had_better_cx_neg_1
-    has_aux_cx_neg_1 have_aux_cx_neg_1 both_conj either_conj first_conj
+    be_th_cop_is_cx_neg_1 be_th_cop_is_plur 
+    had_aux_cx_neg_1 had_better_cx_neg_1 has_aux_cx_neg_1 have_aux_cx_neg_1 
+    both_conj either_conj first_conj
     till_cp_p1 till_cp_p2 till_p1 till_p2 thru_p thru_a1
     how_bout how_bout_s how_bout_vp brine_cured_a2 account_n3 account_n4
     first_day_num ord1ersatz second_day_num ord2ersatz ord3ersatz
@@ -311,7 +317,7 @@
     someplace_n2 sometime_n2 somewhere_n2 en_route_pp_2 round_trip_n2
     hour_n2 hour_n3 hour_n4 approximately_abb seaside_n2
     gallon_abb_n1 gallon_abb_n2 millimeter_abb_n2 milliliter_abb_n2
-    foot_abb_n2 centimeter_abb_n2 meter_abb_n2 with_p_abb2
+    foot_abb_n2 centimeter_abb_n2 meter_abb_n2 with_p_abb2 okay_s_adv2
     )
   "temporary expedient to avoid generating dual forms")
 
@@ -391,8 +397,8 @@
 ;;;
 (defparameter *generic-lexical-entries*
   '((named_gle :generate) (guess_n_gle :generate)
-    (card_gle :generate) (ord_gle :generate) 
-    (yofc_gle :generate) (decade_gle :generate)))
+    (card_gle :generate) (ord_gle :generate)
+    (decade_gle :generate)))
 
 (defparameter *non-idiom-root*
     'root_non_idiom )
@@ -401,7 +407,7 @@
 ;;; when loaded into an environment including [incr tsdb()] and the Redwoods
 ;;; tools, enable selective unpacking against a Maximum Entropy model.
 ;;;
-#+:tsdb
+#+:logon
 (setf *unpacking-scoring-hook* #'tsdb::mem-score-configuration)
 
 ;;;
