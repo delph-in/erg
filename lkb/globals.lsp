@@ -10,10 +10,6 @@
 ;;; should go in user-fns.lsp
 ;;; patches in lkb-code-patches.lsp
 
-;;; For Unicode
-
-(when (lkb-version-after-p "2005/10/28 00:00:00")
-  (grammar-encoding 'utf-8))
 
 ;;; Avoiding multiple inheritance on letypes
 
