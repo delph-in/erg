@@ -5,28 +5,6 @@
 
 (in-package :lkb)
 
-; From lkb/src/mrs/spell.lisp:
-; Commented out the a/an spelling fix, since the grammar is now enforcing
-; this directly, with each lexical entry identifying its phonological
-; onset as either consonantal or vocalic.
-
-(defun fix-spelling (string)
-  (setf string (mapcar #'string-downcase string))
-  (let ((res nil))
-    (loop
-      (when (null string) (return))
-      (let ((word (car string))
-            ;(rest (cdr string))
-            )
-        (setf string (cdr string))
-        ;(if (equal word "a")
-        ;    (if (vowel-first-p (car rest))
-        ;        (push "an" res)
-        ;      (push "a" res))
-          (push word res)
-        ;  )
-      ))
-    (nreverse res)))
 
 ;;; For better batch testing of MRS quality, esp produce-one-scope()
 
@@ -66,6 +44,7 @@
 ;       empty-cache
 ;         clear-generator-lexicon
 (in-package :lkb)
+
 #+:tsdb
 (defun tsdb::finalize-run (context &key custom)
   (declare (ignore custom))

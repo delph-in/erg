@@ -314,7 +314,7 @@
     hour_n2 hour_n3 hour_n4 approximately_abb seaside_n2
     gallon_abb_n1 gallon_abb_n2 millimeter_abb_n2 milliliter_abb_n2
     foot_abb_n2 centimeter_abb_n2 meter_abb_n2 with_p_abb2 okay_s_adv2
-    )
+    e_mail_n1 e_mail_n2 e_mail_n3 e_mail_n4)
   "temporary expedient to avoid generating dual forms")
 
 (setf *gen-ignore-rules*
@@ -394,17 +394,10 @@
 (defparameter *generic-lexical-entries*
   '((named_gle :generate) (guess_n_gle :generate)
     (card_gle :generate) (ord_gle :generate)
-    (decade_gle :generate)))
+    (decade_gle :generate) (yofc_gle :generate)))
 
 (defparameter *non-idiom-root*
     'root_non_idiom )
-
-;;;
-;;; when loaded into an environment including [incr tsdb()] and the Redwoods
-;;; tools, enable selective unpacking against a Maximum Entropy model.
-;;;
-#+:logon
-(setf *unpacking-scoring-hook* #'tsdb::mem-score-configuration)
 
 ;;;
 ;;; for use in LOGON, set post-generation semantic equivalence check to filter
