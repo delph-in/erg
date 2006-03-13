@@ -242,6 +242,7 @@
 	   #-:ansi-eval-when (load eval)
   (setf *additional-root-condition* #'idiom-complete-p))
 
+#+:logon
 (defun determine-argument-optionality (sign arguments)
   ;;
   ;; there appear to be (at least) two ways of linking arguments in the
