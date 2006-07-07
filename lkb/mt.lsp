@@ -6,11 +6,3 @@
 ;;; not when working with only one grammar.
 ;;;
 (setf *transfer-filter-p* nil)
-
-(setf %transfer-properties-accumulator% nil)
-
-(setf %transfer-properties-defaults% nil)
-
-(setf %transfer-properties-filter% nil)
-
-(setf %transfer-values-filter% nil)
