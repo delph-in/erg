@@ -107,48 +107,6 @@
 ; e.g. free relatives.  Maybe should make this generic rel more specific.
 (setf *maximum-genindex-relations* 500)
 
-;;;
-;;; interim solution for MRS `unfilling' until we construct a proper SEM-I
-;;;
-(setf %mrs-extras-filter%
-  ;;
-  ;; _fix_me_
-  ;; even without the full SEMI, we should compute these.  (21-nov-03; oe)
-  ;;
-  (list
-   (cons (mrs::vsym "E.TENSE") (mrs::vsym "basic_tense"))
-   (cons (mrs::vsym "E.ASPECT.PROGR") (mrs::vsym "luk"))
-   (cons (mrs::vsym "E.ASPECT.PERF") (mrs::vsym "luk"))
-   (cons (mrs::vsym "E.MOOD") (mrs::vsym "mood"))
-   (cons (mrs::vsym "PNG.GEN") (mrs::vsym "real_gender"))
-   (cons (mrs::vsym "TPC") (mrs::vsym "basic_semarg"))
-   (cons (mrs::vsym "PSV") (mrs::vsym "basic_semarg"))
-   (cons (mrs::vsym "DIV") (mrs::vsym "bool"))
-   (cons (mrs::vsym "PNG.PN") (mrs::vsym "pernum"))
-   (cons (mrs::vsym "PRONTYPE") (mrs::vsym "prontype"))))
-
-
-;;;
-;;; _fix_me_
-;;; for some of the following, i think they should just not be here (e.g. --TPC
-;;; and possibly STATTIVE), since they are not part of the specified interface,
-;;; i.e. would presumably not be mentioned in the SEM-I.  for PN, on the other
-;;; hand, i would have to understand the range of values better to see whether
-;;; we can sustain the default below in LOGON transfer outputs.
-;;;                                                            (26-nov-04; oe)
-(defparameter %mrs-extras-defaults%
-  (list
-   (list (vsym "U") 
-         (cons (mrs::vsym "--TPC") (vsym "-")))
-   (list (vsym "E") 
-         (cons (mrs::vsym "E.MOOD") (mrs::vsym "indicative"))
-         (cons (vsym "E.ASPECT.PERF") (vsym "-"))
-         (cons (vsym "E.ASPECT.PROGR") (vsym "-")))
-   #-:logon
-   (list (vsym "X")
-         (cons (vsym "PNG.PN") (vsym "unsp_pernum")))))
-
-
 (defparameter *var-extra-conversion-table*
 '(
   ((png.gen fem) . (gender f))

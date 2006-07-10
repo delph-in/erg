@@ -63,9 +63,9 @@
 
 (defparameter *start-symbol* 
   #-:arboretum
-  '(root_strict)
+  ;'(root_strict)
   ;'(root_strict root_informal)
-  ;'(root_strict root_frag)
+  '(root_strict root_frag)
   ;'(root_strict root_informal root_frag)
   ;'(root_strict root_informal root_frag root_robust)
   #+:arboretum
@@ -186,7 +186,7 @@
     u_pro you_guys you_people yall yall_2 yall_3 you_all
     and_conj_slash and_then_1 and_or_conj_1 and_or_conj_2
     and_or_conj_3 and_conj_amp and_conj_2_amp
-    apostrophe_s_lex apostrophe_s_3_lex
+    apostrophe_s_lex apostrophe_s_3_lex apostrophe_s_4_lex
     mister missus mr_title_2 doctor_ttl dr_ttl_2 prof_title mrs_title_2
     ms_title_2 mount_ttl_2 number_abb_title number_abb_title_2 
     number_abb2_title number_abb2_title_2 order_abb_ttl order_abb_ttl_2
@@ -227,12 +227,13 @@
     november_abb_n1 november_abb_n2 november_abb_n3 november_abb_n4 
     october_abb_n1 october_abb_n2 october_abb_n3 october_abb_n4
     september_abb_n1 september_abb_n2 september_abb_n3 september_abb_n4 
+    september_abb_n5 september_abb_n6 september_abb_n7 september_abb_n8
     number_abb_n1 number_abb_n2 number_abb_n3 number_abb_n4 number_abb_title 
-    number_abb_title_2 order_abb_n1 order_abb_ttl 
+    number_abb_title_2 order_abb_n1 
     april_the_det august_the_det december_the_det february_the_det 
     january_the_det july_the_det june_the_det march_the_det may_the_det 
     november_the_det october_the_det september_the_det 
-    km_abb_n1 lets_2 lets_3 a_det_2 i_2
+    km_abb_n1 km_abb_n2 lets_2 lets_3 a_det_2 i_2
     whether_or_not_c_fin whether_or_not_c_inf
     thee thou thy thine thine_nq ye aught threescore fourscore
     am_temp 
@@ -286,17 +287,29 @@
     twentysix_day twentysix_day_2 twentysixth_day_2 twentythird_day_2
     twentythree_day twentythree_day_2 twentythree_day_2_yofc twentytwo_day
     twentytwo_day_2 two_day number_char_n1
+    nineteen_eightyeight nineteen_eightyfive nineteen_eightyfour
+    nineteen_eightynine nineteen_eightyseven nineteen_eightysix
+    nineteen_fiftythree nineteen_ninety nineteen_ninetyeight
+    nineteen_ninetyfive nineteen_ninetyfour nineteen_ninetynine
+    nineteen_ninetyone nineteen_ninetyseven nineteen_ninetysix
+    nineteen_ninetythree nineteen_ninetytwo nineteen_sixtyeight
+    nineteen_sixtysix nineteen_twentynine ninetyeight_year ninetyfour_year
+    ninetynine_year ninetyseven_year ninetysix_year ninetythree_year
+    two-thousand two-thousand_one_4 two-thousand_two_4 two_thousand_three
+    two_thousand_two
     i_2 i_stutter i_stutter_2
     be_th_cop_is_cx_2 be_id_is_cx_2 be_c_is_cx_2 be_c_am_cx_2
     telephone_abb_n1 telephone_abb_n2 adj_abb_n1 adv_abb_n1 anat_abb_n1
     centimeter_abb_n1 comparative_abb_n1 customer_abb_n1 customer_abb_n2
     diameter_abb_n1 foot_abb_n1 geometry_abb_n1 illustration_abb_n1
-    illustration_abb_n3 imp_abb_n1 meter_abb_n1 milliliter_abb_n1
+    illustration_abb_n3 imp_abb_n1 imp_abb_a1 meter_abb_n1 milliliter_abb_n1
     okay_s_adv2 mhm_root_pre2 sure_root_pre2 yeah_root_pre2
     millimeter_abb_n1 minute_abb_n1 minute_abb_n2 noun_abb_n1
     number_abb_n1 number_abb_n2 number_abb_n3 number_abb_n4 order_abb_n1
-    plural_abb_n1 prep_abb_n1 scripture_abb_n1 singular_abb_n1 st_abb_n1
-    st_abb_n2 with_p_abb
+    plural_abb_n1 plural_abb_n2 prep_abb_n1 scripture_abb_n1 singular_abb_n1 
+    singular_abb_n2 thanks_abb_root_post thanks_abb_root_pre thanks_abb_v1
+    st_abb_n1 st_abb_n2 with_p_abb prep_abb_n1 prep_abb_n2 reverend_abb_ttl
+    reverend_abb_ttl_2 veteran_abb_n1 veterinarian_abb_n1
     be_c_am_cx_neg_1 be_c_are_cx_neg_1 be_c_is_cx_neg_1 be_id_am_cx_neg_1
     be_id_are_cx_neg_1 be_id_is_cx_neg_1 be_nv_is_cx_neg_1
     be_th_cop_is_cx_neg_1 be_th_cop_is_plur 
@@ -311,21 +324,44 @@
     x_to_y_np_pl_- x_to_y_np_sg_- x_to_y_np_sg_through x_to_y_np_until
     colour_n1 round anyplace_n2 anywhere_n2 everywhere_n2 nowhere_n2 
     someplace_n2 sometime_n2 somewhere_n2 en_route_pp_2 round_trip_n2
-    hour_n2 hour_n3 hour_n4 approximately_abb seaside_n2
+    hour_n2 hour_n3 hour_n4 approximately_abb approximately_abb_2 seaside_n2
     gallon_abb_n1 gallon_abb_n2 millimeter_abb_n2 milliliter_abb_n2
-    foot_abb_n2 centimeter_abb_n2 meter_abb_n2 with_p_abb2 okay_s_adv2
-    )
+    foot_abb_n2 centimeter_abb_n2 meter_abb_n2 kg_abb_n1 kg_abb_n2 km2_abb_n1
+    with_p_abb2 fig_abb obs_abb_a1 obs_abb_a2 please_abb_adv please_abb_adv3
+    please_abb_adv4 please_abb_root route_abb_ttl route_abb_ttl2
+    orig_abb orig_abb_2 specif_abb specif_abb_2 adj_abb_n1 adj_abb_n2
+    anat_abb_n2 adv_abb_n1 adv_abb_n2 as_abb_post_ttl esp_abb_2 esp_abb_3
+    alabama_n2 alaska_n2 arizona_n2 arkansas_n2 california_n2 colorado_n2
+    connecticut_n2 delaware_n2 florida_n2 georgia_n2 hawaii_n2 idaho_n2 iowa_n2
+    illinois_n2 kansas_n2 kentucky_n2 louisiana_n2 maryland_n2 massachusetts_n2
+    michigan_n2 minnesota_n2 mississippi_n2 missouri_n2 montana_n2 nebraska_n2 
+    nevada_n2 new_york_n2 newhampshire_n2 newjersey_n2 newmexico_n2
+    northcarolina_n2 northdakota_n2 ohio_n2 oklahoma_n2 oregon_n2
+    pennsylvania_n2 rhodeisland_n2 southcarolina_n2 southdakota_n2 tennessee_n2
+    texas_n2 utah_n2 vermont_n2 virginia_n2 washington_n2 washingtondc_n2
+    washingtondc_n4 washingtondc_n5 washingtondc_n6 washingtondc_n8
+    washingtondc_n9 westvirginia_n2 wisconsin_n2 wyoming_n2
+    okay_s_adv2 e_mail_n1 e_mail_n2 e_mail_n3 e_mail_n4 hotell_post_ttl 
+    goodwill_n1 be_inv_are be_inv_is be_inv_was be_inv_were
+    se_isect sw_isect ne_isect nw_isect northwest_adj2 northeast_adj2
+    southwest_adj2 southeast_adj2 doubtlessly)
   "temporary expedient to avoid generating dual forms")
 
 (setf *gen-ignore-rules*
-  '(punct_bang_orule punct_semicol_orule punct_colon_orule
-    punct_rparen_orule punct_lparen_orule punct_rbracket_orule 
-    punct_lbracket_orule punct_dqright_orule punct_dqleft_orule 
-    punct_sqright_orule punct_sqleft_orule 
-    punct_sqleft2_orule punct_hyphen_orule punct_comma_informal_orule 
+  '(punct_bang_orule punct_semicol_orule punct_colon_orule punct_sqright_orule
+    punct_sqleft_orule punct_dqleft_orule punct_rparen_orule punct_lparen_orule
+    punct_dqright_orule punct_rbracket_orule punct_lbracket_orule 
+    punct_hyphen_orule punct_comma_informal_orule punct_sqleft2_orule
     paren_float_s paren_float_n
     ; This rule is relatively expensive and of marginal benefit in generation
     adjh_i_ques
+    ; This rule allows a missing final conjunction in multiple coordination
+    np_coord_mid_noconj
+    ; The following rules allow variation in usage of commas
+    adjh_s_pr hadj_s appos_npr nadj_rr_pr
+    v_coord_fin_mid_ig v_coord_nonfin_mid_ig s_coord_mid_ig p_coord_mid_ig
+    adv_coord_mid_ig np_coord_mid_ig n_coord_mid_ig adj_attr_coord_mid_ig
+    adj_pred_coord_mid_ig fillhead_non_wh_ig
    ))
 
 (setf *semantics-index-path* '(SYNSEM LOCAL CONT HOOK INDEX))
@@ -394,17 +430,10 @@
 (defparameter *generic-lexical-entries*
   '((named_gle :generate) (guess_n_gle :generate)
     (card_gle :generate) (ord_gle :generate)
-    (decade_gle :generate)))
+    (decade_gle :generate) (yofc_gle :generate)))
 
 (defparameter *non-idiom-root*
     'root_non_idiom )
-
-;;;
-;;; when loaded into an environment including [incr tsdb()] and the Redwoods
-;;; tools, enable selective unpacking against a Maximum Entropy model.
-;;;
-#+:logon
-(setf *unpacking-scoring-hook* #'tsdb::mem-score-configuration)
 
 ;;;
 ;;; for use in LOGON, set post-generation semantic equivalence check to filter

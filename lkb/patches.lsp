@@ -5,28 +5,6 @@
 
 (in-package :lkb)
 
-; From lkb/src/mrs/spell.lisp:
-; Commented out the a/an spelling fix, since the grammar is now enforcing
-; this directly, with each lexical entry identifying its phonological
-; onset as either consonantal or vocalic.
-
-(defun fix-spelling (string)
-  (setf string (mapcar #'string-downcase string))
-  (let ((res nil))
-    (loop
-      (when (null string) (return))
-      (let ((word (car string))
-            ;(rest (cdr string))
-            )
-        (setf string (cdr string))
-        ;(if (equal word "a")
-        ;    (if (vowel-first-p (car rest))
-        ;        (push "an" res)
-        ;      (push "a" res))
-          (push word res)
-        ;  )
-      ))
-    (nreverse res)))
 
 ;;; For better batch testing of MRS quality, esp produce-one-scope()
 
@@ -57,35 +35,6 @@
 	      (when (eq marg-value (var-id (hcons-scarg qeq)))
 		(return (values qeq marg-fvp)))))))))
 
-#|
-; In lkb/src/tsdb/lisp/lkb-interface.lisp
-; Redefine tsdb::finalize-run to comment out uncache-lexicon() since it
-; results in uninitializing the generator lexicon, which is annoying:
-;   uncache-lexicon
-;     clear-expanded-lex
-;       empty-cache
-;         clear-generator-lexicon
-(in-package :lkb)
-#+:tsdb
-(defun tsdb::finalize-run (context &key custom)
-  (declare (ignore custom))
-  ;; called after completion of test run
-  (let ((lexicon 0)
-        (*package* *lkb-package*))
-    (loop 
-        for id in (collect-expanded-lex-ids *lexicon*)
-        do 
-          (pushnew id *lex-ids-used*)
-          (incf lexicon)) 
-    (clear-type-cache)
-    ;;(uncache-lexicon)
-    (loop
-        for (variable . value) in context do
-          (case variable
-            (:first-only-p 
-             (setf *first-only-p* value))))
-    (pairlis '(:lexicon) (list lexicon))))
-|#
 
 ; In mrs/idioms.lisp
 ; Added check in idiom_rel-p() since mt::transfer-mrs() is surprised at
@@ -105,6 +54,16 @@
     (and relname
          (equal "_i_rel" (subseq relname (- (length relname) 6))))))
 
+#|
+; DPF 06-jul-06 - Patch supplied by Ann for preprocessor error on "Kim's cat"
+(defun sort-edges-by-from (edges &key addressing)
+  (sort (copy-list edges)
+	'<
+	:key (lambda (x)
+	       (point-to-char-point (or (saf-edge-from x) "0") addressing))
+	))
+|#
 
 (in-package :cl-user)
+
 

@@ -1,6 +1,6 @@
 ;;; -*- Mode: tdl; Coding: utf-8; -*-
 ;;;
-;;;  Copyright (c) 1994-2005
+;;;  Copyright (c) 1994-2006
 ;;;    Dan Flickinger, Rob Malouf, Emily M. Bender
 ;;;    see erg/licence.txt for conditions
 ;;;
@@ -98,7 +98,14 @@ canonical_synsem := expressed_synsem.
 canonical_lex_or_phrase_synsem := canonical_synsem & lex_or_phrase &
   [ LOCAL local_min ].
     
-phr_synsem := canonical_lex_or_phrase_synsem &
+; To distinguish syntactically constructed constituents marked LEX + from
+; simple lexical entries - used e.g. to avoid making nominal gerund NPs
+; directly from lexical gerunds, to avoid spurious ambiguity for
+; 'Singing is fun' given that there is already a verbal gerund 'singing'.
+
+nonlex_synsem := canonical_lex_or_phrase_synsem.
+
+phr_synsem := nonlex_synsem &
   [ LEX - ].
 
 ; LKEYS provide shortcuts to relations in RELS or a lex-entry's complements
@@ -108,7 +115,7 @@ abstr_lex_synsem := canonical_lex_or_phrase_synsem &
 basic_lex_synsem :< abstr_lex_synsem.
 
 lex_synsem := basic_lex_synsem &
-  [ LEX +].
+  [ LEX + ].
 
 ; For signs that are constructed by syntactic rule but have similar
 ; (though not identical) distribution to lexical items - e.g. n_n_cmpnds.
@@ -279,7 +286,8 @@ valence := valence_min &
     COMPS *list* ].
 
 valence_full := valence &
-  [ SPEC *list* ].
+  [ SPEC *list*,
+    SPCMPS *list* ].
 
 ; KCMP is a pointer to a distinguished ('key') complement synsem, used in
 ; generalizations within the lexical type hierarchy, but not present in the
@@ -302,9 +310,10 @@ n_or_p_or_v_or_adv :< head.
 n_or_p_or_v := n_or_p_or_v_or_adv & subst.
 
 p_or_adv_or_dadv :< head.
-a_or_p_or_adv :< head.
+n_or_a_or_p_or_adv :< head.
 v_or_g_or_dadv :< head.
-p_or_adv := n_or_p_or_v_or_adv & p_or_adv_or_dadv & a_or_p_or_adv.
+p_or_adv := n_or_p_or_v_or_adv & p_or_adv_or_dadv & n_or_a_or_p_or_adv &
+            n_or_p_or_adv.
 subst_or_adv :< head.
 
 subst := subst_or_func & subst_or_adv.
@@ -314,26 +323,32 @@ v_or_g_or_p :< subst.
 non_noun :< subst.
 v_or_a_or_p :< non_noun.
 
-a_or_adv := a_or_p_or_adv & n_or_a_or_adv_or_det.
+a_or_adv := n_or_a_or_p_or_adv & n_or_a_or_adv_or_det.
 
 n_or_p_or_frag :< head.
 
-n_or_p_or_a :< subst.
+n_or_p_or_a :< n_or_a_or_p_or_adv.
+
+n_or_p_or_adv :< head.
 
 n_or_v_or_a :< subst.
 
-n_or_p :=  n_or_p_or_v & n_or_p_or_frag & n_or_p_or_a.
+n_or_p :=  n_or_p_or_v & n_or_p_or_frag & n_or_p_or_a & n_or_p_or_adv.
 n_or_a :< n_or_v_or_a.
 ; DPF 3-apr-05 - Added poss-able to allow for locative inversion using subjh.
-a_or_p := v_or_a_or_p & n_or_p_or_a & a_or_p_or_adv & poss-able.
+a_or_p := v_or_a_or_p & n_or_p_or_a & poss-able.
 v_or_p := v_or_a_or_p & n_or_p_or_v.
 n_or_v := n_or_p_or_v & n_or_v_or_a.
 
 n_or_a_or_adv_or_det :< head.
 n_or_adv :< n_or_a_or_adv_or_det.
 nom_or_ttl :< poss-able.
+noun_or_ttl :< nom_or_ttl.
 
-det := func & poss-able & n_or_a_or_adv_or_det.
+; For constraint on head-spec rule.
+n_or_a_or_det := n_or_a_or_adv_or_det.
+
+det := func & poss-able & n_or_a_or_det.
 
 ; Adverbs modify adverbees.
 adverbee :< head.
@@ -359,7 +374,7 @@ adj_or_intadj := n_or_a & a_or_p & adverbee & nominal_or_verbal.
 v_or_a := v_or_g_or_a & n_or_v_or_a & non_noun.
 basic_adj := v_or_a & mobile & adj_or_intadj.
 ; For positive adjectives
-adj := basic_adj & a_or_adv.
+adj := basic_adj & a_or_adv & n_or_a_or_det.
 
 prep_or_modnp :< head.
 
@@ -379,11 +394,11 @@ modnp := n_or_p & nominal & prep_or_modnp & mobile & a_or_adv & v_or_a_or_p.
 supnoun :< nominal.
 
 ; for both nominal and verbal gerunds
-noun_or_gerundive := supnoun & n_or_v.
+noun_or_gerundive := supnoun & n_or_v & n_or_a_or_det.
 noun_or_nomger := noun_or_gerundive & n_or_p & nom_or_ttl.
 noun_or_gerund := noun_or_gerundive.
 
-noun := n_or_a & noun_or_nomger & n_or_adv & noun_or_gerund.
+noun := n_or_a & noun_or_nomger & n_or_adv & noun_or_gerund & noun_or_ttl.
 
 ; DPF 10-Apr-02 - Added n_or_p since want to allow gerunds to undergo noptcomp
 ; rule, to get e.g."way of saying that Kim arrives"
@@ -421,7 +436,7 @@ deg_adv :< basic_adv.
 root-marker := v_or_g_or_dadv & adverbee & p_or_adv_or_dadv.
 wh_adv :< func.
 ; For titles like "Mr" or "Professor", not to be confused with nouns
-ttl := func & nom_or_ttl & a_or_p_or_adv.
+ttl := func & noun_or_ttl & n_or_a_or_p_or_adv.
 
 detspec :< func.
 
@@ -458,7 +473,9 @@ interv_n := noun.
 ; For types that can undergo number-partitive:'five of them','ten feet of rope'
 adj_partitive :< subst_or_func.
 intadj_or_superl :< adj_partitive.
+intadj_or_comp :< adj_partitive.
 superl_adj := basic_adj & intadj_or_superl.
+compar_adj := basic_adj & intadj_or_comp & n_or_a_or_adv_or_det.
 
 ; For measure-NPs
 noun_meas := noun & adj_partitive.
@@ -544,11 +561,7 @@ active :< voice.
 passive :< voice.
 
 mood :< *sort*.
-ind_or_mod_subj :< mood.
-
-strict_ind_or_mod_subj := ind_or_mod_subj & strict_sort.
-indicative :< strict_ind_or_mod_subj.
-modal_subj :< strict_ind_or_mod_subj.
+indicative :< mood.
 subjunctive :< mood.
 
 prontype :< *sort*.
@@ -607,7 +620,8 @@ nothing := basic_semarg.
 semarg := basic_semarg.
 
 basic_non_expl := semarg.
-handle :< basic_non_expl.
+non_event := basic_non_expl.
+handle :< non_event.
 individual_min := basic_semarg.
 
 individual := individual_min & semarg &
@@ -660,12 +674,6 @@ tam := tam_min &
    ASPECT aspect,
    MOOD mood ]. 
 
-basic_ind_or_mod_subj_tam := tam &
- [ MOOD ind_or_mod_subj ].
-
-ind_or_mod_subj_tam := basic_ind_or_mod_subj_tam &
- [ TENSE real_tense ].
-
 past_or_subj_tam := tam &
  [ TENSE nonpresent,
    ASPECT no_aspect ].
@@ -673,9 +681,11 @@ past_or_subj_tam := tam &
 subjnct_tam := past_or_subj_tam &
  [ MOOD subjunctive ].
 
-past_tam := past_or_subj_tam & ind_or_mod_subj_tam &
- [ TENSE past,
-   MOOD indicative ].
+indic_tam := tam &
+ [ MOOD indicative ].
+
+past_tam := past_or_subj_tam & indic_tam &
+ [ TENSE past ].
 
 event := event_or_deg-ind &
   [ E tam ].
@@ -785,9 +795,11 @@ chead := *avm* &
 ; CREL is a pointer to the coord_relation, needed for semantic composition.
 ; CPUNCT enables lexical conjunctions to block comma-marked left conjunct
 ; in simple two-part coordination: '*Abrams, and Browne arrived'.
+
 complex-conj := real-conj &
   [ CREL *top*,
     CPUNCT pnctpair ].
+
 phr-conj := complex-conj & cnil_or_phrconj.
 lex-conj := complex-conj & cnil_or_lexconj.
 num-conj := cnil_or_numconj & atomic-conj.
@@ -930,7 +942,7 @@ there-ind := expl-ind &
 
 non_expl_or_conj-ind :< index.
 ind_or_event_or_conj := non_expl_or_conj-ind & event_or_index.
-non_expl-ind := ind_or_event_or_conj &
+non_expl-ind := ind_or_event_or_conj & non_event &
   [ PNG.GEN real_gender ].
 ref-ind :< non_expl-ind.
 deg-ind := non_expl-ind & event_or_deg-ind.
@@ -1348,7 +1360,7 @@ digit1- :< digit2-.
 ;; DPF 26-Apr-00 - Removed adj parent from intadj.
 ;; DPF 19-Sept-01 - Added supertype adj_or_intadj, for adj-intervals ("2 - 3")
 
-intadj := intsort & adj_or_intadj & intadj_or_superl.
+intadj := intsort & adj_or_intadj & intadj_or_superl & intadj_or_comp.
 intadjn := intadj & digitn.
 intdet := intsort & det.
 
@@ -1405,6 +1417,7 @@ _southwestward_a_1_rel := adj_rel.
 _upward_a_1_rel := adj_rel.
 _downward_a_1_rel := adj_rel.
 _downhill_p_rel :< dir_rel.
+_heavenward_a_1_rel := adj_rel.
 _inward_a_1_rel := adj_rel.
 _outward_a_1_rel := adj_rel.
 _inland_a_1_rel := adj_rel.
@@ -1421,6 +1434,8 @@ _underfoot_a_1_rel := adj_rel.
 _underground_a_1_rel := adj_rel.
 _yonder_a_1_rel := adj_rel.
 _arrear_a_1_rel := adj_rel.
+
+much-many_a_rel := adj_rel.
 
 ; For fragments
 unknown_relation := arg0_relation &
@@ -1727,8 +1742,11 @@ of_p_sel_rel :< selected_prep_rel.
 _of_p_sel_rel := of_p_sel_rel.
 _of_p_nbar_rel := of_p_sel_rel.
 _off_p_sel_rel :< selected_prep_rel.
-_on_p_sel_rel :< selected_prep_rel.
+on_p_sel_rel :< selected_prep_rel.
+_on_p_sel_rel :< on_p_sel_rel.
 _onto_p_sel_rel :< selected_prep_rel.
+_onward_p_sel_rel :< on_p_sel_rel.
+_onwards_p_sel_rel :< on_p_sel_rel.
 _open_a_sel_rel :< selected_adj_rel.
 _out+of_p_sel_rel :< selected_prep_rel.
 _out_p_sel_rel :< selected_prep_rel.
@@ -1742,6 +1760,7 @@ _together_p_sel_rel :< selected_prep_rel.
 _toward_p_sel_rel :< selected_prep_rel.
 _towards_p_sel_rel :< selected_prep_rel.
 _until_p_sel_rel := abstr_until_sel_rel & minute_prep_sel_rel.
+_dashpnct_p_sel_rel :< abstr_until_sel_rel.
 _up_p_sel_rel :< selected_prep_rel.
 _upon_p_sel_rel :< selected_prep_rel.
 _with_p_sel_rel :< selected_prep_rel.
@@ -1751,7 +1770,11 @@ _yet_p_sel_rel :< selected_prep_rel.
 
 _a_p_per_rel :< miscprep_rel.
 _abaft_p_rel :< dir_or_state_nontemp_rel.
+_abaft_p_dir_rel := _abaft_p_rel & dir_rel.
+_abaft_p_state_rel := _abaft_p_rel & state_loc_rel.
 _abeam_p_rel :< dir_or_state_nontemp_rel.
+_abeam_p_dir_rel := _abeam_p_rel & dir_rel.
+_abeam_p_state_rel := _abeam_p_rel & state_loc_rel.
 _aboard_p_rel :< dir_or_state_nontemp_rel.
 _aboard_p_dir_rel := _aboard_p_rel & dir_rel.
 _aboard_p_state_rel := _aboard_p_rel & state_loc_rel.
@@ -1765,8 +1788,12 @@ _according+to_p_rel :< miscprep_rel.
 _across_p_rel :< dir_or_state_nontemp_rel.
 _across_p_dir_rel := _across_p_rel & dir_rel.
 _across_p_state_rel := _across_p_rel & state_loc_rel.
+_afield_p_rel :< miscprep_rel.
 _aft_p_rel :< dir_or_state_nontemp_rel.
+_aft_p_dir_rel := _aft_p_rel & dir_rel.
+_aft_p_state_rel := _aft_p_rel & state_loc_rel.
 _after_p_rel :< temp_loc_abstr_rel.
+_after_p_n-n_rel :< miscprep_rel.
 _afterward_p_rel :< miscprep_rel.
 _afterwards_p_rel :< miscprep_rel.
 _against_p_rel :< miscprep_rel.
@@ -1801,8 +1828,12 @@ _astride_p_rel :< miscprep_rel.
 _at_p_rel :< state_loc_rel.
 _at_p_temp_rel :< temp_loc_sp_rel.
 _athwart_p_rel :< dir_or_state_nontemp_rel.
+_athwart_p_dir_rel := _athwart_p_rel & dir_rel.
+_athwart_p_state_rel := _athwart_p_rel & state_loc_rel.
 _atop_p_rel :< miscprep_rel.
-_away_p_rel :< miscprep_rel.
+_away_p_rel :< dir_or_state_nontemp_rel.
+_away_p_dir_rel := _away_p_rel & dir_rel.
+_away_p_state_rel := _athwart_p_rel & state_loc_rel.
 _back_p_rel :< miscprep_rel.
 _backward_p_rel :< miscprep_rel.
 _backwards_p_rel :< miscprep_rel.
@@ -1831,10 +1862,14 @@ _by_p_temp_rel :< temp_loc_rel.
 _by_p_means_rel :< miscprep_rel.
 _by+means+of_p_rel :< miscprep_rel.
 _by+way+of_p_rel :< miscprep_rel.
+_by_p_n-n_rel :< miscprep_rel.
 _close+to_p_rel :< miscprep_rel.
 _concerning_p_rel :< miscprep_rel.
 _care+of_p_rel :< miscprep_rel.
 _close+by_p_rel :< miscprep_rel.
+_crossways_p_rel :< dir_or_state_nontemp_rel.
+_crossways_p_dir_rel := _crossways_p_rel & dir_rel.
+_crossways_p_state_rel := _crossways_p_rel & state_loc_rel.
 _despite_p_rel :< miscprep_rel.
 _down_p_rel :< dir_rel.
 _downstream_p_rel :< miscprep_rel.
@@ -1848,13 +1883,17 @@ _except+for_p_rel :< miscprep_rel.
 _except_p_rel :< miscprep_rel.
 _excepting_p_rel :< miscprep_rel.
 _face+to+face_a_1_rel :< dir_or_state_nontemp_rel.
+_face+to+face_a_dir_rel := _face+to+face_a_1_rel & dir_rel.
+_face+to+face_a_state_rel := _face+to+face_a_1_rel & state_loc_rel.
 _facing_p_rel :< dir_rel.
 _for_p_rel :< miscprep_rel.
 _for+example_p_rel :< miscprep_rel.
 _for+instance_p_rel :< miscprep_rel.
 _for+lack+of_p_rel :< miscprep_rel.
 _fore_p_rel :< dir_or_state_nontemp_rel.
-_forth_p_rel :< miscprep_rel.
+_fore_p_dir_rel := _fore_p_rel & dir_rel.
+_fore_p_state_rel := _fore_p_rel & state_loc_rel.
+_forth_p_rel :< dir_or_state_nontemp_rel.
 _forth_p_dir_rel := _forth_p_rel & dir_rel.
 _forth_p_state_rel := _forth_p_rel & state_loc_rel.
 _forward_p_rel :< miscprep_rel.
@@ -1863,12 +1902,13 @@ _from_p_rel :< miscprep_rel.
 _from_p_to_rel := dir_rel & instance_rel.
 _from_p_to-n_rel := dir_rel & instance_rel.
 _from_p_time-on_rel :< miscprep_rel.
-_further_p_rel :< miscprep_rel.
+_further_p_rel :< dir_or_state_nontemp_rel.
 _further_p_dir_rel := _further_p_rel & dir_rel.
 _further_p_state_rel := _further_p_rel & state_loc_rel.
 _going+by_p_rel :< miscprep_rel.
+_gone+by_p_rel :< miscprep_rel.
 _hereabouts_p_rel :< miscprep_rel.
-_hither_p_rel :< miscprep_rel.
+_hither_p_rel :< dir_or_state_nontemp_rel.
 _hither_p_dir_rel := _hither_p_rel & dir_rel.
 _hither_p_state_rel := _hither_p_rel & state_loc_rel.
 _hitherward_p_rel :< miscprep_rel.
@@ -1920,6 +1960,9 @@ _no+matter_p_rel := miscprep_rel.
 _notwithstanding_p_rel :< miscprep_rel.
 of_p_rel :< miscprep_rel.
 _of_p_rel :< of_p_rel.
+_off-course_p_rel :< dir_or_state_nontemp_rel.
+_off-course_p_dir_rel := _off-course_p_rel & dir_rel.
+_off-course_p_state_rel := _off-course_p_rel & state_loc_rel.
 _off+of_p_rel :< miscprep_rel.
 _off_p_rel :< dir_or_state_nontemp_rel.
 _off_p_dir_rel := _off_p_rel & dir_rel.
@@ -1942,18 +1985,24 @@ _out_p_rel :< dir_or_state_nontemp_rel.
 _out_p_dir_rel := _out_p_rel & dir_rel.
 _out_p_state_rel := _out_p_rel & state_loc_rel.
 _out+of_p_rel :< dir_or_state_nontemp_rel.
+_out+of_p_dir_rel := _out+of_p_rel & dir_rel.
+_out+of_p_state_rel := _out+of_p_rel & state_loc_rel.
 _out+of+doors_p_rel :< dir_or_state_nontemp_rel.
+_out+of+doors_p_dir_rel := _out+of+doors_p_rel & dir_rel.
+_out+of+doors_p_state_rel := _out+of+doors_p_rel & state_loc_rel.
 _outside_p_rel :< dir_or_state_nontemp_rel.
 _outside_p_dir_rel := _outside_p_rel & dir_rel.
 _outside_p_state_rel := _outside_p_rel & state_loc_rel.
 _outside+of_p_rel :< dir_or_state_nontemp_rel.
+_outside+of_p_dir_rel := _outside+of_p_rel & dir_rel.
+_outside+of_p_state_rel := _outside+of_p_rel & state_loc_rel.
 _over_p_rel :< dir_or_state_nontemp_rel.
 _over_p_dir_rel := _over_p_rel & dir_rel.
 _over_p_state_rel := _over_p_rel & state_loc_rel.
 _over_p_temp_rel :< temp_loc_sp_rel.
 _overland_p_rel :< miscprep_rel.
 _overnight_a_1_rel :< adj_rel.
-_past_p_rel :< miscprep_rel.
+_past_p_rel :< dir_or_state_nontemp_rel.
 _past_p_dir_rel := _past_p_rel & dir_rel.
 _past_p_state_rel := _past_p_rel & state_loc_rel.
 _per_p_rel :< miscprep_rel.
@@ -1971,11 +2020,11 @@ _then_p_temp_rel :< miscprep_rel.
 _thereabouts_p_rel :< miscprep_rel.
 _thereof_p_rel :< miscprep_rel.
 _therewith_p_rel :< miscprep_rel.
-_thither_p_rel :< miscprep_rel.
+_thither_p_rel :< dir_or_state_nontemp_rel.
 _thither_p_dir_rel := _thither_p_rel & dir_rel.
 _thither_p_state_rel := _thither_p_rel & state_loc_rel.
 _thitherward_p_rel :< miscprep_rel.
-_through_p_rel :< miscprep_rel.
+_through_p_rel :< dir_or_state_nontemp_rel.
 _through_p_dir_rel := _through_p_rel & dir_rel. 
 _through_p_state_rel := _through_p_rel & state_loc_rel. 
 _throughout_p_rel :< dir_or_state_nontemp_rel.
@@ -1985,12 +2034,15 @@ _to+do+with_p_rel :< miscprep_rel.
 _to_p_rel := dir_rel & to_or_with_p_rel.
 _together_p_rel :< dir_rel.
 _together+with_p_rel :< miscprep_rel.
+_too_a_also_rel :< adv_rel.
 _toward_p_rel :< dir_rel.
 _towards_p_rel :< dir_rel.
 _under_p_rel :< dir_or_state_nontemp_rel.
 _under_p_dir_rel := _under_p_rel & dir_rel.
 _under_p_state_rel := _under_p_rel & state_loc_rel.
 _underneath_p_rel :< dir_or_state_nontemp_rel.
+_underneath_p_dir_rel := _underneath_p_rel & dir_rel.
+_underneath_p_state_rel := _underneath_p_rel & state_loc_rel.
 _unlike_p_rel :< miscprep_rel.
 _until_p_rel :< miscprep_rel.
 _unto_p_rel :< dir_rel.
@@ -2001,12 +2053,16 @@ _up+until_p_rel :< miscprep_rel.
 _upon_p_rel :< state_loc_rel.
 _upstairs_p_rel :< miscprep_rel.
 _upstream_p_rel :< dir_or_state_nontemp_rel.
+_upstream_p_dir_rel := _upstream_p_rel & dir_rel.
+_upstream_p_state_rel := _upstream_p_rel & state_loc_rel.
 _via_p_rel :< miscprep_rel.
 _viz_p_rel :< miscprep_rel.
 _whither_p_rel := dir_rel.
 _whence_p_rel := dir_rel.
 _with_p_rel := to_or_with_p_rel.
 _within_p_rel :< dir_or_state_nontemp_rel.
+_within_p_dir_rel := _within_p_rel & dir_rel.
+_within_p_state_rel := _within_p_rel & state_loc_rel.
 _without_p_rel :< miscprep_rel.
 _worth_p_rel :< miscprep_rel.
 
@@ -2029,7 +2085,7 @@ _many+a_q_rel :< some_q_rel.
 _another_q_rel := some_q_rel.
 _any_q_rel :< any_q_rel.
 both_all_q_rel :< quant_rel.
-_both_q_rel := def_explicit_q_rel & both_all_q_rel.
+_both_q_rel := basic_def_explicit_q_rel & both_all_q_rel.
 _each_q_rel :< explicit_quant_noagr_q_rel.
 _either_q_rel :< explicit_quant_agr_q_rel.
 _enough_q_rel :< explicit_quant_agr_q_rel.
@@ -2038,16 +2094,12 @@ _half_q_rel :< explicit_quant_agr_q_rel.
 _less_q_rel :< explicit_quant_noagr_q_rel.
 _little_q_rel :< explicit_quant_noagr_q_rel.
 _more_q_than_rel :< explicit_quant_agr_q_rel.
-_most_q_rel :< explicit_quant_agr_q_rel.
-_much_q_rel :< much_many_q_rel.
 _neither_q_rel :< explicit_quant_noagr_q_rel.
 _no_q_rel :< no_q_rel.
 _some_q_rel :< some_q_rel.
 _some_q_indiv_rel :< some_q_rel.
 _such_q_rel :< explicit_q_rel.
 _that_q_dem_rel :< demon_far_q_rel.
-_the+same_q_as_rel :< explicit_quant_agr_q_rel.
-_the+most_q_rel :< explicit_quant_agr_q_rel.
 _these_q_dem_rel :< demon_near_q_rel.
 _this_q_dem_rel :< demon_near_q_rel.
 _those_q_dem_rel :< demon_far_q_rel.
@@ -2131,7 +2183,7 @@ never_unify_rel := predsort.
 
 ; For appositives
 appos-able_rel := predsort.
-indef_or_meas_rel := appos-able_rel.
+indef_or_udef_or_meas_rel := appos-able_rel.
 def_or_meas_rel := predsort.
 
 norm_dim_rel := norm_non_conj_rel.
@@ -2146,9 +2198,10 @@ non_freerel_q_rel := non_freerel_q_or_meas_rel & quant_rel.
 impl_or_expl_q_rel := non_freerel_q_rel & i_or_e_quant_or_deg_rel.
 ; Used in bare plurals
 impl_or_proper_q_rel := quant_rel.
+; Used for superlative adjs
+impl_or_the_q_rel := quant_rel.
 ; Used in appositive rule
-implicit_q_rel := impl_or_expl_q_rel & impl_or_proper_q_rel & 
-                  def_or_udef_q_rel.
+implicit_q_rel := impl_or_proper_q_rel & def_or_udef_q_rel & impl_or_the_q_rel.
 ; Used for heads of appositive phrases
 explicit_or_proper_q_rel := quant_or_wh_rel.
 explicit_q_rel := impl_or_expl_q_rel & explicit_or_proper_q_rel.
@@ -2160,24 +2213,26 @@ explicit_quant_noagr_q_rel := explicit_q_rel &
                               explicit_quant_or_udef_noagr_q_rel.
 ; For '(exactly) three chairs'
 num_q_rel := explicit_or_proper_q_rel & impl_or_expl_q_rel.
-much_many_q_rel := explicit_quant_noagr_q_rel.
+
 ; DPF 19-Oct-02 - This is to allow not only ordinary bare plurals, but also
 ; "afternoons" which must be the one that takes an optional PP-of and
 ; usually requires a definite determiner (unless it's a bare plural)
 
-abstr_def_or_udef_q_rel := quant_rel & def_or_meas_rel.
-def_or_udef_q_rel := abstr_def_or_udef_q_rel.
-def_or_proper_q_rel := abstr_def_or_udef_q_rel.
-udef_q_rel := implicit_q_rel & explicit_quant_or_udef_noagr_q_rel.
+abstr_def_or_udef_q_rel := quant_rel.
+def_or_udef_q_rel := abstr_def_or_udef_q_rel & impl_or_expl_q_rel.
+def_or_proper_q_rel := abstr_def_or_udef_q_rel & def_or_meas_rel.
+udef_q_rel := implicit_q_rel & explicit_quant_or_udef_noagr_q_rel &
+              indef_or_udef_or_meas_rel.
 some-any_q_rel := explicit_quant_agr_q_rel.
-some_q_rel := some-any_q_rel & indef_or_meas_rel.
+some_q_rel := some-any_q_rel & indef_or_udef_or_meas_rel.
 any_q_rel := some-any_q_rel.
 every_q_rel := explicit_q_rel.
 no_q_rel := explicit_q_rel.
-def_q_rel := def_or_udef_q_rel.
+def_q_rel := def_or_udef_q_rel & def_or_meas_rel.
 def_implicit_q_rel := def_q_rel & implicit_q_rel.
-def_explicit_q_rel := def_q_rel & explicit_quant_noagr_q_rel &
-                      def_or_proper_q_rel & appos-able_rel.
+basic_def_explicit_q_rel := def_q_rel & explicit_quant_noagr_q_rel &
+                            def_or_proper_q_rel & appos-able_rel.
+def_explicit_q_rel := basic_def_explicit_q_rel.
 ; Used only in KEYS.KEY
 nondef_explicit_q_rel := explicit_q_rel.
 ; Used by NP-N-cmpnd rule:
@@ -2186,7 +2241,7 @@ meas_np_or_proper_q_rel := explicit_or_proper_q_rel.
 ; It is distinct from i_or_e_quant_or_deg_rel to prevent relative clauses
 ; from attaching to proper names with no specifier.
 num_or_proper_q_rel := non_freerel_q_rel & def_or_proper_q_rel &
-                       meas_np_or_proper_q_rel & appos-able_rel.
+                       explicit_or_proper_q_rel & appos-able_rel.
 proper_q_rel := num_or_proper_q_rel & impl_or_proper_q_rel.
 number_q_rel := num_or_proper_q_rel.
 ; For determiners that can appear e.g. with 'same' (also excluding 'both')
@@ -2199,9 +2254,11 @@ demon_far_q_rel :< demonstrative_q_rel.
 basic_free_relative_q_rel :< explicit_quant_noagr_q_rel.
 free_relative_q_rel :< basic_free_relative_q_rel.
 free_relative_ever_q_rel :< basic_free_relative_q_rel.
-_the_q_rel := def_explicit_q_rel & def_or_demon_q_rel.
+_the_q_rel := basic_def_explicit_q_rel & def_or_demon_q_rel &
+              impl_or_the_q_rel.
 which_q_rel :< explicit_quant_agr_q_rel.
 _all_q_rel := explicit_quant_agr_q_rel & both_all_q_rel.
+_not+all_q_rel := explicit_quant_agr_q_rel & both_all_q_rel.
 idiom_q_rel :< implicit_q_rel.
 
 dir_state_modable_rel := predsort.
@@ -2217,11 +2274,14 @@ nom_rel := basic_nom_rel & nom_or_mnp_rel.
 nonpro_or_mnp_rel := nom_or_mnp_rel.
 nonpro_or_refl_or_num_rel := predsort.
 nonpro_or_num_rel := nonpro_or_refl_or_num_rel.
-nonpro_rel := nom_rel & nonpro_or_mnp_rel & nonpro_or_num_rel.
-abstr_meas_nom_rel := nom_rel & meas_np_or_proper_q_rel.
+basic_nonpro_rel := nom_rel & nonpro_or_mnp_rel & nonpro_or_num_rel.
+; Exclude relative pronouns and deictics, which can not take possessive 's.
+nonpro_rel := basic_nonpro_rel.
+abstr_meas_nom_rel := nom_rel.
 nom_nondim_rel :< nom_rel.
 non_temp_nom_rel := nom_nondim_rel & nontemp_rel.
-non_temp_nonpro_rel := non_temp_nom_rel & nonpro_rel.
+basic_non_temp_nonpro_rel := non_temp_nom_rel & basic_nonpro_rel.
+non_temp_nonpro_rel := basic_non_temp_nonpro_rel & nonpro_rel.
 reg_nom_rel := non_temp_nonpro_rel.
 modable_nom_rel := non_temp_nonpro_rel & modable_rel.
 unspec_diadic_nom_rel := nonpro_rel & nom_nbar_rel.
@@ -2245,12 +2305,12 @@ nom_nbar_rel := gen_nom_nbar_rel & nbar_or_nger_rel & nbar_or_dofm_rel.
 norm_nom_or_place_rel := nom_rel.
 norm_nom_rel := reg_nom_rel & nom_nbar_rel & norm_nom_or_place_rel.
 temp_abstr_or_conj_rel := predsort.
-temp_abstr_rel := nonpro_rel & temp_abstr_or_conj_rel & abstr_meas_nom_rel.
+temp_abstr_rel := nonpro_rel & temp_abstr_or_conj_rel.
 temp_nondim_rel := temp_abstr_rel & gen_nom_nbar_rel.
 ; Used in NP-N-cmpnd rule, to include measure-NP phrases.
-deg_or_named_rel :< norm_rel.
+named_or_meas_rel :< norm_rel.
 ; Used in munging rules to make reversible the implicit quantifier
-abstr_named_rel :< deg_or_named_rel.
+abstr_named_rel :< named_or_meas_rel.
 gen_named_rel := abstr_named_rel.
 named_np_or_num_rel :< gen_named_rel.
 abstr_named_np_rel :< named_np_or_num_rel.
@@ -2259,7 +2319,8 @@ named_num_or_seq_rel :< nom_rel.
 ; DPF 03-may-04 ; Changed non_temp_nonpro_rel to nom_nocmpnd_rel, to prevent
 ; these from appearing in N-N-compounds
 named_num_rel := named_np_or_num_rel & nom_nocmpnd_rel & nonpro_or_num_rel &
-                 named_num_or_seq_rel & nonpro_or_mnp_rel.
+                 named_num_or_seq_rel & nonpro_or_mnp_rel & 
+                 norm_nom_or_place_rel.
 num_seq_nom_rel := named_num_or_seq_rel & non_temp_nom_rel & 
 		   named_np_or_num_rel.
 named_card_rel := named_num_rel & card_rel.
@@ -2272,16 +2333,20 @@ day_rel :< temp_nondim_rel.
 diadic_day_rel := day_rel & unspec_diadic_nom_rel & modable_rel.
 named_day_rel := diadic_day_rel & abstr_named_np_rel.
 ; Needs to inherit from both since we get "on the first day" but "in my day"
-unnamed_day_rel := diadic_day_rel & non_day_or_deg_rel.
+unnamed_day_rel := diadic_day_rel & non_day_or_deg_rel & abstr_meas_nom_rel.
 ; DPF 10-Oct-02 - Need to allow measure-NPs to be complements of temporal "in",
 ; as in "I'll be finished in two chapters".
 non_day_or_deg_rel :< norm_rel.
-non_day_rel := temp_nondim_rel & non_day_or_deg_rel.
+non_day_rel := temp_nondim_rel & non_day_or_deg_rel & abstr_meas_nom_rel.
 ;; day_of_month_rel
 ; DPF 03-may-04 - Replaced diadic_day_rel with day_rel,modable_rel to prevent
 ; these from being nom_nbar_rel, so they won't appear in compounds, among
 ; other unwanted places
-dofm_rel := day_rel & modable_rel & gen_named_rel & nbar_or_dofm_rel.
+; DPF 04-mar-06 - Added dofm_or_mofy_rel to capture the possible modifiees
+; of n_year_le.
+dofm_or_mofy_rel := temp_nondim_rel.
+dofm_rel := day_rel & modable_rel & gen_named_rel & nbar_or_dofm_rel &
+            dofm_or_mofy_rel.
 
 ;; Need supertype of dofw_rel and poss_rel and non-'the' quantifiers
 ;; for the specifier of the small class of words like "morning" as in "my 
@@ -2303,7 +2368,7 @@ _lunch_n_time_rel :< hour_rel.
 _supper_n_time_rel :< hour_rel.
 _tea_n_time_rel :< hour_rel.
 _night_n_time_rel :< hour_rel.
-_minute_n_1_rel :< hour_rel.
+_minute_n_1_rel := hour_rel & abstr_meas_nom_rel.
 ; a quarter till three  ("till" is head - cf "come at a quarter till.")
 hour_prep_rel := hour_rel.
 gen_hour_rel := hour_rel.
@@ -2339,21 +2404,23 @@ non_day_modable_rel := non_day_rel & modable_rel & nom_nbar_rel.
 non_day_diadic_modable_rel := non_day_diadic_rel & modable_rel.
 non_day_time_rel := non_day_diadic_rel & modable_rel & hour_or_time_rel.
 ; "while"
-non_day_nonmodable_rel := non_day_rel & meas_nom_rel.
-
+;non_day_nonmodable_rel := non_day_rel & meas_nom_rel.
+; mealtimes - disallow relative clause modification
+mealtime_rel :< hour_or_time_rel.
 ;; named_month_rel as in "January is fine"
 ;; DPF 13-Mar-02 - Changed parent non_day_diadic_modable_rel to 
 ;; non_day_diadic_rel since we were overgenerating: "*Kim arrived June" in 
 ;; order to admit "Kim arrived last June".  Have to do something else to
 ;; allow the latter.
-mofy_rel := non_day_diadic_rel & abstr_named_np_rel.
+mofy_rel := non_day_diadic_rel & abstr_named_np_rel & dofm_or_mofy_rel.
 
 yofc_rel := non_day_rel & abstr_named_np_rel.
 
 season_rel := non_day_modable_rel & gen_named_rel.
 season_nomod_rel := non_day_rel & gen_named_rel & hour_or_time_rel.
 
-age_rel :< non_day_nonmodable_rel.
+;age_rel :< non_day_nonmodable_rel.
+age_rel :< non_day_rel.
 
 _morning_n_1_rel :< day_part_rel.
 _afternoon_n_1_rel :< day_part_rel.
@@ -2393,7 +2460,7 @@ bare_n_jmod_rel := bare_nom_rel.
 ; Disallow any modification ('on top' 'of course')
 bare_n_nomod_rel := bare_nom_rel.
 
-mnp_symb_rel := nonpro_rel & meas_np_or_proper_q_rel.
+mnp_symb_rel := abstr_meas_nom_rel.
 
 ; For 'it is a pleasure to visit abrams.' and 'Abrams is a pleasure to visit.'
 prednom_rel := nonpro_rel.
@@ -2419,7 +2486,7 @@ excl_rel :< abstr_excl_rel.
 ; For adjectival pro-forms like "the last", and derived number-nouns, neither
 ; of which appear in N-N-compounds
 nom_nocmpnd_rel :< non_temp_nom_rel.
-num_nocmpnd_rel := nom_nocmpnd_rel & nonpro_or_num_rel & part_nom_rel.
+num_nocmpnd_rel := nom_nocmpnd_rel & nonpro_rel & part_nom_rel.
 _one_n_1_rel := nom_nocmpnd_rel & nonpro_rel.
 
 basic_pron_rel := non_temp_nom_rel & abstr_named_rel.
@@ -2430,8 +2497,8 @@ pron_rel := basic_pron_rel.
 ; for "*We sent the books them".
 
 refl_pron_rel := non_temp_nom_rel & nonpro_or_refl_or_num_rel.
-recip_pro_rel := non_temp_nonpro_rel.
-generic_nom_rel := non_temp_nonpro_rel.
+recip_pro_rel := basic_non_temp_nonpro_rel.
+generic_nom_rel := basic_non_temp_nonpro_rel.
 generic_entity_rel := non_temp_nonpro_rel.
 
 basic_adj_rel := event_dim_rel & nontemp_rel & compos_spec_rel.
@@ -2469,6 +2536,7 @@ _need_v_modal_rel :< modal_rel.
 _ought_v_modal_rel :< modal_rel.
 _shall_v_modal_rel :< modal_rel.
 _should_v_modal_rel :< modal_rel.
+_would_v_modal_rel := modal_rel.
 _used+to_v_modal_rel :< modal_rel.
 _had+better_v_modal_rel :< modal_rel.
 ellipsis_rel := v_event_rel & aux_or_ellipt_rel.
@@ -2482,7 +2550,6 @@ expected_event_rel := v_event_rel.
 ; Needed to allow filtering of the relations for "will" and "would" for VIT.
 will_would_rel :< aux_arg1_rel.
 _will_v_aux_rel :< will_would_rel.
-_would_v_modal_rel := will_would_rel.
 _going+to_v_modal_rel :< will_would_rel.
 would_like_rel := predsort.
 generic_verb_rel :< event_dim_rel.
@@ -2546,7 +2613,7 @@ neg_polar_rel :< abstr_adv_dim_rel.
 long_r_rel :< abstr_adv_dim_rel.
 
 degree_rel := compos_spec_rel & independent_rel & event_or_degree_rel
-             & i_or_e_quant_or_deg_rel & non_day_or_deg_rel & deg_or_named_rel.
+             & i_or_e_quant_or_deg_rel & non_day_or_deg_rel.
 comp_degree_rel :< degree_rel.
 non_comp_degree_rel :< degree_rel.
 
@@ -2606,14 +2673,15 @@ comp_most_least_rel := comparative_rel.
 _most_x_comp_rel :< comp_most_least_rel.
 _least_x_comp_rel :< comp_most_least_rel.
 
-; For measure-NPs
+; For measure-NPs and other degree specifiers: 'how tall'
 measure_rel :< non_comp_degree_rel.
 
 ;; For "how" adjective, which quantifies over properties.
 property_rel :< reg_nom_rel.
 prpstn_to_prop_rel := event_rel.
-comp_rel := miscprep_rel.
-superl_rel := miscprep_rel.
+comp_or_superl_rel := miscprep_rel.
+comp_rel := comp_or_superl_rel.
+superl_rel := comp_or_superl_rel.
 comp_less_rel := miscprep_rel.
 comp_equal_rel := miscprep_rel.
 comp_so_rel := miscprep_rel.
@@ -2635,7 +2703,6 @@ _be_v_nv_rel :< cop_id_rel.
 title_id_rel := cop_id_rel.
 person_name_rel := cop_id_rel.
 unspec_adj_rel :< adj_rel.
-number_rel :< reg_diadic_nom_rel.
 quantity_rel :< reg_diadic_nom_rel.
 prednom_state_rel :< reg_diadic_nom_rel.
 _be_v_prd_rel := v_event_rel & aux_event_rel.
@@ -2652,13 +2719,12 @@ be_v_prd-or-id_rel := be_v_prd_rel & be_v_id_rel.
 be_v_prd-or-nv_rel := be_v_prd_rel & be_v_nv_rel.
 be_v_prd-or-there_rel := be_v_prd_rel & be_v_there_rel.
 
-_dollar_n_1_rel :< meas_nom_rel.
 unk_n_rel :< norm_nom_rel.
 gen_currency_rel :< reg_nom_rel.
 ; To distinguish class of nouns that can serve as measure-NP PP-specifiers
 meas_nom_rel := reg_nom_rel & nom_nbar_rel & abstr_meas_nom_rel & 
-                indef_or_meas_rel & non_freerel_q_or_meas_rel &
-                def_or_meas_rel.
+                indef_or_udef_or_meas_rel & non_freerel_q_or_meas_rel &
+                def_or_meas_rel & named_or_meas_rel.
 
 unspec_rel := prep_rel.
 
@@ -2830,10 +2896,12 @@ basic_punct_mark := *avm* &
 clause_or_semicol_or_no_punct := basic_punct_mark.
 clause_or_semicol := clause_or_semicol_or_no_punct.
 comma_or_clause_or_pair_or_no_punct := basic_punct_mark.
+comma_or_rbc_or_clause_or_no_punct := basic_punct_mark.
 clause_or_pair_or_no_punct :< comma_or_clause_or_pair_or_no_punct.
 clause_or_no_punct := clause_or_semicol_or_no_punct & 
                       clause_or_pair_or_no_punct.
-comma_or_clause_or_no_punct := comma_or_clause_or_pair_or_no_punct.
+comma_or_clause_or_no_punct := comma_or_clause_or_pair_or_no_punct &
+                               comma_or_rbc_or_clause_or_no_punct.
 comma_or_rbc_or_hyphen_or_pair_or_no_punct := basic_punct_mark.
 comma_or_rbc_or_colon_or_pair_or_no_punct := basic_punct_mark.
 comma_or_hyphen_or_pair_or_no_punct := comma_or_rbc_or_hyphen_or_pair_or_no_punct.
@@ -2842,7 +2910,8 @@ hyphen_or_pair_or_no_punct := comma_or_hyphen_or_pair_or_no_punct &
                               rbc_or_hyphen_or_pair_or_no_punct.
 comma_or_rbc_or_pair_or_no_punct := comma_or_rbc_or_hyphen_or_pair_or_no_punct
                                    & comma_or_rbc_or_colon_or_pair_or_no_punct.
-comma_or_rbc_or_no_punct := comma_or_rbc_or_pair_or_no_punct.
+comma_or_rbc_or_no_punct := comma_or_rbc_or_pair_or_no_punct &
+                            comma_or_rbc_or_clause_or_no_punct.
 comma_or_pair_or_no_punct := comma_or_hyphen_or_pair_or_no_punct &
                              comma_or_rbc_or_pair_or_no_punct &
                              comma_or_clause_or_pair_or_no_punct.
@@ -2872,17 +2941,10 @@ no_punct := clause_or_no_punct & comma_or_no_punct & hyphen_sgl_or_no_punct &
 pnctpair := *sort*.
 no_ppair := pnctpair.
 ppair := pnctpair.
-#|
-dq_pair := ppair.
-sq_pair := ppair.
-shyph_pair := ppair.
-dhyph_pair := ppair.
-|#
 
 punct_mark := basic_punct_mark.
 
-hyphen_or_comma_or_colon_or_clause :< punct_mark.
-hyphen_or_comma_or_clause :< hyphen_or_comma_or_colon_or_clause.
+hyphen_or_comma_or_clause :< punct_mark.
 hyphen_sgl_or_clause :< punct_mark.
 hyphen_sgl := hyphen_sgl_or_clause & hyphen_sgl_or_no_punct &
               hyphen_or_comma_or_clause & pair_or_no_punct.
@@ -2900,7 +2962,7 @@ clause_sh_punct := hyphen_sgl_or_clause & basic_clause_punct.
 clause_dh_punct := hyphen_dbl_or_clause & basic_clause_punct.
 s_dash_punct := basic_clause_punct.
 colon_punct := comma_or_rbc_or_colon_or_pair_or_no_punct & basic_clause_punct &
-               hyphen_or_comma_or_colon_or_clause.
+               comma_or_clause_or_no_punct.
 pair_punct := punct_mark & pair_or_no_punct & comma_or_pair_punct.
 lparen_or_no_punct := basic_punct_mark.
 lparen_punct := pair_punct & lparen_or_no_punct.
@@ -2921,7 +2983,7 @@ informal := genre.
 robust := informal.
 
 root_synsem := phr_synsem &
-  [ LOCAL [ CAT [ HEAD verbal & [ TAM ind_or_mod_subj_tam ],
+  [ LOCAL [ CAT [ HEAD verbal & [ TAM indic_tam ],
                   VAL [ SUBJ *olist*,
                         SPR *olist*,
                         COMPS < > ],
@@ -2931,4 +2993,4 @@ root_synsem := phr_synsem &
     NONLOC [ SLASH 0-dlist & [ LIST < > ],
              REL 0-dlist & [ LIST < > ],
              QUE 0-dlist & [ LIST < > ] ],
-    PUNCT.RPUNCT clause_or_no_punct & [ MSGPRED #pred ] ].
+    PUNCT.RPUNCT clause_or_pair_or_no_punct & [ MSGPRED #pred ] ].
