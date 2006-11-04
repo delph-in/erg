@@ -463,3 +463,65 @@
 ;;;
 (setf *translate-grid* '(:en . (:en)))
 
+;; when this parameter is set, ersatzes have their CARG set according to surface form
+(setf smaf::*ersatz-carg-path* '(synsem lkeys keyrel carg))
+
+;; temporary hack to avoid instantiating carg on 'ersatzes' with no carg slot
+;; REMOVE_ME as soon as lex entries in ERG fixed
+(defparameter *ersatzes-with-no-carg*
+    '(
+ currencyersatzarp
+ currencyersatzats
+ currencyersatzaud
+ currencyersatzbef
+ currencyersatzbrl
+ currencyersatzchf
+ currencyersatzclp
+ currencyersatzcnd
+ currencyersatzcny
+ currencyersatzczk
+ currencyersatzdem
+ currencyersatzdollarsymb
+ currencyersatzegp
+ currencyersatzesp
+ currencyersatzeur
+ currencyersatzfim
+ currencyersatzfrf
+ currencyersatzgbp
+ currencyersatzgrd
+ currencyersatzhkd
+ currencyersatziep
+ currencyersatzils
+ currencyersatzinr
+ currencyersatzitl
+ currencyersatzjpy
+ currencyersatzkrw
+ currencyersatzmxp
+ currencyersatzmyr
+ currency_ersatz_n1
+ currencyersatznlg
+ currencyersatznok
+ currencyersatznzd
+ currencyersatzpkr
+ currencyersatzpte
+ currencyersatzsek
+ currencyersatzsgd
+ currencyersatzsur
+ currencyersatzthb
+ currencyersatztwd
+ currencyersatzusd
+ currencyersatzzar
+ measnpersatz
+ measnpersatz_range_1
+ measnpersatz_range_2
+ measnpersatz_range_3
+ measnpersatz_range_4
+ measnpersatz_range_5
+ measnpersatz_range_6
+ numidentifierersatz_n2
+ numidentifierersatz_n3
+ numidentifierersatz_n4
+ numidentifierersatz_n5
+ numidentifierersatz_n7
+      ))
+ 
