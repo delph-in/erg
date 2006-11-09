@@ -34,6 +34,7 @@ sign := sign_min &
     ARGS *list*,
     INFLECTD bool,
     GENRE genre,
+    DIALECT dialect,
     POSSCL bool,
     IDIOM bool,
     STEM *list* ].
@@ -188,6 +189,7 @@ alts := alts_min &
   [ PASSIVE bool,
     VPELLIP bool,
     ADVADD bool,
+    ADVNGADD bool,
     NPPART bool,
     SQPNCT bool ].
 no_alts :< alts_min.
@@ -331,7 +333,8 @@ n_or_p_or_a :< n_or_a_or_p_or_adv.
 
 n_or_p_or_adv :< head.
 
-n_or_v_or_a :< subst.
+v_or_n_or_g_or_a := subst.
+n_or_v_or_a :< v_or_n_or_g_or_a.
 
 n_or_p :=  n_or_p_or_v & n_or_p_or_frag & n_or_p_or_a & n_or_p_or_adv.
 n_or_a :< n_or_v_or_a.
@@ -342,7 +345,8 @@ n_or_v := n_or_p_or_v & n_or_v_or_a.
 
 n_or_a_or_adv_or_det :< head.
 n_or_adv :< n_or_a_or_adv_or_det.
-nom_or_ttl :< poss-able.
+basic_nom_or_ttl := poss-able & head.
+nom_or_ttl :< basic_nom_or_ttl.
 noun_or_ttl :< nom_or_ttl.
 
 ; For constraint on head-spec rule.
@@ -350,10 +354,11 @@ n_or_a_or_det := n_or_a_or_adv_or_det.
 
 det := func & poss-able & n_or_a_or_det.
 
+adverbee_or_modnp := head.
 ; Adverbs modify adverbees.
-adverbee :< head.
+adverbee :< adverbee_or_modnp.
 
-v_or_g_or_a :< subst.
+v_or_g_or_a :< v_or_n_or_g_or_a.
 v_or_g := v_or_g_or_a & v_or_g_or_p & verb_or_frag & v_or_g_or_dadv.
 
 nominal_or_verbal := subst.
@@ -372,9 +377,10 @@ mobile :< head.
 adj_or_intadj := n_or_a & a_or_p & adverbee & nominal_or_verbal.
 
 v_or_a := v_or_g_or_a & n_or_v_or_a & non_noun.
-basic_adj := v_or_a & mobile & adj_or_intadj.
+basic_adj := v_or_a & mobile & adj_or_intadj & a_or_adv.
 ; For positive adjectives
-adj := basic_adj & a_or_adv & n_or_a_or_det.
+adj := basic_adj & n_or_a_or_det.
+
 
 prep_or_modnp :< head.
 
@@ -389,20 +395,28 @@ prep := a_or_p & v_or_p & n_or_p & mobile & prep_or_modnp & v_or_g_or_p &
 ; For result of npadv_mod non-branching rule
 ; Need mobile for "where did i put it"
 
-modnp := n_or_p & nominal & prep_or_modnp & mobile & a_or_adv & v_or_a_or_p.
+modnp := n_or_p & nominal & prep_or_modnp & mobile & a_or_adv & v_or_a_or_p &
+         adverbee_or_modnp.
 
-supnoun :< nominal.
+supnoun := nominal & n_or_v & n_or_a_or_det.
 
 ; for both nominal and verbal gerunds
-noun_or_gerundive := supnoun & n_or_v & n_or_a_or_det.
-noun_or_nomger := noun_or_gerundive & n_or_p & nom_or_ttl.
-noun_or_gerund := noun_or_gerundive.
+noun_or_nomger := supnoun & n_or_p & nom_or_ttl.
+noun_or_gerund := supnoun.
+; For nouns that can undergo conversion to adj, like "eared" or "blue"
+noun_adj := supnoun.
 
-noun := n_or_a & noun_or_nomger & n_or_adv & noun_or_gerund & noun_or_ttl.
+basic_noun := n_or_a & noun_or_nomger & n_or_adv & noun_or_gerund & 
+              noun_or_ttl.
+noun := basic_noun.
+noun_adjable := basic_noun & noun_adj.
 
 ; DPF 10-Apr-02 - Added n_or_p since want to allow gerunds to undergo noptcomp
 ; rule, to get e.g."way of saying that Kim arrives"
 gerund := noun_or_gerund & adverbee & v_or_g & n_or_p & disc_adverbee.
+
+; For derived entries like the "eyed" of "wide-eyed"
+n-ed := basic_nom_or_ttl & noun_adj.
 
 ; For no-copula and run-on sentences
 verb_or_frag_or_lexcomp := head &
@@ -474,8 +488,9 @@ interv_n := noun.
 adj_partitive :< subst_or_func.
 intadj_or_superl :< adj_partitive.
 intadj_or_comp :< adj_partitive.
-superl_adj := basic_adj & intadj_or_superl.
-compar_adj := basic_adj & intadj_or_comp & n_or_a_or_adv_or_det.
+compar_or_superl_adj :< basic_adj.
+superl_adj := compar_or_superl_adj & intadj_or_superl.
+compar_adj := compar_or_superl_adj & intadj_or_comp.
 
 ; For measure-NPs
 noun_meas := noun & adj_partitive.
@@ -789,16 +804,22 @@ either :< atomic-conj.
 neither :< atomic-conj.
 nor :< atomic-conj.
 first :< atomic-conj.
+notonly :< atomic-conj.
 chead := *avm* &
   [ LEFT *list* ].
 
 ; CREL is a pointer to the coord_relation, needed for semantic composition.
 ; CPUNCT enables lexical conjunctions to block comma-marked left conjunct
 ; in simple two-part coordination: '*Abrams, and Browne arrived'.
+; CPNG records agreement constraints which a conjunction can contribute,
+; allowing 'and' to provide singular nbar-coordination, but plural NP
+; coordination, for the contrast in "Their hardiness and zest for life is"
+; but "*Abrams and Browne is"
 
 complex-conj := real-conj &
   [ CREL *top*,
-    CPUNCT pnctpair ].
+    CPUNCT pnctpair,
+    CPNG png ].
 
 phr-conj := complex-conj & cnil_or_phrconj.
 lex-conj := complex-conj & cnil_or_lexconj.
@@ -911,9 +932,10 @@ bse :< bse_or_inf.
 ; Base morphology verbs can be either base or imperative, but not if negated.
 ; See discussion of type neg_word.
 bse_only := bse & non_fin & fin_or_bse.
-fin_or_imp :< non_inf.
+fin_or_inf_or_imp :< vform.
+fin_or_imp := non_inf & fin_or_inf_or_imp.
 imp_vform := bse & fin_or_imp.
-fin_or_inf :< non_bse.
+fin_or_inf := non_bse & fin_or_inf_or_imp.
 fin := fin_or_inf & fin_or_bse & fin_or_imp & fin_or_non_fin.
 inf_or_prp :< non_fin.
 inf := inf_or_prp & bse_or_inf & fin_or_inf.
@@ -1201,6 +1223,7 @@ adv_relation := arg01_relation &
   [ ARG0.E [ TENSE no_tense,
              ASPECT no_aspect ] ].
 adv12_relation := adv_relation & arg2_relation.
+adv_carg_relation := adv_relation & const_arg01_relation.
 
 arg1_relation := arg01_relation & event_relation.
 
@@ -1435,11 +1458,13 @@ _underground_a_1_rel := adj_rel.
 _yonder_a_1_rel := adj_rel.
 _arrear_a_1_rel := adj_rel.
 
+
 much-many_a_rel := adj_rel.
 
 ; For fragments
 unknown_relation := arg0_relation &
   [ PRED unknown_rel,
+    ARG0 event,
     ARG semarg ].
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1709,6 +1734,7 @@ than_or_from_rel :< selected_prep_rel.
 ; For PP complements of (temporal) 'from X to/until/through Y'
 abstr_until_sel_rel :< selected_prep_rel.
 
+_aback_p_sel_rel :< selected_prep_rel.
 _about_p_sel_rel :< selected_prep_rel.
 _across_p_sel_rel :< selected_prep_rel.
 _after_p_sel_rel :< minute_prep_sel_rel.
@@ -1753,6 +1779,7 @@ _out_p_sel_rel :< selected_prep_rel.
 _over_p_sel_rel :< selected_prep_rel.
 _short_a_sel_rel :< selected_adj_rel.
 _still_a_sel_rel :< selected_adj_rel.
+_thin_a_sel_rel :< selected_adj_rel.
 _through_p_sel_rel :< abstr_until_sel_rel.
 _to_p_sel_rel := abstr_until_sel_rel & minute_prep_sel_rel.
 _to_p_nbar_rel :< selected_prep_rel.
@@ -1792,7 +1819,7 @@ _afield_p_rel :< miscprep_rel.
 _aft_p_rel :< dir_or_state_nontemp_rel.
 _aft_p_dir_rel := _aft_p_rel & dir_rel.
 _aft_p_state_rel := _aft_p_rel & state_loc_rel.
-_after_p_rel :< temp_loc_abstr_rel.
+_after_p_rel :< temp_loc_rel.
 _after_p_n-n_rel :< miscprep_rel.
 _afterward_p_rel :< miscprep_rel.
 _afterwards_p_rel :< miscprep_rel.
@@ -1816,6 +1843,9 @@ _amongst_p_rel :< miscprep_rel.
 _apart+from_p_rel :< miscprep_rel.
 _around_p_rel :< miscprep_rel.
 _as_p_rel :< miscprep_rel.
+_as+far+as_p_rel :< dir_or_state_nontemp_rel.
+_as+far+as_p_dir_rel := _as+far+as_p_rel & dir_rel.
+_as+far+as_p_state_rel := _as+far+as_p_rel & state_loc_rel.
 _as+for_p_rel :< miscprep_rel.
 _as+if_p_rel :< miscprep_rel.
 _as+of_p_rel :< temp_loc_rel.
@@ -1825,7 +1855,7 @@ _aside_p_rel :< miscprep_rel.
 _aside+from_p_rel :< miscprep_rel.
 _astray_p_rel :< miscprep_rel.
 _astride_p_rel :< miscprep_rel.
-_at_p_rel :< state_loc_rel.
+_at_p_rel := state_loc_rel & unspec_loc_nontemp_rel.
 _at_p_temp_rel :< temp_loc_sp_rel.
 _athwart_p_rel :< dir_or_state_nontemp_rel.
 _athwart_p_dir_rel := _athwart_p_rel & dir_rel.
@@ -1864,6 +1894,7 @@ _by+means+of_p_rel :< miscprep_rel.
 _by+way+of_p_rel :< miscprep_rel.
 _by_p_n-n_rel :< miscprep_rel.
 _close+to_p_rel :< miscprep_rel.
+_colon_p_namely_rel :< miscprep_rel.
 _concerning_p_rel :< miscprep_rel.
 _care+of_p_rel :< miscprep_rel.
 _close+by_p_rel :< miscprep_rel.
@@ -1872,12 +1903,14 @@ _crossways_p_dir_rel := _crossways_p_rel & dir_rel.
 _crossways_p_state_rel := _crossways_p_rel & state_loc_rel.
 _despite_p_rel :< miscprep_rel.
 _down_p_rel :< dir_rel.
+_downstairs_p_rel :< miscprep_rel.
 _downstream_p_rel :< miscprep_rel.
 _due+to_p_rel :< miscprep_rel.
 _during_p_rel :< temp_loc_rel.
 _e+g_p_rel :< miscprep_rel.
 _each_p_rel :< miscprep_rel.
 _en+route_p_rel :< dir_rel.
+_ever+before_p_rel :< temp_loc_rel.
 _ever+since_p_rel :< temp_loc_rel.
 _except+for_p_rel :< miscprep_rel.
 _except_p_rel :< miscprep_rel.
@@ -1897,6 +1930,7 @@ _forth_p_rel :< dir_or_state_nontemp_rel.
 _forth_p_dir_rel := _forth_p_rel & dir_rel.
 _forth_p_state_rel := _forth_p_rel & state_loc_rel.
 _forward_p_rel :< miscprep_rel.
+_forwards_p_rel :< miscprep_rel.
 _fore+and+aft_p_rel :< miscprep_rel.
 _from_p_rel :< miscprep_rel.
 _from_p_to_rel := dir_rel & instance_rel.
@@ -1946,6 +1980,7 @@ _just+like_p_rel :< miscprep_rel.
 _less+than_p_rel :< miscprep_rel.
 _like_p_rel :< miscprep_rel.
 _maximum_p_rel :< miscprep_rel.
+_midfield_p_rel :< state_loc_rel.
 _more+than_p_rel :< miscprep_rel.
 _namely_p_rel :< miscprep_rel.
 _nationwide_a_1_rel :< miscprep_rel.
@@ -1967,6 +2002,7 @@ _off+of_p_rel :< miscprep_rel.
 _off_p_rel :< dir_or_state_nontemp_rel.
 _off_p_dir_rel := _off_p_rel & dir_rel.
 _off_p_state_rel := _off_p_rel & state_loc_rel.
+_offshore_p_rel :< miscprep_rel.
 _on_p_rel :< dir_or_state_nontemp_rel.
 _on_p_dir_rel := _on_p_rel & dir_rel.
 _on_p_state_rel := _on_p_rel & state_loc_rel.
@@ -2012,6 +2048,7 @@ _regarding_p_rel :< miscprep_rel.
 _right+away_p_rel :< miscprep_rel.
 _save_p_rel :< miscprep_rel.
 _side+by+side_p_rel :< miscprep_rel.
+_sideways_p_rel :< miscprep_rel.
 _since_p_rel :< temp_loc_rel.
 _such+as_p_rel :< miscprep_rel.
 _thanks+to_p_rel :< miscprep_rel.
@@ -2072,6 +2109,8 @@ _at+all_a_1_rel :< neg_polar_rel.
 _ever_a_1_rel :< neg_polar_rel.
 _nomore_a_1_rel :< neg_polar_rel.
 _or+what_a_1_rel :< neg_polar_rel.
+
+_please_x_rel :< adv_rel.
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Determiner preds
@@ -2259,7 +2298,7 @@ _the_q_rel := basic_def_explicit_q_rel & def_or_demon_q_rel &
 which_q_rel :< explicit_quant_agr_q_rel.
 _all_q_rel := explicit_quant_agr_q_rel & both_all_q_rel.
 _not+all_q_rel := explicit_quant_agr_q_rel & both_all_q_rel.
-idiom_q_rel :< implicit_q_rel.
+idiom_q_i_rel :< implicit_q_rel.
 
 dir_state_modable_rel := predsort.
 modable_rel := basic_nom_rel & dir_state_modable_rel.
@@ -2314,7 +2353,7 @@ abstr_named_rel :< named_or_meas_rel.
 gen_named_rel := abstr_named_rel.
 named_np_or_num_rel :< gen_named_rel.
 abstr_named_np_rel :< named_np_or_num_rel.
-named_np_rel := abstr_named_np_rel & reg_nom_rel.
+named_np_rel := abstr_named_np_rel & reg_nom_rel & norm_nom_or_place_rel.
 named_num_or_seq_rel :< nom_rel.
 ; DPF 03-may-04 ; Changed non_temp_nonpro_rel to nom_nocmpnd_rel, to prevent
 ; these from appearing in N-N-compounds
@@ -2460,7 +2499,9 @@ bare_n_jmod_rel := bare_nom_rel.
 ; Disallow any modification ('on top' 'of course')
 bare_n_nomod_rel := bare_nom_rel.
 
-mnp_symb_rel := abstr_meas_nom_rel.
+n-ed_rel := basic_non_temp_nonpro_rel & nom_nbar_rel & nonpro_rel.
+
+mnp_symb_rel := abstr_meas_nom_rel & nonpro_rel.
 
 ; For 'it is a pleasure to visit abrams.' and 'Abrams is a pleasure to visit.'
 prednom_rel := nonpro_rel.
@@ -2483,6 +2524,8 @@ abstr_excl_rel := independent_mod_rel.
 greet_rel :< abstr_excl_rel.
 
 excl_rel :< abstr_excl_rel.
+polite_rel :< excl_rel.
+
 ; For adjectival pro-forms like "the last", and derived number-nouns, neither
 ; of which appear in N-N-compounds
 nom_nocmpnd_rel :< non_temp_nom_rel.
@@ -2566,15 +2609,9 @@ dir_rel := dir_or_state_nontemp_rel & dir_or_unsp_loc_rel.
 state_loc_rel := dir_or_state_nontemp_rel.
 generic_loc_rel :< loc_abstr_rel.
 
-temp_loc_abstr_rel :< loc_abstr_rel.
+temp_loc_rel := loc_abstr_rel & independent_mod_rel.
 
 miscprep_rel :< nontemp_prep_rel.
-
-temp_loc_rel := temp_loc_abstr_rel & independent_mod_rel.
-; Specific temporal locatives in, on, at
-temp_loc_sp_rel := temp_loc_rel.
-; Decomposed rel for e.g. free relative "when"
-temp_loc_x_rel := temp_loc_rel.
 
 part_nom_rel := predsort.
 part_of_rel := reg_diadic_nom_rel & part_nom_rel.
@@ -2586,9 +2623,14 @@ loc_rel := dir_or_state_rel.
 
 dir_or_unsp_loc_rel :< prep_mod_rel.
 ; Used for implicit locative, as in "Kim arrived Tuesday"
-unspec_loc_rel := loc_rel & dir_or_unsp_loc_rel.
-unspec_loc_temp_rel := unspec_loc_rel & temp_loc_abstr_rel.
+unspec_loc_rel := loc_rel & dir_or_unsp_loc_rel & independent_mod_rel.
+unspec_loc_temp_rel := unspec_loc_rel & temp_loc_rel.
 unspec_loc_nontemp_rel := unspec_loc_rel & nontemp_rel.
+
+; Specific temporal locatives in, on, at
+temp_loc_sp_rel := unspec_loc_temp_rel.
+; Decomposed rel for e.g. free relative "when"
+temp_loc_x_rel := temp_loc_rel.
 
 interval_p_start_rel :< miscprep_rel.
 interval_p_end_rel := miscprep_rel.
@@ -2625,20 +2667,28 @@ non_comp_degree_rel :< degree_rel.
 ; So try alternate approach to e.g. 'Kim hid under five feet of snow'
 
 much_or_very_deg_rel := degree_rel & nonpro_or_mnp_rel & nonpro_or_num_rel.
+more_or_very_deg_rel := degree_rel.
 
 ; For specifiers of adjectives
 deg_rel :< non_comp_degree_rel.
 
-very_this_that_rel := deg_rel & much_or_very_deg_rel.
+very_this_that_rel := deg_rel & much_or_very_deg_rel & more_or_very_deg_rel.
 ; For specifiers of positive adjectives
 very_deg_rel := very_this_that_rel.
 
 ; For degree specifiers "this/that/too/as" as in "that much", "so tall"
 this_that_deg_rel :< very_this_that_rel.
+
+; For 'more" with positive adjectives
+more_deg_rel :< more_or_very_deg_rel.
+
 ; For as..as, too..to
 comp_as_too_degree_rel := this_that_deg_rel & comp_more_less_rel.
 comp_more_degree_rel := much_deg_rel & comp_more_less_rel.
 enough_deg_rel :< degree_rel.
+
+; For specifiers of superlatives: "very tallest", "next tallest"
+sup_deg_rel :< very_deg_rel.
 
 ; For specifiers of "the", including "only" and "just"
 just_only_degree_rel :< degree_rel.
@@ -2692,6 +2742,7 @@ difference_rel := miscprep_rel.
 ; Abstract prep relations
 ; Needed for idiosyncratic decomposition of "why"
 cause :< miscprep_rel.
+
 ; For identity, as with pronoun in tag questions.
 id_rel :< predsort.
 
@@ -2702,6 +2753,7 @@ _be_v_id_rel :< cop_id_rel.
 _be_v_nv_rel :< cop_id_rel.
 title_id_rel := cop_id_rel.
 person_name_rel := cop_id_rel.
+_colon_v_id_rel := cop_id_rel.
 unspec_adj_rel :< adj_rel.
 quantity_rel :< reg_diadic_nom_rel.
 prednom_state_rel :< reg_diadic_nom_rel.
@@ -2734,12 +2786,13 @@ compound_name_rel := unspec_rel.
 ; For 'the term "whippletree"'
 term_rel := compound_rel.
 parenthetical_rel := unspec_rel.
+; For n-ed as in "wide-eyed"
+unspec_mod_rel := unspec_rel.
+; For reflexive pro modification: 'you yourself' 'do it yourself'
+refl_mod_rel := unspec_rel.
+
 ; For instrumental relative clauses
 with_p_rel :< miscprep_rel.
-
-
-; Used for vocatives.
-unspec_mod_rel :< prep_mod_rel.
 
 ; Relation introduced for tag questions
 probable_rel :< adj_rel.
@@ -2764,6 +2817,7 @@ _and+yet_c_rel :< conj_rel.
 _after_c_rel :< conj_rel.
 _as+well+as_c_rel :< conj_rel.
 _but_c_rel :< conj_rel.
+_but+also_c_rel :< conj_rel.
 _but+not_c_rel :< conj_rel.
 _but+then_c_rel :< conj_rel.
 _minus_c_rel :< conj_rel.
@@ -2783,6 +2837,7 @@ _both_c_rel :< conj_rel.
 _either_c_rel :< conj_rel.
 _neither_c_rel :< conj_rel.
 _not_c_rel :< conj_rel.
+_et+al_c_rel :< conj_rel.
 _etc_c_rel :< conj_rel.
 _to+name+a+few_c_rel :< conj_rel.
 _not+to+mention_c_rel :< conj_rel.
@@ -2795,10 +2850,11 @@ discourse_rel :< conj_rel.
 num_seq_rel :< conj_rel.
 
 
-abstr_place_rel := basic_diadic_modable_nom_rel & non_temp_nonpro_rel &
+abstr_place_rel := unspec_diadic_nom_rel & non_temp_nonpro_rel &
                    norm_nom_or_place_rel.
-place_n_rel := abstr_place_rel & abstr_named_rel.
-_place_n_1_rel :< place_n_rel.
+basic_place_n_rel := abstr_place_rel & abstr_named_rel.
+place_n_rel :=  basic_place_n_rel & modable_rel.
+_place_n_1_rel :< basic_place_n_rel.
 
 time_n_rel := modable_rel & temp_abstr_rel & independent_mod_rel.
 _time_n_1_rel :< time_n_rel.
@@ -2815,6 +2871,7 @@ _be_v_there_rel :< v_event_arg1_rel.
 _be_v_itcleft_rel :< v_event_arg1_rel.
 _gotta_v_modal_rel :< modal_rel.
 _got_v_to_rel :< v_event_arg1_rel.
+lex_imp_rel :< nonaux_event_rel.
 
 ; Want these to undergo the adj-coord rule
 integer_rel := compos_spec_rel & independent_mod_rel &
@@ -2982,6 +3039,12 @@ edited := genre.
 informal := genre.
 robust := informal.
 
+dialect := *sort*.
+us := dialect.
+br := dialect.
+uk := br.
+au := br.
+
 root_synsem := phr_synsem &
   [ LOCAL [ CAT [ HEAD verbal & [ TAM indic_tam ],
                   VAL [ SUBJ *olist*,
@@ -2989,7 +3052,7 @@ root_synsem := phr_synsem &
                         COMPS < > ],
                   MC + ],
             CONT.MSG message & [ PRED #pred ],
-            CONJ cnil_or_lexconj & [ CHEAD.LEFT.FIRST cnil ] ],
+            CONJ cnil & [ CHEAD.LEFT.FIRST cnil ] ],
     NONLOC [ SLASH 0-dlist & [ LIST < > ],
              REL 0-dlist & [ LIST < > ],
              QUE 0-dlist & [ LIST < > ] ],

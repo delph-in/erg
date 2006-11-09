@@ -50,7 +50,7 @@
   (let* ((relpred (mrs::rel-pred rel))
          (relname (when (and relpred 
                              (or (symbolp relpred) (stringp relpred)))
-                    (string relpred))))
+                    (string-downcase relpred))))
     (and relname
          (equal "_i_rel" (subseq relname (- (length relname) 6))))))
 

@@ -184,7 +184,7 @@
     will_aux_pos_cx will_aux_pos_cx_2 would_aux_pos_cx 
     would_aux_pos_cx_2 had_better_cx had_better_cx_2
     u_pro you_guys you_people yall yall_2 yall_3 you_all
-    and_conj_slash and_then_1 and_or_conj_1 and_or_conj_2
+    and_conj_slash and_or_conj_1 and_or_conj_2
     and_or_conj_3 and_conj_amp and_conj_2_amp
     apostrophe_s_lex apostrophe_s_3_lex apostrophe_s_4_lex
     mister missus mr_title_2 doctor_ttl dr_ttl_2 prof_title mrs_title_2
@@ -245,7 +245,7 @@
     a_one_adj_2 a_quarter_adj2 i_2 i_guess_disc_2 i_guess_disc_4
     i_mean_disc_2 i_must_say_root_2 i_must_say_root_4 i_think_disc_2
     or_conj_1a or_conj_2a order_n1a order_n2a order_ttla oregon_n2
-    one_adj_digit his_her_poss_2 backcountry_n1
+    one_adj_digit his_her_poss his_her_poss_2 backcountry_n1
     3d_adj eight_day_num eight_day_num_yofc eighteen_day_num 
     eighteen_day_num_yofc eighteenth_day_num eighth_day_num eleven_day_num 
     eleven_day_num_yofc eleventh_day_num fifteen_day_num 
@@ -340,11 +340,14 @@
     pennsylvania_n2 rhodeisland_n2 southcarolina_n2 southdakota_n2 tennessee_n2
     texas_n2 utah_n2 vermont_n2 virginia_n2 washington_n2 washingtondc_n2
     washingtondc_n4 washingtondc_n5 washingtondc_n6 washingtondc_n8
-    washingtondc_n9 westvirginia_n2 wisconsin_n2 wyoming_n2
+    washingtondc_n9 westvirginia_n2 wisconsin_n2 wyoming_n2 goodwill_n1 
     okay_s_adv2 e_mail_n1 e_mail_n2 e_mail_n3 e_mail_n4 hotell_post_ttl 
-    goodwill_n1 be_inv_are be_inv_is be_inv_was be_inv_were
     se_isect sw_isect ne_isect nw_isect northwest_adj2 northeast_adj2
-    southwest_adj2 southeast_adj2 doubtlessly)
+    southwest_adj2 southeast_adj2 doubtlessly spec_n1 hon_abb_a1 them_abb
+    yer_pro e_g_pp2 e_g_disc_adv2 e_g_a2 e_g_pp3 e_g_disc_adv3 e_g_a3
+    after_all_adv2 year_abb_n1 year_abb_n2 years_abb_n1
+    full-grown_a2 because_abb because_of_abb_p
+    be_inv_are be_inv_is be_inv_was be_inv_were)
   "temporary expedient to avoid generating dual forms")
 
 (setf *gen-ignore-rules*
@@ -356,7 +359,6 @@
     ; This rule is relatively expensive and of marginal benefit in generation
     adjh_i_ques
     ; This rule allows a missing final conjunction in multiple coordination
-    np_coord_mid_noconj
     ; The following rules allow variation in usage of commas
     adjh_s_pr hadj_s appos_npr nadj_rr_pr
     v_coord_fin_mid_ig v_coord_nonfin_mid_ig s_coord_mid_ig p_coord_mid_ig
@@ -524,4 +526,3 @@
  numidentifierersatz_n5
  numidentifierersatz_n7
       ))
- 

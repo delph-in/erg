@@ -71,7 +71,9 @@
                (if (eql (char name cur) #\L) (< (incf cur) end))
                (if (eql (char name cur) #\E) (<= (incf cur) end))
                (or (= cur end)
-                   (and (digit-char-p (char name cur)) (= (incf cur) end))))))))
+                   (and (digit-char-p (char name cur))
+                        (= (incf cur) end))))))))
+
 (defun make-unknown-word-sense-unifications (word-string &optional stem)
   ;;; this assumes we always treat unknown words as proper names
   ;;; uncomment the *unknown-word-types* in globals.lsp
@@ -84,9 +86,15 @@
        (make-unification :lhs
           (create-path-from-feature-list '(STEM REST))
           :rhs (make-u-value :type 'lkb::*null*))
-       (make-unification :lhs
-          (create-path-from-feature-list '(SYNSEM LKEYS KEYREL CARG))
-          :rhs (make-u-value :type (string-downcase word-string))))))
+       ;;
+       ;; _fix_me_
+       ;; see my email to `developers' of today.                 (7-sep-06; oe)
+       ;;
+       (let ((carg #-:logon (string-downcase word-string)
+                   #+:logon word-string))
+         (make-unification
+          :lhs (create-path-from-feature-list '(SYNSEM LKEYS KEYREL CARG))
+          :rhs (make-u-value :type carg))))))
 
 
 (defun instantiate-generic-lexical-entry (gle surface)
@@ -354,9 +362,9 @@
                 (ignore-errors
                  (loop
                      for match in '(basic_n_proper_lexent
-                                    n_month_year_le
-                                    n_day_of_week_le
-                                    n_pers_pro_i_le)
+                                    n_-_c-month_le
+                                    n_-_c-dow_le
+                                    n_-_pr-i_le)
                      thereis (or (eq type match)
                                  (subtype-p type match)))))
                (cliticp (and (> (length string) 0)
@@ -385,7 +393,17 @@
       (gen-extract-surface edge initialp :stream stream)
       (get-output-stream-string stream))))
 
-
 (eval-when #+:ansi-eval-when (:load-toplevel :compile-toplevel :execute)
 	   #-:ansi-eval-when (load eval compile)
   (setf *gen-extract-surface-hook* 'gen-extract-surface))
+
+; DPF 20-oct-06 - Enable newly enhanced treatment of affixation with
+; multi-words, provided that the LKB version is recent enough.
+
+(defun find-infl-pos (unifs orths sense-id)
+  (declare (ignore unifs sense-id))
+  (if (and (fboundp 'lkb::lkb-version-after-p)
+           (lkb::lkb-version-after-p "2006/10/19 15:55:27"))
+      nil
+   ; default inflection position for multi-word entries is rightmost
+    (length orths)))

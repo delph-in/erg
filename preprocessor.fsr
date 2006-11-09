@@ -78,6 +78,9 @@
 ;;; Replace |«| and |»| with |"|
 !(?:«|»)					"
 
+;;; DPF 18-oct-06 - Temporarily replace |+| with |plus| for PET tokenizer bug
+! ([+])					 plus 
+
 ;;;
 ;;; Separate funny punctuation with whitespace on either side from the
 ;;; preceding and following word(s).
@@ -88,7 +91,7 @@
 ;;;
 ;;; Eliminate spurious space preceding ordinary punctuation
 ;;;
-! ([:;,.:!\)\?])		\1
+! ([;,.!\)\?])			\1
 
 ;;; Eliminate space preceding double quote when space on both sides
 ;;; (admittedly arbitrary, and not correct for S-initial stranded quote,
@@ -119,23 +122,33 @@
 ;;;
 ;;; Eliminate spurious space preceding right paren
 ;;;
-! ([\)])			\1
+! ([\)])				\1
 
 ;;;
 ;;; Eliminate spurious space following left paren
 ;;;
-!([\(]) 			\1
+!([\(]) 				\1
 
 ;;;
-;;; Add white space to left of (.
+;;; Add white space to left of (
 ;;;
-!([a-zA-Z0-9])([\(])			\1 \2
+!([a-zA-Z0-9.])([\(])			\1 \2
+
+;;;
+;;; Add white space around colon if sandwiched with following alphanumeric
+;;; (but not e.g. |http://...| and not ratios with numbers on both sides)
+;;;
+!([a-zA-Z0-9.])([:])([a-zA-Z])		\1 \2 \3
+!([a-zA-Z.])([:])([a-zA-Z0-9])		\1 \2 \3
+
+;;; And add white space to the left of colon when followed by white space:
+!([a-zA-Z0-9.])([:]) 			\1 \2 
 
 ;;; And the variants with surrounding punctuation
 
-!([a-zA-Z])([,:/])([a-zA-Z])([.?!,;])	\1\2 \3\4
-!([0-9])([,:/])([a-zA-Z])([.?!,;])	\1\2 \3\4
-!([a-zA-Z])([,:/])([0-9])([.?!,;])	\1\2 \3\4
+!([a-zA-Z])([,/])([a-zA-Z])([.?!,;])	\1\2 \3\4
+!([0-9])([,/])([a-zA-Z])([.?!,;])	\1\2 \3\4
+!([a-zA-Z])([,/])([0-9])([.?!,;])	\1\2 \3\4
 
 ;;;
 ;;; For now, simplify punctuation clusters found in subordinate quoted Ss, as
@@ -177,11 +190,6 @@
 ! ([A-HJ-Z]) ([A-HJ-Z]) 		 _\1 _\2 
 ! ([A-HJ-Z]) 				 _\1 
 ! ([A-HJ-Z])([.?!,;":\)-]+)		 _\1\2
-
-;;; Also add special treatment for abbrev OR for Oregon and for US
-;;; (consider also IN)
-! OR					 _OR
-! US					 _US
 
 ;;;
 ;;; Try correcting squished compounds, here just by listing
@@ -265,7 +273,8 @@
 ;;; Item identifiers: 1a, 3d, 1-a  (but crucially not 1st, 2nd, 3rd)
 ;;;
 ^([\(]*)[0-9]+[a-zA-Z]([.?!,;":\)]*)			\1IdentifierErsatz\2
-^([\(]*)[0-9]+-[a-zA-Z]([.?!,;":\)]*)			\1IdentifierErsatz\2
+^([\(]*)[0-9]{3}[0-9]+[a-zA-Z]+([.?!,;":\)]*)		\1IdentifierErsatz\2
+^([\(]*)[0-9]+[-][a-zA-Z]([.?!,;":\)]*)			\1IdentifierErsatz\2
 
 ;;;
 ;;; _fix_me_
@@ -310,6 +319,9 @@
 ^~?([\(]*)[0-9]{11}([.?!,;":\)]*)		\1ElevenDigitErsatz\2
 ^~?([\(]*)[0-9]{12}([.?!,;":\)]*)		\1TwelveDigitErsatz\2
 ^~?([\(]*)[0-9]{13,}([.?!,;":\)]*)		\1ThirteenPlusDigitErsatz\2
+
+^~?([\(]*)\-[0-9]+([.?!,;":\)]*)		\1NegDigitErsatz\2
+^~?([\(]*)\-[0-9]+.[0-9]+([.?!,;":\)]*)		\1NegDecimalErsatz\2
 
 ;;; Numerical ordinals like "360th"
 
@@ -383,10 +395,19 @@
 
 ;;; |an 800m hill|
 ;;;
-^~?([\(]*)[0-9]+[m'"]([.?!,;":\)]*)		\1MeasNPErsatz\2
+^~?([\(]*)[0-9]+([m'"]|cm|mm|σ)([.?!,;":\)]*)	\1MeasNPErsatz\3
 ^~?([\(]*)[0-9]+[Kk][m]([.?!,;":\)]*)		\1MeasNPErsatz\2
 ^~?([\(]*)[0-9]+[,.][0-9]+[m'"]([.?!,;":\)]*)	\1MeasNPErsatz\2
 ^~?([\(]*)[0-9]+[,.][0-9]+[Kk][m]([.?!,;":\)]*)	\1MeasNPErsatz\2
 ^~?([\(]*)[0-9]+[.,-][0-9]+[m'"]([.?!,;":\)]*)	\1MeasNPErsatz\2
 ^~?([\(]*)[0-9]+[.,-][0-9]+[Kk][m]([.?!,;":\)]*)	\1MeasNPErsatz\2
 ^~?([\(]*)1:[0-9]+([.?!,;":\)]*)		\1MeasNPErsatz\2
+
+
+;;; Also add special treatment for abbrev OR (Oregon), IN (Indiana) and US
++OR					_OR
++IN					_IN
++US					_US
+
+;+([^:]+):				\1
+;|					_:

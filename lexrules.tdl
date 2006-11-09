@@ -71,11 +71,12 @@ prp_verb := non_fin_verb & verb_participle_affix &
 ; generation, since "Kim has arrived" didn't say [PROGR -] so we could get
 ; 'Kim is being hired'.  One disadvantage is that we have to stipulate
 ; duplicate irregular passive forms for the irregular past participles.
+; DPF 25-Oct-06 - Removed PROGR - since we want to parse "having arrived",
+; and since the 11-Nov-03 difficulty has been resolved.
 
 psp_verb := non_fin_verb &
   [ CAT [ HEAD [ VFORM psp,
-                 TAM.ASPECT [ PROGR -,
-                              PERF + ],
+                 TAM.ASPECT.PERF +,
 		 PRD - ],
 	  VAL.SUBJ < [ OPT - ] > ] ].
 
@@ -167,8 +168,7 @@ mass_noun := local &
 mass_count_noun := local &
   [ CAT [ HEAD noun_or_ttl,
           VAL.SPR < [ LOCAL.AGR.PNG.PN 3sg ] > ],
-    CONT.HOOK.INDEX.PNG png & [ PN 3sg,
-                                GEN neut ] ]. 
+    CONT.HOOK.INDEX.PNG png & [ PN 3sg ] ]. 
 
 plur_noun := local &
   [ CAT [ HEAD noun_or_ttl,
@@ -226,6 +226,7 @@ lex_rule_supermost := phrase_or_lexrule & word_or_lexrule &
     DTR sign & [ ALTS #alts,
                  POSSCL -,
                  IDIOM #idiom,
+                 DIALECT #dialect,
                  SYNSEM.LOCAL local & 
                               [ CONT [ RELS [ LIST #rfirst,
                                               LAST #rmiddle ],
@@ -233,6 +234,7 @@ lex_rule_supermost := phrase_or_lexrule & word_or_lexrule &
                                                LAST #hcmiddle ] ] ] ],
     ALTS #alts,
     IDIOM #idiom,
+    DIALECT #dialect,
     SYNSEM abstr_lex_synsem & 
            [ LOCAL local &
                    [ CONT [ RELS [ LIST #rfirst,
@@ -486,6 +488,13 @@ loc_inv := lex_rule_basic &
 ; are unconstrained.
 ; DPF 25-nov-05 - Removed AUX + from mother, since it was preventing adjunct-
 ; extraction for e.g. "In Berlin, Browne is also Abrams"
+; DPF 08-oct-06 - Note that this rule does not correctly get the scope right
+; for "must not" which idiosyncratically gives the modal scope over the
+; the neg_rel.  Can't simply split rule, since would have to overwrite the
+; qeq in the lexical entry for "must" to insert neg_rel in scope chain.  So
+; probably need to manually add separate "must not" lexical entry and block
+; application of this rule to "must".  Then what about non-neg adverbs with
+; "must"?  FIX someday.
 
 adv_addition := lex_rule &
   [ STEM #orth,
@@ -812,6 +821,8 @@ vger_ing := lex_rule &
 ;; attach).
 ;; DPF 26-aug-04 - Note that we leave the output of the nominal-gerund rule
 ;; unmarked for INFLECTD so it can appear as the left member of n-n-cmpnds.
+;; DPF 13-jul-06 - Added DIV + to SPR, to avoid spurious ambiguity with
+;; nbar_coord_asym_rule.
 
 nominal_gerund := lex_rule_basic &
   [ STEM #orth,
@@ -848,7 +859,8 @@ nominal_gerund := lex_rule_basic &
 						   SPR *olist*,
 						   COMPS < > ] ],
                                        AGR.PNG #png ],
-                               --SIND #ind & [ PNG #png ],
+                               --SIND #ind & [ PNG #png,
+                                               DIV + ],
 			       NONLOC #snonloc,
 			       OPT - ] > ],
                  MC #mc,
@@ -1131,7 +1143,7 @@ attr_adj_lr := lex_rule &
 ;; consultant"
 ;; DPF 5-nov-05 - It's tempting to relax SYNSEM..MOD..KEY from nom_nbar_rel to 
 ;; reg_nom_rel in order to also allow "the retired Abrams", but this leads to
-;; unpleasant spurious ambiguity as in "Abrams has hired Browne."  Could try
+;; unpleasant spurious ambiguity as in "Abrams has hired Browne."  Let's try
 ;; a specialized variant of this rule for proper names which requires that
 ;; they then have a non-empty specifier.
 ;; DPF 13-nov-05 - Re: 16-sept-05, but this also prevents "most visited",
@@ -1162,8 +1174,7 @@ basic_attr_verb_part_lr := lex_rule &
         [ CAT [ HEAD adj &
                      [ MOD < synsem &
                              [ LOCAL intersective_mod &
-                                     [ CAT nbar_cat &
-                                           [ HEAD.KEYS.KEY nom_nbar_rel ],
+                                     [ CAT nbar_cat,
                                        CONJ cnil,
                                        AGR #ind ],
                                --SIND #ind ] >,
@@ -1171,7 +1182,7 @@ basic_attr_verb_part_lr := lex_rule &
                        KEYS.KEY norm_adj_rel ],
                 VAL [ SUBJ < >,
                       SPR < [ LOCAL local_min &
-                              [ CAT [ HEAD.KEYS.KEY much_or_very_deg_rel,
+                              [ CAT [ HEAD.KEYS.KEY more_or_very_deg_rel,
                                       VAL [ SPR *olist*,
                                             SPEC < [ LOCAL.CAT.HS-LEX 
                                                                 #hslex ] > ],
@@ -1190,7 +1201,7 @@ basic_attr_verb_part_lr := lex_rule &
           CONT.MSG #msg,
           CTXT #ctxt ],
        NONLOC #non-local & [ QUE 0-dlist ],
-       MODIFD.LPERIPH bool ],
+       MODIFD notmod & [ LPERIPH bool ] ],
     C-CONT [ HOOK [ LTOP #mltop,
                     INDEX #event,
                     XARG #ind ],
@@ -1202,19 +1213,22 @@ basic_attr_verb_part_lr := lex_rule &
              HCONS <! qeq & [ HARG #marg,
                               LARG #ltop ] !> ] ].
 
-attr_verb_part_lr := basic_attr_verb_part_lr &
+attr_verb_part_nbarmod_lr := basic_attr_verb_part_lr &
+  [ SYNSEM.LOCAL.CAT.HEAD.MOD < [ LOCAL.CAT.HEAD.KEYS.KEY nom_nbar_rel ] > ].
+
+attr_verb_part_lr := attr_verb_part_nbarmod_lr &
   [ DTR.SYNSEM.LOCAL.CAT.VAL.COMPS < > ].
 
 ; transitive -ing verbs
 
-attr_verb_part_tr_lr := basic_attr_verb_part_lr &
+attr_verb_part_tr_lr := attr_verb_part_nbarmod_lr &
   [ DTR.SYNSEM.LOCAL.CAT [ HEAD.VFORM prp,
                            VAL.COMPS 
                               < unexpressed &
                                 [ LOCAL.CAT.HEAD n_or_p &
                                   [ KEYS.KEY independent_rel ] ] . *olist* >]].
 
-attr_verb_part_psv_lr := basic_attr_verb_part_lr &
+attr_verb_part_psv_lr := attr_verb_part_nbarmod_lr &
   [ DTR.SYNSEM.LOCAL [ CAT [ HEAD.VFORM pas,
                              VAL.COMPS 
                               < unexpressed &
@@ -1222,6 +1236,21 @@ attr_verb_part_psv_lr := basic_attr_verb_part_lr &
                                                selected_rel ] . *olist* > ],
                        CONT.MSG.PSV #psv ],
     C-CONT.RELS <! [ PSV #psv ] !>].
+
+; For "the bewitching Abrams"
+; DPF 30-sept-06 - The DTR..VFORM prp constraint prevents e.g. "the newly
+; built Paris", so remove and see what happens to added ambiguity.
+
+attr_verb_part_namemod_lr := basic_attr_verb_part_lr &
+  [ SYNSEM.LOCAL.CAT.HEAD.MOD < [ LOCAL.CAT [ HEAD.KEYS.KEY named_rel,
+                                              VAL.SPR < expressed_synsem >]]>].
+
+attr_verb_part_intr_namemod_lr := attr_verb_part_namemod_lr &
+  [ DTR.SYNSEM.LOCAL.CAT.VAL.COMPS < > ].
+
+attr_verb_part_tr_namemod_lr := attr_verb_part_namemod_lr &
+  [ DTR.SYNSEM.LOCAL.CAT.VAL.COMPS < unexpressed &
+                                     [ LOCAL.CAT.HEAD n_or_p ] > ].
 
 ;; The partitive construction rule introduces a new type of relation: 
 ;; part_of_rel, which contains the semantic information of the partitive.
@@ -1461,6 +1490,43 @@ enough_addition := lex_rule &
             NONLOC #nonloc ],
     C-CONT [ RELS <! !>,
              HCONS <! !> ] ].
+
+; For "eyed" of "wide-eyed"
+;
+noun_adj_lr := lex_rule_basic &
+  [ DTR word_or_lexrule & #stem &
+        [ INFLECTD -,
+          SYNSEM [ LOCAL [ CAT [ HEAD noun &
+                                      [ MOD < >,
+                                        KEYS.KEY n-ed_rel ],
+				 VAL #val &
+                                      [ SUBJ < >,
+                                       SPR < synsem & 
+                                             [ LOCAL.CAT.HEAD.KEYS.KEY 
+                                                        quant_or_deg_rel ] >,
+                                       COMPS < > ] ],
+                           CONT.HOOK [ LTOP #nltop,
+                                       INDEX #nind ],
+                           CTXT #ctxt ],
+		   NONLOC #non-local ],
+          KEY-ARG #keyarg ],
+    SYNSEM [ LOCAL [ CAT [ HEAD n-ed &
+                                [ MOD < >,
+                                  KEYS [ KEY norm_nom_rel,
+                                         ALTKEY no_rel,
+                                         ALT2KEY norm_rel ] ],
+                           VAL #val ],
+                     CTXT #ctxt ],
+             NONLOC #non-local,
+             MODIFD notmod ],
+    C-CONT [ HOOK [ LTOP #nltop,
+                    INDEX #nind ],
+             RELS <! !>,
+             HCONS <! !> ],
+    KEY-ARG #keyarg,
+    ARGS < #stem >,
+    INFLECTD +,
+    POSSCL - ].
 
 ;; Punctuation rules
 ;
