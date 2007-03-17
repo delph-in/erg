@@ -411,7 +411,8 @@
             (setf (schar string 0) (char-upcase (schar string 0))))
           (unless (or initialp cliticp)
             (format stream " "))
-          (let ((start (file-position stream)))
+          (let (#+:logon 
+                (start (file-position stream)))
             (loop
                 with hyphenp
                 for c across string
