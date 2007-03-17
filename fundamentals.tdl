@@ -23,7 +23,6 @@ sign_min := *avm* &
 ;; GENRE used to control variations in grammaticality, e.g. for edited
 ;; vs informal text, but subsuming earlier boolean ROBUST feature so we
 ;; can accommodate some ill-formed input such as missing det for sg-noun.
-;; POSSCL marks whether sign contains a possessive clitic.
 ;; IDIOM marks whether sign contains an idiomatic element.
 ;; --SIND is re-entrant with HOOK.INDEX, to help modularize path specs,
 ;; and to delay expansion of subcategorizations until necessary.
@@ -35,7 +34,6 @@ sign := sign_min &
     INFLECTD bool,
     GENRE genre,
     DIALECT dialect,
-    POSSCL bool,
     IDIOM bool,
     STEM *list* ].
 
@@ -54,8 +52,7 @@ word_or_lexrule := word_or_lexrule_min & sign &
   [ ALTS alts_min ].
 
 word := word_or_lexrule &
-  [ POSSCL -,
-    SYNSEM.PUNCT.PNCTPR ppair ].
+  [ SYNSEM.PUNCT.PNCTPR ppair ].
 
 ; Not all phrases have SYNSEM phr_synsem, since we need to allow the head-comp
 ; rules to build signs which are still [ SYNSEM lex_synsem ], for constructions
@@ -81,7 +78,6 @@ synsem_min0 := synsem_min &
 synsem_min1 := synsem_min0 &
   [ OPT bool,
     LEX luk,
-    ROOT bool,
     NONLOC non-local_min,
     MODIFD xmod,
     --SIND *top*,
@@ -318,11 +314,11 @@ p_or_adv := n_or_p_or_v_or_adv & p_or_adv_or_dadv & n_or_a_or_p_or_adv &
             n_or_p_or_adv.
 subst_or_adv :< head.
 
-subst := subst_or_func & subst_or_adv.
+subst := subst_or_func.
 
 v_or_g_or_p :< subst.
 
-non_noun :< subst.
+non_noun := subst & subst_or_adv.
 v_or_a_or_p :< non_noun.
 
 a_or_adv := n_or_a_or_p_or_adv & n_or_a_or_adv_or_det.
@@ -425,8 +421,7 @@ verb_or_frag := verb_or_frag_or_lexcomp.
 
 ; Added poss-able to allow s's as subjects of quoting verbs, as in
 ; 'Kim arrived said Sandy.'
-verb := verbal & v_or_p & n_or_v & v_or_a & poss-able &
-  [ VOICE voice ].
+verb := verbal & v_or_p & n_or_v & v_or_a & poss-able.
 
 ; DPF 24-jul-05 - Removed nominal as supertype of comp since we use a rule to
 ; convert NP-subject-taking VPs into CP-taking ones, with distinct semantic
@@ -570,11 +565,6 @@ declarative := decl_int & decl_imp.
 interrogative :< decl_int.
 imperative :< decl_imp.
 
-
-voice :< *sort*.
-active :< voice.
-passive :< voice.
-
 mood :< *sort*.
 indicative :< mood.
 subjunctive :< mood.
@@ -645,10 +635,14 @@ individual := individual_min & semarg &
 
 ; DIV (divisible) distinguishes singular count nouns from plural and mass 
 ; nouns, for determiners like "some", and for bare-plural NPs.
+; IND (individuated) draws the relevant semantic distinction between 
+; countable and non-countable entities, so DIV should be only a morphosyntactic
+; distinction.
 
 index := individual &
   [ PNG png,
-    DIV bool ].
+    DIV bool,
+    IND bool ].
     
 ; Moved SORT to individual, since need to allow constraint to affect events too
 full_index := index &
@@ -708,14 +702,14 @@ event := event_or_deg-ind &
 ; Once used to distinguish discourse adverbs, for VIT purposes - now obsolete?
 disc_frag :< event_or_index.
 
-; WLINK links semantic relation to input string elements, more or less.
+; LNK links semantic relation to input string elements
 ; CFROM and CTO used for characterization
 
 relation_min := *avm*.
 relation := relation_min &
   [ PRED predsort,
     LBL handle,
-    WLINK *list*,
+    LNK *list*,
     CFROM *top*,
     CTO *top* ].
 
@@ -786,27 +780,31 @@ qeq := scp_pr & [ HARG.INSTLOC #1, LARG.INSTLOC #1 ].
 ; have a complex-conj CONJ value.  A complex CONJ value has three parts: the
 ; handles and indices of the sub-parts of the right conjunct, and the CHEAD
 ; info that gets passed from the right conjunct to the mother.  The CHEAD
-; value has only one piece of information: the CONJ values of the
+; value has only one piece of information: the CONJ value of the
 ; left conjunct daughters.  For more info about how this works, see
 ; top_coord_rule in syntax.tdl.
 
-conj := *avm* &
-  [ CHEAD chead ].
+conj := *avm*.
 cnil_or_numconj :< conj.
 cnil_or_phrconj :< conj.
 cnil_or_lexconj :< conj.
-cnil := cnil_or_numconj & cnil_or_phrconj & cnil_or_lexconj.
-real-conj := conj.
+both_or_cnil :< conj.
+either_or_cnil :< conj.
+neither_or_cnil :< conj.
+first_or_cnil :< conj.
+notonly_or_cnil :< conj.
+cnil := cnil_or_numconj & cnil_or_phrconj & cnil_or_lexconj & both_or_cnil &
+        either_or_cnil & neither_or_cnil & first_or_cnil & notonly_or_cnil.
+
+real-conj := conj & 
+  [ CHEAD conj ].
 atomic-conj := real-conj &
-  [ CHEAD.LEFT.FIRST cnil ].
-both :< atomic-conj.
-either :< atomic-conj.
-neither :< atomic-conj.
-nor :< atomic-conj.
-first :< atomic-conj.
-notonly :< atomic-conj.
-chead := *avm* &
-  [ LEFT *list* ].
+  [ CHEAD cnil ].
+both := atomic-conj & both_or_cnil.
+either := atomic-conj & either_or_cnil.
+neither := atomic-conj & neither_or_cnil.
+first := atomic-conj & first_or_cnil.
+notonly := atomic-conj & notonly_or_cnil.
 
 ; CREL is a pointer to the coord_relation, needed for semantic composition.
 ; CPUNCT enables lexical conjunctions to block comma-marked left conjunct
@@ -882,8 +880,7 @@ lexkeys+ := lexkeys_full &
 ;; (and use defaults)
 
 non_affix_bearing := word_or_lexrule &
-  [ SYNSEM.LKEYS.KEYREL.WLINK *cons*,
-    INFLECTD + ].
+  [ INFLECTD + ].
 
 ; Rule
 
@@ -1067,8 +1064,7 @@ basic_message_full := basic_message & arg0_relation &
     
 no_msg :< basic_message_full.
 message := basic_message_full &
-  [ MARG handle,
-    PARAMS *diff-list* ].
+  [ MARG handle ].
 
 quant_or_wh_relation := arg0_relation &
   [ PRED quant_or_wh_rel,
@@ -1076,7 +1072,7 @@ quant_or_wh_relation := arg0_relation &
     RSTR handle,
     BODY handle ].
 
-; Values in the feature QUE and in PARAMS, used to distinguish ordinary
+; Value in the feature QUE, used to distinguish ordinary
 ; WH-questions from in-situ WH.
 param :< *sort*.
 
@@ -1213,6 +1209,9 @@ it_adj_arg1_relation := adj_arg1_relation.
 it_adj_arg12_relation := adj_arg12_relation & it_adj_arg1_relation.
 it_adj_arg123_relation := adj_arg123_relation & it_adj_arg12_relation.
 
+; For unknown word adjectives, which currently need a CARG
+adj_wcarg_relation := norm_adj_relation & const_arg01_relation.
+
 basic_arg01_relation := arg0_relation &
   [ ARG1 *top* ].
 
@@ -1285,6 +1284,9 @@ superl_relation := prep_relation &
 subord_relation := event_relation &
   [ MAIN handle,
     SUBORD handle ].
+
+; Relations for unknown-word verb lexical types, which currently need a CARG
+arg12_carg_relation := arg12_relation & const_arg01_relation.
 
 ; Discourse functions
 
@@ -1856,7 +1858,7 @@ _aside_p_rel :< miscprep_rel.
 _aside+from_p_rel :< miscprep_rel.
 _astray_p_rel :< miscprep_rel.
 _astride_p_rel :< miscprep_rel.
-_at_p_rel := state_loc_rel & unspec_loc_nontemp_rel.
+_at_p_rel := state_loc_rel.
 _at_p_temp_rel :< temp_loc_sp_rel.
 _athwart_p_rel :< dir_or_state_nontemp_rel.
 _athwart_p_dir_rel := _athwart_p_rel & dir_rel.
@@ -2187,7 +2189,8 @@ like_m_rel := prpstn_or_like_m_rel.
 predsort := *sort*.
 
 non_number_rel := predsort.
-norm_rel := non_number_rel.
+norm_non_num_rel :< non_number_rel.
+norm_rel := norm_non_num_rel.
 event_or_degree_or_no_rel := predsort.
 non_conj_rel := predsort.
 norm_non_conj_rel := non_conj_rel & norm_rel.
@@ -2217,7 +2220,8 @@ non_freerel_rel := independent_rel.
 no_rel := non_freerel_rel & non_conj_rel & event_or_degree_or_no_rel &
           nonaux_event_rel & non_number_rel.
 ; Hack to prevent 'this/that' from being modified by non-wh rel clauses
-deictic_sg_rel := non_number_rel.
+; which it would do if this were instead a subtype of norm_rel.
+deictic_sg_rel := norm_non_num_rel.
 
 never_unify_rel := predsort.
 
@@ -2623,10 +2627,11 @@ diadic_nom_rel := reg_diadic_nom_rel & norm_nom_rel.
 loc_rel := dir_or_state_rel.
 
 dir_or_unsp_loc_rel :< prep_mod_rel.
+unspec_loc_or_mod_rel :< prep_rel.
 ; Used for implicit locative, as in "Kim arrived Tuesday"
-unspec_loc_rel := loc_rel & dir_or_unsp_loc_rel & independent_mod_rel.
+unspec_loc_rel := loc_rel & dir_or_unsp_loc_rel & independent_mod_rel &
+                  unspec_loc_or_mod_rel.
 unspec_loc_temp_rel := unspec_loc_rel & temp_loc_rel.
-unspec_loc_nontemp_rel := unspec_loc_rel & nontemp_rel.
 
 ; Specific temporal locatives in, on, at
 temp_loc_sp_rel := unspec_loc_temp_rel.
@@ -2788,7 +2793,7 @@ compound_name_rel := unspec_rel.
 term_rel := compound_rel.
 parenthetical_rel := unspec_rel.
 ; For n-ed as in "wide-eyed"
-unspec_mod_rel := unspec_rel.
+unspec_mod_rel := unspec_rel & unspec_loc_or_mod_rel.
 ; For reflexive pro modification: 'you yourself' 'do it yourself'
 refl_mod_rel := unspec_rel.
 
@@ -3025,7 +3030,7 @@ pair_punct := punct_mark & pair_or_no_punct & comma_or_pair_punct.
 lparen_or_no_punct := basic_punct_mark.
 lparen_punct := pair_punct & lparen_or_no_punct.
 rparen_punct := basic_clause_punct & pair_punct.
-dq_punct := basic_clause_punct & pair_punct.
+dq_punct := basic_clause_punct & pair_punct & 3dots_or_clause.
 sq_punct := basic_clause_punct & pair_punct.
 hyphen_dbl := hyphen_dbl_or_clause & hyphen_dbl_or_no_punct &
               hyphen_or_comma_or_clause & pair_or_no_punct.
@@ -3053,7 +3058,7 @@ root_synsem := phr_synsem &
                         COMPS < > ],
                   MC + ],
             CONT.MSG message & [ PRED #pred ],
-            CONJ cnil & [ CHEAD.LEFT.FIRST cnil ] ],
+            CONJ cnil ],
     NONLOC [ SLASH 0-dlist & [ LIST < > ],
              REL 0-dlist & [ LIST < > ],
              QUE 0-dlist & [ LIST < > ] ],

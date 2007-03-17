@@ -6,4 +6,4 @@
 ;;;
 
 
-(defparameter *grammar-version* "LinGO (Nov-06)")
+(defparameter *grammar-version* "LinGO (15-Mar-07)")

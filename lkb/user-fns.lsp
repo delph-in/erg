@@ -86,43 +86,49 @@
        (make-unification :lhs
           (create-path-from-feature-list '(STEM REST))
           :rhs (make-u-value :type 'lkb::*null*))
-       ;;
-       ;; _fix_me_
-       ;; see my email to `developers' of today.                 (7-sep-06; oe)
-       ;;
-       (let ((carg #-:logon (string-downcase word-string)
-                   #+:logon word-string))
-         (make-unification
-          :lhs (create-path-from-feature-list '(SYNSEM LKEYS KEYREL CARG))
-          :rhs (make-u-value :type carg))))))
+       (make-unification
+        :lhs (create-path-from-feature-list '(SYNSEM LKEYS KEYREL CARG))
+        :rhs (make-u-value :type (string-downcase word-string))))))
 
 
-(defun instantiate-generic-lexical-entry (gle surface)
-  (let ((tdfs (copy-tdfs-elements (lex-entry-full-fs (if (gle-p gle)
-                                                       (gle-le gle)
-                                                       gle)))))
+(defun instantiate-generic-lexical-entry (gle surface &optional (carg surface))
+  (let ((tdfs (copy-tdfs-elements
+               (lex-entry-full-fs (if (gle-p gle) (gle-le gle) gle)))))
     (loop
         with dag = (tdfs-indef tdfs)
         for path in '((STEM FIRST) (SYNSEM LKEYS KEYREL CARG))
         for foo = (existing-dag-at-end-of dag path)
         do (setf (dag-type foo) *string-type*))
-    (let* ((unifications (make-unknown-word-sense-unifications
-                          surface
-                          (or
-                           #+:logon
-                           (case (gle-id gle)
-                             (guess_n_gle 
-                              (format nil "/~a/" surface))
-                             (decade_gle
-                              (format nil "~as" surface)))
-                           surface)))
+    (let* ((surface(or
+                    #+:logon
+                    (case (gle-id gle)
+                      (guess_n_gle 
+                       (format nil "/~a/" surface))
+                      (decade_gle
+                       (format nil "~as" surface)))
+                    surface))
+           (unifications
+            (list 
+             (make-unification
+              :lhs (create-path-from-feature-list
+                    (append *orth-path* *list-head*))
+              :rhs (make-u-value :type surface))
+             (make-unification
+              :lhs (create-path-from-feature-list
+                    (append *orth-path* *list-tail*))
+              :rhs (make-u-value :type *empty-list-type*))
+             (make-unification
+              :lhs (create-path-from-feature-list '(SYNSEM LKEYS KEYREL CARG))
+              :rhs (make-u-value :type carg))))
            (indef (process-unifications unifications))
            (indef (and indef (create-wffs indef)))
            (overlay (and indef (make-tdfs :indef indef))))
-      (when indef
+      (values
+       (when overlay
         (with-unification-context (ignore)
           (let ((foo (yadu tdfs overlay)))
-            (when foo (copy-tdfs-elements foo))))))))
+            (when foo (copy-tdfs-elements foo)))))
+       surface))))
 
 
 (defun make-orth-tdfs (orth)
@@ -285,37 +291,6 @@
                       finally (return nil)))))
     (loop repeat (length arguments) collect nil)))
 
-(defun determine-derived-forms (le)
-  (loop
-      with patterns
-      = '((:plural plur_noun_orule)
-          (:present third_sg_fin_verb_orule)
-          (:past past_verb_orule)
-          (:passive passive_orule dative_passive_orule)
-          (:gerund prp_verb_orule))
-      with le = (typecase le
-                  (lex-entry le)
-                  (symbol (get-lex-entry-from-id le)))
-      with tdfs = (if (lex-entry-p le)
-                    (lex-entry-full-fs le)
-                    (return-from determine-derived-forms))
-      for (tag . ids) in patterns
-      for rules = (loop for id in ids collect (gethash id *lexical-rules*))
-      for mrs::*number-of-lrule-applications* = 0
-      for outputs
-      = (ignore-errors
-         (mrs::apply-instantiated-lexical-rules
-          (list (cons nil tdfs))
-          rules))
-      when outputs
-      collect (cons
-               tag
-               (loop
-                   for output in outputs
-                   collect (string-downcase
-                            (extract-orth-from-fs (rest output)))))))
-
-
 ;;;
 ;;; the following two functions allow customization of how edges are displayed
 ;;; in the LUI chart browser (not the traditional LKB chart window).  for each
@@ -345,19 +320,58 @@
 ;;; STEM to spell out the actual (canonical) surface form.  that would seem to
 ;;; require that we re-view assumptions about capitalization across the lexicon
 ;;; et al.  but the LKB should probably do that one day!        (30-aug-05; oe)
+;;; --- as of late, the ERG lexicon actually contains (some) STEM values that
+;;; reflect canonical capitalization; the modified code below will now try to
+;;; either (a) respect the orthography from the lexicon, as long as it contains
+;;; at least one upper-case letter and is string-equal() to the inflected form
+;;; (which tends to be true for proper names at least :-) or (b) invoke the old
+;;; heuristics to try and guess appropriate capitalization.  still not quite a
+;;; perfect solution, but to do better i now think the morphology would have to
+;;; stop upcasing things as soon as one of the inflectional rules applies.
+;;;                                                             (18-dec-06; oe)
 ;;;
-(defun gen-extract-surface (edge &optional (initialp t) &key stream)
+(defun gen-extract-surface (edge &optional (initialp t) &key cliticp stream)
   (if stream
     (let ((daughters (edge-children edge)))
       (if daughters
         (loop
             for daughter in daughters
             for foo = initialp then nil
-            append (gen-extract-surface daughter foo :stream stream))
+            do 
+              (setf cliticp 
+                (gen-extract-surface
+                 daughter foo :cliticp cliticp :stream stream))
+            finally
+              (setf (edge-lnk edge)
+                (mrs::combine-lnks
+                 (edge-lnk (first daughters))
+                 (edge-lnk (first (last daughters))))))
         (let* ((entry (get-lex-entry-from-id (first (edge-lex-ids edge))))
+               (orth (format nil "~{~a~^ ~}" (lex-entry-orth entry)))
+               ;;
+               ;; need to fix-up irregular cases like `Englishmen' manually :-{
+               ;;
+               (orth (if (ppcre::scan "man$" orth)
+                       (subseq orth 0 (- (length orth) 3))
+                       orth))
                (tdfs (and entry (lex-entry-full-fs entry)))
                (type (and tdfs (type-of-fs (tdfs-indef tdfs))))
                (string (string-downcase (copy-seq (first (edge-leaves edge)))))
+               ;;
+               ;; _fix_me_
+               ;; maybe we could be more courageous and just search for .orth.
+               ;; as a sub-sequence of .string., starting at position .prefix.
+               ;;                                               (22-dec-06; oe)
+               (prefix (loop
+                           for c across string
+                           while (member c '(#\( #\" #\') :test #'char=)
+                           count 1))
+               (suffix (min (length string) (+ prefix (length orth))))
+               (suffix (when (string-equal
+                              orth string :start2 prefix :end2 suffix)
+                         suffix))
+               (rawp (and suffix
+                          (loop for c across orth thereis (upper-case-p c))))
                (capitalizep
                 (ignore-errors
                  (loop
@@ -367,28 +381,50 @@
                                     n_-_pr-i_le)
                      thereis (or (eq type match)
                                  (subtype-p type match)))))
-               (cliticp (and (> (length string) 0)
-                             (char= (char string 0) #\'))))
-          (when capitalizep
-            (loop
-                with spacep = t
-                for i from 0 to (- (length string) 1)
-                for c = (schar string i)
-                when (char= c #\Space) do (setf spacep t)
-                else when (char= c #\_)
-                do
-                  (setf spacep t)
-                  (setf (schar string i) #\Space)
-                else do
-                  (when (and spacep (alphanumericp c))
-                    (setf (schar string i) (char-upcase c)))
-                  (setf spacep nil)))
+               (cliticp (or cliticp
+                            (and (> (length string) 0)
+                                 (char= (char string 0) #\')))))
+          (if rawp
+            (setf string
+              (concatenate 'string
+                (subseq string 0 prefix) orth (subseq string suffix)))
+            (when capitalizep
+              (loop
+                  with spacep = t
+                  for i from 0 to (- (length string) 1)
+                  for c = (schar string i)
+                  when (char= c #\Space) do (setf spacep t)
+                  else when (char= c #\_)
+                  do
+                    (setf spacep t)
+                    (setf (schar string i) #\Space)
+                  else do
+                    (when (and spacep (alphanumericp c))
+                      (setf (schar string i) (char-upcase c)))
+                       (setf spacep nil))))
+          (when (and (> (length string) 1)
+                     (char= (char string 0) #\_)
+                     (upper-case-p (char string 1)))
+            (setf string (subseq string 1)))
           (when (and initialp (alphanumericp (schar string 0)))
             (setf (schar string 0) (char-upcase (schar string 0))))
-          (format
-           stream
-           "~@[ ~*~]~a"
-           (and (not initialp) (not cliticp)) string))))
+          (unless (or initialp cliticp)
+            (format stream " "))
+          (let ((start (file-position stream)))
+            (loop
+                with hyphenp
+                for c across string
+                unless (and hyphenp (char= c #\space))
+                do (write-char c stream)
+                when (char= c #\-) do (setf hyphenp t)
+                else do (setf hyphenp nil))
+            (setf (edge-lnk edge)
+              (list :characters start (file-position stream))))
+          ;;
+          ;; finally, inform the caller as to whether we output something that
+          ;; inhibits intervening space (e.g. `mid-July').
+          ;;
+          (member (schar orth (- (length orth) 1)) '(#\-) :test #'char=))))
     (let ((stream (make-string-output-stream)))
       (gen-extract-surface edge initialp :stream stream)
       (get-output-stream-string stream))))

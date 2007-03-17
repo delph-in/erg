@@ -297,7 +297,13 @@
     ninetynine_year ninetyseven_year ninetysix_year ninetythree_year
     two-thousand two-thousand_one_4 two-thousand_two_4 two_thousand_three
     two_thousand_two
-    i_2 i_stutter i_stutter_2
+    i_2 i_stutter i_stutter_2 i_stutter_3 i_stutter_4 i_stutter_5 i_stutter_6
+    we_stutter_1 we_stutter_2 we_stutter_3 
+    you_stutter_1 you_stutter_2 you_stutter_3
+    they_stutter_1 they_stutter_2 they_stutter_3
+    he_stutter_1 he_stutter_2 he_stutter_3 
+    she_stutter_1 she_stutter_2 she_stutter_3 
+    it_stutter_1 it_stutter_2 it_stutter_3 
     be_th_cop_is_cx_2 be_id_is_cx_2 be_c_is_cx_2 be_c_am_cx_2
     telephone_abb_n1 telephone_abb_n2 adj_abb_n1 adv_abb_n1 anat_abb_n1
     centimeter_abb_n1 comparative_abb_n1 customer_abb_n1 customer_abb_n2
@@ -327,7 +333,8 @@
     hour_n2 hour_n3 hour_n4 approximately_abb approximately_abb_2 seaside_n2
     gallon_abb_n1 gallon_abb_n2 millimeter_abb_n2 milliliter_abb_n2
     foot_abb_n2 centimeter_abb_n2 meter_abb_n2 kg_abb_n1 kg_abb_n2 km2_abb_n1
-    with_p_abb2 fig_abb obs_abb_a1 obs_abb_a2 please_abb_adv please_abb_adv3
+    with_p_abb2 with_p_abb3
+    fig_abb obs_abb_a1 obs_abb_a2 please_abb_adv please_abb_adv3
     please_abb_adv4 please_abb_root route_abb_ttl route_abb_ttl2
     orig_abb orig_abb_2 specif_abb specif_abb_2 adj_abb_n1 adj_abb_n2
     anat_abb_n2 adv_abb_n1 adv_abb_n2 as_abb_post_ttl esp_abb_2 esp_abb_3
@@ -346,8 +353,10 @@
     southwest_adj2 southeast_adj2 doubtlessly spec_n1 hon_abb_a1 them_abb
     yer_pro e_g_pp2 e_g_disc_adv2 e_g_a2 e_g_pp3 e_g_disc_adv3 e_g_a3
     after_all_adv2 year_abb_n1 year_abb_n2 years_abb_n1
-    full-grown_a2 because_abb because_of_abb_p
-    be_inv_are be_inv_is be_inv_was be_inv_were)
+    full-grown_a2 because_abb because_of_abb_p worthwhile_a2 worthwhile_a4
+    t_marked_a1 t_marked_a3 u_shaped_a2 slash_per_p slash_per_p2
+    be_inv_are be_inv_is be_inv_was be_inv_were come_v3 go_v3 lie_v4 run_v4
+    stand_v3 micro_a2 mid_isect super_deg1 øvre_n2)
   "temporary expedient to avoid generating dual forms")
 
 (setf *gen-ignore-rules*
@@ -432,7 +441,8 @@
 (defparameter *generic-lexical-entries*
   '((named_gle :generate) (guess_n_gle :generate)
     (card_gle :generate) (ord_gle :generate)
-    (decade_gle :generate) (yofc_gle :generate)))
+    (decade_gle :generate) (yofc_gle :generate)
+    (dofw_gle :generate) (dofm_gle :generate)))
 
 (defparameter *non-idiom-root*
     'root_non_idiom )
@@ -470,6 +480,7 @@
 
 ;; temporary hack to avoid instantiating carg on 'ersatzes' with no carg slot
 ;; REMOVE_ME as soon as lex entries in ERG fixed
+#|
 (defparameter *ersatzes-with-no-carg*
     '(
  currencyersatzarp
@@ -526,3 +537,5 @@
  numidentifierersatz_n5
  numidentifierersatz_n7
       ))
+|#
+(defparameter *ersatzes-with-no-carg* nil)
