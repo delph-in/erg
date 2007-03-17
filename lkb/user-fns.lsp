@@ -341,7 +341,7 @@
               (setf cliticp 
                 (gen-extract-surface
                  daughter foo :cliticp cliticp :stream stream))
-            finally
+            #+:logon finally
               #+:logon
               (setf (edge-lnk edge)
                 (mrs::combine-lnks
