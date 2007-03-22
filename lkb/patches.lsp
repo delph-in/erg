@@ -52,17 +52,9 @@
                              (or (symbolp relpred) (stringp relpred)))
                     (string-downcase relpred))))
     (and relname
-         (equal "_i_rel" (subseq relname (- (length relname) 6))))))
-
-#|
-; DPF 06-jul-06 - Patch supplied by Ann for preprocessor error on "Kim's cat"
-(defun sort-edges-by-from (edges &key addressing)
-  (sort (copy-list edges)
-	'<
-	:key (lambda (x)
-	       (point-to-char-point (or (saf-edge-from x) "0") addressing))
-	))
-|#
+         (or 
+          (equal "_i_rel" (subseq relname (- (length relname) 6)))
+          (equal "-i_rel" (subseq relname (- (length relname) 6)))))))
 
 (in-package :cl-user)
 

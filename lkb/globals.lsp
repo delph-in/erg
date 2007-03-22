@@ -68,6 +68,7 @@
   '(root_strict root_frag)
   ;'(root_strict root_informal root_frag)
   ;'(root_strict root_informal root_frag root_robust)
+  ;'(root_formal)
   #+:arboretum
   '(root_strict root_strict_robust)
    "specifing valid parses")

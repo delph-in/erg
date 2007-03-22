@@ -44,8 +44,9 @@
 (setf *construction-semantics-path*
   `(,(vsym "C-CONT") ,(vsym "RELS") ,(vsym "LIST")))
 
-(setf *psoa-top-h-path* 
-  `(,(vsym "HOOK") ,(vsym "LTOP")))
+(setf *psoa-top-h-path* nil
+  ;`(,(vsym "HOOK") ,(vsym "LTOP"))
+  )
 
 (defparameter *psoa-index-path* 
   `(,(vsym "HOOK") ,(vsym "INDEX"))
@@ -114,18 +115,18 @@
   ((png.gen andro) . (gender m-or-f))
   ((png.gen neut) . (gender n))
 
-  ((png.pn 1sg) . (AND (pers 1) (num sg)))
-  ((png.pn 2sg) . (AND (pers 1) (num sg)))
-  ((png.pn 3sg) . (AND (pers 3) (num sg)))
-  ((png.pn non1sg) . (AND (pers 2-or-3) (num sg)))
+  ((png.pn 1s) . (AND (pers 1) (num sg)))
+  ((png.pn 2s) . (AND (pers 1) (num sg)))
+  ((png.pn 3s) . (AND (pers 3) (num sg)))
+  ((png.pn -1s) . (AND (pers 2-or-3) (num sg)))
   
-  ((png.pn 1pl) . (AND (pers 1) (num pl)))
-  ((png.pn 2pl) . (AND (pers 1) (num pl)))
-  ((png.pn 3pl) . (AND (pers 3) (num pl)))
+  ((png.pn 1p) . (AND (pers 1) (num pl)))
+  ((png.pn 2p) . (AND (pers 1) (num pl)))
+  ((png.pn 3p) . (AND (pers 3) (num pl)))
 
-  ((png.pn 1per) .  (pers 1))
-  ((png.pn 2per) .  (pers 2))
-  ((png.pn 3per) .  (pers 3))
+  ((png.pn 1) .  (pers 1))
+  ((png.pn 2) .  (pers 2))
+  ((png.pn 3) .  (pers 3))
 
   ((e.tense basic_tense) . (tense u))
   ((e.tense no_tense) . (tense u))
@@ -147,3 +148,4 @@
  ;;; case.  We therefore need to translate the RMRS `u'
  ;;; into `basic_tense'
 ))
+
