@@ -341,8 +341,7 @@
               (setf cliticp 
                 (gen-extract-surface
                  daughter foo :cliticp cliticp :stream stream))
-            #+:logon finally
-              #+:logon
+            finally
               (setf (edge-lnk edge)
                 (mrs::combine-lnks
                  (edge-lnk (first daughters))
@@ -411,8 +410,7 @@
             (setf (schar string 0) (char-upcase (schar string 0))))
           (unless (or initialp cliticp)
             (format stream " "))
-          (let (#+:logon 
-                (start (file-position stream)))
+          (let ((start (file-position stream)))
             (loop
                 with hyphenp
                 for c across string
@@ -420,7 +418,6 @@
                 do (write-char c stream)
                 when (char= c #\-) do (setf hyphenp t)
                 else do (setf hyphenp nil))
-            #+:logon
             (setf (edge-lnk edge)
               (list :characters start (file-position stream))))
           ;;
