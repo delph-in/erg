@@ -341,7 +341,8 @@
               (setf cliticp 
                 (gen-extract-surface
                  daughter foo :cliticp cliticp :stream stream))
-            finally
+              #+:logon finally
+              #+:logon
               (setf (edge-lnk edge)
                 (mrs::combine-lnks
                  (edge-lnk (first daughters))
@@ -410,7 +411,8 @@
             (setf (schar string 0) (char-upcase (schar string 0))))
           (unless (or initialp cliticp)
             (format stream " "))
-          (let ((start (file-position stream)))
+          (let (#+:logon 
+                (start (file-position stream)))
             (loop
                 with hyphenp
                 for c across string
@@ -418,13 +420,15 @@
                 do (write-char c stream)
                 when (char= c #\-) do (setf hyphenp t)
                 else do (setf hyphenp nil))
+            #+:logon
             (setf (edge-lnk edge)
               (list :characters start (file-position stream))))
           ;;
           ;; finally, inform the caller as to whether we output something that
           ;; inhibits intervening space (e.g. `mid-July').
           ;;
-          (member (schar orth (- (length orth) 1)) '(#\-) :test #'char=))))
+          (unless (string= orth "")
+            (member (schar orth (- (length orth) 1)) '(#\-) :test #'char=)))))
     (let ((stream (make-string-output-stream)))
       (gen-extract-surface edge initialp :stream stream)
       (get-output-stream-string stream))))

@@ -223,10 +223,13 @@ head_only := unary_phrase & headed_phrase &
   [ HD-DTR #head & [ SYNSEM.LOCAL.CONJ cnil ],
     ARGS < #head > ].
 
-head_initial := basic_binary_headed_phrase &
+basic_head_initial := basic_binary_headed_phrase &
   [ HD-DTR #head,
-    NH-DTR #non-head & [ SYNSEM.LOCAL.CONJ cnil_or_numconj ],
+    NH-DTR #non-head,
     ARGS < #head, #non-head > ].
+
+head_initial := basic_head_initial &
+  [ NH-DTR.SYNSEM.LOCAL.CONJ cnil_or_numconj ].
 
 head_initial_infl := head_initial & binary_headed_phrase.
 
@@ -311,8 +314,7 @@ decl_phrase := non_rel_clause &
   [ SYNSEM.LOCAL.CAT [ HEAD verb_or_frag &
                             [ VFORM fin,
                               INV -,
-                              PRD -,
-                              TAM indic_tam ],
+                              PRD - ],
                        MC bool ],
     HD-DTR.SYNSEM.LOCAL.CONT.HOOK [ LTOP #hdtop,
                                     INDEX #hdind ],
@@ -769,7 +771,7 @@ inf_non_wh_subj_rel_cl := basic_inf_non_wh_rel_cl &
                     INDEX #event ],
              RELS <! arg1_relation &
                      [ LBL #ltop,
-                       PRED expected_event_rel,
+                       PRED expected_event_v_rel,
                        ARG0 #event,
                        ARG1 #vpltop ] !> ] ].
 
@@ -1167,7 +1169,6 @@ head_subj_phrase := head_nexus_rel_phrase & head_final_infl &
                    PUNCT [ LPUNCT pair_or_no_punct,
                            RPUNCT comma_or_rbc_or_pair_or_no_punct,
                            PNCTPR ppair ] ] ].
-
 ; A head/comps phrase is a phrase that combines a head with something selected
 ; for by the COMPS feature.  Head/comps phrases come in two denominations:
 ; head/comp phrases and head/marker phrases.  A head/comp phrases is like the
@@ -1206,7 +1207,7 @@ head_comp_or_marker_phrase := head_valence_phrase & head_compositional &
                                         SPCMPS #spcomps ] ] ],
                     MODIFD #modif ],
     NH-DTR.SYNSEM #synsem & canonical_synsem &
-           [ PUNCT.PNCTPR #ppair ] ].
+                  [ PUNCT.PNCTPR #ppair ] ].
 
 ; ERB (03-10-96) hcomp_nc is no longer marked as non-clause because some of them
 ; are "clauses" in the sense of having a message (e.g., "Kim wants [to leave]").
@@ -1250,11 +1251,15 @@ head_comp_or_marker_phrase := head_valence_phrase & head_compositional &
 ; information from its RPUNCT, no longer no if it was marked with final comma,
 ; or clause_punct, etc - unacceptable, so we'll just live with generating
 ; 'Kim handed Abrams, the book.'
+; DPF 28-jun-07 - Made phrase be SYNSEM nonlex_synsem to prevent PPs from
+; being complements of v_p_le verbs, given that we now depend on the SYNSEM
+; type to distinguish P from PP for these particle guys.
 
 head_comp_phrase := head_comp_or_marker_phrase & head_initial &
                     binary_punct_phrase &
   [ INFLECTD #infl,
-    SYNSEM [ LOCAL [ CAT [ POSTHD #ph,
+    SYNSEM nonlex_synsem &
+           [ LOCAL [ CAT [ POSTHD #ph,
                            HS-LEX #hslex ],
 		     CONJ cnil ],
 	     LEX #lex ],
@@ -1306,7 +1311,7 @@ basic_head_marker_phrase := head_comp_or_marker_phrase &
                             PAIRED #nhpaired ] ] ].
 
 head_marker_phrase := basic_head_marker_phrase &
-  [ SYNSEM.LOCAL.CONJ real-conj & 
+  [ SYNSEM.LOCAL.CONJ complex-conj &
                       [ CREL #rel ],
     HD-DTR.SYNSEM.LOCAL.CONJ.CREL #rel ].
 
@@ -1374,7 +1379,7 @@ basic_head_marker_phrase_nom := head_marker_phrase & head_initial &
     HD-DTR.SYNSEM [ LOCAL [ AGR [ PNG #png,
                                   DIV #div ],
                             CONJ complex-conj & [ CREL.R-INDEX #ind ] ],
-                    PUNCT.RPUNCT hyphen_sgl_or_no_punct ],
+                    PUNCT.RPUNCT hyphen_sgl_or_rbc_or_no_punct ],
     NH-DTR.SYNSEM.LOCAL [ CAT.HEAD supnoun &
                                    [ KEYS.ALT2KEY #alt2key ],
                           CONT.HOOK.INDEX #ind & ref-ind ] ].
@@ -1468,8 +1473,16 @@ basic_head_opt_comp_phrase := head_valence_phrase & norm_unary_phrase &
 	     HCONS <! !> ],
     ARGS < #head > ].
 
+; DPF 28-jun-07 - Added event_or_hour_rel as temporary solution to puzzle
+; about making "three twenty" (clocktime) discharge its optional complement
+; even though it is built using hcomp which now stamps nonlex_synsem on the
+; mother, but the noun-optcomp rule wants the dtr to be basic_lex_synsem
+; in order to avoid spurious ambig with noun-noun compounds like "book cover"
+; So for now, we let "three twenty" go through the non-noun optcomp rule.
+
 head_opt_comp_phrase := basic_head_opt_comp_phrase &
-  [ SYNSEM [ LOCAL.CAT.VAL.COMPS #comps,
+  [ SYNSEM nonlex_synsem &
+           [ LOCAL.CAT.VAL.COMPS #comps,
              LEX #lex ],
     HD-DTR [ INFLECTD +,
              SYNSEM [ LOCAL.CAT [ HEAD.KEYS.KEY event_rel,
@@ -1494,7 +1507,7 @@ noun_opt_comp_phrase := basic_head_opt_comp_phrase &
   [ SYNSEM basic_lex_synsem &
            [ LOCAL.CAT.VAL.COMPS #comps,
              LEX #lex ],
-    HD-DTR [ SYNSEM basic_lex_synsem &
+    HD-DTR [ SYNSEM lex_or_nonlex_synsem &
                   [ LOCAL.CAT 
                           [ HEAD n_or_p,
                             VAL.COMPS 
@@ -1529,6 +1542,9 @@ extracted_arg_phrase := head_valence_phrase & head_only &
 ; wasn't being propagated.
 
 ; *** We still need special extraction rules for fronting CPs and VPs.
+; DPF 31-May-07 - Generalized COMPS gap to include S complements, by
+; making 'verb' (but not 'comp') be subtype of 'mobile', and adding 
+; constraint that the gap's SUBJ be *anti_list* to exclude VPs.
 
 extracted_comp_phrase := extracted_arg_phrase & head_compositional &
   [ SYNSEM canonical_synsem &
@@ -1542,8 +1558,10 @@ extracted_comp_phrase := extracted_arg_phrase & head_compositional &
 			       VAL [ SUBJ #subj,
 				     SPR #spr,
 				     COMPS < gap &
-					     [ LOCAL [ CAT.HEAD mobile,
-                                                       CONT.HOOK.INDEX #ind ],
+					     [ LOCAL 
+                                               [ CAT [ HEAD mobile,
+                                                       VAL.SUBJ *anti_list*],
+                                                 CONT.HOOK.INDEX #ind ],
                                                --SIND #ind & non_expl,
 					       NONLOC.SLASH #slash ]
 					     . #comps > ],
@@ -1598,7 +1616,8 @@ extracted_subj_phrase := extracted_arg_phrase &
 ; DPF 06-mar-06 - Without messages, we don't need (or want) this XARG hack.
 
 extracted_subj_phrase_fin := extracted_subj_phrase & decl_phrase &
-  [ SYNSEM.LOCAL [ CAT.VAL.SUBJ < >,
+  [ SYNSEM.LOCAL [ CAT [ HEAD.TAM indic_tam,
+                         VAL.SUBJ < > ],
                    CONT [ HOOK.INDEX.SF prop-or-ques ] ],
     HD-DTR.SYNSEM.LOCAL.CAT [ HEAD.VFORM fin,
                               VAL.SUBJ < [ LOCAL.CAT.HEAD.CASE nom ] > ] ].
@@ -1667,6 +1686,7 @@ basic_head_spec_phrase := head_valence_phrase & head_final &
                                     POSTHD #hdph ],
                               CONT [ HOOK #hdhook ],
                               CONJ cnil ],
+                      LEX #hdlex,
                       MODIFD #hmodif,
                       PHON #phon,
                       --SIND #semind,
@@ -1678,6 +1698,7 @@ basic_head_spec_phrase := head_valence_phrase & head_final &
                                                             VAL.COMPS #comps,
                                                             POSTHD #hdph ],
                                                       CONT.HOOK #hdhook ],
+                                              LEX #hdlex,
                                               MODIFD #hmodif,
                                               PHON #phon,
                                               --SIND #semind ] >,
@@ -1999,7 +2020,7 @@ adj_head_scop_prpnct_phrase := adj_head_scop_xp_phrase &
 ; DPF 30-sept-06 - Also allow robust comma on head-dtr.
 adj_head_scop_nopair_phrase := adj_head_scop_xp_phrase &
   [ SYNSEM.PUNCT.PNCTPR #ppair,
-    NH-DTR.SYNSEM.PUNCT.RPUNCT pair_or_no_punct,
+    NH-DTR.SYNSEM.PUNCT.RPUNCT rbc_or_pair_or_no_punct,
     HD-DTR.SYNSEM.PUNCT [ RPUNCT comma_or_rbc_or_clause_or_no_punct,
                           PNCTPR #ppair ] ].
 
@@ -2231,7 +2252,8 @@ n_adj_relcl_phrase := n_adj_int_phrase & isect_mod_phrase &
     HD-DTR.SYNSEM [ LOCAL.CAT [ VAL.SPR < [ LOCAL.CAT.HEAD.KEYS 
                                            [ KEY quant_or_deg_rel ] ] >,
                                 HEAD.KEYS.ALT2KEY non_number_rel ],
-                    NONLOC.REL 0-dlist ] ].
+                    NONLOC.REL 0-dlist,
+                    MODIFD.RPERIPH na_or_- ] ].
 
 ; The paired variant, where both daughters match in right punctuation
 n_adj_relcl_prpnct := n_adj_relcl_phrase &
@@ -2267,9 +2289,10 @@ n_adj_relcl_nopair := n_adj_relcl_phrase &
 ; handle in XARG, also unify with XARG.
 
 n_adj_redrel_phrase := n_adj_int_phrase & head_compositional &
-  [ HD-DTR.SYNSEM.LOCAL [ CAT.HEAD.KEYS.ALTKEY norm_non_conj_rel,
-                          CONT.HOOK [ LTOP #hand,
-                                      XARG #hand ] ],
+  [ HD-DTR.SYNSEM [ LOCAL [ CAT.HEAD.KEYS.ALTKEY norm_non_conj_rel,
+                            CONT.HOOK [ LTOP #hand,
+                                        XARG #hand ] ],
+                    MODIFD.RPERIPH na_or_- ],
     NH-DTR.SYNSEM 
        [ LOCAL [ CAT [ HEAD n_or_a_or_p_or_adv &
                             [ MOD < [ LOCAL intersective_mod ] > ],
@@ -2304,7 +2327,7 @@ h_adj_unsl_phrase := head_adj_int_phrase &
 ; DPF 10-dec-03 - Restrict this rule to exclude elided auxiliary heads, to
 ; avoid "Berlin, the road is, to"
 h_adj_sl_phrase := head_adj_int_phrase &
-  [ HD-DTR.SYNSEM.LOCAL.CAT.HEAD.KEYS.ALTKEY role_rel,
+  [ HD-DTR.SYNSEM.LOCAL.CAT.HEAD.KEYS.ALTKEY non_ellipt_rel,
     ARGS.REST.FIRST.SYNSEM.NONLOC.SLASH 1-dlist ].
 
 ; DPF 11-May-01 - Split adj_head_int_phrase into two: one for nominal head-dtrs
@@ -2333,7 +2356,7 @@ h_adj_sl_phrase := head_adj_int_phrase &
 
 adj_n_int_phrase := adj_head_int_phrase &
   [ SYNSEM.LOCAL.CAT.VAL.COMPS #comps & *obllist*,
-    HD-DTR [ SYNSEM.LOCAL.CAT [ HEAD nom_or_ttl,
+    HD-DTR [ SYNSEM.LOCAL.CAT [ HEAD basic_nom_or_ttl,
                                 VAL [ SPR < [ LOCAL.CAT.HEAD.KEYS.KEY 
                                                                quant_rel ] >,
                                       COMPS < > ] ],
@@ -2474,7 +2497,7 @@ extracted_adj_int_phrase := basic_extracted_adj_phrase & head_compositional &
     HD-DTR.SYNSEM canonical_synsem &
 	   [ LOCAL local_basic &
 		   [ CAT [ HEAD #head & v_or_a_or_p &
-				[ TAM.MOOD indicative,
+				[ TAM.MOOD ind_or_modal_subj,
                                   MOD < anti_synsem > ],
                            VAL #val,
 			   POSTHD #ph & +,
@@ -2551,14 +2574,15 @@ extracted_adj_npadv_phrase := basic_extracted_adj_phrase & head_compositional &
                  <! local &
                     [ CAT basic_nbar_cat & 
                           [ HEAD.KEYS.KEY modable_rel,
-                            VAL.SPR < [ LOCAL.CAT.HEAD det &
+                            VAL.SPR < synsem &
+                                      [ LOCAL.CAT.HEAD det &
                                                [ KEYS.ALTKEY no_rel ],
                                         OPT - ] > ],
                       CONT.HOOK.INDEX #ind & [ SORT location ] ] !> ],
     HD-DTR.SYNSEM canonical_synsem &
 	   [ LOCAL local_basic &
 		   [ CAT [ HEAD verb & [ VFORM fin_or_bse,
-                                         TAM.MOOD indicative,
+                                         TAM.MOOD ind_or_modal_subj,
                                          MOD *anti_list* ],
                            VAL.SUBJ < synsem & [ LOCAL.CAT.HEAD nominal,
                                                  --SIND non_expl-ind,
@@ -2570,6 +2594,7 @@ extracted_adj_npadv_phrase := basic_extracted_adj_phrase & head_compositional &
              NONLOC.SLASH 0-dlist,
 	     MODIFD notmod ],
     C-CONT [ RELS <! prep_relation &
+
                      [ LBL #hand,
                        PRED unspec_loc_rel,
                        ARG0.E [ TENSE no_tense,
@@ -2618,19 +2643,24 @@ generic_bare_np_phrase := norm_unary_phrase &
                            HC-LEX #hclex,
                            VAL [ SUBJ < >,
                                  COMPS < >,
-                                 SPR < > ],
+                                 SPR < [ LOCAL [ CAT.HEAD adv &
+                                                          [ KEYS.KEY 
+                                                           just_only_deg_rel ],
+                                                 CONT.HOOK.LTOP #splbl ] ] > ],
                            MC na ],
                      AGR ref-ind &
                          [ PNG #png ],
                      CONJ #conj ],
-             NONLOC #nonloc ],
+             NONLOC #nonloc,
+             MODIFD.RPERIPH + ],
     ARGS < [ SYNSEM 
              [ LOCAL [ CAT [ HEAD #head & noun_or_nomger,
                              HC-LEX #hclex,
                              VAL [ SUBJ *olist*,
                                    COMPS < >,
                                    SPR < [ OPT -,
-                                           LOCAL.CONT.HOOK.LTOP #splbl,
+                                           LOCAL [ CAT.HEAD det,
+                                                   CONT.HOOK.LTOP #splbl ],
                                            NONLOC [ SLASH 0-dlist,
                                                        REL 0-dlist,
                                                        QUE 0-dlist ] ] > ] ],
@@ -2679,12 +2709,21 @@ reg_bare_np_phrase := norm_bare_np_phrase &
 ; DPF 19-mar-06 - Divided bare_np_phrase into two, one for nouns and
 ; another for nominal gerunds, so we can restrict the gerunds to phrasal
 ; ones, to reduce the unwanted ambiguity for eg 'Singing is fun'.
+; DPF 23-may-07 - But this restriction is unfortunate in two ways: (1) it
+; prevents e.g. "Hiring is fun" since the verbal gerund LR preserves the
+; non-optionality of the verb's NP complement; (2) it prevents N-N compounds
+; like "bell ringing is fun" where the N-N compound rule carefully excludes
+; verbal gerunds as heads.  So we remove this constraint and merge these 
+; two rules again.
+
+;bare_np_phrase := reg_bare_np_phrase &
+;  [ ARGS < [ SYNSEM.LOCAL.CAT.HEAD basic_noun ] > ].
+;
+;bare_nomger_phrase := reg_bare_np_phrase &
+;  [ ARGS < [ SYNSEM nonlex_synsem & [ LOCAL.CAT.HEAD nomger ] ] > ].
 
 bare_np_phrase := reg_bare_np_phrase &
-  [ ARGS < [ SYNSEM.LOCAL.CAT.HEAD basic_noun ] > ].
-
-bare_nomger_phrase := reg_bare_np_phrase &
-  [ ARGS < [ SYNSEM nonlex_synsem & [ LOCAL.CAT.HEAD nomger ] ] > ].
+  [ ARGS < [ SYNSEM.LOCAL.CAT.HEAD noun_or_nomger ] > ].
 
 ; DPF 23-Nov-01 - Added SPR..KEY udef_q_rel to block num_noun as input.
 ; DPF 2-Jun-02 - Added ARGS..KEY non_temp_nom_rel to exclude temporal nouns.
@@ -2909,7 +2948,7 @@ np_cp_wh_phrase := unary_phrase & phrasal &
     ARGS < [ SYNSEM [ LOCAL [ CAT [ HEAD verbal &
                                          [ VFORM fin_or_inf,
                                            INV -,
-                                           TAM.MOOD indicative ],
+                                           TAM.MOOD ind_or_modal_subj ],
                                     VAL [ SUBJ < >,
                                           COMPS < > ],
                                     MC - ],
@@ -3041,7 +3080,7 @@ basic_n_n_cmpnd_phr := head_final & head_compositional & binary_punct_phrase &
                       QUE #que,
                       REL #rel ],
              MODIFD notmod_or_lmod,
-             PUNCT [ LPUNCT no_punct,
+             PUNCT [ LPUNCT pair_or_no_punct,
                      PNCTPR #ppair ] ] ],
     NH-DTR 
      [ SYNSEM 
@@ -3058,7 +3097,7 @@ norm_n_n_cmpnd_phr := basic_n_n_cmpnd_phr &
                                       INDEX #hind ] ],
     NH-DTR.SYNSEM [ LOCAL.CONT.HOOK.INDEX #modind,
                     PUNCT [ LPUNCT pair_or_no_punct,
-                            RPUNCT hyphen_or_pair_or_no_punct ] ],
+                            RPUNCT comma_or_hyphen_or_pair_or_no_punct ] ],
     C-CONT.RELS.LIST < prep_notense_relation &
                        [ LBL #ltop,
                          PRED compound_rel,
@@ -3116,7 +3155,7 @@ np_n_cmpnd_phr := n_n_cmpnd_phr &
                                      PRD - ],
                                     VAL [ SPR *anti_list*,
                                           SUBJ < > ] ] ],
-                      LEX na_or_+,
+                      LEX +,
                       MODIFD.LPERIPH + ] ],
     C-CONT [ RELS <! relation !>,
              HCONS <! !> ] ].
@@ -3164,7 +3203,8 @@ basic_np_name_cmpnd_phr := basic_n_n_cmpnd_phr &
              SYNSEM [ LOCAL [ CAT [ HEAD noun &
                                          [ KEYS [ KEY named_np_rel,
                                                   ALTKEY proper_q_rel ] ],
-                                    VAL.SPR < [ NONLOC non-local_none ] > ],
+                                    VAL.SPR < [ LOCAL.CAT.HEAD det,
+                                                NONLOC non-local_none ] > ],
                               CONT.HOOK [ LTOP #nhltop,
                                           INDEX #nhind & [ PNG.PN 3s ] ] ],
                       MODIFD.LPERIPH +,
@@ -3229,11 +3269,15 @@ np_city_state_phr := basic_np_name_cmpnd_phr &
 ; But this alas also blocks det-less noun compounds like 'sea level, where
 ; we don't want 'level' as left member, but do as head.  So instead make
 ; type for nouns like 'next' which can't be heads or non-heads.
+; DPF 21-jun-07 - Try restricting HD-DTR..KEY to nbar_or_nger_rel, to
+; prevent verbal gerunds as heads in compounds, e.g. to avoid spurious parse
+; for "[story involving] cats"
 
 noun_n_cmpnd_phr := n_n_cmpnd_phr &
   [ SYNSEM.MODIFD.LPERIPH #lperiph,
     HD-DTR.SYNSEM abstr_lex_synsem & 
-                    [ MODIFD notmod & [ LPERIPH na ],
+                    [ LOCAL.CAT.HEAD.KEYS.KEY nbar_or_nger_rel,
+                      MODIFD notmod & [ LPERIPH na ],
                       LEX + ],
     NH-DTR 
        [ INFLECTD -,
@@ -3246,7 +3290,8 @@ noun_n_cmpnd_phr := n_n_cmpnd_phr &
                              CONT.HOOK [ LTOP #nltop,
                                          INDEX #nind ] ],
                      LEX +,
-                     MODIFD.LPERIPH #lperiph ] ],
+                     MODIFD.LPERIPH #lperiph,
+                     PUNCT.RPUNCT hyphen_or_pair_or_no_punct ] ],
     C-CONT [ RELS <! prep_notense_relation &
                      [ PRED compound_rel ], 
                      [ PRED udef_q_rel,
@@ -3342,7 +3387,8 @@ n-adj_phrase := basic_unary_phrase &
                                        [ MOD < >,
                                          KEYS.ALT2KEY #alt2key ],
                                     VAL [ SPR < synsem_min &
-                                                [ NONLOC.SLASH 0-dlist ] >,
+                                                [ LOCAL.CAT.HEAD det,
+                                                  NONLOC.SLASH 0-dlist ] >,
                                           COMPS < > ] ],
                               CONT.HOOK [ LTOP #nltop,
                                           INDEX #nind ],
@@ -3424,6 +3470,12 @@ n-adj_phrase := basic_unary_phrase &
 ;; DPF 16-mar-06 - Re 13-Nov-03: Conflict with desire to constrain rel clause
 ;; rule via ALT2KEY.  So removed from NH-DTR, since 'the chair here' is now
 ;; ruled out by SORT mismatch.
+;; DPF 24-may-07 - Tried requiring PNG to match on both dtrs, but this blocked
+;; appos analysis of 'we have two cats, one from each litter'.  Also prevents
+;; 'Our team, six men and six women, is going to win', and "Our friends, a
+;; couple from Kansas, are visiting."  So remove constraint.
+;; DPF 31-may-07 - Changed HD-DTR..KEY from nonpro_or_num_rel to nom_rel,
+;; to allow "I myself arrived early" and "we the people"
 
 basic_appos_phr := head_initial_infl & head_compositional &
   [ SYNSEM phr_synsem &
@@ -3436,7 +3488,7 @@ basic_appos_phr := head_initial_infl & head_compositional &
              PUNCT.LPUNCT no_punct ],
     HD-DTR.SYNSEM canonical_synsem &
 	     [ LOCAL [ CAT [ HEAD noun & 
-                                [ KEYS [ KEY nonpro_or_num_rel,
+                                [ KEYS [ KEY nom_rel,
                                          ALT2KEY no_rel ] ],
                              VAL #valence &
                                   [ SPR *olist*,
@@ -3445,8 +3497,7 @@ basic_appos_phr := head_initial_infl & head_compositional &
                        CONT [ HOOK [ INDEX #hind & ref-ind &
                                            [ SORT #sort ],
                                      XARG #ltop ] ],
-                       CONJ cnil,
-                       AGR.PNG #png ],
+                       CONJ cnil ],
                NONLOC [ SLASH 0-dlist,
                         QUE 0-dlist,
                         REL 0-dlist ],
@@ -3459,8 +3510,7 @@ basic_appos_phr := head_initial_infl & head_compositional &
                              VAL [ SUBJ < >,
                                    COMPS < > ] ],
                        CONT [ HOOK.INDEX #modind &
-                                         [ SORT #sort ] ],
-                       AGR.PNG #png ],
+                                         [ SORT #sort ] ] ],
                NONLOC [ SLASH 0-dlist & [ LIST < > ],
                         QUE 0-dlist,
                         REL 0-dlist ],
@@ -3493,18 +3543,29 @@ appos_phr_prpnct := appos_np_phr &
                     PUNCT [ PAIRED #pnctpr,
                             PNCTPR #paired ] ] ].
 
+; DPF 18-jun-07 - This is a patch to enable us to get comma-marked appositives
+; as right conjuncts, while our comma constraints on conjuncts currently block
+; them with normal commas.
+
+appos_phr_rbc := appos_np_phr &
+  [ HD-DTR.SYNSEM [ LOCAL.CAT.HEAD.KEYS.ALTKEY explicit_or_proper_q_rel,
+                    PUNCT.RPUNCT comma_punct ],
+    NH-DTR.SYNSEM [ LOCAL.CAT.HEAD.KEYS.ALTKEY def_or_proper_q_rel,
+                    PUNCT.RPUNCT rbcomma_punct ] ].
+
 appos_indef_phr := appos_np_phr &
-  [ HD-DTR.SYNSEM.PUNCT [ RPUNCT comma_punct,
+  [ HD-DTR.SYNSEM.PUNCT [ RPUNCT comma_or_pair_punct,
                           PNCTPR #ppair ],
     NH-DTR.SYNSEM [ LOCAL.CAT.HEAD.KEYS.ALTKEY indef_or_udef_or_meas_rel,
-                    PUNCT [ RPUNCT comma_or_clause,
+                    PUNCT [ RPUNCT comma_or_clause_or_pair_punct,
                             PNCTPR #ppair ] ] ].
 
 ; 'Paris, home of the Eifel Tower'
 appos_nbar_phr := basic_appos_phr &
   [ SYNSEM.PUNCT.PAIRED #paired,
-    HD-DTR.SYNSEM.PUNCT [ PNCTPR #pnctpr,
-                          PAIRED #paired ],
+    HD-DTR.SYNSEM [ LOCAL.CAT.HEAD.KEYS.KEY nonpro_or_num_rel,
+                    PUNCT [ PNCTPR #pnctpr,
+                            PAIRED #paired ] ],
     NH-DTR.SYNSEM phr_synsem & 
                   [ LOCAL [ CAT [ HEAD.KEYS.KEY nom_nbar_rel,
                                   VAL.SPR < synsem & 
@@ -3609,14 +3670,20 @@ appos_nbar_phr := basic_appos_phr &
 ; appositives, as in "the manager today, Abrams, arrives."  So instead use
 ; value 'non_number_rel', which also allows 'no_rel', only excluding
 ; 'never_unify_rel'.
+; DPF 23-may-07 - Re: 01-may-04, we want "they know why Kim is here", and
+; "why" wants to modify a phrase with a non-empty SPR, so modnp "here"
+; needs such a SPR, but we'll make it anti_synsem_min to avoid unwanted
+; side-effects.
+; DPF 18-jun-07 - Re 30-sept-06: But if we block "here there", we also
+; block "here today" as in "Kim is here today", and also "Kim arrives late
+; this afternoon."  So remove this constraint, and live with the spurious
+; analysis of "here there".
 
 basic_npadv_mod_phrase := basic_unary_phrase & phrasal &
   [ SYNSEM [ LOCAL [ CAT [ HEAD modnp &
 				[ MOD < [ LOCAL intersective_mod &
 					  [ CAT 
-                                            [ HEAD subst & 
-                                              [ AUX -,
-                                                KEYS.ALT2KEY non_number_rel ],
+                                            [ HEAD subst & [ AUX - ],
                                               VAL.COMPS < >,
                                               MC #mc ],
                                             CONJ cnil ],
@@ -3628,7 +3695,7 @@ basic_npadv_mod_phrase := basic_unary_phrase & phrasal &
                                   PRD #prd ],
                            POSTHD +,
 			   VAL [ SUBJ < >,
-                                 SPR < >,
+                                 SPR < anti_synsem_min >,
                                  COMPS #comps ],
 			   MC #mc ],
 		     CONT.HOOK [ INDEX [ SORT #sort ],
@@ -3708,7 +3775,8 @@ npadv_yofc_phrase := basic_npadv_mod_phrase &
 ; analysis for 'ten foot rope' (in addition to intended NP-N compound).
 
 basic_measure_np_phrase := phrase &
-  [ SYNSEM [ LOCAL [ CAT [ HEAD noun & [ KEYS [ KEY meas_nom_rel,
+  [ INFLECTD #infl,
+    SYNSEM [ LOCAL [ CAT [ HEAD noun & [ KEYS [ KEY meas_nom_rel,
                                                 ALTKEY udef_q_rel,
                                                 ALT2KEY quantity_rel ],
                                          MOD < > ],
@@ -3718,7 +3786,8 @@ basic_measure_np_phrase := phrase &
              NONLOC [ SLASH 0-dlist,
                       QUE 0-dlist,
                       REL 0-dlist ] ],
-    DTR1 [ SYNSEM basic_lex_synsem &
+    DTR1 [ INFLECTD #infl,
+           SYNSEM basic_lex_synsem &
                   [ LOCAL [ CAT [ HEAD noun &
                                        [ KEYS [ KEY abstr_meas_nom_rel,
                                                 ALTKEY udef_q_rel,
@@ -3759,8 +3828,7 @@ bare_measure_np_phrase := norm_unary_phrase & basic_measure_np_phrase &
   [ SYNSEM.LOCAL [ CAT [ HEAD.CASE obliq,
                          VAL.COMPS < > ],
                    AGR #agr ],
-    DTR1 #dtr1 & [ INFLECTD +,
-		   SYNSEM [ LOCAL [ CAT.HEAD.KEYS.KEY abstr_meas_nom_rel,
+    DTR1 #dtr1 & [ SYNSEM [ LOCAL [ CAT.HEAD.KEYS.KEY abstr_meas_nom_rel,
                                     AGR #agr & [ PNG.PN 3p ] ],
                             MODIFD notmod,
                             LEX + ] ],
@@ -3778,8 +3846,7 @@ bare_measure_np_phrase := norm_unary_phrase & basic_measure_np_phrase &
 ; "ten miles on artificial snow is hard work", so we live with the ambiguity.
 
 binary_measure_np_phrase := binary_punct_phrase & basic_measure_np_phrase &
-  [ INFLECTD #infl,
-    SYNSEM.LOCAL [ CAT.VAL.COMPS #comps,
+  [ SYNSEM.LOCAL [ CAT.VAL.COMPS #comps,
                    AGR.PNG.PN 3s ],
     DTR2 [ INFLECTD +,
            SYNSEM [ LOCAL [ CAT [ HEAD intadj & 
@@ -3796,8 +3863,7 @@ binary_measure_np_phrase := binary_punct_phrase & basic_measure_np_phrase &
                                         XARG #index ],
                             CONJ cnil ],
                     LEX + ] ],
-    DTR1 [ INFLECTD #infl,
-           SYNSEM [ LOCAL [ CAT.HEAD.KEYS.KEY #key,
+    DTR1 [ SYNSEM [ LOCAL [ CAT.HEAD.KEYS.KEY #key,
                             CONT.HOOK [ LTOP #nhand,
                                         INDEX #index ],
                             AGR #agr ],
@@ -4005,8 +4071,8 @@ num_noun_sequence_phrase := binary_phrase &
 ; doing anything with that index just now, beyond checking for its presence.)
 ; DPF (1-May-99) Removed identification of HD-DTR..KEY and NHD-DTR..SLASH..KEY
 ; since the slash's KEY is already identified with the main verb's KEY in the
-; non-head dtr, for independent reasons.  Don't know what work this was supposed
-; to do, anyway.
+; non-head dtr, for independent reasons.  Don't know what work this was 
+; supposed to do, anyway.
 ;
 ; DPF 10-Jun-99 - Added SUBJ *olist* to head-dtr, to prevent e.g. "one to three".
 ; DPF 24-Mar-01 - Removed [MODIFD notmod] from mother, since free-rels need
@@ -4361,6 +4427,9 @@ partitive_np_phrase := norm_unary_phrase & phrasal &
 ; Vocatives
 ; Restrict to LEX +, to avoid appositives as vocatives (spurious ambiguity)
 ; DPF 06-mar-06 - XARG ??
+; DPF 13-jun-07 - Removed identif of MOD..XARG with the addressee_rel's LBL,
+; since it was clearly wrong (prevented this rule from ever succeeding with
+; attachment to S).
 vocative_np_phrase := norm_unary_phrase & phrasal &
  [ INFLECTD +,
    SYNSEM disc_adv_phr_synsem &
@@ -4369,9 +4438,8 @@ vocative_np_phrase := norm_unary_phrase & phrasal &
                                             [ CAT [ HEAD adverbee &
                                                       [ TAM.TENSE real_tense ],
                                                     VAL.SUBJ *olist* ],
-                                              CONT [ HOOK [ LTOP #ltop,
-                                                            INDEX #index,
-                                                            XARG #xarg ] ]]] >,
+                                              CONT.HOOK [ LTOP #ltop,
+                                                          INDEX #index ] ] ] >,
                                    KEYS.KEY abstr_excl_rel ],
                             MC + ],
                       CONJ #conj ],
@@ -4380,7 +4448,7 @@ vocative_np_phrase := norm_unary_phrase & phrasal &
             SYNSEM [ LOCAL [ CAT [ HEAD noun & 
                                         [ KEYS [ KEY named_rel,
                                                  ALTKEY proper_q_rel ] ],
-                                   VAL [ SPR < >,
+                                   VAL [ SPR *olist*,
                                          COMPS < >,
                                          SPEC < anti_synsem_min > ] ],
                              CONT.HOOK.INDEX #argind,
@@ -4391,7 +4459,7 @@ vocative_np_phrase := norm_unary_phrase & phrasal &
                              RPUNCT hyphen_or_comma_or_clause ] ] ] >,
    C-CONT [ HOOK [ LTOP #ltop,
                    INDEX #index ],
-            RELS <! [ LBL #xarg,
+            RELS <! [ LBL #ltop,
                       PRED addressee_rel,
                       ARG1 #argind,
                       ARG2 #index ] !>,
@@ -4437,6 +4505,9 @@ vocative_np_phrase := norm_unary_phrase & phrasal &
 ; DPF 22-Mar-01 - Moved AGR.DIV reentrancy down to NP coordination, since
 ; want to allow non-like AGR.DIV values for sentence coordination, as in
 ; "I arrived and consultants left."
+; DPF 29-may-07 - Changed constraint on RCONJ-DTR to be [LEX bool] rather
+; than nonlex_synsem, so we can allow "etc," as right dtr.  Conjunction words
+; are now [LEX na].
 
 basic_coord_phr := basic_binary_phrase & non_headed_phrase & 
   [ INFLECTD #infl,
@@ -4455,12 +4526,12 @@ basic_coord_phr := basic_binary_phrase & non_headed_phrase &
                       NONLOC #non-local ] ],
     RCONJ-DTR #right &
            [ INFLECTD #infl,
-             SYNSEM nonlex_synsem &
-                    [ LOCAL [ CAT.VAL [ COMPS #comps,
+             SYNSEM [ LOCAL [ CAT.VAL [ COMPS #comps,
                                         SPEC #spec,
                                         SPCMPS #spcmps ],
                               CONT.HOOK.INDEX individual ],
                       NONLOC #non-local,
+                      LEX bool,
                       PUNCT.PNCTPR #ppair ] ],
     ARGS < #left, #right > ].
 
@@ -4618,7 +4689,8 @@ subjh_rule_decl := binary_rule_right_to_left & head_subj_phrase & decl_phrase &
                     NONLOC.QUE 0-dlist ] ].
 
 subjh_mc_rule := subjh_rule_decl &
-  [ SYNSEM [ LOCAL [ CAT.MC +,
+  [ SYNSEM [ LOCAL [ CAT [ HEAD.TAM indic_tam,
+                           MC + ],
                      CONT.HOOK.INDEX.SF #pred & prop-or-ques ],
              PUNCT.RPUNCT.PSF #pred ] ].
 
@@ -4723,7 +4795,7 @@ subconj_prdp_v_init_rule := rule & subconj_prdp_v_init_phr.
 ; non_wh_rel_rule := rule & non_wh_rel_cl.
 
 bare_np_rule := rule & bare_np_phrase.
-bare_nomger_rule := rule & bare_nomger_phrase.
+;bare_nomger_rule := rule & bare_nomger_phrase.
 proper_np_rule := rule & proper_np_noconj.
 proper_np_conj_rule := rule & proper_np_conj.
 num_np_rule := rule & num_np_noconj.
@@ -4745,6 +4817,7 @@ noun_title_cmpnd_rule := binary_rule_right_to_left & noun_title_cmpnd_phr.
 n-adj_rule := rule & n-adj_phrase.
 appos_prpnct_rule := binary_rule_right_to_left & appos_phr_prpnct.
 appos_nopair_rule := binary_rule_right_to_left & appos_phr_nopair.
+appos_rbc_rule := binary_rule_right_to_left & appos_phr_rbc.
 appos_indef_rule := binary_rule_right_to_left & appos_indef_phr.
 appos_nbar_rule := binary_rule_right_to_left & appos_nbar_phr.
 npadv_mod_rule := rule & npadv_mod_phrase.
@@ -4826,7 +4899,8 @@ filler_head_rule_non_wh := binary_rule_right_to_left &
                            basic_head_filler_phrase_fin &
                            head_compositional &
   [ INFLECTD +,
-    SYNSEM [ LOCAL [ CAT.VAL.SUBJ *olist* & < anti_synsem_min >,
+    SYNSEM [ LOCAL [ CAT [ VAL.SUBJ *olist* & < anti_synsem_min >,
+                           MC bool ],
                      CONT [ HOOK.XARG #xarg ] ],
              NONLOC [ SLASH 0-dlist,
                       QUE 0-dlist ] ],
@@ -4843,8 +4917,7 @@ filler_head_rule_non_wh := binary_rule_right_to_left &
                       MODIFD notmod_or_lmod,
                       PUNCT.RPUNCT.PSF #pred ] ],
     NH-DTR [ INFLECTD +,
-             SYNSEM [ LOCAL [ CAT [ HEAD n_or_p_or_v_or_adv &
-                                         [ CASE non_nom ],
+             SYNSEM [ LOCAL [ CAT [ HEAD n_or_p_or_v_or_adv,
                                     MC #mc ],
                               CONT.HOOK [ LTOP #nhltop,
                                           INDEX #nhind ] ],
@@ -4862,11 +4935,11 @@ filler_head_rule_non_wh := binary_rule_right_to_left &
              HCONS <! !> ] ].
 
 filler_head_rule_non_wh_edgen := filler_head_rule_non_wh &
-  [ NH-DTR.SYNSEM.PUNCT.RPUNCT comma_punct ].
+  [ NH-DTR.SYNSEM.PUNCT.RPUNCT comma_or_pair_punct ].
 
 filler_head_rule_non_wh_infgen := filler_head_rule_non_wh &
   [ NH-DTR.SYNSEM.PUNCT.RPUNCT no_punct,
-    GENRE informal ].
+    GENRE nonformal ].
 
 ; DPF 20-Oct-01 - Changed HEAD.INV + to HEAD.INV +* (and same for AUX) to 
 ; allow for coordination of inverted and non-inverted sentences.
@@ -4992,7 +5065,7 @@ filler_head_rule_rel := binary_rule_left_to_right & rel_cl &
                                    [ LIST < [ LTOP #rhand,
                                               INDEX #ind,
                                               XARG #rhand ] > ] ],
-                      PUNCT.RPUNCT no_punct ] ],
+                      PUNCT.RPUNCT rbc_or_no_punct ] ],
 	   [ INFLECTD +,
              SYNSEM [ LOCAL [ CAT [ HEAD verbal & [ VFORM #vform & fin_or_inf,
                                                     TAM #tam,
@@ -5087,7 +5160,7 @@ basic_top_coord_rule := binary_rule_right_to_left & basic_coord_phr &
              PUNCT [ LPUNCT #lpunct,
                      PAIRED #rpnctpr,
                      RPUNCT #rpunct ] ],
-    LCONJ-DTR.SYNSEM [ LOCAL local & [ CONJ conj & #left ],
+    LCONJ-DTR.SYNSEM [ LOCAL local & [ CONJ basic-conj & #left ],
                        PUNCT [ LPUNCT #lpunct,
                                RPUNCT comma_or_rbc_or_pair_or_no_punct,
                                PNCTPR #pnctpr ] ],
@@ -5182,7 +5255,7 @@ mid_coord_edgen_rule := mid_coord_rule &
 ; Informal variant has no comma on left dtr
 mid_coord_infgen_rule := mid_coord_rule &
   [ LCONJ-DTR.SYNSEM.PUNCT.RPUNCT no_punct,
-    GENRE informal ].
+    GENRE nonformal ].
 
 ; Coordination of non-nominal phrases (S's and VPs)
 ;; DPF 25-Feb-01 - Changed division of labor with these two rules, so the first now
@@ -5234,6 +5307,8 @@ verbal_coord_phr := norm_coord_phr &
 
 ; DPF 13-nov-05 - Removed HEAD verb on mother and daughters, since this
 ; prevented coordination of infinitival VPs: "Kim tried to sing and to dance"
+; DPF 18-jun-07 - Instead, only put [HEAD verb] on the finite subtype, in
+; part to block spurious application of the frag-sbar rule.
 v_coord_phr := verbal_coord_phr &
   [ SYNSEM.LOCAL [ CAT [ HEAD [ VFORM #vform,
                                 KEYS #keys ],
@@ -5251,25 +5326,25 @@ v_coord_phr := verbal_coord_phr &
                                    VAL.SUBJ < synsem > ],
                              CONT.HOOK [ XARG #xarg,
                                          INDEX.SF #iforce ],
-                             CONJ.CREL.R-INDEX [ E indic_tam,
-                                                 SF prop-or-ques ] ] ].
+                             CONJ.CREL.R-INDEX.E indic_tam ] ].
 
 v_coord_phr_fin := v_coord_phr &
-  [ SYNSEM.LOCAL [ CAT.HEAD [ VFORM fin,
-                              TAM indic_tam &
+  [ SYNSEM.LOCAL.CAT.HEAD verb &
+                          [ VFORM fin_or_imp,
+                            TAM indic_tam &
                                   [ ASPECT [ PERF #perf,
                                              PROGR #progr ],
-                                    MOOD indicative ] ],
-                   CONT.HOOK.INDEX.SF prop-or-ques ],
-   LCONJ-DTR.SYNSEM.LOCAL [ CAT.HEAD [ VFORM fin,
-                                       TAM indic_tam &
+                                    MOOD #mood ] ],
+   LCONJ-DTR.SYNSEM.LOCAL.CAT.HEAD verb &
+                                   [ VFORM fin_or_imp,
+                                     TAM indic_tam &
                                            [ ASPECT [ PERF #perf,
                                                       PROGR #progr ],
-                                             MOOD indicative ] ],
-                            CONT.HOOK.INDEX.SF prop-or-ques ],
-   RCONJ-DTR.SYNSEM.LOCAL [ CAT.HEAD [ VFORM fin,
-                                       TAM indic_tam ],
-                            CONT.HOOK.INDEX.SF prop-or-ques ] ].
+                                             MOOD #mood & 
+                                                  ind_or_modal_subj ] ],
+   RCONJ-DTR.SYNSEM.LOCAL.CAT.HEAD verb &
+                                   [ VFORM fin_or_imp,
+                                     TAM indic_tam ] ].
 
 v_coord_phr_nonfin := v_coord_phr &
   [ SYNSEM.LOCAL.CAT.HEAD [ VFORM non_fin,
@@ -5296,10 +5371,10 @@ s_coord_phr := verbal_coord_phr &
                            VAL [ SUBJ *olist*,
                                  COMPS < > ],
                            MC bool ] ] ],
-    LCONJ-DTR.SYNSEM.LOCAL [ CAT.HEAD.TAM.MOOD indicative,
+    LCONJ-DTR.SYNSEM.LOCAL [ CAT.HEAD.TAM.MOOD ind_or_modal_subj,
                              CONT.HOOK.INDEX.SF iforce ],
     RCONJ-DTR.SYNSEM phr_synsem &
-                     [ LOCAL [ CAT.HEAD.TAM.MOOD indicative,
+                     [ LOCAL [ CAT.HEAD.TAM.MOOD ind_or_modal_subj,
                                CONT.HOOK.INDEX.SF iforce ] ] ].
 
 ; Exclude S-coord from NP-CP rule unless complementizer present.
@@ -5465,6 +5540,12 @@ adj_pred_coord_top_phr := adj_pred_coord_phr & top_coord_event_rule &
 adj_pred_coord_mid_eg_phr := adj_pred_coord_phr & mid_coord_event_edgen_rule.
 adj_pred_coord_mid_ig_phr := adj_pred_coord_phr & mid_coord_event_infgen_rule.
 
+; DPF 21-jun-07 - Instead of requiring that the dtrs have SUBJ *anti_list*
+; (which is incompatible with VP adverbs requiring that their modifiee be
+; *synlist*, so we wouldn't get "poorly understood and unhappy"), we make
+; the two dtrs be SPR *cons*, since this is true of all predicative phrases
+; including VPs, but not true of Ss.
+
 predp_coord_phr := basic_coord_phr &
   [ INFLECTD +,
     SYNSEM [ LEX -,
@@ -5483,7 +5564,7 @@ predp_coord_phr := basic_coord_phr &
                 SYNSEM [ LOCAL [ CAT [ HEAD v_or_a_or_p &
                                           [ PRD +,
                                             MOD #mod ],
-                                       VAL.SUBJ *anti_list*,
+                                       VAL.SPR *cons*,
                                        POSTHD #ph ],
                                  CONT.HOOK.XARG #xarg ],
                          NONLOC.SLASH 0-dlist ] ],
@@ -5491,7 +5572,7 @@ predp_coord_phr := basic_coord_phr &
                 SYNSEM [ LOCAL [ CAT [ HEAD v_or_a_or_p &
                                           [ PRD +,
                                             MOD #mod ],
-                                       VAL.SUBJ *anti_list*,
+                                       VAL.SPR *cons*,
                                        POSTHD #ph ],
                                  CONT.HOOK.XARG #xarg,
                                  CONJ complex-conj ],
@@ -5534,8 +5615,7 @@ pp_predp_coord_mid_ig_phr := pp_predp_coord_phr & mid_coord_event_infgen_rule.
 
 basic_nom_coord_rule := basic_coord_phr &
   [ SYNSEM synsem &
-           [ LOCAL [ CAT [ HEAD noun & [ CASE #case,
-                                         MOD < >,
+           [ LOCAL [ CAT [ HEAD noun & [ MOD < >,
                                          KEYS #keys,
                                          PRD #prd ],
                            VAL.SUBJ #subj ],
@@ -5555,13 +5635,18 @@ nom_coord_rule := basic_nom_coord_rule & coord_phr &
   [ LCONJ-DTR.SYNSEM.LOCAL.CONT.HOOK.INDEX #ind,
     RCONJ-DTR.SYNSEM.LOCAL.CONJ.CREL conj_relation & [ L-INDEX #ind ] ].
 
+; DPF 29-may-07 - Mother was [LEX na], but we need to use this value to
+; distinguish lexical conjunction from head-marker-phrase (to avoid simple
+; conjunction as right dtr in coord phrase), and it's not clear what work
+; this [LEX na] was doing.  Note that it was also unhappily blocking
+; "[Kim and Sandy] Browne".
+
 np_coord_rule := nom_coord_rule &
   [ SYNSEM [ LOCAL [ CAT.VAL.SPR < >,
                      CONT.HOOK.INDEX [ PNG #png,
                                        SORT #sort ],
                      AGR [ PNG #png,
                            DIV #div ] ],
-             LEX na,
              MODIFD [ LPERIPH #lper,
                       RPERIPH #rper ] ],
     LCONJ-DTR [ SYNSEM [ LOCAL.CAT.VAL [ SPR *olist*,
@@ -5597,6 +5682,28 @@ np_coord_top_rule := basic_top_coord_rule & np_coord_rule &
     C-CONT [ HOOK.INDEX #ind,
              RELS <! relation & [ ARG0 #ind ] !> ] ].
 
+np_coord_top_eg_rule := np_coord_top_rule &
+  [ SYNSEM.LOCAL.CAT.HEAD.CASE #case,
+    LCONJ-DTR.SYNSEM.LOCAL.CAT.HEAD.CASE #case ].
+
+np_coord_top_ig1_rule := np_coord_top_rule &
+  [ SYNSEM.LOCAL.CAT.HEAD.CASE nom,
+    LCONJ-DTR.SYNSEM.LOCAL.CAT.HEAD [ KEYS.KEY pron_rel,
+                                      CASE acc ],
+    GENRE nonformal ].
+
+np_coord_top_ig2_rule := np_coord_top_rule &
+  [ SYNSEM.LOCAL.CAT.HEAD.CASE nom,
+    RCONJ-DTR.SYNSEM.LOCAL.CAT.HEAD [ KEYS.KEY pron_rel,
+                                      CASE acc ],
+    GENRE nonformal ].
+
+np_coord_top_ig3_rule := np_coord_top_rule &
+  [ SYNSEM.LOCAL.CAT.HEAD.CASE acc,
+    RCONJ-DTR.SYNSEM.LOCAL.CAT.HEAD [ KEYS.KEY pron_rel,
+                                      CASE nom ],
+    GENRE nonformal ].
+
 np_coord_mid_rule := basic_mid_coord_rule & np_coord_rule &
   [ SYNSEM.LOCAL.CONJ.CREL #rel,
     LCONJ-DTR.SYNSEM.MODIFD.RPERIPH bool,
@@ -5606,27 +5713,24 @@ np_coord_mid_rule := basic_mid_coord_rule & np_coord_rule &
 np_coord_mid_eg_rule := np_coord_mid_rule & mid_coord_edgen_rule.
 np_coord_mid_ig_rule := np_coord_mid_rule & mid_coord_infgen_rule.
 
-; For sequence of coordinated NPs without final conjunction
-np_coord_mid_noconj_rule := binary_rule_right_to_left & basic_nom_coord_rule &
-  [ SYNSEM [ LOCAL [ CAT [ HEAD.CASE non_obliq,
-                           VAL.SPR < > ],
+; For sequence of coordinated NPs and nbars without final conjunction
+; Constrain to be GENRE informal
+nom_coord_mid_noconj_rule := binary_rule_right_to_left & basic_nom_coord_rule &
+  [ SYNSEM [ LOCAL [ CAT.HEAD.CASE non_obliq,
                      CONJ phr-conj & [ CHEAD cnil,
                                        CREL #rel ] ],
              PUNCT [ LPUNCT no_punct,
                      PAIRED no_ppair,
                      RPUNCT #rpunct ],
-             LEX na,
              MODIFD.RPERIPH na ],
-    LCONJ-DTR [ SYNSEM [ LOCAL [ CAT [ HEAD.CASE non_obliq,
-                                       VAL.SPR *olist* ],
+    LCONJ-DTR [ SYNSEM [ LOCAL [ CAT.HEAD.CASE non_obliq,
                                  CONT.HOOK.INDEX #lind & nonconj_ref-ind,
                                  CONJ cnil ],
                          PUNCT [ LPUNCT no_punct,
                                  RPUNCT comma_punct ],
                          MODIFD.RPERIPH bool ],
                 INFLECTD + ], 
-    RCONJ-DTR [ SYNSEM [ LOCAL [ CAT [ HEAD.CASE non_obliq,
-                                       VAL.SPR *olist* ],
+    RCONJ-DTR [ SYNSEM [ LOCAL [ CAT.HEAD.CASE non_obliq,
                                  CONT.HOOK.INDEX #rind & nonconj_ref-ind,
                                  CONJ cnil ],
                          PUNCT [ LPUNCT no_punct,
@@ -5635,22 +5739,68 @@ np_coord_mid_noconj_rule := binary_rule_right_to_left & basic_nom_coord_rule &
                 INFLECTD + ],
     C-CONT [ HOOK [ LTOP #ltop,
                     INDEX #cind & conj-ind ],
-             RELS <! [ PRED udef_q_rel,
-                       ARG0 #cind2,
-                       RSTR #harg ],
-                     basic_conj_relation &
-                     [ LBL #ctop2,
-                       PRED implicit_conj_rel,
-                       ARG0 #cind2 & non_expl,
-                       L-INDEX #lind,
-                       R-INDEX #rind ],
-                     basic_conj_relation & #rel &
-                     [ LBL #ltop,
-                       PRED implicit_conj_rel,
-                       ARG0 #cind & non_expl,
-                       R-INDEX #cind2 ] !>,
-             HCONS <! qeq & [ HARG #harg,
-                              LARG #ctop2 ]!> ] ].
+             RELS.LIST < [ PRED udef_q_rel,
+                           ARG0 #cind2,
+                           RSTR #harg ],
+                         basic_conj_relation &
+                         [ LBL #ctop2,
+                           PRED implicit_conj_rel,
+                           ARG0 #cind2 & non_expl,
+                           L-INDEX #lind,
+                           R-INDEX #rind ],
+                         basic_conj_relation & #rel &
+                         [ LBL #ltop,
+                           PRED implicit_conj_rel,
+                           ARG0 #cind & non_expl,
+                           R-INDEX #cind2 ], ... >,
+             HCONS.LIST < qeq & [ HARG #harg,
+                                  LARG #ctop2 ], ... > ],
+    GENRE nonformal ].
+
+np_coord_mid_noconj_rule := nom_coord_mid_noconj_rule &
+  [ SYNSEM.LOCAL.CAT.VAL.SPR < >,
+    LCONJ-DTR.SYNSEM.LOCAL.CAT.VAL.SPR *olist*,
+    RCONJ-DTR.SYNSEM.LOCAL.CAT.VAL.SPR *olist*,
+    C-CONT [ RELS <! relation, relation, relation !>,
+             HCONS <! qeq !> ] ].
+
+nbar_coord_mid_noconj_rule := nom_coord_mid_noconj_rule &
+  [ SYNSEM.LOCAL [ CAT.VAL.SPR < synsem &
+                                 [ LOCAL local_min &
+                                         [ CAT [ HEAD det,
+                                                 VAL [ SUBJ < >,
+                                                       SPR *olist* ] ],
+                                           AGR #agr & [ PNG.PN 3p ] ],
+                                   NONLOC #nonloc,
+                                   LEX +,
+                                   OPT - ] >,
+                   AGR #agr ],
+    LCONJ-DTR.SYNSEM.LOCAL [ CAT.VAL.SPR < synsem & 
+                                          [ OPT -,
+                                            LOCAL.CAT.HEAD det &
+                                                [ KEYS.KEY #sprkey ],
+                                            NONLOC #nonloc ] >,
+                             CONT.HOOK [ LTOP #ltop,
+                                         INDEX #lind ] ],
+    RCONJ-DTR.SYNSEM.LOCAL [ CAT.VAL.SPR < synsem & 
+                                           [ OPT -,
+                                             LOCAL.CAT.HEAD det &
+                                                 [ KEYS.KEY #sprkey ],
+                                             NONLOC #nonloc ] >,
+                             CONT.HOOK [ LTOP #rtop,
+                                         INDEX #rind ] ],
+    C-CONT [ RELS <! relation, relation, relation,
+                     [ PRED udef_q_rel,
+                           ARG0 #lind,
+                           RSTR #lrstr ],
+                     [ PRED udef_q_rel,
+                           ARG0 #rind,
+                           RSTR #rstr ] !>,
+             HCONS <! qeq, 
+                      qeq & [ HARG #lrstr,
+                              LARG #ltop ],
+                      qeq & [ HARG #rstr,
+                              LARG #rtop ] !> ] ].
 
 ; Exclude proper name nbar coord for now at least.
 ; DPF 26-aug-04 - Generalized dtrs' HEAD from noun to noun_or_nomger
@@ -5894,13 +6044,14 @@ adv_coord_mid_ig_phr := adv_coord_phr & mid_coord_event_infgen_rule.
 ; DPF 03-sep-05 - But this doesn't work so well with fragments.  So just
 ; restrict left conjunct to prop_imp_m_rel, and ignore for now run-ons with a
 ; left interrogative -- annoying in treebanking, but manageable.
+; DPF 31-may-07 - Removed ALTKEY no_rel from mother to allow recursive
+; application of this rule.
 
 basic_run_on_rule := binary_rule_right_to_left & basic_binary_phrase &
   [ INFLECTD +,
     SYNSEM [ LEX -,
              LOCAL [ CAT [ HEAD conj-s & [ MOD < >,
-                                           KEYS [ KEY discourse_rel,
-                                                  ALTKEY no_rel ] ],
+                                           KEYS.KEY discourse_rel ],
                            VAL [ SUBJ *anti_list*,
                                  SPR *anti_list*,
                                  COMPS < > ],
@@ -5924,13 +6075,14 @@ basic_run_on_rule := binary_rule_right_to_left & basic_binary_phrase &
                             [ CAT [ VAL [ SUBJ *anti_list*,
                                           COMPS < > ] ],
                               AGR.PNG #png,
-                              CONJ cnil_or_lexconj ],
+                              CONJ cnil_or_lexconj & [ CHEAD cnil ] ],
                       NONLOC.SLASH 0-dlist & [ LIST < > ],
                       MODIFD.LPERIPH -,
                       PUNCT [ LPUNCT lparen_or_no_punct,
-                              RPUNCT #rpunct ] ] ] >,
+                              RPUNCT #rpunct & [ PSF #sf ] ] ] ] >,
     C-CONT [ HOOK [ LTOP #cltop,
-                    INDEX #ind & event ],
+                    INDEX #ind & event &
+                         [ SF #sf ] ],
 	     RELS.LIST < conj_relation & 
                          [ PRED implicit_conj_rel,
                            LBL #cltop,
@@ -5938,11 +6090,15 @@ basic_run_on_rule := binary_rule_right_to_left & basic_binary_phrase &
                            L-HNDL #lhand,
                            L-INDEX #lind ], ... > ] ].
 
+; DPF 23-jun-07 - Changed RCONJ-DTR..RPUNCT from clause_or_semicol to
+; clause_or_semicol_or_no_punct in order to allow e.g. |2. Kim| without
+; final period.  May cause trouble since this rule is now right-recursive.
+
 run_on_coord_rule := basic_run_on_rule & basic_coord_phr &
  [ SYNSEM.LOCAL.CAT.VAL.SUBJ #subj,
    LCONJ-DTR #lconj &
              [ SYNSEM [ LOCAL [ CAT [ HEAD verb_or_frag &
-                                          [ TAM.MOOD indicative,
+                                          [ TAM.MOOD ind_or_modal_subj,
                                             KEYS [ KEY norm_rel,
                                                    ALTKEY norm_rel ] ],
                                       VAL.SUBJ #subj,
@@ -5956,20 +6112,24 @@ run_on_coord_rule := basic_run_on_rule & basic_coord_phr &
                                       VAL.SUBJ #subj,
                                       MC + ],
                                 CONT [ HOOK [ LTOP #rhand,
-                                              INDEX #rind ] ] ] ] ],
+                                              INDEX #rind ] ] ],
+                        PUNCT.RPUNCT clause_or_semicol_or_no_punct ] ],
    C-CONT [ RELS <! [ R-HNDL #rhand,
                       R-INDEX #rind ] !>,
             HCONS <! !> ],
    ARGS < #lconj, #rconj > ].
 
 run_on_np_rule := basic_run_on_rule & non_headed_phrase &
- [ SYNSEM [ NONLOC #nonloc ],
-   ARGS < [ SYNSEM [ LOCAL [ CAT.HEAD frag & [ KEYS.KEY norm_rel ],
+ [ SYNSEM [ LOCAL.CAT.HEAD.KEYS.ALTKEY no_rel,
+            NONLOC #nonloc ],
+   ARGS < [ SYNSEM [ LOCAL [ CAT [ HEAD verb_or_frag & [ KEYS.KEY norm_rel ],
+                                   VAL.SUBJ *anti_list*,
+                                   MC + ],
                              CONT.HOOK.INDEX.SF prop-or-comm ],
                      NONLOC #nonloc,
                      PUNCT.RPUNCT rbcomma_punct ] ],
           [ SYNSEM [ LOCAL [ CAT [ HEAD noun & [ KEYS.KEY norm_rel ],
-                                   VAL.SPR < > ],
+                                   VAL.SPR *olist* ],
                              CONT.HOOK.INDEX #nind ],
                      NONLOC #nonloc ] ] >,
    C-CONT [ RELS <! [ R-HNDL #rhand,
@@ -5979,7 +6139,7 @@ run_on_np_rule := basic_run_on_rule & non_headed_phrase &
                       ARG0 #rind,
                       ARG #nind ] !>,
             HCONS <! qeq & [ HARG #rhand, LARG #ulbl ] !> ],
-   GENRE informal ].
+   GENRE nonformal ].
 
 no_copula_prd_vp_rule := no_copula_prd_phrase & rule.
 
@@ -6042,6 +6202,7 @@ basic_unary_frag_rule := norm_frag_rule & norm_unary_phrase &
     ARGS < [ INFLECTD +,
              SYNSEM [ LOCAL [ CAT.VAL.COMPS < >,
                               CONJ #conj ],
+                      LEX bool,
                       NONLOC.REL 0-dlist,
                       PUNCT.RPUNCT.PSF #pred ] ] >,
     C-CONT.HOOK.INDEX.SF prop-or-ques ].
@@ -6147,7 +6308,9 @@ frag_sent_adv_rule := basic_unary_frag_rule &
 
 ; 'And Kim arrived.'
 frag_sent_conj_rule := basic_frag_rule & norm_unary_phrase &
-  [ SYNSEM.LOCAL [ CAT [ HEAD comp & [ MOD < > ],
+  [ SYNSEM.LOCAL [ CAT [ HEAD comp & 
+                              [ MOD < >,
+                                KEYS.ALTKEY no_rel ],
                          VAL.SPR < > ],
                    CONJ cnil ],
     ARGS < [ SYNSEM [ LOCAL [ CAT [ HEAD verb,
@@ -6157,7 +6320,8 @@ frag_sent_conj_rule := basic_frag_rule & norm_unary_phrase &
                                     MC + ],
                               CONT.HOOK [ LTOP #ltop,
                                           INDEX #arg0 ],
-                              CONJ lex-conj ],
+                              CONJ lex-conj & [ CHEAD cnil ] ],
+                      LEX bool,
                       NONLOC.SLASH 0-dlist & [ LIST < > ] ] ] >,
     C-CONT [ HOOK [ LTOP #ltop,
                     INDEX #arg0 & [ SF prop-or-ques ] ],
@@ -6189,25 +6353,26 @@ binary_frag_rule := norm_frag_rule & binary_punct_phrase &
                              QUE 0-dlist ] ] ],
     DTRB [ INFLECTD +,
            SYNSEM [ LOCAL [ CAT [ HEAD.KEYS.KEY independent_rel,
-                                  VAL [ COMPS < >,
-                                        SPR *olist* ] ],
+                                  VAL.COMPS < > ],
                             CONJ cnil_or_lexconj ],
                     NONLOC [ SLASH 0-dlist & [ LIST < > ],
                              REL 0-dlist ] ],
            KEY-ARG + ],
     ARGS < sign, [ SYNSEM.PUNCT.RPUNCT.PSF #pred ] >,
-    C-CONT [ RELS <! [ LBL #ulbl,
-                       ARG0 #uind ] !> ] ].
+    C-CONT [ RELS.LIST < [ LBL #ulbl,
+                           ARG0 #uind ], ... > ] ].
 
 binary_left_frag_rule := binary_frag_rule &
   [ SYNSEM.PUNCT.PNCTPR #ppair,
     DTRA #dtr1 &
          [ SYNSEM [ LOCAL.CONT.HOOK.LTOP #ltop,
                     PUNCT.RPUNCT comma_or_clause_or_no_punct ] ],
-    DTRB #dtr2 & [ SYNSEM.PUNCT.PNCTPR #ppair ],
+    DTRB #dtr2 & [ SYNSEM [ LOCAL.CAT.VAL.SPR *olist*,
+                            PUNCT.PNCTPR #ppair ] ],
     ARGS < #dtr1, #dtr2 >,
-    C-CONT.HOOK [ LTOP #ltop,
-                  INDEX.SF prop-or-ques ] ].
+    C-CONT [ HOOK [ LTOP #ltop,
+                    INDEX.SF prop-or-ques ],
+             RELS <! relation !> ] ].
 
 ; DPF 25-apr-04 - Added POSTHD - to modifier, like for frag_l_mod_pp_rule.
 frag_l_mod_np_rule := binary_left_frag_rule &
@@ -6252,7 +6417,7 @@ frag_l_mod_adv_rule := binary_left_frag_rule &
            [ SYNSEM.LOCAL.CAT [ HEAD.MOD < synsem &
                                            [ LOCAL scopal_mod &
                                                   [ CONT.HOOK.LTOP #klbl ] ] >,
-                                  POSTHD - ] ] >,
+                                POSTHD + ] ] >,
     C-CONT [ RELS.LIST.FIRST.LBL #klbl,
              HCONS <! !> ] ].
 
@@ -6260,7 +6425,7 @@ frag_l_mod_vp_rule := binary_left_frag_rule &
   [ ARGS < sign & 
            [ SYNSEM.LOCAL.CAT [ HEAD.MOD < [ LOCAL scopal_mod &
                                               [ CAT.VAL.SUBJ < [ OPT - ] > ]]>,
-                                POSTHD - ] ],
+                                POSTHD + ] ],
            [ SYNSEM [ LOCAL [ CAT [ HEAD verbal & 
                                          [ INV -,
                                            KEYS.KEY norm_rel,
@@ -6291,15 +6456,54 @@ binary_right_frag_rule := binary_frag_rule &
     ARGS < #dtr2, #dtr1 > ].
 
 frag_r_mod_np_rule := binary_right_frag_rule &
-  [ ARGS < [ SYNSEM [ LOCAL [ CAT.HEAD noun &
+  [ ARGS < [ SYNSEM [ LOCAL [ CAT [ HEAD noun &
                                        [ CASE acc,
                                          KEYS.ALTKEY non_freerel_q_rel ],
+                                    VAL.SPR *olist* ],
                               CONT [ HOOK.INDEX #ind ] ],
                       PUNCT.RPUNCT #rpunct ] ],
            sign & [ SYNSEM.LOCAL 
                             [ CAT.HEAD.MOD < [ LOCAL scopal_mod,
                                                PUNCT.RPUNCT #rpunct ] > ] ] >,
-    C-CONT [ RELS.LIST.FIRST.ARG #ind,
+    C-CONT [ RELS <! [ ARG #ind ] !>,
+             HCONS <! !> ] ].
+
+frag_r_mod_nbar_rule := binary_right_frag_rule &
+  [ ARGS < [ SYNSEM [ LOCAL [ CAT [ HEAD noun &
+                                       [ CASE acc,
+                                         KEYS.ALTKEY non_freerel_q_rel ],
+                                    VAL.SPR < [ OPT - ] > ],
+                              AGR [ PNG.PN 3s,
+                                    DIV - ],
+                              CONT.HOOK [ LTOP #ltop,
+                                          INDEX #ind ] ],
+                      PUNCT.RPUNCT #rpunct ] ],
+           sign & [ SYNSEM.LOCAL 
+                            [ CAT.HEAD.MOD < [ LOCAL scopal_mod,
+                                               PUNCT.RPUNCT #rpunct ] > ] ] >,
+    C-CONT [ RELS <! [ ARG #ind ], 
+                     [ PRED udef_q_rel,
+                       ARG0 #ind,
+                       RSTR #rstr ] !>,
+	     HCONS <! qeq & [ HARG #rstr,
+                              LARG #ltop ] !> ] ].
+
+; For intersective adverbs or non-nom-modifying PPs, as in
+; "many problems afterwards"
+frag_r_mod_np_i_rule := binary_right_frag_rule &
+  [ ARGS < [ SYNSEM [ LOCAL [ CAT [ HEAD noun &
+                                       [ CASE acc,
+                                         KEYS.ALTKEY non_freerel_q_rel ],
+                                    VAL.SPR *olist* ],
+                              CONT [ HOOK.INDEX #ind ] ],
+                      PUNCT.RPUNCT #rpunct ] ],
+           sign & [ SYNSEM.LOCAL 
+                            [ CAT.HEAD.MOD < [ LOCAL intersective_mod &
+                                                     [ CAT.HEAD v_or_a ],
+                                               PUNCT.RPUNCT #rpunct ] >,
+                              CONT.HOOK.LTOP #ltop ] ] >,
+    C-CONT [ HOOK.LTOP #ltop,
+             RELS <! [ ARG #ind ] !>,
              HCONS <! !> ] ].
 
 ; DPF 16-mar-06 - Try doing without this one
@@ -6315,8 +6519,8 @@ frag_r_mod_int_pp_rule := binary_right_frag_rule &
            sign & [ SYNSEM.LOCAL.CAT.HEAD.MOD 
                                   < [ LOCAL intersective_mod,
                                       --SIND #kev ] > ] >,
-    C-CONT [ RELS.LIST.FIRST [ LBL #klbl,
-                               ARG0 #kev ],
+    C-CONT [ RELS <! [ LBL #klbl,
+                       ARG0 #kev ] !>,
              HCONS <! !> ] ].
 |#
 
@@ -6333,7 +6537,7 @@ frag_r_mod_scop_pp_rule := binary_right_frag_rule &
                                                      [ CONT.HOOK.LTOP #klbl ],
                                                     --SIND #kev ] > ] ] >,
     C-CONT [ HOOK.INDEX.SF prop-or-ques,
-             RELS.LIST.FIRST.ARG0 #kev,
+             RELS <! [ ARG0 #kev ] !>,
              HCONS <! !> ] ].
 
 frag_r_mod_ap_rule := binary_right_frag_rule &
@@ -6345,7 +6549,7 @@ frag_r_mod_ap_rule := binary_right_frag_rule &
                                                      [ CONT.HOOK.LTOP #klbl ],
                                                     --SIND #ind ] > ] ] >,
     C-CONT [ HOOK.INDEX.SF prop-or-ques,
-             RELS.LIST.FIRST.ARG #ind,
+             RELS <! [ ARG #ind ] !>,
              HCONS <! !> ] ].
 
 frag_np_coord_rule := norm_frag_rule & binary_punct_phrase &
@@ -6395,9 +6599,10 @@ frag_np_coord_rule := norm_frag_rule & binary_punct_phrase &
 ; appearing in run_on_s rule.
 
 basic_frag_verbal_rule := basic_frag_rule & unary_phrase &
-  [ SYNSEM.LOCAL.CAT [ HEAD frag & 
-                            [ KEYS.ALTKEY no_rel ],
-                       VAL.SPR < > ],
+  [ SYNSEM [ LOCAL.CAT [ HEAD frag & 
+                              [ KEYS.ALTKEY no_rel ],
+                         VAL.SPR < > ],
+             PUNCT.RPUNCT.PSF #sf ],
     ARGS < [ INFLECTD +,
              SYNSEM [ LOCAL.CAT [ HEAD verbal & 
                                        [ INV - ],
@@ -6405,7 +6610,7 @@ basic_frag_verbal_rule := basic_frag_rule & unary_phrase &
                                   MC na_or_- ],
                       NONLOC [ REL 0-dlist,
                                QUE 0-dlist ] ] ] >,
-    C-CONT.HOOK.INDEX.SF prop-or-ques ].
+    C-CONT.HOOK.INDEX.SF prop-or-ques & #sf ].
 
 frag_verbal_rule := basic_frag_verbal_rule &
   [ ARGS < [ SYNSEM.NONLOC.SLASH 0-dlist & [ LIST < > ] ] > ].
@@ -6443,6 +6648,28 @@ frag_vp_nonfin_rule := frag_vp_rule &
                                          [ LBL #ltop,
                                            ARG0 #arg0,
                                            ARG #argltop ] !> ] ].
+
+frag_sbar_rule := frag_verbal_rule &
+  [ ARGS < [ SYNSEM.LOCAL [ CAT [ HEAD comp &
+                                       [ KEYS.KEY norm_rel,
+                                         VFORM fin ],
+                                  VAL.SUBJ *anti_list* ],
+                            CONJ cnil ] ] >,
+    C-CONT [ RELS <! !>,
+             HCONS <! !> ] ].
+
+frag_relcl_rule := frag_verbal_rule &
+  [ ARGS < [ SYNSEM [ LOCAL [ CAT [ HEAD verb &
+                                       [ KEYS [ KEY norm_rel,
+                                                ALT2KEY norm_rel ],
+                                         VFORM fin,
+                                         MOD < synsem > ],
+                                    MC na,
+                                    VAL.SUBJ *anti_list* ],
+                              CONJ cnil ],
+                      PUNCT.RPUNCT.PSF prop ] ] >,
+    C-CONT [ RELS <! !>,
+             HCONS <! !> ] ].
 
 #|
 frag_nocop_s_rule := frag_verbal_rule &
@@ -6482,10 +6709,11 @@ frag_dadv_rule := norm_frag_rule & norm_unary_phrase &
   [ SYNSEM.LOCAL.CAT [ HEAD frag,
                        VAL.SPR < >,
                        POSTHD - ],
-    ARGS < [ SYNSEM.LOCAL [ CAT [ HEAD root-marker,
-                                  POSTHD - ],
-                            CONT.HOOK [ LTOP #ltop,
-                                        INDEX #ind ] ] ] >,
+    ARGS < [ SYNSEM [ LOCAL [ CAT [ HEAD root-marker,
+                                    POSTHD - ],
+                              CONT.HOOK [ LTOP #ltop,
+                                          INDEX #ind ] ],
+                      LEX bool ] ] >,
     C-CONT [ HOOK [ LTOP #ltop,
                     INDEX #ind & [ SF prop-or-ques ] ],
              RELS <! relation & [ ARG0 #ind ] !>,
@@ -6514,8 +6742,9 @@ punct_marker_hfinal_rule := punct_marker_phrase & head_final &
                    RPUNCT #rpunct,
                    PNCTPR #ppair ],
     NH-DTR.SYNSEM.PUNCT.LPUNCT #lpunct & punct_mark,
-    HD-DTR.SYNSEM.PUNCT [ RPUNCT #rpunct,
-                          PNCTPR #ppair ] ].
+    HD-DTR.SYNSEM [ LEX +,
+                    PUNCT [ RPUNCT #rpunct,
+                            PNCTPR #ppair ] ] ].
 
 ; Making mother be SYNSEM lex_punct_synsem prevents spurious application of
 ; derivational rules that are constrained by synsem type.  Assumes that
@@ -6570,7 +6799,7 @@ punct_marker_hinit_rule := punct_marker_phrase & head_initial &
 ; also for other right paired elements like quotes.  For now, we'll
 ; over-generate.
 
-paren_float_rule := head_initial & head_compositional & 
+paren_float_rule := basic_head_initial & head_compositional & 
                     binary_rule_right_to_left &
   [ INFLECTD +,
     SYNSEM phr_synsem &
@@ -6618,7 +6847,7 @@ paren_float_s_rule := paren_float_rule &
              HCONS <! !> ] ].
 
 ; "We visited Turlidfossen (waterfall)."
-paren_float_nbar_rule := paren_float_rule &
+paren_float_nbar_rule := paren_float_rule & head_initial &
   [ NH-DTR.SYNSEM.LOCAL [ CAT nbar_cat &
                               [ VAL.SPEC *anti_list* ],
                           CONT.HOOK [ LTOP #nhtop,

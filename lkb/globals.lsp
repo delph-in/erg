@@ -108,7 +108,7 @@
 (defparameter *chart-packing-p* t)
 
 (defparameter *packing-restrictor*
-  ;'(STEM RELS HCONS RNAME PUNCT)
+  ;'(STEM RELS HCONS RNAME RPUNCT)
   '(STEM RELS HCONS RNAME)
   "restrictor used when parsing with ambiguity packing")
 
@@ -202,7 +202,7 @@
     be_id_was_neg_subj_2 be_id_were_neg_2 be_id_were_neg_subj_2
     be_th_cop_are_neg_2 be_th_cop_is_neg_2 be_th_cop_was_neg_2
     be_th_cop_was_neg_subj_2 be_th_cop_were_neg_2 be_th_cop_were_neg_subj_2
-    can_aux_neg_2 dare_aux_neg_2 did1_neg_2 does1_neg_2 dont_2 
+    can_aux_neg_2 dare_aux_neg_2 did1_neg_2 does1_neg_2 dont_2 dont_4
     might_aux_neg_2 must_aux_neg_2 need_aux_neg_2 ought_aux_neg_2 
     should_aux_neg_2 gonna_v1 that_c_subj wherein
     be_it_cop_is_neg_1 be_it_cop_is_neg_2 aint_be_it_cop_is_neg_1 
@@ -319,7 +319,7 @@
     reverend_abb_ttl_2 veteran_abb_n1 veterinarian_abb_n1
     be_c_am_cx_neg_1 be_c_are_cx_neg_1 be_c_is_cx_neg_1 be_id_am_cx_neg_1
     be_id_are_cx_neg_1 be_id_is_cx_neg_1 be_nv_is_cx_neg_1
-    be_th_cop_is_cx_neg_1 be_th_cop_is_plur 
+    be_inv_is_cx be_inv_are_cx be_th_cop_is_cx_neg_1 be_th_cop_is_plur 
     had_aux_cx_neg_1 had_better_cx_neg_1 has_aux_cx_neg_1 have_aux_cx_neg_1 
     both_conj either_conj first_conj
     till_cp_p1 till_cp_p2 till_p1 till_p2 thru_p thru_a1
@@ -330,7 +330,7 @@
     bc_temp_1 bc_temp_2 ad_temp_1 ad_temp_2 x_to_y_adj_- x_to_y_nbar_hyphen
     x_to_y_np_pl_- x_to_y_np_sg_- x_to_y_np_sg_through x_to_y_np_until
     colour_n1 round anyplace_n2 anywhere_n2 everywhere_n2 nowhere_n2 
-    someplace_n2 sometime_n2 somewhere_n2 en_route_pp_2 round_trip_n2
+    someplace_n2 sometime_n2 somewhere_n2 en_route_pp_2 round_trip_n2 hour_n5
     hour_n2 hour_n3 hour_n4 approximately_abb approximately_abb_2 seaside_n2
     gallon_abb_n1 gallon_abb_n2 millimeter_abb_n2 milliliter_abb_n2
     foot_abb_n2 centimeter_abb_n2 meter_abb_n2 kg_abb_n1 kg_abb_n2 km2_abb_n1
@@ -357,7 +357,9 @@
     full-grown_a2 because_abb because_of_abb_p worthwhile_a2 worthwhile_a4
     t_marked_a1 t_marked_a3 u_shaped_a2 slash_per_p slash_per_p2
     be_inv_are be_inv_is be_inv_was be_inv_were come_v3 go_v3 lie_v4 run_v4
-    stand_v3 micro_a2 mid_isect super_deg1 øvre_n2)
+    stand_v3 micro_a2 mid_isect super_deg1 øvre_n2 temperature_abb_n1
+    zero_det liquify_v1 liquify_v2 used_to_aux_nonfin_2 and_num 
+    be_inv_is_cx be_inv_are_cx)
   "temporary expedient to avoid generating dual forms")
 
 (setf *gen-ignore-rules*
@@ -374,6 +376,12 @@
     v_coord_fin_mid_ig v_coord_nonfin_mid_ig s_coord_mid_ig p_coord_mid_ig
     adv_coord_mid_ig np_coord_mid_ig n_coord_mid_ig adj_attr_coord_mid_ig
     adj_pred_coord_mid_ig fillhead_non_wh_ig
+    ; The following rule allows that-S as a fragment, but with MRS the same
+    ; as for an ordinary matrix S, so we don't use it for generation.      
+    frag_sbar
+    ; The following rule allows inverted quoting verbs, as in "said Kim",
+    ; giving unnecessary variation in generation.
+    inv_quote
    ))
 
 (setf *semantics-index-path* '(SYNSEM LOCAL CONT HOOK INDEX))

@@ -88,7 +88,7 @@
 ;;; debugging effort the day some of the MRS defaults changes :-).
 
 (defparameter *event-type* (vsym "event"))
-(defparameter *event_or_index-type* (vsym "non_expl"))
+(defparameter *event_or_index-type* (vsym "individual"))
 (defparameter *non_expl-ind-type* (vsym "non_expl-ind"))
 (defparameter *handle-type* (vsym "handle"))
 (defparameter *ref-ind-type* (vsym "ref-ind"))
