@@ -56,6 +56,25 @@
           (equal "_i_rel" (subseq relname (- (length relname) 6)))
           (equal "-i_rel" (subseq relname (- (length relname) 6)))))))
 
+
+; In lkb/src/lexdb/headers.lsp
+; Added "5" to load-foreign-types for 64-bit
+(defun psql-initialize ()
+  (unless (libpq-p)
+    #+:linux
+    (let (#+allegro 
+	  (excl::*load-foreign-types* 
+	   (append '("3" "4" "5") excl::*load-foreign-types*))
+	  )
+      (load-libpq '("libpq.so.5" "libpq.so" "libpq.so.4" "libpq.so.3")))
+    #+:mswindows
+    (load-libpq '("libpq.dll"))
+    #-(or :linux :mswindows)
+    (load-libpq nil)))
+
+#+:logon
+(setf ppcre:*use-bmh-matchers* nil)
+
 (in-package :cl-user)
 
 

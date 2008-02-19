@@ -21,6 +21,7 @@
    *ignored-extra-features*
    (list (vsym "SORT") (vsym "INSTLOC"))))
 
+; (setf *top-level-rel-types*  `(,(vsym "PRON_REL")))
 (setf *top-level-rel-types*  nil)
 
 ;;; features for extracting semantics from expanded lexical entries
@@ -32,7 +33,7 @@
 (defparameter *mrs-for-language* 'english)
 
 (defparameter *mrs-scoping* nil)
-(setf *scoping-call-limit* 100000)
+(setf *scoping-call-limit* 1000000)
 
 (setf *initial-semantics-path* 
   `(,(vsym "SYNSEM") ,(vsym "LOCAL") ,(vsym "CONT") ))

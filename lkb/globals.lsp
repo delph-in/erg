@@ -65,9 +65,9 @@
   #-:arboretum
   ;'(root_strict)
   ;'(root_strict root_informal)
-  '(root_strict root_frag)
-  ;'(root_strict root_informal root_frag)
-  ;'(root_strict root_informal root_frag root_robust)
+  ;'(root_strict root_frag)
+  ;'(root_strict root_informal root_frag root_inffrag)
+  '(root_strict root_informal root_frag root_inffrag root_robust)
   ;'(root_formal)
   #+:arboretum
   '(root_strict root_strict_robust)
@@ -155,7 +155,7 @@
 ; Turn on characterization in preprocessor
 (setf *characterize-p* t)
 
-(defparameter *discriminant-path* '(SYNSEM LOCAL KEYS KEY))
+(defparameter *discriminant-path* '(SYNSEM LOCAL MINORS MIN))
 
 ;;; Hide lexical rule nodes in parse tree
 ;;; (setf  *dont-show-lex-rules* t)
@@ -170,14 +170,14 @@
     be_th_cop_is_neg_2 aint_be_th_cop_is_neg_1 aint_be_th_cop_is_neg_2 
     might_aux_neg_1 might_aux_neg_2 must_aux_neg_1 must_aux_neg_2
     need_aux_neg_1 need_aux_neg_2 ought_aux_neg_1 ought_aux_neg_2
-    should_aux_neg_2 could_aux_neg_2 be_id_was_neg_2 
+    should_aux_neg_2 could_aux_neg_2 could_aux_neg_2b be_id_was_neg_2 
     be_th_cop_was_neg_2 be_c_was_neg_2 
     be_id_was_neg_subj_1 be_id_was_neg_subj_2 be_th_cop_was_neg_subj_1 
     be_th_cop_was_neg_subj_2 be_c_was_neg_subj_1 be_c_was_neg_subj_2 
     be_c_were_neg_2 be_id_were_neg_2 
     be_th_cop_were_neg_2 be_c_were_neg_subj_1
     be_c_were_neg_subj_2 be_id_were_neg_subj_1 be_id_were_neg_subj_2
-    be_th_cop_were_neg_subj_1 be_th_cop_were_neg_subj_2
+    be_th_cop_were_neg_subj_1 be_th_cop_were_neg_subj_2 need_not_v3
     be_c_am_cx be_id_am_cx be_id_am_cx_2 be_c_are_cx be_c_are_cx_2
     be_id_are_cx be_id_are_cx_2 had_aux_cx had_aux_cx_2 has_aux_cx has_aux_cx_2
     have_fin_aux_cx have_fin_aux_cx_2 have_bse_aux_cx_1 have_bse_aux_cx_2 
@@ -211,10 +211,12 @@
     be_it_cop_is_cx be_it_cop_is_cx_2
     aint_be_it_cop_is_neg_2 be_it_cop_are_neg_2 be_it_cop_is_neg_2
     be_it_cop_was_neg_2 be_it_cop_was_neg_subj_2
+    be_nv_are_neg_2 be_nv_is_neg_2 be_nv_was_neg_2 be_nv_was_neg_subj_2
+    be_nv_were_neg_2 be_nv_were_neg_subj_2
     shall_aux_pos
     sunday_n2 monday_n2 tuesday_n2 wednesday_n2 thursday_n2 friday_n2
     saturday_n2 sunday_n3 monday_n3 tuesday_n3 wednesday_n3 thursday_n3 
-    friday_n3 saturday_n3 slash_punct_adv1 or_else_1
+    friday_n3 saturday_n3 thursday_n4 thursday_n5 slash_punct_adv1 or_else_1
     whom2 yours_truly_pn1 hour_n2 couple_adj
     customer_abb_n1 customer_abb_n2 
     april_abb_n1 april_abb_n2 april_abb_n3 april_abb_n4 
@@ -312,7 +314,8 @@
     illustration_abb_n3 imp_abb_n1 imp_abb_a1 meter_abb_n1 milliliter_abb_n1
     okay_s_adv2 mhm_root_pre2 sure_root_pre2 yeah_root_pre2
     millimeter_abb_n1 minute_abb_n1 minute_abb_n2 noun_abb_n1
-    number_abb_n1 number_abb_n2 number_abb_n3 number_abb_n4 order_abb_n1
+    number_abb_n1 number_abb_n2 number_abb_n3 number_abb_n4 number_abb_n5
+    order_abb_n2
     plural_abb_n1 plural_abb_n2 prep_abb_n1 scripture_abb_n1 singular_abb_n1 
     singular_abb_n2 thanks_abb_root_post thanks_abb_root_pre thanks_abb_v1
     st_abb_n1 st_abb_n2 with_p_abb prep_abb_n1 prep_abb_n2 reverend_abb_ttl
@@ -331,12 +334,14 @@
     x_to_y_np_pl_- x_to_y_np_sg_- x_to_y_np_sg_through x_to_y_np_until
     colour_n1 round anyplace_n2 anywhere_n2 everywhere_n2 nowhere_n2 
     someplace_n2 sometime_n2 somewhere_n2 en_route_pp_2 round_trip_n2 hour_n5
-    hour_n2 hour_n3 hour_n4 approximately_abb approximately_abb_2 seaside_n2
+    hour_n2 hour_n3 hour_n4 approximately_abb approximately_abb_2 
+    approximately_abb_3 appointment_abb_n1 appointment_abb_n2 seaside_n2
     gallon_abb_n1 gallon_abb_n2 millimeter_abb_n2 milliliter_abb_n2
     foot_abb_n2 centimeter_abb_n2 meter_abb_n2 kg_abb_n1 kg_abb_n2 km2_abb_n1
-    with_p_abb2 with_p_abb3
+    with_p_abb2 with_p_abb3 figure_abb_n1
     fig_abb obs_abb_a1 obs_abb_a2 please_abb_adv please_abb_adv3
     please_abb_adv4 please_abb_root route_abb_ttl route_abb_ttl2
+    route_abb_n1 route_abb_n2
     orig_abb orig_abb_2 specif_abb specif_abb_2 adj_abb_n1 adj_abb_n2
     anat_abb_n2 adv_abb_n1 adv_abb_n2 as_abb_post_ttl esp_abb_2 esp_abb_3
     alabama_n2 alaska_n2 arizona_n2 arkansas_n2 california_n2 colorado_n2
@@ -358,8 +363,16 @@
     t_marked_a1 t_marked_a3 u_shaped_a2 slash_per_p slash_per_p2
     be_inv_are be_inv_is be_inv_was be_inv_were come_v3 go_v3 lie_v4 run_v4
     stand_v3 micro_a2 mid_isect super_deg1 øvre_n2 temperature_abb_n1
-    zero_det liquify_v1 liquify_v2 used_to_aux_nonfin_2 and_num 
-    be_inv_is_cx be_inv_are_cx)
+    zero_det liquify_v1 liquify_v2 used_to_aux_nonfin_2 and_num hafta_v1
+    be_inv_is_cx be_inv_are_cx but+rather_np_conj overall_a2 anti_a2
+    till_p3 today_adv3 today_np2 miscellaneous_abb_a1 private_abb_a1
+    standup_a1 standup_a3 departure_abb_n1 arrival_abb_n1 criteria_n1 
+    off_prtcl_2 lean_to_n2 non_a1 non_a2 the_rbst_1 the_rbst_2 the_rbst_3
+    the_rbst_4 the_rbst_5 the_rbst_6 the_rbst_7 
+    a_det_rbst a_det_2_rbst a_det_3_rbst an_det_rbst an_det_2_rbst
+    its_poss_rbst let_rbst_v1 let_rbst_v2 permit_rbst_v1 recommend_rbst_v1
+    advise_rbst_v1 allow_rbst_v1 enable_rbst_v1 suggest_rbst_v1 
+    foot_apostr_n1 avec_nbar)
   "temporary expedient to avoid generating dual forms")
 
 (setf *gen-ignore-rules*
@@ -367,6 +380,7 @@
     punct_sqleft_orule punct_dqleft_orule punct_rparen_orule punct_lparen_orule
     punct_dqright_orule punct_rbracket_orule punct_lbracket_orule 
     punct_hyphen_orule punct_comma_informal_orule punct_sqleft2_orule
+    punct_qqmark_orule
     paren_float_s paren_float_n
     ; This rule is relatively expensive and of marginal benefit in generation
     adjh_i_ques
@@ -382,6 +396,13 @@
     ; The following rule allows inverted quoting verbs, as in "said Kim",
     ; giving unnecessary variation in generation.
     inv_quote
+    ; The following rule allows adverbs and PPs after verbs but preceding
+    ; complements (one part of 'heavy-NP shift' phenomena)
+    vmod_i
+    ;;
+    ;; suggested in email by dan (9-feb-08), suppress in-situ WH pronouns.
+    ;;
+    subjh-q
    ))
 
 (setf *semantics-index-path* '(SYNSEM LOCAL CONT HOOK INDEX))
@@ -425,10 +446,10 @@
   '((adjh_i . (1)) (nadj_rr_nt . (2))))
 
 (defparameter *chart-dependencies*
-  '((SYNSEM LKEYS --+COMPKEY) (SYNSEM LOCAL CAT HEAD KEYS KEY)
-    (SYNSEM LKEYS --+OCOMPKEY) (SYNSEM LOCAL CAT HEAD KEYS KEY)
+  '((SYNSEM LKEYS --+COMPKEY) (SYNSEM LOCAL CAT HEAD MINORS MIN)
+    (SYNSEM LKEYS --+OCOMPKEY) (SYNSEM LOCAL CAT HEAD MINORS MIN)
     (SYNSEM LKEYS --COMPHD) (SYNSEM LOCAL CAT HEAD)
-    (SYNSEM LKEYS --+SUBJIND) (SYNSEM --SIND)))
+    (SYNSEM LKEYS --+ARGIND) (SYNSEM --SIND)))
 
 ;;; AAC - Dec 2003
 ;;; *unknown-word-types*
@@ -487,64 +508,4 @@
 ;; when this parameter is set, ersatzes have their CARG set according to surface form
 (setf smaf::*ersatz-carg-path* '(synsem lkeys keyrel carg))
 
-;; temporary hack to avoid instantiating carg on 'ersatzes' with no carg slot
-;; REMOVE_ME as soon as lex entries in ERG fixed
-#|
-(defparameter *ersatzes-with-no-carg*
-    '(
- currencyersatzarp
- currencyersatzats
- currencyersatzaud
- currencyersatzbef
- currencyersatzbrl
- currencyersatzchf
- currencyersatzclp
- currencyersatzcnd
- currencyersatzcny
- currencyersatzczk
- currencyersatzdem
- currencyersatzdollarsymb
- currencyersatzegp
- currencyersatzesp
- currencyersatzeur
- currencyersatzfim
- currencyersatzfrf
- currencyersatzgbp
- currencyersatzgrd
- currencyersatzhkd
- currencyersatziep
- currencyersatzils
- currencyersatzinr
- currencyersatzitl
- currencyersatzjpy
- currencyersatzkrw
- currencyersatzmxp
- currencyersatzmyr
- currency_ersatz_n1
- currencyersatznlg
- currencyersatznok
- currencyersatznzd
- currencyersatzpkr
- currencyersatzpte
- currencyersatzsek
- currencyersatzsgd
- currencyersatzsur
- currencyersatzthb
- currencyersatztwd
- currencyersatzusd
- currencyersatzzar
- measnpersatz
- measnpersatz_range_1
- measnpersatz_range_2
- measnpersatz_range_3
- measnpersatz_range_4
- measnpersatz_range_5
- measnpersatz_range_6
- numidentifierersatz_n2
- numidentifierersatz_n3
- numidentifierersatz_n4
- numidentifierersatz_n5
- numidentifierersatz_n7
-      ))
-|#
 (defparameter *ersatzes-with-no-carg* nil)
