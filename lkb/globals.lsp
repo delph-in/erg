@@ -65,9 +65,9 @@
   #-:arboretum
   ;'(root_strict)
   ;'(root_strict root_informal)
-  ;'(root_strict root_frag)
+  '(root_strict root_frag)
   ;'(root_strict root_informal root_frag root_inffrag)
-  '(root_strict root_informal root_frag root_inffrag root_robust)
+  ;'(root_strict root_informal root_frag root_inffrag root_robust)
   ;'(root_formal)
   #+:arboretum
   '(root_strict root_strict_robust)
@@ -178,15 +178,9 @@
     be_th_cop_were_neg_2 be_c_were_neg_subj_1
     be_c_were_neg_subj_2 be_id_were_neg_subj_1 be_id_were_neg_subj_2
     be_th_cop_were_neg_subj_1 be_th_cop_were_neg_subj_2 need_not_v3
-    be_c_am_cx be_id_am_cx be_id_am_cx_2 be_c_are_cx be_c_are_cx_2
-    be_id_are_cx be_id_are_cx_2 had_aux_cx had_aux_cx_2 has_aux_cx has_aux_cx_2
-    have_fin_aux_cx have_fin_aux_cx_2 have_bse_aux_cx_1 have_bse_aux_cx_2 
-    be_c_is_cx be_id_is_cx be_th_cop_is_cx 
-    will_aux_pos_cx will_aux_pos_cx_2 would_aux_pos_cx 
-    would_aux_pos_cx_2 had_better_cx had_better_cx_2
     u_pro you_guys you_people yall yall_2 yall_3 you_all
-    and_conj_slash and_or_conj_1 and_or_conj_2
-    and_or_conj_3 and_conj_amp and_conj_2_amp
+    and_conj_slash and_or_conj_1 and_or_conj_2 and_or_conj_3 
+    and_or_conj_4 and_or_conj_5 and_conj_amp and_conj_2_amp
     apostrophe_s_lex apostrophe_s_3_lex apostrophe_s_4_lex
     mister missus mr_title_2 doctor_ttl dr_ttl_2 prof_title mrs_title_2
     ms_title_2 mount_ttl_2 number_abb_title number_abb_title_2 
@@ -208,7 +202,6 @@
     be_it_cop_is_neg_1 be_it_cop_is_neg_2 aint_be_it_cop_is_neg_1 
     aint_be_it_cop_is_neg_2 be_it_cop_was_neg_1 be_it_cop_was_neg_2
     be_it_cop_was_neg_subj_1 be_it_cop_was_neg_subj_2
-    be_it_cop_is_cx be_it_cop_is_cx_2
     aint_be_it_cop_is_neg_2 be_it_cop_are_neg_2 be_it_cop_is_neg_2
     be_it_cop_was_neg_2 be_it_cop_was_neg_subj_2
     be_nv_are_neg_2 be_nv_is_neg_2 be_nv_was_neg_2 be_nv_was_neg_subj_2
@@ -239,9 +232,8 @@
     km_abb_n1 km_abb_n2 lets_2 lets_3 a_det_2 i_2
     whether_or_not_c_fin whether_or_not_c_inf
     thee thou thy thine thine_nq ye aught threescore fourscore
-    am_temp 
-    noon_min pm_temp pm_temp_3
-    clocktime-ersatz_2
+    am_temp_2 am_temp_3 am_temp_4 ap_temp_5 ap_temp_5 pm_temp_2 pm_temp_3 
+    pm_temp_4 pm_temp_5 pm_temp_6 clocktime-ersatz_2 noon_min 
     wanna_v1 wanna_v2 gotta_v1 cuz_subconj less_than_a_one_adj
     a+little_det_2 a_bit_adv2 a_couple_det2 a_det_2 a_few_det2 a_half_deg_2
     a_little_bit_adv2 a_little_deg_3 a_little_deg_4 a_lot_deg_2 a_np1
@@ -307,7 +299,6 @@
     he_stutter_1 he_stutter_2 he_stutter_3 
     she_stutter_1 she_stutter_2 she_stutter_3 
     it_stutter_1 it_stutter_2 it_stutter_3 
-    be_th_cop_is_cx_2 be_id_is_cx_2 be_c_is_cx_2 be_c_am_cx_2
     telephone_abb_n1 telephone_abb_n2 adj_abb_n1 adv_abb_n1 anat_abb_n1
     centimeter_abb_n1 comparative_abb_n1 customer_abb_n1 customer_abb_n2
     diameter_abb_n1 foot_abb_n1 geometry_abb_n1 illustration_abb_n1
@@ -322,7 +313,7 @@
     reverend_abb_ttl_2 veteran_abb_n1 veterinarian_abb_n1
     be_c_am_cx_neg_1 be_c_are_cx_neg_1 be_c_is_cx_neg_1 be_id_am_cx_neg_1
     be_id_are_cx_neg_1 be_id_is_cx_neg_1 be_nv_is_cx_neg_1
-    be_inv_is_cx be_inv_are_cx be_th_cop_is_cx_neg_1 be_th_cop_is_plur 
+    be_th_cop_is_cx_neg_1 
     had_aux_cx_neg_1 had_better_cx_neg_1 has_aux_cx_neg_1 have_aux_cx_neg_1 
     both_conj either_conj first_conj
     till_cp_p1 till_cp_p2 till_p1 till_p2 thru_p thru_a1
@@ -364,23 +355,42 @@
     be_inv_are be_inv_is be_inv_was be_inv_were come_v3 go_v3 lie_v4 run_v4
     stand_v3 micro_a2 mid_isect super_deg1 øvre_n2 temperature_abb_n1
     zero_det liquify_v1 liquify_v2 used_to_aux_nonfin_2 and_num hafta_v1
-    be_inv_is_cx be_inv_are_cx but+rather_np_conj overall_a2 anti_a2
+    be_inv_is_cx be_inv_are_cx 
+    had_better_cx had_better_cx_2
+    but+rather_np_conj overall_a2 anti_a2
     till_p3 today_adv3 today_np2 miscellaneous_abb_a1 private_abb_a1
-    standup_a1 standup_a3 departure_abb_n1 arrival_abb_n1 criteria_n1 
+    standup_a1 standup_a3 departure_abb_n1 arrival_abb_n1 arriving_abb_a1
+    criteria_n1 
     off_prtcl_2 lean_to_n2 non_a1 non_a2 the_rbst_1 the_rbst_2 the_rbst_3
     the_rbst_4 the_rbst_5 the_rbst_6 the_rbst_7 
     a_det_rbst a_det_2_rbst a_det_3_rbst an_det_rbst an_det_2_rbst
     its_poss_rbst let_rbst_v1 let_rbst_v2 permit_rbst_v1 recommend_rbst_v1
     advise_rbst_v1 allow_rbst_v1 enable_rbst_v1 suggest_rbst_v1 
-    foot_apostr_n1 avec_nbar)
+    foot_apostr_n1 avec_nbar threshhold_n1 awful_adv
+    ; Exclude contracted auxiliaries for the time being
+    be_c_am_cx be_c_am_cx_2 be_c_are_cx be_c_is_cx be_c_is_cx_2
+    be_id_am_cx be_id_am_cx_2 be_id_are_cx be_id_is_cx be_id_is_cx_2
+    be_it_cop_is_cx be_it_cop_is_cx_2 be_nv_is_cx be_nv_is_cx_2
+    be_th_cop_is_cx be_th_cop_is_cx_2 had_aux_cx had_aux_cx_2 has_aux_cx
+    has_aux_cx_2 have_bse_aux_cx_1 have_bse_aux_cx_2 have_fin_aux_cx
+    have_fin_aux_cx_2 had_aux_cx had_aux_cx_2 has_aux_cx has_aux_cx_2
+    have_bse_aux_cx_1 have_bse_aux_cx_2 have_fin_aux_cx have_fin_aux_cx_2
+    will_aux_pos_cx will_aux_pos_cx_2 would_aux_pos_cx would_aux_pos_cx_2
+    generic_adj_compar generic_adj_superl
+    whatsoever1 whatsoever_det whosoever_n1
+    easy_to_use_a2 on_screen_a2 psyche_out_v2 no_brainer_n2 off_camera_a2
+    all_in_all_adv2 must_have_n2 after_market_a2 in_depth_a2
+    top_of_the_line_a2 out_of_town_a2 set_up_n2
+    )
   "temporary expedient to avoid generating dual forms")
 
 (setf *gen-ignore-rules*
   '(punct_bang_orule punct_semicol_orule punct_colon_orule punct_sqright_orule
     punct_sqleft_orule punct_dqleft_orule punct_rparen_orule punct_lparen_orule
     punct_dqright_orule punct_rbracket_orule punct_lbracket_orule 
+    punct_dqright2_orule punct_dqleft2_orule
     punct_hyphen_orule punct_comma_informal_orule punct_sqleft2_orule
-    punct_qqmark_orule
+    punct_qqmark_orule punct_qmark_bang_orule
     paren_float_s paren_float_n
     ; This rule is relatively expensive and of marginal benefit in generation
     adjh_i_ques
@@ -403,6 +413,7 @@
     ;; suggested in email by dan (9-feb-08), suppress in-situ WH pronouns.
     ;;
     subjh-q
+    robust_np_sg robust_subjh_sg robust_subjh_pl
    ))
 
 (setf *semantics-index-path* '(SYNSEM LOCAL CONT HOOK INDEX))
