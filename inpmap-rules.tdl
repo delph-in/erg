@@ -1,5 +1,20 @@
 ;;; -*- Mode: tdl; Coding: utf-8; -*-
 
+
+;;; Form-driven generic entries
+
+email-ne-rule := inpmap-rule &
+  [ +INPUT   < [ +FORM #form &
+   	          "/(<?[-a-zA-ZÅåØøÆæ0-9_]{2,}@[-a-zA-ZÅåØøÆæ0-9._]{2,}>?)/",
+		 +CLASS stdorth,
+		 +IDS #ids, +CFROM #cfrom, +CTO #cto ] >,
+    +OUTPUT  < [ +FORM #form,
+		 +ONSET unk_onset,
+		 +CLASS email_ne,
+		 +CARG #form,
+		 +TNT null_tnt,
+		 +IDS #ids, +CFROM #cfrom, +CTO #cto ] > ].
+
 ;;;
 ;;; Normalize surviving XML punctuation marks
 ;;;
@@ -658,14 +673,32 @@ double_rquote-space-2-rule := inpmap-rule &
     +OUTPUT  < [ +FORM "${I1:+FORM:1}${I1:+FORM:2}\"", +TNT #tnt ] >,
     +POSITION "I1<I2" ].
 
+
 ;;;
 ;;; Eliminate spurious space preceding and following most punctuation marks
 ;;;
 
+
+#|
 space-punct-rule := inpmap-rule &
-  [ +INPUT   < [ +FORM "/([\(\"'`]?)([a-zA-ZÅåØøÆæ0-9!.\*\\]\)\"\-\/,\?_]+)/", +TNT #tnt ],
-               [ +FORM "/([.;,'!\?\\]\)\"]+)/" ] >,
-    +OUTPUT  < [ +FORM "${I1:+FORM:1}${I1:+FORM:2}${I2:+FORM:1}", +TNT #tnt ]>,
+  [ +INPUT   < [ +FORM "/(.*)/", +TNT #tnt,
+		 +ONSET #onset, +CLASS #class, +PRED #pred, +CARG #carg, 
+		 +CFROM #cfrom, +CTO #cto ],
+               [ +FORM "/([.;,'!\?\\]\)]+)/"] >,
+    +OUTPUT  < [ +FORM "${I1:+FORM:1}${I2:+FORM:1}", +TNT #tnt,
+		 +ONSET #onset, +CLASS #class, +PRED #pred, +CARG #carg, 
+		 +CFROM #cfrom, +CTO #cto ] >,
+    +POSITION "I1<I2" ].
+|#
+
+space-punct-rule := inpmap-rule &
+  [ +INPUT   < [ +FORM "/(.*)/", +TNT #tnt,
+		 +ONSET #onset, +CLASS #class, +PRED #pred, +CARG #carg, 
+		 +CFROM #cfrom, +CTO #cto ],
+               [ +FORM "/([.;,'!\?\\]\)]+)/"] >,
+    +OUTPUT  < [ +FORM "${I1:+FORM:1}", +TNT #tnt,
+		 +ONSET #onset, +CLASS #class, +PRED #pred, +CARG #carg, 
+		 +CFROM #cfrom, +CTO #cto ] >,
     +POSITION "I1<I2" ].
 
 paren-space-rule := inpmap-rule &
@@ -1046,9 +1079,11 @@ mixed-alphanum-8-rule := inpmap-x11-rule &
 ;;; readable ersatz into the token.                           (2-feb-02; oe)
 ;;;
 
+#|
 email-1-rule := inpmap-x11-rule &
   [ +INPUT   < [ +FORM "/([\(]*)([-a-zA-ZÅåØøÆæ0-9]+@[-.a-zA-ZÅåØøÆæ0-9]+)([.\?!,;\":\)]*)/" ] >,
     +OUTPUT  < [ +FORM "${I1:+FORM:1}emailersatz${I1:+FORM:3}" ] > ].
+|#
 
 ;;;
 ;;; Fractions
@@ -1376,9 +1411,11 @@ web-5-rule := inpmap-rule &
     +OUTPUT  < [ +FORM "${I1:+FORM:1}webersatz${I3:+FORM:2}",
 		 +TNT #tnt, +IDS #ids, +CFROM #cfrom, +CTO #cto ] > ].
 
+#|
 email-2-rule := inpmap-x11-rule &
   [ +INPUT   < [ +FORM "/([\(\*]*)(<?[a-zA-ZÅåØøÆæ0-9_\\-]{2,}@[a-zA-ZÅåØøÆæ0-9._\\-]{2,}>?)([.\?!,;\":\)]*)/" ] >,
     +OUTPUT  < [ +FORM "${I1:+FORM:1}emailersatz${I1:+FORM:3}" ] > ].
+|#
 
 ;;;
 ;;; reduced year names; possibly another case where, in full generality, we
@@ -1550,14 +1587,14 @@ didnt-rule-2 := inpmap-x21-rule &
 ;;; for native entries.
 ;;;
 
-explode-tnt-rule := inpmap-012-rule &
+recurse-tnt-rule := inpmap-012-rule &
   [ +INPUT   < [ +FORM #form ,
 		 +CLASS #class,
                  +TNT.+TAGS [ FIRST #tag , REST #tagrest & *cons* ],
                  +TNT.+PRBS [ FIRST #prb , REST #prbrest & *cons* ] ] > ,
     +OUTPUT  < [ +FORM #form,
 		 +CLASS #class,
-		 +PRED generic_unk_rel,
+		 +ONSET unk_onset,
                  +TNT.+TAGS < #tag >,
                  +TNT.+PRBS < #prb > ] ,
                [ +FORM #form,
@@ -1566,10 +1603,40 @@ explode-tnt-rule := inpmap-012-rule &
                  +TNT.+PRBS #prbrest ] > ,
     +POSITION "O1=O2" ].
 
+terminate-tnt-rule := inpmap-012-rule &
+  [ +INPUT   < [ +FORM #form,
+		 +CLASS #class,
+                 +TNT.+TAGS < #tag >,
+                 +TNT.+PRBS < #prb > ] >,
+    +OUTPUT  < [ +FORM #form,
+		 +CLASS #class,
+		 +ONSET unk_onset,
+                 +TNT.+TAGS < #tag >,
+                 +TNT.+PRBS < #prb > ] ,
+               [ +FORM #form,
+		 +CLASS #class,
+		 +ONSET con_or_voc,
+                 +TNT.+TAGS < >,
+                 +TNT.+PRBS < > ] >,
+    +POSITION "O1=O2" ].
+
+filter-dup-fw-token := inpmap-rule &
+  [ +CONTEXT < [ +TNT.+TAGS < "NN" > ] >,
+    +INPUT   < [ +TNT.+TAGS < "FW" > ] >,
+    +OUTPUT  < >,
+    +POSITION "I1=C1" ].
+
+filter-dup-nnp-token := inpmap-rule &
+  [ +CONTEXT < [ +TNT.+TAGS < "NN" > ] >,
+    +INPUT   < [ +TNT.+TAGS < "NNP" > ] >,
+    +OUTPUT  < >,
+    +POSITION "I1=C1" ].
+
 assign-default-class := inpmap-rule &  
   [ +INPUT   < [ +FORM #form,
-		 +CLASS noclass, +PRED #pred,
+		 +CLASS noclass, +PRED #pred, +ONSET #onset,
                  +TNT #tnt, +IDS #ids, +CFROM #cfrom, +CTO #cto ] >,
     +OUTPUT  < [ +FORM #form,
-		 +CLASS loweralpha, +PRED #pred,
+		 +CLASS loweralpha, +PRED #pred, +ONSET #onset,
                  +TNT #tnt, +IDS #ids, +CFROM #cfrom, +CTO #cto ] > ].
+
