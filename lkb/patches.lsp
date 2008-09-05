@@ -80,6 +80,7 @@
 ; of the tagger (separating punctuation etc)
 (in-package :lkb)
 
+#+:tsdb
 (defun repp-for-pet-with-tagger (string &optional tagger)
   (setf string
     (let ((pretokscript (format nil "~Alkb/token-n-tnt.prl" 
