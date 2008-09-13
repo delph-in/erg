@@ -86,8 +86,8 @@
     (let ((pretokscript (format nil "~Alkb/token-n-tnt.prl" 
 				   lkb::*grammar-directory*)))
       (with-open-file (stream "/tmp/pretokin" :direction :output 
-		       :if-does-not-exist :create :if-exists :supersede) 
-	(format stream string))
+		       :if-does-not-exist :create :if-exists :supersede)
+        (write-string string stream))
       (run-process (format nil "~a < /tmp/pretokin" pretokscript)
 		   :wait t :output "/tmp/pretokout"
 		   :if-output-exists :supersede)
