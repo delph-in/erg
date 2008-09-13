@@ -81,7 +81,7 @@
 (in-package :lkb)
 
 #+:tsdb
-(defun repp-for-pet-with-tagger (string &optional tagger)
+(defun repp-for-pet-with-tagger (string &optional tagger &key (format :pet))
   (setf string
     (let ((pretokscript (format nil "~Alkb/token-n-tnt.prl" 
 				   lkb::*grammar-directory*)))
@@ -98,7 +98,7 @@
           (:tnt
            (apply 
             #'tnt
-            (repp string :format :list :verbose nil)
+            (repp string :repp :preprocessor-min :format :list :verbose nil)
             (rest tagger))))
       (loop
           for (id start end form surface . tags) in tokens
@@ -111,7 +111,8 @@
           collect token into tokens
           finally 
             (return (values (format nil "~{~a~^ ~}" tokens) length))))
-    (repp string :format :pet :verbose nil)))
+                
+    (repp string :repp :preprocessor-min :format format :verbose nil)))
 
 (in-package :cl-user)
 
