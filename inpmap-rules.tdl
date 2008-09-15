@@ -17,7 +17,7 @@
 ;;;  http://lingpipe-blog.com/2008/06/26/the-curse-of-intelligent-tokenization/
 ;;;
 ;;; in the process of token mapping, we move from a PTB-compatible tokenization
-;;; to an ERG-compatible one: specifically, most punctuation marks are attached
+;;; to an ERG-compatible one: specifically, many punctuation marks are attached
 ;;; as prefixes or suffixes on other tokens.  the process is broken down into a
 ;;; number of (more or less) distinct phases, viz.
 ;;;
@@ -85,8 +85,8 @@ non_alphanumeric_tmr := token_class_tmt &
 
 ;;
 ;; in case we are running without a PoS tagger, or something went wrong in the
-;; creation of token AVMs from input in one for or another, make sure to annul 
-;; part-of-speech information.
+;; creation of token AVMs from our input (in one form or another), make sure to
+;; fully annul part-of-speech information.
 ;;
 null_tnt_tmr := inpmap-rule &
 [ +INPUT < [ +FORM #form, +ONSET #onset, +CLASS #class,
@@ -1117,12 +1117,50 @@ double_rquote-space-2-rule := inpmap-rule &
     +OUTPUT  < [ +FORM "${I1:+FORM:1}${I1:+FORM:2}\"", +TNT #tnt ] >,
     +POSITION "I1<I2" ].
 
+;;;
+;;; re-combine punctuation marks with adjacent tokens, based on directionality
+;;; of punctuation marks, e.g. opening vs. closing quotes and brackets.  doing
+;;; one such re-combination at a time is sufficient, as each rewrite rule will
+;;; apply as many times as it possible can, seeing its own output from earlier
+;;; applications.
+;;;
+prefix_punctuation_tmr := inpmap-rule &
+  [ +INPUT   < [ +FORM "/([[({“‘])/",
+                 +FROM #from ],
+               [ +FORM "/(.+)/",
+		 +ONSET #onset, +CLASS #class, +PRED #pred, +CARG #carg, 
+                 +TO #to, +TNT #tnt ] >,
+    +OUTPUT  < [ +FORM "${I1:+FORM:1}${I2:+FORM:1}",
+		 +ONSET #onset, +CLASS #class, +PRED #pred, +CARG #carg, 
+                 +FROM #from, +TO #to, +TNT #tnt ] >,
+    +POSITION "I1<I2" ].
+
+;;
+;; _fix_me_
+;; there is a special case here: |'| following a token ending in |s| could be a
+;; possessive marker (which should remain a token in its own right), or could 
+;; be a closing single quote.  in principle, the same is true for |"|, but the
+;; `feet' measure unit, possibly, will have been detected during NE recognition
+;; earlier.  in either case, we would need a way of keeping a separate |'| in
+;; the chart, and also re-combine it with the preceding token.  (14-sep-08; oe)
+;;
+suffix_punctuation_tmr := inpmap-rule &
+  [ +INPUT   < [ +FORM "/(.+)/",
+		 +ONSET #onset, +CLASS #class, +PRED #pred, +CARG #carg, 
+                 +FROM #from, +TNT #tnt ],
+               [ +FORM "/([])}”\"’,;.!?])/",
+                 +TO #to ] >,
+    +OUTPUT  < [ +FORM "${I1:+FORM:1}${I2:+FORM:1}",
+		 +ONSET #onset, +CLASS #class, +PRED #pred, +CARG #carg, 
+                 +FROM #from, +TO #to, +TNT #tnt ] >,
+    +POSITION "I1<I2" ].
 
 ;;;
 ;;; Eliminate spurious space preceding and following most punctuation marks
 ;;; This includes removal of spaces introduced around punctuation in 
 ;;; tokenization step.
 ;;;
+
 
 space-punct-rule := inpmap-rule &
   [ +INPUT   < [ +FORM "/(.*)/", +TNT #tnt,

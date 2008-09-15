@@ -79,7 +79,9 @@
 ;;
 ;; two special cases involving periods: map ASCII ellipsis (|...|) to a single
 ;; UniCode character (|…|), and convert |..| between numbers into an n-dash,
-;; i.e. a numeric range (typically tokenized off, i.e. |42| |–| |43|).
+;; i.e. a numeric range (typically tokenized off, i.e. |42| |–| |43|).  maybe
+;; the latter can also occur between non-numbers?  we could also just preserve
+;; it, but always make it a token in its own right?
 ;;
 !([^.])\.\.\.([^.])						\1 … \2
 !([0-9.]) *\.\. *([0-9.])					\1 – \2
@@ -92,31 +94,42 @@
 
 ;;
 ;; deviating from the PTB conventions, we use one-character double quote marks
-;; (i.e. |“| and |"| instead of |``| and |''|).  when expecting LaTeX mark-up,
-;; maybe, one could interpret |''| as a proper closing quote (|”|), but people
-;; are not very consistent about their quotes, even when writing LaTeX.  thus,
-;; we distinguish proper opening quotes (|“| and |‘|) and ambiguous quotes (|"|
-;; and |'|).  do this prior to tokenizing off other characters (group #1 below)
-;; to make adjacent whitespace detection possible, e.g. in |"yes!"|.
+;; (i.e. |“| and |"| instead of |``| and |''|); much like the PTB, however, we
+;; aim to disambiguate neutral quotes (|"| and |''|) at the string level, i.e.
+;; opening quotes are preceded by a token boundary (white space), with a small
+;; number of additional, token-initial characters than can intervene.  anything
+;; else, we assume, is a closing quote.  rather than the proper UniCode closing
+;; quote (|”|), however, use a straight double quote (|"|), which can double as
+;; a unit of measure (feet).  do the same for single quotes, using apostrophes
+;; (|'|) rather than proper closing quotes (|’|), to allow ambiguity with the
+;; possessive maker, specifically when following |s|.  to not create spurious
+;; ambiguity, preserve proper closing quotes, if used in the input.
 ;;
-;!``								“
-;!`								‘
-;!''								"
+;; convert quotes to single characters prior to tokenizing off other characters
+;; (group #1 below) to make adjacent whitespace detection easier, as e.g. in
+;; |``$20!''|.
+;;
+!``								“
+!(^| [[({]*)("|'')						\1“
+!''								”
+!`								‘
+
+;;
+;; normalize stylistic variance in (directional) quote marks.  once these rules
+;; are complete, we are down to only six quote marks: |“|, |”|, |"|, |‘|, |’|,
+;; and |'|.  of these, the straight ones (the traditional ASCII characters) are
+;; ambiguous between being a closing quote and something else.
+;;
+![„«]								“
+![»]								”
+![‚‹]								‘
+![›]								’
 
 ;;
 ;; remove space after initial |O'| and |L'|, i.e. irish and romance names, to
 ;; avoid stripping off their apostrophes.
 ;;
 ! ([OlL])' 							 \1'
-
-;;
-;; the ERG opts to squash some variation in punctuation (even though probably
-;; we should preserve the contrast between opening and closing quotes, as it
-;; would unambiguously correspond to prefix vs. suffix positions).  for now, 
-;; accomodate the way the grammar expects things to come into the parser.
-;;
-![‘’‚‹›`]							'
-![“”„«»]							"
 
 ;;
 ;; a new REPP facility: named groups and iterative group calls.  there are a
@@ -150,9 +163,9 @@
 ;;
 !  +							 
 #1
-!([^ ])([][(){}?!,;:@#$€¢£¥%&“‘'"]) ([^ ]|$)			\1 \2 \3
-!([^ ])\. ([])}'" ]*)$						\1 . \2
-!(^|[^ ]) ([][(){}?!,;:@#$€¢£¥%&“‘'"])([^ ])			\1 \2 \3
+!([^ ])([][(){}?!,;:@#$€¢£¥%&“”"‘’']) ([^ ]|$)			\1 \2 \3
+!([^ ])\. ([])}”"’' ]*)$					\1 . \2
+!(^|[^ ]) ([][(){}?!,;:@#$€¢£¥%&“”"‘’'])([^ ])			\1 \2 \3
 #
 
 >1
