@@ -1,0 +1,287 @@
+;;; -*- Mode: tdl; Coding: utf-8; -*-
+
+;;;
+;;; token mapping is the process of inspecting and re-arranging input tokens,
+;;; i.e. a lattice of structured objects (feature structures), to best match
+;;; the expectations of the grammar proper.  the general mechnism is described
+;;; by Adolphs, et al. (2008); see:
+;;;
+;;;   http://www.lrec-conf.org/proceedings/lrec2008/summaries/349.html
+;;;
+;;; as of August 2008, we are assuming an initial tokenization that is (mostly)
+;;; compatible to Penn Treebank (PTB) conventions; this may or may not turn out
+;;; to be a good idea, but if nothing else it makes the core parser compatible
+;;; with a wide variety of existing tools and pre-processing approaches.  for a
+;;; critical (and subjective) discussion of some tokenization issues, see:
+;;;
+;;;  http://lingpipe-blog.com/2008/06/26/the-curse-of-intelligent-tokenization/
+;;;
+;;; in the process of token mapping, we move from a PTB-compatible tokenization
+;;; to an ERG-compatible one: specifically, many punctuation marks are attached
+;;; as prefixes or suffixes on other tokens.  the process is broken down into a
+;;; number of (more or less) distinct phases, viz.
+;;;
+;;; - decoration: filling in missing or underspecified token properties.
+;;; - normalization: anything the (ideal) tokenizer _should_ have done.
+;;; - NE recognition: surface-based identification of URLs, numbers, et al.
+;;; - token combination: re-attach punctuation marks and contracted forms.
+;;; - sandwiched punctuation
+;;; - PoS explosion: multiply out alternate PoS readings
+;;; - PoS reduction: prune overlapping PoS readings
+;;;
+;;; we hope we have (now) arrived at a relatively stable inventory of token
+;;; properties, of which some typically are only introduced in token mapping;
+;;; these are ONSET, PRED, CARG.  however, in principle a tokenizer might pass
+;;; in any of these properties, or they could be introduced very early in the
+;;; rewrite process.  hence, all rules must make sure to always preserve all
+;;; token information.
+;;;
+
+;;
+;; some tokenizers (e.g. the one of acrolinx) already distinguish a number of
+;; token classes.  our REPP tokenizer, however, does not; so, determine class
+;; values here, if need be.  with acrolinx, we might have to map their naming
+;; scheme into our type hierarchy, on the other hand.
+;;
+numeric_tmr := token_class_tmt &
+[ +INPUT < [ +FORM "/[[:digit:]]+/" ] >,
+  +OUTPUT < [ +CLASS numeric ] > ].
+
+alphabetic+upper_tmr := token_class_tmt &
+[ +INPUT < [ +FORM "/[[:upper:]]+/" ] >,
+  +OUTPUT < [ +CLASS alphabetic+upper ] > ].
+
+alphabetic+lower_tmr := token_class_tmt &
+[ +INPUT < [ +FORM "/[[:lower:]]+/" ] >,
+  +OUTPUT < [ +CLASS alphabetic+lower ] > ].
+
+alphabetic+capitalized+mixed_tmr := token_class_tmt &
+[ +INPUT < [ +FORM "/[[:upper:]][[:alpha:]]+/" ] >,
+  +OUTPUT < [ +CLASS alphabetic+capitalized+mixed ] > ].
+
+alphabetic+non_capitalized+mixed_tmr := token_class_tmt &
+[ +INPUT < [ +FORM "/[[:lower:]][[:alpha:]]+/" ] >,
+  +OUTPUT < [ +CLASS alphabetic+non_capitalized+mixed ] > ].
+
+alphanumeric+upper_tmr := token_class_tmt &
+[ +INPUT < [ +FORM "/[[:upper:][:digit:]]+/" ] >,
+  +OUTPUT < [ +CLASS alphanumeric+upper ] > ].
+
+alphanumeric+lower_tmr := token_class_tmt &
+[ +INPUT < [ +FORM "/[[:lower:][:digit:]]+/" ] >,
+  +OUTPUT < [ +CLASS alphanumeric+lower ] > ].
+
+alphanumeric+capitalized+mixed_tmr := token_class_tmt &
+[ +INPUT < [ +FORM "/[[:upper:]][[:alnum:]]+/" ] >,
+  +OUTPUT < [ +CLASS alphanumeric+capitalized+mixed ] > ].
+
+alphanumeric+non_capitalized+mixed_tmr := token_class_tmt &
+[ +INPUT < [ +FORM "/[[:lower:][:digit:]][[:alnum:]]+/" ] >,
+  +OUTPUT < [ +CLASS alphanumeric+non_capitalized+mixed ] > ].
+
+non_alphanumeric_tmr := token_class_tmt &
+[ +OUTPUT < [ +CLASS non_alphanumeric ] > ].
+
+;;
+;; in case we are running without a PoS tagger, or something went wrong in the
+;; creation of token AVMs from our input (in one form or another), make sure to
+;; fully annul part-of-speech information.
+;;
+null_tnt_tmr := inpmap-rule &
+[ +INPUT < [ +FORM #form, +ONSET #onset, +CLASS #class,
+             +PRED #pred, +CARG #carg, +ID #id, +FROM #from, +TO #to,
+             +TNT [ +TAGS < "FOO", ... > ] ] >,
+  +OUTPUT < [ +FORM #form, +ONSET #onset, +CLASS #class,
+              +PRED #pred, +CARG #carg, +ID #id, +FROM #from, +TO #to, 
+              +TNT null_tnt ] > ].
+
+;;;
+;;; lightweight NEs: form-driven generic entries (formerly `ersatz' entries)
+;;;
+
+;;;
+;;; email addresses
+;;;
+
+;;
+;; any valid DNS string, prefixed by address, with optional angle brackets
+;;
+email_ne_tmr := ne_tmt &
+[ +INPUT < [ +FORM
+             "/<?[[:alnum:]._-]+@[[:alnum:]_-]+(\\.[[:alnum:]_-]+)+>?/" ] >,
+  +OUTPUT < [ +CLASS email_ne ] > ].
+
+;;;
+;;; URLs
+;;;
+
+;;
+;; any valid DNS string, prefixed by `http://', with optional angle brackets
+;;
+url_ne_1_tmr := ne_tmt &
+[ +INPUT < [ +FORM "/<?http://[[:alnum:]_-]+(\\.[[:alnum:]_-]+)+>?/" ] >,
+  +OUTPUT < [ +CLASS url_ne ] > ].
+
+;;
+;; any valid DNS string, prefixed by `www', with optional angle brackets
+;;
+url_ne_2_tmr := ne_tmt &
+[ +INPUT < [ +FORM "/<?www(\\.[[:alnum:]_-]+)+>?/" ] >,
+  +OUTPUT < [ +CLASS url_ne ] > ].
+
+;;
+;; any valid DNS string, with obligatory angle brackets
+;;
+url_ne_3_tmr := ne_tmt &
+[ +INPUT < [ +FORM "/<[[:alnum:]_-]+(\\.[[:alnum:]_-]+)+>/" ] >,
+  +OUTPUT < [ +CLASS url_ne ] > ].
+
+
+;;;
+;;; re-combine punctuation marks with adjacent tokens, based on directionality
+;;; of punctuation marks, e.g. opening vs. closing quotes and brackets.  doing
+;;; one such re-combination at a time is sufficient, as each rewrite rule will
+;;; apply as many times as it possible can, seeing its own output from earlier
+;;; applications.
+;;;
+prefix_punctuation_tmr := inpmap-rule &
+[ +INPUT < [ +FORM "/([[({“‘])/",
+             +FROM #from ],
+           [ +FORM "/(.+)/",
+             +ONSET #onset, +CLASS #class, +PRED #pred, +CARG #carg, 
+             +TO #to, +TNT #tnt ] >,
+  +OUTPUT < [ +FORM "${I1:+FORM:1}${I2:+FORM:1}",
+             +ONSET #onset, +CLASS #class, +PRED #pred, +CARG #carg, 
+             +FROM #from, +TO #to, +TNT #tnt ] >,
+  +POSITION "I1<I2" ].
+
+;;
+;; _fix_me_
+;; there is a special case here: |'| following a token ending in |s| could be a
+;; possessive marker (which should remain a token in its own right), or could 
+;; be a closing single quote.  in principle, the same is true for |"|, but the
+;; `feet' measure unit, possibly, will have been detected during NE recognition
+;; earlier.  in either case, we would need a way of keeping a separate |'| in
+;; the chart, and also re-combine it with the preceding token.  (14-sep-08; oe)
+;;
+suffix_punctuation_tmr := inpmap-rule &
+[ +INPUT < [ +FORM "/(.+)/",
+             +ONSET #onset, +CLASS #class, +PRED #pred, +CARG #carg, 
+             +FROM #from, +TNT #tnt ],
+           [ +FORM "/([])}”\"’,;.!?])/",
+             +TO #to ] >,
+  +OUTPUT < [ +FORM "${I1:+FORM:1}${I2:+FORM:1}",
+              +ONSET #onset, +CLASS #class, +PRED #pred, +CARG #carg, 
+              +FROM #from, +TO #to, +TNT #tnt ] >,
+  +POSITION "I1<I2" ].
+
+
+;;
+;; finally, convert everything to lower case, for lexical look-up in PET
+;;
+lower_case_tmr := inpmap-011-rule &
+[ +INPUT < [ +FORM "/(.*[[:upper:]].*)/" ] > ,
+  +OUTPUT < [ +FORM "${lc(I1:+FORM:1)}" ] > ].
+
+
+;;;
+;;; at this point, we multiply out PoS values on all tokens, where for each
+;;; original token as many additional tokens are created (in the same chart
+;;; cell) as there are PoS readings.  at this point, we start distinguishing
+;;; between tokens that activate native lexical entries (LEs), vs. those that
+;;; activate generic LEs.  in the token universe, this distinction is made by
+;;; virtue of +ONSET, with unk_onset reserved for generic LEs.  the two sets
+;;; do not overlap, i.e. for a single original token with two PoS readings, we
+;;; end up with a total of three new tokens.  the pair of rules below resembles
+;;; a recursive function, terminating once the PoS list has been reduced to 
+;;; a singleton element.  form-based named entities identified earlier avoid
+;;; this kind of PoS multiplication because they have already emptied out their
+;;; PoS list.
+;;;
+
+tnt_recurse_rule := inpmap-012-rule &
+[ +INPUT < [ +FORM #form ,
+             +CLASS #class,
+             +TNT.+TAGS [ FIRST #tag , REST #tagrest & *cons* ],
+             +TNT.+PRBS [ FIRST #prb , REST #prbrest & *cons* ] ] > ,
+  +OUTPUT < [ +FORM #form,
+              +CLASS #class,
+              +ONSET unk_onset,
+              +TNT.+TAGS < #tag >,
+              +TNT.+PRBS < #prb > ] ,
+            [ +FORM #form,
+              +CLASS #class,
+              +TNT.+TAGS #tagrest,
+              +TNT.+PRBS #prbrest ] > ,
+  +POSITION "O1=O2" ].
+
+tnt_terminate_tmr := inpmap-012-rule &
+[ +INPUT < [ +FORM #form,
+             +CLASS #class,
+             +TNT.+TAGS < #tag >,
+             +TNT.+PRBS < #prb > ] >,
+  +OUTPUT < [ +FORM #form,
+              +CLASS #class,
+              +ONSET unk_onset,
+              +TNT.+TAGS < #tag >,
+              +TNT.+PRBS < #prb > ] ,
+            [ +FORM #form,
+              +CLASS #class,
+              +ONSET con_or_voc,
+              +TNT.+TAGS < >,
+              +TNT.+PRBS < > ] >,
+  +POSITION "O1=O2" ].
+
+;;;
+;;; with singleton PoS readings multiplied out in each chart cell, we can prune
+;;; undesirable alternatives, e.g. a foreign word reading when there also is a
+;;; common noun.  also, ditch PoS readings with very low probability, and ones
+;;; for which no PoS-activated generic entries exist anyway.
+;;;
+;;; _fix_me_
+;;; should we eventually want to include the PoS probabilities as a feature in
+;;; parse selection, this kind of pruning should disappear: a high-probability
+;;; FW, say, should not be bullied out by an unlike NN.         (31-aug-08; oe)
+;;;
+
+tnt_ditch_unlikely_tmr := inpmap-rule &
+[ +INPUT < [ +TNT.+PRBS < "/0?\\.0.*/" > ] >,
+  +OUTPUT < > ].
+
+tnt_ditch_function_tmr := inpmap-rule &
+[ +INPUT < [ +TNT.+TAGS 
+             < "/CC|DT|IN|MD|PDT|POS|PRP\\$?|RP|TO|UH|WDT|WP|WRB/" > ] >,
+  +OUTPUT < > ].
+
+tnt_ditch_punctuation_tmr := inpmap-rule &
+[ +INPUT < [ +TNT.+TAGS < "/:\\(|\\)/" > ] >,
+  +OUTPUT < > ].
+
+tnt_filter_dup_fw_tmr := inpmap-rule &
+[ +CONTEXT  < [ +TNT.+TAGS < "NN" > ] >,
+  +INPUT    < [ +TNT.+TAGS < "FW" > ] >,
+  +OUTPUT   < >,
+  +POSITION "I1=C1" ].
+
+tnt_filter_dup_nnp_tmr := inpmap-rule &
+[ +CONTEXT  < [ +TNT.+TAGS < "NN" > ] >,
+  +INPUT    < [ +TNT.+TAGS < "NNP" > ] >,
+  +OUTPUT   < >,
+  +POSITION "I1=C1" ].
+
+tnt_filter_dup_nnps_tmr := inpmap-rule &
+[ +CONTEXT  < [ +TNT.+TAGS < "NNP" > ] >,
+  +INPUT    < [ +TNT.+TAGS < "NNPS" > ] >,
+  +OUTPUT   < >,
+  +POSITION "I1=C1" ].
+
+#|
+assign-semantics-nn := inpmap-rule &  
+  [ +INPUT   < [ +FORM #form & "/([a-zA-Z0-9]+)/",
+		 +CLASS #class & stdorth, +ONSET #onset & unk_onset, +ID #id,
+                 +TNT #tnt & [ +TAGS < "NN" > ], +FROM #from, +TO #to ] >,
+    +OUTPUT  < [ +FORM #form,
+		 +CLASS #class, +PRED "_${I1:+FORM:1}_n_rel", +ONSET #onset,
+                 +TNT #tnt, +ID #id, +FROM #from, +TO #to ] > ].
+|#
+
