@@ -151,7 +151,7 @@ url-ne-5-rule := inpmap-ne-11-rule &
 
 ; |/etc/config|
 file-ne-1-rule := inpmap-ne-11-rule &
-[ +INPUT   < [ +FORM "/\\/?[a-zA-Z0-9]+\\/(.*)/" ] >,
+[ +INPUT   < [ +FORM "/\\/[a-zA-Z0-9]+\\/(.*)/" ] >,
   +OUTPUT  < [ +CLASS file_ne ] > ].
 
 
@@ -494,6 +494,8 @@ measure-ne-7-rule := inpmap-ne-21-rule &
   +OUTPUT  < [ +FORM "${I1:+FORM:1}${I2:+FORM:1}",
 	       +CLASS meas_ne ] > ].
 
+; DPF 15-sept-08 - Now using separate :xml preprocessor module
+#|
 ;;;
 ;;; Normalize surviving XML punctuation marks
 ;;;
@@ -793,6 +795,7 @@ xml-charseq6-rule := inpmap-rule &
   [ +INPUT   < [ +FORM "\*", +FROM #from ], [ +FORM "\*" ], [ +FORM "f", +TNT #tnt, +TO #to ] >,
     +OUTPUT  < [ +FORM " ", +TNT #tnt, +FROM #from, +TO #to ] >,
     +POSITION "I1<I2<I3" ].
+|#
 
 strip-char1-rule := inpmap-x11-rule &
   [ +INPUT   < [ +FORM "/([A-Za-zÅåØøÆæ0-9.\?!\)]+)( )/" ] >,
@@ -891,14 +894,20 @@ norm-hyphen-rule := inpmap-x11-rule &
 ;;;
 
 punct-right-space-rule := inpmap-rule &
-  [ +INPUT   < [ +FORM "/([a-zA-ZÅåØøÆæ0-9]+)([=#$%~\(§§])+/", +TNT #tnt ] >,
-    +OUTPUT  < [ +FORM "${I1:+FORM:1}", +TNT #tnt ],
-    	       [ +FORM "${I1:+FORM:2}", +TNT #tnt ] > ].
+  [ +INPUT   < [ +FORM "/([a-zA-ZÅåØøÆæ0-9]+)([=#$%~\(§§])+/", +TNT #tnt,
+		 +ONSET #onset, +CLASS #class ] >,
+    +OUTPUT  < [ +FORM "${I1:+FORM:1}", +TNT #tnt,
+		 +ONSET #onset, +CLASS #class ],
+    	       [ +FORM "${I1:+FORM:2}", +TNT #tnt,
+		 +ONSET #onset, +CLASS #class ] > ].
 
 punct-left-space-rule := inpmap-rule &
-  [ +INPUT   < [ +FORM "/([=#$%~+*\)§§]+)([a-zA-ZÅåØøÆæ0-9]+)/", +TNT #tnt ] >,
-    +OUTPUT  < [ +FORM "${I1:+FORM:1}", +TNT #tnt ],
-               [ +FORM "${I1:+FORM:2}", +TNT #tnt ] > ].
+  [ +INPUT   < [ +FORM "/([=#$%~+*\)§§]+)([a-zA-ZÅåØøÆæ0-9]+)/", +TNT #tnt,
+	         +ONSET #onset, +CLASS #class ] >,
+    +OUTPUT  < [ +FORM "${I1:+FORM:1}", +TNT #tnt,
+		 +ONSET #onset, +CLASS #class ],
+               [ +FORM "${I1:+FORM:2}", +TNT #tnt,
+		 +ONSET #onset, +CLASS #class ] > ].
 
 ;;;
 ;;; DPF 18-oct-06 - Temporarily replace |+| with |plus| for PET tokenizer bug
@@ -929,9 +938,11 @@ punct-cluster3-rule := inpmap-x11-rule &
     +OUTPUT  < [ +FORM "${I1:+FORM:1}${I1:+FORM:2}" ] > ].
 
 punct-cluster4-rule := inpmap-rule &
-  [ +INPUT   < [ +FORM "/([a-zA-ZÅåØøÆæ0-9]*),/", +TNT #tnt ],
+  [ +INPUT   < [ +FORM "/([a-zA-ZÅåØøÆæ0-9]*),/", +TNT #tnt,
+		 +ONSET #onset, +CLASS #class ],
       	       [ +FORM "/([.?])/" ] >,
-    +OUTPUT  < [ +FORM "${I1:+FORM:1}${I2:+FORM:1}", +TNT #tnt ] >,
+    +OUTPUT  < [ +FORM "${I1:+FORM:1}${I2:+FORM:1}", +TNT #tnt,
+		 +ONSET #onset, +CLASS #class ] >,
     +POSITION "I1<I2" ].
 
 punct-cluster5-rule := inpmap-x11-rule &
@@ -961,9 +972,11 @@ punct-cluster8-rule := inpmap-x21-rule &
 
 quote-pair-space-rule := inpmap-rule &
   [ +INPUT   < [ +FORM "/([\"])/" ],
-	       [ +FORM "/([a-zA-ZÅåØøÆæ0-9]+)([.?]*)/", +TNT #tnt ],
+	       [ +FORM "/([a-zA-ZÅåØøÆæ0-9]+)([.?]*)/", 
+		 +TNT #tnt, +ONSET #onset, +CLASS #class ],
 	       [ +FORM "/([\"])/" ] >,
-    +OUTPUT  < [ +FORM "${I1:+FORM:1}${I2:+FORM:1}${I2:+FORM:2}${I3:+FORM:1}", +TNT #tnt ] >,
+    +OUTPUT  < [ +FORM "${I1:+FORM:1}${I2:+FORM:1}${I2:+FORM:2}${I3:+FORM:1}",
+		 +TNT #tnt, +ONSET #onset, +CLASS #class ] >,
     +POSITION "I1<I2<I3" ].
 
 ;;;
@@ -980,152 +993,296 @@ final-doubleq-rule := inpmap-x11-rule &
 ;;; Same for periods between capital letters: "D.B. Smith", "2.Kim"
 ;;; Add white space on both sides for forward slash
 ;;;
-squished-punct1-rule := inpmap-rule &
-  [ +INPUT   < [ +FORM "/([\(\*]*)([a-zA-ZÅåØøÆæ\\-]+)([,:])([a-zA-ZÅåØøÆæ@.\\-]+)([.\?!,;\":\)]*)/", +TNT #tnt, +CLASS stdorth ] >,
-    +OUTPUT  < [ +FORM "${I1:+FORM:1}${I1:+FORM:2}${I1:+FORM:3}", +TNT #tnt ],
-               [ +FORM "${I1:+FORM:4}${I1:+FORM:5}", +TNT #tnt ] > ].
+squished-punct1-rule := inpmap-x12-rule &
+  [ +INPUT   < [ +FORM 
+ "/([\(\*]*)([a-zA-ZÅåØøÆæ\\-]+)([,:])([a-zA-ZÅåØøÆæ@.\\-]+)([.\?!,;\":\)]*)/",
+		 +CLASS stdorth ] >,
+    +OUTPUT  < [ +FORM "${I1:+FORM:1}${I1:+FORM:2}${I1:+FORM:3}" ],
+               [ +FORM "${I1:+FORM:4}${I1:+FORM:5}" ] > ].
 
-squished-punct2-rule := inpmap-rule &
-  [ +INPUT   < [ +FORM "/([\(]*)([0-9]+)([,:])([a-zA-ZÅåØøÆæ]+)([.\?!,;\":\)]*)/", +TNT #tnt, +CLASS stdorth ] >,
-    +OUTPUT  < [ +FORM "${I1:+FORM:1}${I1:+FORM:2}${I1:+FORM:3}", +TNT #tnt ],
-               [ +FORM "${I1:+FORM:4}${I1:+FORM:5}", +TNT #tnt ] > ].
+squished-punct2-rule := inpmap-x12-rule &
+  [ +INPUT   < [ +FORM 
+		 "/([\(]*)([0-9]+)([,:])([a-zA-ZÅåØøÆæ]+)([.\?!,;\":\)]*)/",
+		 +CLASS stdorth ] >,
+    +OUTPUT  < [ +FORM "${I1:+FORM:1}${I1:+FORM:2}${I1:+FORM:3}" ],
+               [ +FORM "${I1:+FORM:4}${I1:+FORM:5}" ] > ].
 
-squished-punct3-rule := inpmap-rule &
-  [ +INPUT   < [ +FORM "/([\(]*)([0-9.]+)(-)([a-zA-ZÅåØøÆæ][a-zA-ZÅåØøÆæ-]+)([.\?!,;\":\)]*)/", +TNT #tnt, +CLASS stdorth ] >,
-    +OUTPUT  < [ +FORM "${I1:+FORM:1}${I1:+FORM:2}", +TNT #tnt ],
-    	       [ +FORM "${I1:+FORM:3}", +TNT #tnt ],
-               [ +FORM "${I1:+FORM:4}${I1:+FORM:5}", +TNT #tnt ] > ].
+squished-punct3-rule := inpmap-x13-rule &
+  [ +INPUT   < [ +FORM 
+   "/([\(]*)([0-9.]+)(-)([a-zA-ZÅåØøÆæ][a-zA-ZÅåØøÆæ-]+)([.\?!,;\":\)]*)/",
+		 +CLASS stdorth ] >,
+    +OUTPUT  < [ +FORM "${I1:+FORM:1}${I1:+FORM:2}" ],
+    	       [ +FORM "${I1:+FORM:3}" ],
+               [ +FORM "${I1:+FORM:4}${I1:+FORM:5}" ] > ].
 
-#|
-squished-punct4-rule := inpmap-rule &
-  [ +INPUT   < [ +FORM "/([\(]*)([a-zA-ZαβΔÅåØøÆæ]+)([,:-])([a-zA-ZÅåØøÆæ]+)([.\?!,;\":\)]*)/", +TNT #tnt] >,
-    +OUTPUT  < [ +FORM "${I1:+FORM:1}${I1:+FORM:2}${I1:+FORM:3}", +TNT #tnt ],
-               [ +FORM "${I1:+FORM:4}${I1:+FORM:5}", +TNT #tnt ] > ].
-|#
-squished-punct4a-rule := inpmap-rule &
-  [ +INPUT   < [ +FORM "/([\(\*]*)([a-zA-ZαβΔÅåØøÆæ']+)([,:-])([a-zA-ZÅåØøÆæ']+)([.\?!,;\":\)]*)/", +TNT #tnt, +CLASS stdorth ] >,
-    +OUTPUT  < [ +FORM "${I1:+FORM:1}${I1:+FORM:2}${I1:+FORM:3}", +TNT #tnt ],
-               [ +FORM "${I1:+FORM:4}${I1:+FORM:5}", +TNT #tnt ] > ].
+squished-punct4a-rule := inpmap-x12-rule &
+  [ +INPUT   < [ +FORM 
+   "/([\(\*]*)([a-zA-ZαβΔÅåØøÆæ']+)([-,:\/])([a-zA-ZÅåØøÆæ']+)([.\?!,;\":\)]*)/",
+		 +CLASS stdorth ] >,
+    +OUTPUT  < [ +FORM "${I1:+FORM:1}${I1:+FORM:2}${I1:+FORM:3}" ],
+               [ +FORM "${I1:+FORM:4}${I1:+FORM:5}" ] > ].
 
 ; Allow digits and "s" to right of dash, for eg "mid-1900s" and "mid-1900's"
-squished-punct4b-rule := inpmap-rule &
-  [ +INPUT   < [ +FORM "/([\(\*]*)([a-zA-ZαβΔÅåØøÆæ]+)([,:-])([0-9']+)s([.\?!,;\":\)]*)/", +TNT #tnt, +CLASS stdorth ] >,
-    +OUTPUT  < [ +FORM "${I1:+FORM:1}${I1:+FORM:2}${I1:+FORM:3}", +TNT #tnt ],
-               [ +FORM "${I1:+FORM:4}s${I1:+FORM:5}", +TNT #tnt ] > ].
+squished-punct4b-rule := inpmap-x12-rule &
+  [ +INPUT   < [ +FORM 
+            "/([\(\*]*)([a-zA-ZαβΔÅåØøÆæ]+)([,:-])([0-9']+)s([.\?!,;\":\)]*)/",
+		 +CLASS stdorth ] >,
+    +OUTPUT  < [ +FORM "${I1:+FORM:1}${I1:+FORM:2}${I1:+FORM:3}" ],
+               [ +FORM "${I1:+FORM:4}s${I1:+FORM:5}" ] > ].
 
-squished-punct5-rule := inpmap-rule &
-  [ +INPUT   < [ +FORM "/([\(]*)([a-zA-ZÅåØøÆæ]+)([,:])([0-9]+)([.\?!,;\":\)]*)/", +TNT #tnt, +CLASS stdorth ] >,
-    +OUTPUT  < [ +FORM "$${I1:+FORM:1}{I1:+FORM:2}${I1:+FORM:3}", +TNT #tnt ],
-               [ +FORM "${I1:+FORM:4}${I1:+FORM:5}", +TNT #tnt ] > ].
+squished-punct5-rule := inpmap-x12-rule &
+  [ +INPUT   < [ +FORM 
+                 "/([\(]*)([a-zA-ZÅåØøÆæ]+)([,:])([0-9]+)([.\?!,;\":\)]*)/",
+		 +CLASS stdorth ] >,
+    +OUTPUT  < [ +FORM "$${I1:+FORM:1}{I1:+FORM:2}${I1:+FORM:3}" ],
+               [ +FORM "${I1:+FORM:4}${I1:+FORM:5}" ] > ].
 
-squished-punct6-rule := inpmap-rule &
-  [ +INPUT   < [ +FORM "/([\(]*)([A-ZÅØ0-9]+)(\\.)([A-ZÅØ+])(\\.)([A-ZÅØ]+)([.\?!,;\":\)]*)/", +TNT #tnt, +CLASS stdorth ] >,
-    +OUTPUT  < [ +FORM "${I1:+FORM:1}${I1:+FORM:2}${I1:+FORM:3}", +TNT #tnt ],
-    	       [ +FORM "${I1:+FORM:4}${I1:+FORM:5}", +TNT #tnt ],
-               [ +FORM "${I1:+FORM:6}${I1:+FORM:7}", +TNT #tnt ] > ].
+squished-punct6-rule := inpmap-x13-rule &
+  [ +INPUT   < [ +FORM 
+        "/([\(]*)([A-ZÅØ0-9]+)(\\.)([A-ZÅØ+])(\\.)([A-ZÅØ]+)([.\?!,;\":\)]*)/",
+		 +CLASS stdorth ] >,
+    +OUTPUT  < [ +FORM "${I1:+FORM:1}${I1:+FORM:2}${I1:+FORM:3}" ],
+    	       [ +FORM "${I1:+FORM:4}${I1:+FORM:5}" ],
+               [ +FORM "${I1:+FORM:6}${I1:+FORM:7}" ] > ].
 
-squished-punct7-rule := inpmap-rule &
-  [ +INPUT   < [ +FORM "/([\(]*)([A-ZÅØ0-9]+)(\\.)([A-ZÅØ]+)([.\?!,;\":\)]*)/", +TNT #tnt, +CLASS stdorth ] >,
-    +OUTPUT  < [ +FORM "${I1:+FORM:1}${I1:+FORM:2}${I1:+FORM:3}", +TNT #tnt ],
-               [ +FORM "${I1:+FORM:4}${I1:+FORM:5}", +TNT #tnt ] > ].
+squished-punct7-rule := inpmap-x12-rule &
+  [ +INPUT   < [ +FORM "/([\(]*)([A-ZÅØ0-9]+)(\\.)([A-ZÅØ]+)([.\?!,;\":\)]*)/",
+		 +CLASS stdorth ] >,
+    +OUTPUT  < [ +FORM "${I1:+FORM:1}${I1:+FORM:2}${I1:+FORM:3}" ],
+               [ +FORM "${I1:+FORM:4}${I1:+FORM:5}" ] > ].
 
 ; Replace squished slash with double slash token which is limited to
 ; lexical conjunction.
-squished-punct9-rule := inpmap-rule &
-[ +INPUT   < [ +FORM "/([\(]*)([a-zA-ZÅåØøÆæ-]+)([→/])([a-zA-ZÅåØøÆæ-]+)([.\?!,;\":\)]*)/", +TNT #tnt, +CLASS stdorth ] >,
-    +OUTPUT  < [ +FORM "${I1:+FORM:1}${I1:+FORM:2}", +TNT #tnt ],
-    	       [ +FORM "//", +TNT #tnt ],
-               [ +FORM "${I1:+FORM:4}${I1:+FORM:5}", +TNT #tnt ] > ].
+squished-punct9-rule := inpmap-x13-rule &
+[ +INPUT   < [ +FORM 
+	 "/([\(]*)([a-zA-ZÅåØøÆæ-]+)([→/])([a-zA-ZÅåØøÆæ-]+)([.\?!,;\":\)]*)/",
+	       +CLASS stdorth ] >,
+    +OUTPUT  < [ +FORM "${I1:+FORM:1}${I1:+FORM:2}" ],
+    	       [ +FORM "//" ],
+               [ +FORM "${I1:+FORM:4}${I1:+FORM:5}" ] > ].
 
 squished-punct10-rule := inpmap-x12-rule &
-  [ +INPUT   < [ +FORM "/([\(]*)([a-zA-ZÅåØøÆæ]+)(/)/", +TNT #tnt, +CLASS stdorth ] >,
-    +OUTPUT  < [ +FORM "${I1:+FORM:1}${I1:+FORM:2}", +TNT #tnt ],
-    	       [ +FORM "${I1:+FORM:3}", +TNT #tnt ] > ].
+  [ +INPUT   < [ +FORM "/([\(]*)([a-zA-ZÅåØøÆæ]+)(/)/", +CLASS stdorth ] >,
+    +OUTPUT  < [ +FORM "${I1:+FORM:1}${I1:+FORM:2}" ],
+    	       [ +FORM "${I1:+FORM:3}" ] > ].
 
-squished-punct11-rule := inpmap-rule &
-  [ +INPUT   < [ +FORM "/([\(]*)([0-9]+)(/)([a-zA-ZÅåØøÆæ]+)([.\?!,;\":\)]*)/", +TNT #tnt, +CLASS stdorth ] >,
-    +OUTPUT  < [ +FORM "${I1:+FORM:1}${I1:+FORM:2}", +TNT #tnt ],
-    	       [ +FORM "${I1:+FORM:3}", +TNT #tnt ],
-               [ +FORM "${I1:+FORM:4}${I1:+FORM:5}", +TNT #tnt ] > ].
+squished-punct11-rule := inpmap-x13-rule &
+  [ +INPUT   < [ +FORM "/([\(]*)([0-9]+)(/)([a-zA-ZÅåØøÆæ]+)([.\?!,;\":\)]*)/",
+		 +CLASS stdorth ] >,
+    +OUTPUT  < [ +FORM "${I1:+FORM:1}${I1:+FORM:2}" ],
+    	       [ +FORM "${I1:+FORM:3}" ],
+               [ +FORM "${I1:+FORM:4}${I1:+FORM:5}" ] > ].
 
-squished-punct12-rule := inpmap-rule &
-  [ +INPUT   < [ +FORM "/([\(]*)([a-zA-ZÅåØøÆæ]=)(/)([0-9]+)([.\?!,;\":\)]*)/", +TNT #tnt, +CLASS stdorth ] >,
-    +OUTPUT  < [ +FORM "${I1:+FORM:1}${I1:+FORM:2}", +TNT #tnt ],
-    	       [ +FORM "${I1:+FORM:3}", +TNT #tnt ],
-               [ +FORM "${I1:+FORM:4}${I1:+FORM:5}", +TNT #tnt ] > ].
+squished-punct12-rule := inpmap-x13-rule &
+  [ +INPUT   < [ +FORM "/([\(]*)([a-zA-ZÅåØøÆæ]=)(/)([0-9]+)([.\?!,;\":\)]*)/",
+		 +CLASS stdorth ] >,
+    +OUTPUT  < [ +FORM "${I1:+FORM:1}${I1:+FORM:2}" ],
+    	       [ +FORM "${I1:+FORM:3}" ],
+               [ +FORM "${I1:+FORM:4}${I1:+FORM:5}" ] > ].
 
-squished-punct13-rule := inpmap-rule &
-  [ +INPUT   < [ +FORM "/([\(]*)([a-zA-ZÅåØøÆæ]+)(-)(a)(-)([a-zA-Z0-9ÅåØøÆæ]+)([.\?!,;\":\)]*)/", +TNT #tnt, +CLASS stdorth ] >,
-    +OUTPUT  < [ +FORM "${I1:+FORM:1}${I1:+FORM:2}", +TNT #tnt ],
-    	       [ +FORM "${I1:+FORM:3}", +TNT #tnt ],
-               [ +FORM "${I1:+FORM:4}${I1:+FORM:5}", +TNT #tnt ],
-    	       [ +FORM "${I1:+FORM:6}${I1:+FORM:7}", +TNT #tnt ] > ].
+squished-punct13-rule := inpmap-x14-rule &
+  [ +INPUT   < [ +FORM 
+     "/([\(]*)([a-zA-ZÅåØøÆæ]+)(-)(a)(-)([a-zA-Z0-9ÅåØøÆæ]+)([.\?!,;\":\)]*)/",
+		 +CLASS stdorth ] >,
+    +OUTPUT  < [ +FORM "${I1:+FORM:1}${I1:+FORM:2}" ],
+    	       [ +FORM "${I1:+FORM:3}" ],
+               [ +FORM "${I1:+FORM:4}${I1:+FORM:5}" ],
+    	       [ +FORM "${I1:+FORM:6}${I1:+FORM:7}" ] > ].
 
-squished-punct15-rule := inpmap-rule &
-  [ +INPUT   < [ +FORM "/([\(\"]*)([a-zA-Z0-9ÅåØøÆæ]+)(-)([a-zA-ZÅåØøÆæ-]+)([.\?!,;\":\)]*)/", +TNT #tnt, +CLASS stdorth ] >,
-    +OUTPUT  < [ +FORM "${I1:+FORM:1}${I1:+FORM:2}${I1:+FORM:3}", +TNT #tnt ],
-               [ +FORM "${I1:+FORM:4}${I1:+FORM:5}", +TNT #tnt ] > ].
+squished-punct15-rule := inpmap-x12-rule &
+  [ +INPUT   < [ +FORM 
+	"/([\(\"]*)([a-zA-Z0-9ÅåØøÆæ]+)(-)([a-zA-ZÅåØøÆæ-]+)([.\?!,;\":\)]*)/",
+		 +CLASS stdorth ] >,
+    +OUTPUT  < [ +FORM "${I1:+FORM:1}${I1:+FORM:2}${I1:+FORM:3}" ],
+               [ +FORM "${I1:+FORM:4}${I1:+FORM:5}" ] > ].
 
 ;;;
 ;;; Eliminate space for double quote when space on both sides
 ;;;
 
 quote-space-rule := inpmap-rule &
-  [ +INPUT   < [ +FORM "/([\"])/" ],
-	       [ +FORM "/([a-zA-ZÅåØøÆæ0-9]+)([.?]*)/", +TNT #tnt ] >,
-    +OUTPUT  < [ +FORM "${I1:+FORM:1}${I2:+FORM:1}${I2:+FORM:2}", +TNT #tnt ] >,
+  [ +INPUT   < [ +FORM "/([\"])/", +FROM #from ],
+	       [ +FORM "/([a-zA-ZÅåØøÆæ0-9]+)([.?]*)/", +ID #id, +TO #to, 
+		 +TNT #tnt, +ONSET #onset, +CLASS #class & stdorth ] >,
+    +OUTPUT  < [ +FORM "${I1:+FORM:1}${I2:+FORM:1}${I2:+FORM:2}",
+		 +ID #id, +FROM #from, +TO #to, +TNT #tnt,
+		 +ONSET #onset, +CLASS #class ] >,
     +POSITION "I1<I2" ].
 
 double_lquote-space-rule := inpmap-rule &
-  [ +INPUT   < [ +FORM "/``/" ],
-	       [ +FORM "/([a-zA-ZÅåØøÆæ0-9'\)\-]+)([.?,]*)/", +TNT #tnt ] >,
-    +OUTPUT  < [ +FORM "\"${I2:+FORM:1}${I2:+FORM:2}", +TNT #tnt ] >,
+  [ +INPUT   < [ +FORM "/``/", +FROM #from ],
+	       [ +FORM "/([a-zA-ZÅåØøÆæ0-9'\)\-]+)([.?,]*)/", +ID #id, 
+	         +TO #to, +TNT #tnt, +ONSET #onset, +CLASS #class & stdorth ]>,
+    +OUTPUT  < [ +FORM "\"${I2:+FORM:1}${I2:+FORM:2}", +ID #id, +FROM #from,
+		 +TO #to, +TNT #tnt, +ONSET #onset, +CLASS #class ] >,
     +POSITION "I1<I2" ].
 
-double_lquote-space-rule-2 := inpmap-rule &
-  [ +INPUT   < [ +FORM "/``([a-zA-ZÅåØøÆæ0-9'\)\-]+)([.?,]*)/", +TNT #tnt ] >,
-    +OUTPUT  < [ +FORM "\"${I1:+FORM:1}${I1:+FORM:2}", +TNT #tnt ] > ].
+double_lquote-space-rule-2 := inpmap-x11-rule &
+  [ +INPUT   < [ +FORM "/``([a-zA-ZÅåØøÆæ0-9'\)\-]+)([.?,]*)/",
+	         +CLASS stdorth ] >,
+    +OUTPUT  < [ +FORM "\"${I1:+FORM:1}${I1:+FORM:2}" ] > ].
 
 double_rquote-space-rule := inpmap-rule &
-  [ +INPUT   < [ +FORM "/([\"a-zA-ZÅåØøÆæ0-9\-]+)([.?,!]*)/", +TNT #tnt ],
-	       [ +FORM "/''([.?,\)]*)/" ] >,
-    +OUTPUT  < [ +FORM "${I1:+FORM:1}${I1:+FORM:2}\"${I2:+FORM:1}", +TNT #tnt ] >,
+  [ +INPUT   < [ +FORM "/([\"a-zA-ZÅåØøÆæ0-9\-]+)([.?,!]*)/", 
+		 +ID #id, +FROM #from, +TNT #tnt,
+		 +ONSET #onset, +CLASS #class & stdorth ],
+	       [ +FORM "/''([.?,\)]*)/", +TO #to ] >,
+    +OUTPUT  < [ +FORM "${I1:+FORM:1}${I1:+FORM:2}\"${I2:+FORM:1}", 
+		 +ID #id, +FROM #from, +TO #to, +TNT #tnt,
+		 +ONSET #onset, +CLASS #class ] >,
     +POSITION "I1<I2" ].
 
 double_rquote-space-b-rule := inpmap-rule &
-  [ +INPUT   < [ +FORM "/([\"a-zA-ZÅåØøÆæ0-9\-]+)([.?,]*)/", +TNT #tnt ],
+  [ +INPUT   < [ +FORM "/([\"a-zA-ZÅåØøÆæ0-9\-]+)([.?,]*)/", 
+		 +ID #id, +FROM #from, +TNT #tnt,
+		 +ONSET #onset, +CLASS #class & stdorth ],
 	       [ +FORM "/([.;,'!\?\\]\)]+)/" ],
-	       [ +FORM "/''/" ] >,
-    +OUTPUT  < [ +FORM "${I1:+FORM:1}${I1:+FORM:2}${I2:+FORM:1}\"", +TNT #tnt ] >,
+	       [ +FORM "/''/", +TO #to ] >,
+    +OUTPUT  < [ +FORM "${I1:+FORM:1}${I1:+FORM:2}${I2:+FORM:1}\"", 
+		 +ID #id, +FROM #from, +TO #to, +TNT #tnt,
+		 +ONSET #onset, +CLASS #class & stdorth ] >,
     +POSITION "I1<I2<I3" ].
 
-double_rquote-space-c-rule := inpmap-rule &
-  [ +INPUT   < [ +FORM "/([\"a-zA-ZÅåØøÆæ0-9\-]+)([.?,]*)''/", +TNT #tnt ] >,
-    +OUTPUT  < [ +FORM "${I1:+FORM:1}${I1:+FORM:2}\"", +TNT #tnt ] > ].
+double_rquote-space-c-rule := inpmap-x11-rule &
+  [ +INPUT   < [ +FORM "/([\"a-zA-ZÅåØøÆæ0-9\-]+)([.?,]*)''/", 
+		 +CLASS stdorth ] >,
+    +OUTPUT  < [ +FORM "${I1:+FORM:1}${I1:+FORM:2}\"" ] > ].
 
-double_rquote-space-d-rule := inpmap-rule &
-  [ +INPUT   < [ +FORM "/([\"a-zA-ZÅåØøÆæ0-9\-]+)\\.?''([.?,\)]+)/", +TNT #tnt ] >,
-    +OUTPUT  < [ +FORM "${I1:+FORM:1}\"${I1:+FORM:2}", +TNT #tnt ] > ].
+double_rquote-space-d-rule := inpmap-x11-rule &
+  [ +INPUT   < [ +FORM "/([\"a-zA-ZÅåØøÆæ0-9\-]+)\\.?''([.?,\)]+)/", 
+	         +CLASS stdorth ] >,
+    +OUTPUT  < [ +FORM "${I1:+FORM:1}\"${I1:+FORM:2}" ] > ].
 
-double_rquote-space-e-rule := inpmap-rule &
-  [ +INPUT   < [ +FORM "/([.?,]+)''/", +TNT #tnt ] >,
-    +OUTPUT  < [ +FORM "${I1:+FORM:1}\"", +TNT #tnt ] > ].
+double_rquote-space-e-rule := inpmap-x11-rule &
+  [ +INPUT   < [ +FORM "/([.?,]+)''/", +CLASS stdorth ] >,
+    +OUTPUT  < [ +FORM "${I1:+FORM:1}\"" ] > ].
 
 double_rquote-space-2-rule := inpmap-rule &
-  [ +INPUT   < [ +FORM "/([\"a-zA-ZÅåØøÆæ0-9\-]+)([.?,]*)/", +TNT #tnt ],
-	       [ +FORM "/\"/" ] >,
-    +OUTPUT  < [ +FORM "${I1:+FORM:1}${I1:+FORM:2}\"", +TNT #tnt ] >,
+  [ +INPUT   < [ +FORM "/([\"a-zA-ZÅåØøÆæ0-9\-]+)([.?,]*)/", 
+		 +ID #id, +FROM #from, +TNT #tnt,
+		 +ONSET #onset, +CLASS #class & stdorth ],
+	       [ +FORM "/\"/", +TO #to ] >,
+    +OUTPUT  < [ +FORM "${I1:+FORM:1}${I1:+FORM:2}\"", 
+		 +ID #id, +FROM #from, +TO #to, +TNT #tnt,
+		 +ONSET #onset, +CLASS #class & stdorth ] >,
     +POSITION "I1<I2" ].
+
+;;; 
+;;; Add proper name entry for italicized tokens
+;;;
+
+; |''chatterbot''|
+italics-1a-rule := inpmap-rule &
+   [ +INPUT < [ +FORM "/“/", +FROM #from ],
+	      [ +FORM "/(.*)/",
+		+TNT #tnt, +ID #id, +CLASS #class ],
+	      [ +FORM "/[”\"]/", +TO #to ] >,
+     +OUTPUT  < [ +FORM "${I2:+FORM:1}",
+		  +CLASS italics_ne, 
+		  +TNT null_tnt, +ID #id, +FROM #from, +TO #to ],
+		[ +FORM "${I2:+FORM:1}",
+		  +CLASS #class,
+		  +TNT #tnt, +ID #id, +FROM #from, +TO #to ] >,
+     +POSITION "I1<I2<I3, O1=O2" ].
+
+; |''(chatterbot)''|
+italics-1b-rule := inpmap-rule &
+   [ +INPUT < [ +FORM "/“/", +FROM #from ],
+	      [ +FORM "/(\\()/" ],
+	      [ +FORM "/(.*)/",
+		+TNT #tnt, +ID #id, +CLASS #class ],
+	      [ +FORM "/(\\))/" ],
+	      [ +FORM "/[”\"]/", +TO #to ] >,
+     +OUTPUT  < [ +FORM "${I2:+FORM:1}${I3:+FORM:1}${I4:+FORM:1}",
+		  +CLASS italics_ne, 
+		  +TNT null_tnt, +ID #id, +FROM #from, +TO #to ],
+		[ +FORM "${I2:+FORM:1}${I3:+FORM:1}${I4:+FORM:1}",
+		  +CLASS #class,
+		  +TNT #tnt, +ID #id, +FROM #from, +TO #to ] >,
+     +POSITION "I1<I2<I3<I4<I5, O1=O2" ].
+
+; |''chatter bot"|
+italics-2a-rule := inpmap-rule &
+ [ +CONTEXT < [ +FORM "/(.*)/",
+		+TNT #tnt1, +ID #id1, +CLASS #class1 ],
+	      [ +FORM "/(.*)/",
+		+TNT #tnt2, +ID #id2, +CLASS #class2 ] >,
+     +INPUT < [ +FORM "/“/", +FROM #from ],
+	      [ +FORM "/[”\"]/", +TO #to ] >,
+    +OUTPUT < [ +FORM "${C1:+FORM:1} ${C2:+FORM:1}",
+		+CLASS italics_ne, 
+		+TNT null_tnt, +ID #id2, +FROM #from, +TO #to ] >,
+   +POSITION "I1<C1<C2<I2" ].
+
+; |''(chatter bot)"|
+italics-2b-rule := inpmap-rule &
+ [ +CONTEXT < [ +FORM "/(.*)/",
+		+TNT #tnt1, +ID #id1, +CLASS #class1 ],
+	      [ +FORM "/(.*)/",
+		+TNT #tnt2, +ID #id2, +CLASS #class2 ] >,
+     +INPUT < [ +FORM "/“/", +FROM #from ],
+	      [ +FORM "/(\\()/" ],
+	      [ +FORM "/(\\))/" ],
+	      [ +FORM "/[”\"]/", +TO #to ] >,
+    +OUTPUT < [ +FORM "${I2:+FORM:1}${C1:+FORM:1} ${C2:+FORM:1}${I3:+FORM:1}",
+		+CLASS italics_ne, 
+		+TNT null_tnt, +ID #id2, +FROM #from, +TO #to ] >,
+   +POSITION "I1<I2<C1<C2<I3<I4" ].
+
+; Remove stranded italics quotes (around three or more tokens)
+;
+; For some reason, can't just delete this token - all following tokens also
+; get deleted
+#|
+delete-italics-left-rule := inpmap-rule &
+   [ +INPUT < [ +FORM "/“/" ] >,
+     +OUTPUT <  > ].
+|#
+
+delete-italics-left-rule := inpmap-rule &
+   [ +INPUT  < [ +FORM "“", +FROM #from ],
+	       [ +FORM #form, +ONSET #onset, +CLASS #class,
+		 +PRED #pred, +CARG #carg, 
+		 +ID #id, +TO #to, +TNT #tnt ] >,
+     +OUTPUT < [ +FORM #form, +ONSET #onset, +CLASS #class,
+		 +PRED #pred, +CARG #carg, 
+		 +ID #id, +FROM #from, +TO #to, +TNT #tnt ] >,
+   +POSITION "I1<I2" ].
+
+
+delete-italics-right-rule := inpmap-rule &
+   [ +INPUT  < [ +FORM #form, +ONSET #onset, +CLASS #class,
+		 +PRED #pred, +CARG #carg, 
+		 +ID #id, +FROM #from, +TNT #tnt ],
+	       [ +FORM "”", +TO #to ] >,
+     +OUTPUT < [ +FORM #form, +ONSET #onset, +CLASS #class,
+		 +PRED #pred, +CARG #carg, 
+		 +ID #id, +FROM #from, +TO #to, +TNT #tnt ] >,
+   +POSITION "I1<I2" ].
+
+; This should maybe be done instead in wiki.fsr
+;
+; |played[,]|
+bracketed-comma-rule := inpmap-rule &
+   [ +INPUT < [ +FORM "[" ],
+	      [ +FORM ",", +ONSET #onset, +CLASS #class,
+		 +PRED #pred, +CARG #carg, 
+		 +ID #id, +FROM #from, +TO #to, +TNT #tnt ],
+	      [ +FORM "]" ] >,
+     +OUTPUT < [ +FORM ",", +ONSET #onset, +CLASS #class,
+		 +PRED #pred, +CARG #carg, 
+		 +ID #id, +FROM #from, +TO #to, +TNT #tnt ] >, 
+     +POSITION "I1<I2<I3" ].
 
 ;;;
 ;;; re-combine punctuation marks with adjacent tokens, based on directionality
 ;;; of punctuation marks, e.g. opening vs. closing quotes and brackets.  doing
 ;;; one such re-combination at a time is sufficient, as each rewrite rule will
-;;; apply as many times as it possible can, seeing its own output from earlier
+;;; apply as many times as it possibly can, seeing its own output from earlier
 ;;; applications.
 ;;;
 prefix_punctuation_tmr := inpmap-rule &
-  [ +INPUT   < [ +FORM "/([[({“‘])/",
+  [ +INPUT   < [ +FORM "/([[({“‘“]+)/",
                  +FROM #from ],
                [ +FORM "/(.+)/",
 		 +ONSET #onset, +CLASS #class, +PRED #pred, +CARG #carg, 
@@ -1148,7 +1305,7 @@ suffix_punctuation_tmr := inpmap-rule &
   [ +INPUT   < [ +FORM "/(.+)/",
 		 +ONSET #onset, +CLASS #class, +PRED #pred, +CARG #carg, 
                  +FROM #from, +TNT #tnt ],
-               [ +FORM "/([])}”\"’,;.!?])/",
+               [ +FORM "/([])}”\"’”,;.!?#]+)/",
                  +TO #to ] >,
     +OUTPUT  < [ +FORM "${I1:+FORM:1}${I2:+FORM:1}",
 		 +ONSET #onset, +CLASS #class, +PRED #pred, +CARG #carg, 
@@ -1230,63 +1387,73 @@ space-lbrack-rule := inpmap-rule &
 ;;; Add white space around colon if sandwiched with following alphanumeric
 ;;; (but not e.g. |http://...| and not ratios with numbers on both sides)
 ;;;
-squished-punct16-rule := inpmap-rule &
-  [ +INPUT   < [ +FORM "/([a-zA-ZÅåØøÆæ0-9.]+)([:])([a-zA-ZÅåØøÆæ]+)/", +TNT #tnt, +CLASS stdorth ] >,
-    +OUTPUT  < [ +FORM "${I1:+FORM:1}", +TNT #tnt ],
-    	       [ +FORM "${I1:+FORM:2}", +TNT #tnt ],
-               [ +FORM "${I1:+FORM:3}", +TNT #tnt ] > ].
+squished-punct16-rule := inpmap-x13-rule &
+  [ +INPUT   < [ +FORM "/([a-zA-ZÅåØøÆæ0-9.]+)([:])([a-zA-ZÅåØøÆæ]+)/", 
+		 +CLASS stdorth ] >,
+    +OUTPUT  < [ +FORM "${I1:+FORM:1}" ],
+    	       [ +FORM "${I1:+FORM:2}" ],
+               [ +FORM "${I1:+FORM:3}" ] > ].
 
-squished-punct17-rule := inpmap-rule &
-  [ +INPUT   < [ +FORM "/([a-zA-ZÅåØøÆæ.]+)([:])([a-zA-ZÅåØøÆæ0-9]+)/", +TNT #tnt, +CLASS stdorth ] >,
-    +OUTPUT  < [ +FORM "${I1:+FORM:1}", +TNT #tnt ],
-    	       [ +FORM "${I1:+FORM:2}", +TNT #tnt ],
-               [ +FORM "${I1:+FORM:3}", +TNT #tnt ] > ].
+squished-punct17-rule := inpmap-x13-rule &
+  [ +INPUT   < [ +FORM "/([a-zA-ZÅåØøÆæ.]+)([:])([a-zA-ZÅåØøÆæ0-9]+)/",
+		 +CLASS stdorth ] >,
+    +OUTPUT  < [ +FORM "${I1:+FORM:1}" ],
+    	       [ +FORM "${I1:+FORM:2}" ],
+               [ +FORM "${I1:+FORM:3}" ] > ].
 
 ;;;
 ;;; And add white space to the left of colon when followed by white space:
 ;;;
-squished-punct18-rule := inpmap-rule &
-  [ +INPUT   < [ +FORM "/([a-zA-ZÅåØøÆæ0-9.]+)([:])/", +TNT #tnt, +CLASS stdorth ] >,
-    +OUTPUT  < [ +FORM "${I1:+FORM:1}", +TNT #tnt ],
-    	       [ +FORM "${I1:+FORM:2}", +TNT #tnt ] > ].
+squished-punct18-rule := inpmap-x12-rule &
+  [ +INPUT   < [ +FORM "/([a-zA-ZÅåØøÆæ0-9.]+)([:])/", +CLASS stdorth ] >,
+    +OUTPUT  < [ +FORM "${I1:+FORM:1}" ],
+    	       [ +FORM "${I1:+FORM:2}" ] > ].
 
 ;;;
 ;;; And the variants with surrounding punctuation
 ;;;
-squished-punct19-rule := inpmap-rule &
-  [ +INPUT   < [ +FORM "/([a-zA-ZÅåØøÆæ]+)([,/])([a-zA-ZÅåØøÆæ]+)([.?!,;])/", +TNT #tnt, +CLASS stdorth ] >,
-    +OUTPUT  < [ +FORM "${I1:+FORM:1}${I1:+FORM:2}", +TNT #tnt ],
-               [ +FORM "${I1:+FORM:3}${I1:+FORM:4}", +TNT #tnt ] > ].
+squished-punct19-rule := inpmap-x12-rule &
+  [ +INPUT   < [ +FORM "/([a-zA-ZÅåØøÆæ]+)([,/])([a-zA-ZÅåØøÆæ]+)([.?!,;])/",
+		 +CLASS stdorth ] >,
+    +OUTPUT  < [ +FORM "${I1:+FORM:1}${I1:+FORM:2}" ],
+               [ +FORM "${I1:+FORM:3}${I1:+FORM:4}" ] > ].
 
-squished-punct20-rule := inpmap-rule &
-  [ +INPUT   < [ +FORM "/([0-9]+)([,/])([a-zA-ZÅåØøÆæ]+)([.?!,;])/", +TNT #tnt, +CLASS stdorth ] >,
-    +OUTPUT  < [ +FORM "${I1:+FORM:1}${I1:+FORM:2}", +TNT #tnt ],
-               [ +FORM "${I1:+FORM:3}${I1:+FORM:4}", +TNT #tnt ] > ].
+squished-punct20-rule := inpmap-x12-rule &
+  [ +INPUT   < [ +FORM "/([0-9]+)([,/])([a-zA-ZÅåØøÆæ]+)([.?!,;])/",
+		 +CLASS stdorth ] >,
+    +OUTPUT  < [ +FORM "${I1:+FORM:1}${I1:+FORM:2}" ],
+               [ +FORM "${I1:+FORM:3}${I1:+FORM:4}" ] > ].
 
-squished-punct21-rule := inpmap-rule &
-  [ +INPUT   < [ +FORM "/([a-zA-ZÅåØøÆæ])([,/])([0-9])([.?!,;])/", +TNT #tnt, +CLASS stdorth ] >,
-    +OUTPUT  < [ +FORM "${I1:+FORM:1}${I1:+FORM:2}", +TNT #tnt ],
-               [ +FORM "${I1:+FORM:3}${I1:+FORM:4}", +TNT #tnt ] > ].
+squished-punct21-rule := inpmap-x12-rule &
+  [ +INPUT   < [ +FORM "/([a-zA-ZÅåØøÆæ])([,/])([0-9])([.?!,;])/",
+		 +CLASS stdorth ] >,
+    +OUTPUT  < [ +FORM "${I1:+FORM:1}${I1:+FORM:2}" ],
+               [ +FORM "${I1:+FORM:3}${I1:+FORM:4}" ] > ].
 
 ;;;
 ;;; Add space to left of left paren and to right of right paren
 ;;;
 
-squished-punct22-rule := inpmap-rule &
-  [ +INPUT   < [ +FORM "/([\(]*)([a-zA-ZÅåØøÆæ]+)([\(\[])([a-zA-ZÅåØøÆæ0-9]+)([.\?!,;\":\)]*)/", +TNT #tnt, +CLASS stdorth ] >,
-    +OUTPUT  < [ +FORM "${I1:+FORM:1}${I1:+FORM:2}", +TNT #tnt ],
-               [ +FORM "${I1:+FORM:3}${I1:+FORM:4}${I1:+FORM:5}", +TNT #tnt ] > ].
+squished-punct22-rule := inpmap-x12-rule &
+  [ +INPUT   < [ +FORM 
+      "/([\(]*)([a-zA-ZÅåØøÆæ]+)([\(\[])([a-zA-ZÅåØøÆæ0-9]+)([.\?!,;\":\)]*)/",
+		 +CLASS stdorth ] >,
+    +OUTPUT  < [ +FORM "${I1:+FORM:1}${I1:+FORM:2}" ],
+               [ +FORM "${I1:+FORM:3}${I1:+FORM:4}${I1:+FORM:5}" ] > ].
 
-squished-punct23-rule := inpmap-rule &
-  [ +INPUT   < [ +FORM "/([\(]*)([a-zA-ZÅåØøÆæ]+)([\\]\)])([a-zA-ZÅåØøÆæ0-9]+)([.\?!,;\":\)]*)/", +TNT #tnt, +CLASS stdorth ] >,
-    +OUTPUT  < [ +FORM "${I1:+FORM:1}${I1:+FORM:2}${I1:+FORM:3}", +TNT #tnt ],
-               [ +FORM "${I1:+FORM:4}${I1:+FORM:5}", +TNT #tnt ] > ].
+squished-punct23-rule := inpmap-x12-rule &
+  [ +INPUT   < [ +FORM 
+     "/([\(]*)([a-zA-ZÅåØøÆæ]+)([\\]\)])([a-zA-ZÅåØøÆæ0-9]+)([.\?!,;\":\)]*)/",
+                 +CLASS stdorth ] >,
+    +OUTPUT  < [ +FORM "${I1:+FORM:1}${I1:+FORM:2}${I1:+FORM:3}" ],
+               [ +FORM "${I1:+FORM:4}${I1:+FORM:5}" ] > ].
 
-squished-punct24-rule := inpmap-rule &
-  [ +INPUT   < [ +FORM "/([a-zA-ZÅåØøÆæ0-9.]+)([—])([a-zA-ZÅåØøÆæ]+)([.?,]*)/", +TNT #tnt, +CLASS stdorth ] >,
-    +OUTPUT  < [ +FORM "${I1:+FORM:1}", +TNT #tnt ],
-    	       [ +FORM "---", +TNT #tnt ],
-               [ +FORM "${I1:+FORM:3}${I1:+FORM:4}", +TNT #tnt ] > ].
+squished-punct24-rule := inpmap-x13-rule &
+  [ +INPUT   < [ +FORM "/([a-zA-ZÅåØøÆæ0-9.]+)([—])([a-zA-ZÅåØøÆæ]+)([.?,]*)/",
+		 +CLASS stdorth ] >,
+    +OUTPUT  < [ +FORM "${I1:+FORM:1}" ],
+    	       [ +FORM "---" ],
+               [ +FORM "${I1:+FORM:3}${I1:+FORM:4}" ] > ].
 
 ;;;
 ;;; apostrophes are a bit tricky: generally, we want to separate leading and 
@@ -1294,46 +1461,51 @@ squished-punct24-rule := inpmap-rule &
 ;;; separate token (e.g. |abrams'| --> |abrams '|); the possessive |'s|, on 
 ;;; the other hand, we want to separate but then consider a single token.
 ;;;
-apostrophe-s-1-rule := inpmap-rule &
-  [ +INPUT   < [ +FORM "/([\(\"]?)([a-zA-XÅåØøÆæ0-9]+[sS])'/", +TNT #tnt,
+apostrophe-s-1-rule := inpmap-x12-rule &
+  [ +INPUT   < [ +FORM "/([\(\"]?)([a-zA-XÅåØøÆæ0-9]+[sS])'/",
 		 +ONSET con_or_voc ] >,
-    +OUTPUT  < [ +FORM "${I1:+FORM:1}${I1:+FORM:2}", +TNT #tnt ],
-    	       [ +FORM "'", +TNT #tnt ] > ].
+    +OUTPUT  < [ +FORM "${I1:+FORM:1}${I1:+FORM:2}" ],
+    	       [ +FORM "'" ] > ].
 
-apostrophe-s-2-rule := inpmap-rule &
-  [ +INPUT   < [ +FORM "/([\(\"]?)([a-zA-XÅåØøÆæ0-9.]+)'[sS]/", +TNT #tnt,
+apostrophe-s-2-rule := inpmap-x12-rule &
+  [ +INPUT   < [ +FORM "/([\(\"]?)([a-zA-XÅåØøÆæ0-9.]+)'[sS]/",
 		 +ONSET con_or_voc ] >,
-    +OUTPUT  < [ +FORM "${I1:+FORM:1}${I1:+FORM:2}", +TNT #tnt ],
-    	       [ +FORM "'s", +TNT #tnt ] > ].
+    +OUTPUT  < [ +FORM "${I1:+FORM:1}${I1:+FORM:2}" ],
+    	       [ +FORM "'s" ] > ].
 
-apostrophe-s-3-rule := inpmap-rule &
+apostrophe-s-3-rule := inpmap-x12-rule &
   [ +INPUT   < [ +FORM "/([\(\"]?)([a-zA-XÅåØøÆæ0-9]+)'[sS]([.?!,;\"])/", 
-		 +TNT #tnt, +ONSET con_or_voc ] >,
-    +OUTPUT  < [ +FORM "${I1:+FORM:1}${I1:+FORM:2}", +TNT #tnt ],
-    	       [ +FORM "'s${I1:+FORM:3}", +TNT #tnt ] > ].
+		 +ONSET con_or_voc ] >,
+    +OUTPUT  < [ +FORM "${I1:+FORM:1}${I1:+FORM:2}" ],
+    	       [ +FORM "'s${I1:+FORM:3}" ] > ].
 
 ;;;
 ;;; split off other contracted auxiliaries
 ;;;
 contracted-aux-ll-rule := inpmap-x12-rule &
   [ +INPUT   < [ +FORM "/([\(\"]?)([A-Za-zÅåØøÆæ]+)('ll|'LL)/" ] >,
-    +OUTPUT  < [ +FORM "${I1:+FORM:1}${I1:+FORM:2}" ], [ +FORM "${I1:+FORM:3}" ] > ].
+    +OUTPUT  < [ +FORM "${I1:+FORM:1}${I1:+FORM:2}" ], 
+	       [ +FORM "${I1:+FORM:3}" ] > ].
 
 contracted-aux-d-rule := inpmap-x12-rule &
   [ +INPUT   < [ +FORM "/([\(\"]?)([A-Za-zÅåØøÆæ]+)('[dD])/" ] >,
-    +OUTPUT  < [ +FORM "${I1:+FORM:1}${I1:+FORM:2}" ], [ +FORM "${I1:+FORM:3}" ] > ].
+    +OUTPUT  < [ +FORM "${I1:+FORM:1}${I1:+FORM:2}" ], 
+	       [ +FORM "${I1:+FORM:3}" ] > ].
 
 contracted-aux-ve-rule := inpmap-x12-rule &
   [ +INPUT   < [ +FORM "/([\(\"]?)([A-Za-zÅåØøÆæ]+)('ve|'VE)/" ] >,
-    +OUTPUT  < [ +FORM "${I1:+FORM:1}${I1:+FORM:2}" ], [ +FORM "${I1:+FORM:3}" ] > ].
+    +OUTPUT  < [ +FORM "${I1:+FORM:1}${I1:+FORM:2}" ], 
+	       [ +FORM "${I1:+FORM:3}" ] > ].
 
 contracted-aux-m-rule := inpmap-x12-rule &
   [ +INPUT   < [ +FORM "/([\(\"]?)([A-Za-zÅåØøÆæ]+)('[mM])/" ] >,
-    +OUTPUT  < [ +FORM "${I1:+FORM:1}${I1:+FORM:2}" ], [ +FORM "${I1:+FORM:3}" ] > ].
+    +OUTPUT  < [ +FORM "${I1:+FORM:1}${I1:+FORM:2}" ], 
+	       [ +FORM "${I1:+FORM:3}" ] > ].
 
 contracted-aux-re-rule := inpmap-x12-rule &
   [ +INPUT   < [ +FORM "/([\(\"]?)([A-Za-zÅåØøÆæ]+)('re|'RE)/" ] >,
-    +OUTPUT  < [ +FORM "${I1:+FORM:1}${I1:+FORM:2}" ], [ +FORM "${I1:+FORM:3}" ] > ].
+    +OUTPUT  < [ +FORM "${I1:+FORM:1}${I1:+FORM:2}" ], 
+	       [ +FORM "${I1:+FORM:3}" ] > ].
 
 ;;;
 ;;; PTB repairs
@@ -1352,62 +1524,6 @@ space-after-o-l-rule := inpmap-x21-rule &
 	       [ +FORM "/([a-zA-ZÅåØøÆæ]+)/" ] >,
     +OUTPUT  < [ +FORM "${I1:+FORM:1}${I1:+FORM:2}'${I2:+FORM:1}", +TNT #tnt ] >,
     +POSITION "I1<I2" ].
-
-;;;
-;;; Experimental: mark capitalization with preceding special character |_|
-;;; but right now only for single letters used as proper names.
-;;; Add special case for sequence of two capitals separated by space, since
-;;; the space after the first one gets consumed by the simple rule.
-;;; Exclude "I" since it's so frequent as pronoun
-;;;
-initial-caps-rule := inpmap-rule &
-  [ +INPUT   < [ +FORM "/([A-HJ-Z])([a-zA-ZÅåØøÆæ]+)([.?!,;:-]?)/", +TNT #tnt ],
-               [ +FORM "/([A-HJ-Z])([.?!,;:-]?)/" ] >,
-    +OUTPUT  < [ +FORM "${I1:+FORM:1}${I1:+FORM:2}${I1:+FORM:3}", +TNT #tnt ],
-    	       [ +FORM "_${I2:+FORM:1}${I2:+FORM:2}", +TNT #tnt ] >,
-    +POSITION "I1<I2" ].
-
-punct-caps-rule := inpmap-x11-rule &
-  [ +INPUT   < [ +FORM "/([\(\"]?)([A-HJ-Z])([\"\)]?)([.?!,;:-]?)/" ] >,
-    +OUTPUT  < [ +FORM "${I1:+FORM:1}_${I1:+FORM:2}${I1:+FORM:3}${I1:+FORM:4}" ] > ].
-
-;;;
-;;; Special treatment for two-letter abbreviations like 
-;;; OR (Oregon), IN (Indiana), CO (Colorado), US, and IT
-;;; And similarly for ON, OFF, as in "the ON switch"
-;;;
-
-abb-or-rule := inpmap-x11-rule &
-  [ +INPUT   < [ +FORM "/([\(]*)(OR)([.\?!,;\":\)]*)/" ] >,
-    +OUTPUT  < [ +FORM "${I1:+FORM:1}_OR${I1:+FORM:3}" ] > ].
-
-abb-in-rule := inpmap-x11-rule &
-  [ +INPUT   < [ +FORM "/([\(]*)(IN)([.\?!,;\":\)]*)/" ] >,
-    +OUTPUT  < [ +FORM "${I1:+FORM:1}_IN${I1:+FORM:3}" ] > ].
-
-abb-co-rule := inpmap-x11-rule &
-  [ +INPUT   < [ +FORM "/([\(]*)(CO)([.\?!,;\":\)]*)/" ] >,
-    +OUTPUT  < [ +FORM "${I1:+FORM:1}_CO${I1:+FORM:3}" ] > ].
-
-abb-us-rule := inpmap-x11-rule &
-  [ +INPUT   < [ +FORM "/([\(]*)(US)([.\?!,;\":\)]*)/" ] >,
-    +OUTPUT  < [ +FORM "${I1:+FORM:1}_US${I1:+FORM:3}" ] > ].
-
-abb-it-rule := inpmap-x11-rule &
-  [ +INPUT   < [ +FORM "/([\(]*)(IT)([.\?!,;\":\)]*)/" ] >,
-    +OUTPUT  < [ +FORM "${I1:+FORM:1}_IT${I1:+FORM:3}" ] > ].
-
-abb-on-rule := inpmap-x11-rule &
-  [ +INPUT   < [ +FORM "/([\(]*)(ON)([.\?!,;\":\)]*)/" ] >,
-    +OUTPUT  < [ +FORM "${I1:+FORM:1}_ON${I1:+FORM:3}" ] > ].
-
-abb-off-rule := inpmap-x11-rule &
-  [ +INPUT   < [ +FORM "/([\(]*)(OFF)([.\?!,;\":\)]*)/" ] >,
-    +OUTPUT  < [ +FORM "${I1:+FORM:1}_OFF${I1:+FORM:3}" ] > ].
-
-abb-is-rule := inpmap-x11-rule &
-  [ +INPUT   < [ +FORM "/([\(]*)(IS)([.\?!,;\":\)]*)/" ] >,
-    +OUTPUT  < [ +FORM "${I1:+FORM:1}_IS${I1:+FORM:3}" ] > ].
 
 ;;;
 ;;; Replace left and right angle marks with variant, to avoid communication 
@@ -1452,23 +1568,23 @@ put-rule := inpmap-x11-rule &
 
 mixed-case-proper-1-rule := inpmap-rule &
    [ +CONTEXT < [ ] >,
-     +INPUT < [ +FORM "/([A-ZÅØ])([A-Za-zÅåØøÆæ0-9,.\?]+)/",
+     +INPUT < [ +FORM "/([A-ZÅØ])([A-Za-zÅåØøÆæ0-9,.\?]*)/",
 		+TNT #tnt & [ +TAGS.FIRST "NNP" ],
 		+ID #id, +FROM #from, +TO #to ] >,
      +OUTPUT  < [ +FORM "${I1:+FORM:1}${I1:+FORM:2}",
 		  +CLASS initcap,
 		  +TNT #tnt, +ID #id, +FROM #from, +TO #to ] >,
-     +POSITION "C1<I1"  ].
+     +POSITION "C1<I1" ].
 
 mixed-case-proper-2-rule := inpmap-rule &
    [ +CONTEXT < [ ] >,
-     +INPUT < [ +FORM "/([A-ZÅØ])([A-Za-zÅåØøÆæ0-9,.\?]+)/",
+     +INPUT < [ +FORM "/([A-ZÅØ])([A-Za-zÅåØøÆæ0-9,.\?]*)/",
 		+TNT #tnt & [ +TAGS.REST.FIRST "NNP" ],
 		+ID #id, +FROM #from, +TO #to ] >,
      +OUTPUT  < [ +FORM "${I1:+FORM:1}${I1:+FORM:2}",
 		  +CLASS initcap,
 		  +TNT #tnt, +ID #id, +FROM #from, +TO #to ] >,
-     +POSITION "C1<I1"  ].
+     +POSITION "C1<I1" ].
 
 ;;;
 ;;; Make everything remaining be lower case - see GG
@@ -1530,32 +1646,26 @@ didnt-rule-2 := inpmap-x21-rule &
 
 recurse-tnt-rule := inpmap-012-rule &
   [ +INPUT   < [ +FORM #form ,
-		 +CLASS #class,
                  +TNT.+TAGS [ FIRST #tag , REST #tagrest & *cons* ],
                  +TNT.+PRBS [ FIRST #prb , REST #prbrest & *cons* ] ] > ,
     +OUTPUT  < [ +FORM #form,
-		 +CLASS #class,
 		 +ONSET unk_onset,
                  +TNT.+TAGS < #tag >,
                  +TNT.+PRBS < #prb > ] ,
                [ +FORM #form,
-		 +CLASS #class,
                  +TNT.+TAGS #tagrest,
                  +TNT.+PRBS #prbrest ] > ,
     +POSITION "O1=O2" ].
 
 terminate-tnt-rule := inpmap-012-rule &
   [ +INPUT   < [ +FORM #form,
-		 +CLASS #class,
                  +TNT.+TAGS < #tag >,
                  +TNT.+PRBS < #prb > ] >,
     +OUTPUT  < [ +FORM #form,
-		 +CLASS #class,
 		 +ONSET unk_onset,
                  +TNT.+TAGS < #tag >,
                  +TNT.+PRBS < #prb > ] ,
                [ +FORM #form,
-		 +CLASS #class,
 		 +ONSET con_or_voc,
                  +TNT.+TAGS < >,
                  +TNT.+PRBS < > ] >,
