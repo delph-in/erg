@@ -87,7 +87,7 @@ non_alphanumeric_tmr := token_class_tmt &
 ;; creation of token AVMs from our input (in one form or another), make sure to
 ;; fully annul part-of-speech information.
 ;;
-null_tnt_tmr := inpmap-rule &
+null_tnt_tmr := token_mapping_rule &
 [ +INPUT < [ +FORM #form, +ONSET #onset, +CLASS #class,
              +PRED #pred, +CARG #carg, +ID #id, +FROM #from, +TO #to,
              +TNT [ +TAGS < anti_string, ... > ] ] >,
@@ -144,7 +144,7 @@ url_ne_3_tmr := ne_tmt &
 ;;; apply as many times as it possible can, seeing its own output from earlier
 ;;; applications.
 ;;;
-prefix_punctuation_tmr := inpmap-rule &
+prefix_punctuation_tmr := token_mapping_rule &
 [ +INPUT < [ +FORM "/([[({“‘])/",
              +FROM #from ],
            [ +FORM "/(.+)/",
@@ -164,7 +164,7 @@ prefix_punctuation_tmr := inpmap-rule &
 ;; earlier.  in either case, we would need a way of keeping a separate |'| in
 ;; the chart, and also re-combine it with the preceding token.  (14-sep-08; oe)
 ;;
-suffix_punctuation_tmr := inpmap-rule &
+suffix_punctuation_tmr := token_mapping_rule &
 [ +INPUT < [ +FORM "/(.+)/",
              +ONSET #onset, +CLASS #class, +PRED #pred, +CARG #carg, 
              +FROM #from, +TNT #tnt ],
@@ -179,9 +179,13 @@ suffix_punctuation_tmr := inpmap-rule &
 ;;
 ;; finally, convert everything to lower case, for lexical look-up in PET
 ;;
-lower_case_tmr := inpmap-011-rule &
-[ +INPUT < [ +FORM "/(.*[[:upper:]].*)/" ] > ,
-  +OUTPUT < [ +FORM "${lc(I1:+FORM:1)}" ] > ].
+lower_case_tmr := token_mapping_rule &
+[ +INPUT < [ +FORM "/(.*[[:upper:]].*)/",
+             +ONSET #onset, +CLASS #class, +PRED #pred, +CARG #carg, 
+             +ID #id, +FROM #from, +TO #to, +TNT #tnt ] > ,
+  +OUTPUT < [ +FORM "${lc(I1:+FORM:1)}",
+              +ONSET #onset, +CLASS #class, +PRED #pred, +CARG #carg, 
+              +ID #id, +FROM #from, +TO #to, +TNT #tnt ] > ].
 
 
 ;;;
@@ -199,37 +203,32 @@ lower_case_tmr := inpmap-011-rule &
 ;;; PoS list.
 ;;;
 
-tnt_recurse_rule := inpmap-012-rule &
-[ +INPUT < [ +FORM #form ,
-             +CLASS #class,
-             +TNT.+TAGS [ FIRST #tag , REST #tagrest & *cons* ],
-             +TNT.+PRBS [ FIRST #prb , REST #prbrest & *cons* ] ] > ,
-  +OUTPUT < [ +FORM #form,
-              +CLASS #class,
-              +ONSET unk_onset,
+tnt_recurse_rule := token_mapping_rule &
+[ +INPUT < [ +FORM #form, +ONSET anti_onset,
+             +CLASS #class, +PRED #pred, +CARG #carg,
+             +ID #id, +FROM #from, +TO #to,
+             +TNT.+TAGS [ FIRST #tag , REST #tags ],
+             +TNT.+PRBS [ FIRST #prb , REST #prbs ] ] > ,
+  +OUTPUT < [ +FORM #form, +ONSET unk_onset,
+              +CLASS #class, +PRED #pred, +CARG #carg,
+              +ID #id, +FROM #from, +TO #to,
               +TNT.+TAGS < #tag >,
               +TNT.+PRBS < #prb > ] ,
             [ +FORM #form,
               +CLASS #class,
-              +TNT.+TAGS #tagrest,
-              +TNT.+PRBS #prbrest ] > ,
+              +TNT.+TAGS #tags,
+              +TNT.+PRBS #prbs ] > ,
   +POSITION "O1=O2" ].
 
-tnt_terminate_tmr := inpmap-012-rule &
-[ +INPUT < [ +FORM #form,
-             +CLASS #class,
-             +TNT.+TAGS < #tag >,
-             +TNT.+PRBS < #prb > ] >,
-  +OUTPUT < [ +FORM #form,
-              +CLASS #class,
-              +ONSET unk_onset,
-              +TNT.+TAGS < #tag >,
-              +TNT.+PRBS < #prb > ] ,
-            [ +FORM #form,
-              +CLASS #class,
-              +ONSET con_or_voc,
-              +TNT null_tnt ] >,
-  +POSITION "O1=O2" ].
+tnt_terminate_tmr := token_mapping_rule &
+[ +INPUT < [ +FORM #form, +ONSET anti_onset,
+             +CLASS #class, +PRED #pred, +CARG #carg,
+             +ID #id, +FROM #from, +TO #to,
+             +TNT #tnt & null_tnt ] > ,
+  +OUTPUT < [ +FORM #form, +ONSET con_or_voc,
+              +CLASS #class, +PRED #pred, +CARG #carg,
+              +ID #id, +FROM #from, +TO #to,
+              +TNT #tnt ] > ].
 
 ;;;
 ;;; with singleton PoS readings multiplied out in each chart cell, we can prune
@@ -243,46 +242,45 @@ tnt_terminate_tmr := inpmap-012-rule &
 ;;; FW, say, should not be bullied out by an unlike NN.         (31-aug-08; oe)
 ;;;
 
-tnt_ditch_unlikely_tmr := inpmap-rule &
+tnt_ditch_unlikely_tmr := token_mapping_rule &
 [ +INPUT < [ +TNT.+PRBS < "/0?\\.0.*/" > ] >,
   +OUTPUT < > ].
 
-tnt_ditch_function_tmr := inpmap-rule &
+tnt_ditch_function_tmr := token_mapping_rule &
 [ +INPUT < [ +TNT.+TAGS 
              < "/CC|DT|EX|IN|MD|PDT|POS|PRP\\$?|RP|TO|UH|WDT|WP|WRB/" > ] >,
   +OUTPUT < > ].
 
-tnt_ditch_punctuation_tmr := inpmap-rule &
+tnt_ditch_punctuation_tmr := token_mapping_rule &
 [ +INPUT < [ +TNT.+TAGS < "/\\$|#|``|''|\\(|\\)|,|\\.|:/" > ] >,
   +OUTPUT < > ].
 
-tnt_filter_dup_fw_tmr := inpmap-rule &
+tnt_filter_dup_fw_tmr := token_mapping_rule &
 [ +CONTEXT  < [ +TNT.+TAGS < "NN" > ] >,
   +INPUT    < [ +TNT.+TAGS < "FW" > ] >,
   +OUTPUT   < >,
   +POSITION "I1=C1" ].
 
-tnt_filter_dup_nnp_tmr := inpmap-rule &
+tnt_filter_dup_nnp_tmr := token_mapping_rule &
 [ +CONTEXT  < [ +TNT.+TAGS < "/FW|NN/" > ] >,
   +INPUT    < [ +TNT.+TAGS < "NNP" > ] >,
   +OUTPUT   < >,
   +POSITION "I1=C1" ].
 
-tnt_filter_dup_nnps_tmr := inpmap-rule &
+tnt_filter_dup_nnps_tmr := token_mapping_rule &
 [ +CONTEXT  < [ +TNT.+TAGS < "NNP" > ] >,
   +INPUT    < [ +TNT.+TAGS < "NNPS" > ] >,
   +OUTPUT   < >,
   +POSITION "I1=C1" ].
 
-assign_nn_pred_tmr := inpmap-rule &  
+assign_nn_pred_tmr := token_mapping_rule &  
 [ +INPUT < [ +FORM #form & "/(.+)/",
              +ONSET #onset & unk_onset, +CLASS #class & non_ne, 
              +PRED anti_string, +CARG #carg,
              +ID #id, +FROM #from, +TO #to,
-             +TNT #tnt & [ +TAGS < "NNS?" > ] >,
+             +TNT #tnt & [ +TAGS < "NNS?" > ] ] >,
   +OUTPUT < [ +FORM #form & "/(.+)/",
               +ONSET #onset & unk_onset, +CLASS #class & non_ne, 
               +PRED "_${I1:+FORM:1}_n_rel", +CARG #carg,
               +ID #id, +FROM #from, +TO #to,
               +TNT #tnt ] > ].
-
