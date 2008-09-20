@@ -21,9 +21,9 @@
 ;;; as prefixes or suffixes on other tokens.  the process is broken down into a
 ;;; number of (more or less) distinct phases, viz.
 ;;;
-;;; - decoration: filling in missing or underspecified token properties.
 ;;; - normalization: anything the (ideal) tokenizer _should_ have done.
 ;;; - NE recognition: surface-based identification of URLs, numbers, et al.
+;;; - decoration: filling in missing or underspecified token properties.
 ;;; - token combination: re-attach punctuation marks and contracted forms.
 ;;; - sandwiched punctuation
 ;;; - PoS explosion: multiply out alternate PoS readings
@@ -37,67 +37,45 @@
 ;;; token information.
 ;;;
 
-;;
-;; some tokenizers (e.g. the one of acrolinx) already distinguish a number of
-;; token classes.  our REPP tokenizer, however, does not; so, determine class
-;; values here, if need be.  with acrolinx, we might have to map their naming
-;; scheme into our type hierarchy, on the other hand.
-;;
-numeric_tmr := token_class_tmt &
-[ +INPUT < [ +FORM "/[[:digit:]]+/" ] >,
-  +OUTPUT < [ +CLASS numeric ] > ].
-
-alphabetic+upper_tmr := token_class_tmt &
-[ +INPUT < [ +FORM "/[[:upper:]]+/" ] >,
-  +OUTPUT < [ +CLASS alphabetic+upper ] > ].
-
-alphabetic+lower_tmr := token_class_tmt &
-[ +INPUT < [ +FORM "/[[:lower:]]+/" ] >,
-  +OUTPUT < [ +CLASS alphabetic+lower ] > ].
-
-alphabetic+capitalized+mixed_tmr := token_class_tmt &
-[ +INPUT < [ +FORM "/[[:upper:]][[:alpha:]]+/" ] >,
-  +OUTPUT < [ +CLASS alphabetic+capitalized+mixed ] > ].
-
-alphabetic+non_capitalized+mixed_tmr := token_class_tmt &
-[ +INPUT < [ +FORM "/[[:lower:]][[:alpha:]]+/" ] >,
-  +OUTPUT < [ +CLASS alphabetic+non_capitalized+mixed ] > ].
-
-alphanumeric+upper_tmr := token_class_tmt &
-[ +INPUT < [ +FORM "/[[:upper:][:digit:]]+/" ] >,
-  +OUTPUT < [ +CLASS alphanumeric+upper ] > ].
-
-alphanumeric+lower_tmr := token_class_tmt &
-[ +INPUT < [ +FORM "/[[:lower:][:digit:]]+/" ] >,
-  +OUTPUT < [ +CLASS alphanumeric+lower ] > ].
-
-alphanumeric+capitalized+mixed_tmr := token_class_tmt &
-[ +INPUT < [ +FORM "/[[:upper:]][[:alnum:]]+/" ] >,
-  +OUTPUT < [ +CLASS alphanumeric+capitalized+mixed ] > ].
-
-alphanumeric+non_capitalized+mixed_tmr := token_class_tmt &
-[ +INPUT < [ +FORM "/[[:lower:][:digit:]][[:alnum:]]+/" ] >,
-  +OUTPUT < [ +CLASS alphanumeric+non_capitalized+mixed ] > ].
-
-non_alphanumeric_tmr := token_class_tmt &
-[ +OUTPUT < [ +CLASS non_alphanumeric ] > ].
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; correct tokenization `damage', inherited from the PTB conventions.
+;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;
-;; in case we are running without a PoS tagger, or something went wrong in the
-;; creation of token AVMs from our input (in one form or another), make sure to
-;; fully annul part-of-speech information.
+;; convert (PTB-style) ASCII directional quotes to UniCode characters
 ;;
-null_tnt_tmr := inpmap-rule &
-[ +INPUT < [ +FORM #form, +ONSET #onset, +CLASS #class,
-             +PRED #pred, +CARG #carg, +ID #id, +FROM #from, +TO #to,
-             +TNT [ +TAGS < "FOO", ... > ] ] >,
-  +OUTPUT < [ +FORM #form, +ONSET #onset, +CLASS #class,
-              +PRED #pred, +CARG #carg, +ID #id, +FROM #from, +TO #to, 
-              +TNT null_tnt ] > ].
+opening_double_quote := one_one_form_tmt &
+[ +INPUT < [ +FORM "``" ] >,
+  +OUTPUT < [ +FORM "“" ] > ].
+           
+closing_double_quote := one_one_form_tmt &
+[ +INPUT < [ +FORM "''" ] >,
+  +OUTPUT < [ +FORM "”" ] > ].
+           
 
+;;
+;; {|do| |has| |wo| ...} |n't| --> {|don't| |hasn't| |won't| 
+;;
+contracted_negation_tmr := token_mapping_rule &
+[ +INPUT < [ +FORM "/([[:alpha:]]+)/", 
+             +ONSET #onset, +CLASS #class, +PRED #pred, +CARG #carg, 
+             +FROM #from, +TNT #tnt ],
+           [ +FORM "/(n't|N'T)/",
+             +TO #to ] >,
+  +OUTPUT < [ +FORM "${I1:+FORM:1}${I2:+FORM:1}",
+              +ONSET #onset, +CLASS #class, +PRED #pred, +CARG #carg, 
+              +FROM #from, +TO #to, +TNT #tnt ] >,
+  +POSITION "I1<I2" ].
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; lightweight NEs: form-driven generic entries (formerly `ersatz' entries)
 ;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;;
 ;;; email addresses
@@ -112,7 +90,7 @@ email_ne_tmr := ne_tmt &
   +OUTPUT < [ +CLASS email_ne ] > ].
 
 ;;;
-;;; URLs
+;;; uniform resource locators (URLs)
 ;;;
 
 ;;
@@ -136,65 +114,78 @@ url_ne_3_tmr := ne_tmt &
 [ +INPUT < [ +FORM "/<[[:alnum:]_-]+(\\.[[:alnum:]_-]+)+>/" ] >,
   +OUTPUT < [ +CLASS url_ne ] > ].
 
-
 ;;;
-;;; File names
-;;;
-
-; |/etc/config|
-file-ne-1-rule := inpmap-ne-11-rule &
-[ +INPUT   < [ +FORM "/\\/[a-zA-Z0-9]+\\/(.*)/" ] >,
-  +OUTPUT  < [ +CLASS file_ne ] > ].
-
-
-;;;
-;;; times
+;;; file names
 ;;;
 
-; |10:25pm| (tokenizer separates |:|)
-time-ne-1-rule := inpmap-ne-31-rule &
-[ +INPUT   < [ +FORM "/([0-2]?[0-9])/" ],
-	     [ +FORM "/(:)/" ],
-	     [ +FORM "/([0-5][0-9]([aApP][mM])?)/" ] >,
-  +OUTPUT  < [ +FORM "${I1:+FORM:1}${I2:+FORM:1}${I3:+FORM:1}",
-	       +CLASS time_ne ] > ].
+;;
+;; fully-qualified Un*x style, starting with a slash, e.g. |/etc/config|.  
+;;
+;; _fix_me_
+;; we require a minimum of two components, such that |/etc| by itself will not
+;; match.  maybe we should allow these too but create an ambiguity here, i.e.
+;; output two tokens, one [ CLASS file_ne }, the other [ CLASS non_ne ]?
+;;                                                              (19-sep-08; oe)
+;;
+file_ne_tmr := ne_tmt &
+[ +INPUT < [ +FORM "/(/[[:alnum:]._-]+){2,}/?/" ] >,
+  +OUTPUT < [ +CLASS file_ne ] > ].
+
 
 ;;;
-;;; Ratios
+;;; time-of-day expressions: |9am|, |11:45pm|, |20:15|
 ;;;
 
-; |1:1000|
-ratio-ne-1-rule := inpmap-ne-31-rule &
-[ +INPUT   < [ +FORM "/([0-9]{1,3})/" ],
-             [ +FORM "/(:)/" ],
-             [ +FORM "/([0-9]+)/" ] >,
-  +OUTPUT  < [ +FORM "${I1:+FORM:1}${I2:+FORM:1}${I3:+FORM:1}",
-	       +CLASS meas_ne ] > ].   
+;;
+;; an |am| or |pm| suffix unambiguously indicates a time expression.  we also
+;; grab all tokens of the form `H:M' where `H' and `M' are numbers in the right
+;; ranges.
+;;
+;; _fix_me_
+;; i wonder about `mix in a ratio of 1:15', which the second rule below would
+;; consider a time-of-day expression.  should we approach those case with more
+;; `optional' NE rules, i.e. ones outputting two tokens?  or should we rather
+;; introduce an abstraction over `time_ne' and `ratio_ne', such that a single
+;; token can activate multiple lexical entries?  once we get regular expression
+;; matching for lexical instantiation (peter is working on that), in principle,
+;; we could just drop `time_ne_2_tmr', make `time_ne_ a sub-type of `ratio_ne',
+;; and put the `H:M' regular expression into the generic lexical entry.  with
+;; great power comes great responsibility :-).                 (19-sep-08; oe)
+;;                       
+time_ne_1_tmr := ne_tmt &
+[ +INPUT < [ +FORM "/(0?[0-9]|1[0-2])(:[0-5][0-9])?([aApP][mM])/" ] >,
+  +OUTPUT  < [ +CLASS time_ne ] > ].
 
-; |1:100,000|
-ratio-ne-2-rule := inpmap-ne-31-rule &
-[ +INPUT   < [ +FORM "/([0-9]{1,3})/" ],
-             [ +FORM "/(:)/" ],
-             [ +FORM "/([0-9]{1,3},[0-9]{3})/" ] >,
-  +OUTPUT  < [ +FORM "${I1:+FORM:1}${I2:+FORM:1}${I3:+FORM:1}",
-	       +CLASS meas_ne ] > ].   
+time_ne_2_tmr := ne_tmt &
+[ +INPUT < [ +FORM "/(0?[0-9]|1[0-9]|2[0-4]):[0-5][0-9]/" ] >,
+  +OUTPUT  < [ +CLASS time_ne ] > ].
 
-; |1:1,000,000|
-ratio-ne-3-rule := inpmap-ne-31-rule &
-[ +INPUT   < [ +FORM "/([0-9]{1,3})/" ],
-             [ +FORM "/(:)/" ],
-             [ +FORM "/([0-9]{1,3},[0-9]{3},[0-9]{3})/" ] >,
-  +OUTPUT  < [ +FORM "${I1:+FORM:1}${I2:+FORM:1}${I3:+FORM:1}",
-	       +CLASS meas_ne ] > ].   
+;;;
+;;; ratios: |1:1000|, |1:100,000|, et al.
+;;;
+
+;;
+;; we make the conservative assumption that the first element not exceed three
+;; digits and not have leading zeros.
+;;
+ratio_ne_1_tmr := ne_tmt &
+[ +INPUT < [ +FORM "/[1-9][0-9]{0,2}:[1-9][0-9]*/" ] >,
+  +OUTPUT < [ +CLASS meas_ne ] > ].   
+
+ratio_ne_2_tmr := ne_tmt &
+[ +INPUT < [ +FORM "/[1-9][0-9]{0,2}:[1-9][0-9]{2}(,[0-9]{1,3})*/" ] >,
+  +OUTPUT < [ +CLASS meas_ne ] > ].   
 
 ;;;
 ;;; Numerals
 ;;;
 
-; |23|
-num-or-dom-ne-1-rule := inpmap-ne-11-rule &
-[ +INPUT   < [ +FORM "/[0-2]?[0-9]/" ] >,
-  +OUTPUT  < [ +CLASS card_or_dom_ne ] > ].
+;;
+;; days of the month: |1| -- |9|, |10| -- |29|, |30|, and |31|
+;;
+num_or_dom_nt_tmr := ne_tmt &
+[ +INPUT < [ +FORM "/([1-9]|[1-2][0-9]|3[01])/" ] >,
+  +OUTPUT < [ +CLASS card_or_dom_ne ] > ].
 
 ; |2005|
 num-or-year-ne-1-rule := inpmap-ne-11-rule &
@@ -337,6 +328,10 @@ range-ne-3-rule := inpmap-ne-11-rule &
 [ +INPUT   < [ +FORM "/[0-9]{1,3}[.,][0-9]{1,2}-[0-9]{1,3}[.,][0-9]{1,2}/" ] >,
   +OUTPUT  < [ +CLASS card_ne ] > ].   
 
+;;
+;; _fix_me_
+;; nowadays a single token.                                     (19-sep-08; oe)
+;;
 ; |IV-VII|
 range-ne-4-rule := inpmap-ne-21-rule &
 [ +INPUT   < [ +FORM "/([IV]+)-/" ],
@@ -387,6 +382,12 @@ ordinal-ne-2-rule := inpmap-ne-11-rule &
 [ +INPUT   < [ +FORM "/([0-9]*1st|[0-9]*2nd|[0-9]*3rd|[0-9]*[4567890]th)/" ] >,
   +OUTPUT  < [ +CLASS ord_ne ] > ].
 
+;;
+;; _fix_me_
+;; are the following two rules really legitimate orthography?  if they occur
+;; in mis-speled text, we should maybe move them into a separate fix-up set
+;; (and ignore for right now).                                 (19-sep-08; oe)
+;;
 ; day-of-month or ordinal
 ; |24 th|
 ordinal-ne-3-rule := inpmap-ne-21-rule &
@@ -446,6 +447,10 @@ measure-ne-2-rule := inpmap-ne-11-rule &
 [ +INPUT   < [ +FORM "/[0-9]+[,.][0-9]+([mM'\"kK]|cm|mm|σ|(º[CF]?))/" ] >,
   +OUTPUT  < [ +CLASS meas_ne ] > ].
 
+;;
+;; _fix_me_
+;; nowadays a single token.                                     (19-sep-08; oe)
+;;
 ; |1:1000m|
 measure-ne-3-rule := inpmap-ne-31-rule &
 [ +INPUT   < [ +FORM "/([0-9]{1,3})/" ],
@@ -486,7 +491,100 @@ measure-ne-7-rule := inpmap-ne-21-rule &
   +OUTPUT  < [ +FORM "${I1:+FORM:1}${I2:+FORM:1}",
 	       +CLASS meas_ne ] > ].
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; now with NEs out of our way, this would be a good time for adjustments to
+;;; tokenization: introduce additional token boundaries (e.g. for hyphens and 
+;;; slashes) and maybe some robustness rules for `sandwiched' punctuation.
+;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; some tokenizers (e.g. the one of acrolinx) already distinguish a number of
+;;; token classes.  our REPP tokenizer, however, does not; so, determine class
+;;; values here, if need be.  with acrolinx, we might have to map their naming
+;;; scheme into our type hierarchy, on the other hand.
+;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+numeric_class_tmr := token_class_tmt &
+[ +INPUT < [ +FORM "/[[:digit:]]+/" ] >,
+  +OUTPUT < [ +CLASS numeric ] > ].
+
+alphabetic_class_tmr := token_class_tmt &
+[ +INPUT < [ +FORM "/[[:alpha:]]+/" ] >,
+  +OUTPUT < [ +CLASS alphabetic ] > ].
+
+alphanumeric_class_tmr := token_class_tmt &
+[ +INPUT < [ +FORM "/[[:alnum:]_-]+/" ] >,
+  +OUTPUT < [ +CLASS alphanumeric ] > ].
+
+non_alphanumeric_class_tmr := token_class_tmt &
+[ +OUTPUT < [ +CLASS non_alphanumeric ] > ].
+
+;;
+;; further decorate the token class with information about (a) sentence-initial
+;; initial position and (b) capitalization.  because these are attributes of
+;; +CLASS (and there is no way of overwriting), we play a nasty trick on +CARG,
+;; viz. utilize it as a `scratch' slot to prevent cyclic rule applications.  we
+;; (kind of assume) that no external tokenizer will pass in +CARG values, and
+;; if it did, the worst that would happen is that the rules below cannot fire.
+;;
+non_initial_tmr := token_case_tmt &
+[ +CONTEXT < [] >,
+  +INPUT < [ +CARG anti_string ] >,
+  +OUTPUT < [ +CLASS [ +INITIAL - ], +CARG non_string ] >,
+  +POSITION "C1<I1" ].
+
+initial_tmr := token_case_tmt &
+[ +INPUT < [ +CARG anti_string ] >,
+  +OUTPUT < [ +CLASS #class & [ +INITIAL + ], +CARG non_string ] > ].
+
+lower_tmr := token_case_tmt &
+[ +INPUT < [ +FORM "/[[:lower:][:digit:]_-]+/", 
+             +CARG non_string ] >,
+  +OUTPUT < [ +CLASS [ +CASE lower ], 
+              +CARG anti_string ] > ].
+
+upper_tmr := token_case_tmt &
+[ +INPUT < [ +FORM "/[[:upper:][:digit:]_-]+/", 
+             +CARG non_string ] >,
+  +OUTPUT < [ +CLASS [ +CASE upper ], 
+              +CARG anti_string ] > ].
+  
+capitalized_tmr := token_case_tmt &
+[ +INPUT < [ +FORM "/[[:upper:]][[:alnum:]_-]+/", 
+             +CARG non_string ] >,
+  +OUTPUT < [ +CLASS [ +CASE capitalized+mixed ],
+              +CARG anti_string ] > ].
+
+non_capitalized_tmr := token_case_tmt &
+[ +INPUT < [ +FORM "/[[:lower:][:digit:]][[:alnum:]_-]+/", 
+             +CARG non_string ] >,
+  +OUTPUT < [ +CLASS [ +CASE non_capitalized+mixed ],
+              +CARG anti_string ] > ].
+
+;;
+;; in case we are running without a PoS tagger, or something went wrong in the
+;; creation of token AVMs from our input (in one form or another), make sure to
+;; fully annul part-of-speech information.
+;;
+null_tnt_tmr := token_mapping_rule &
+[ +INPUT < [ +FORM #form, +ONSET #onset, +CLASS #class,
+             +PRED #pred, +CARG #carg, +ID #id, +FROM #from, +TO #to,
+             +TNT [ +TAGS < anti_string, ... > ] ] >,
+  +OUTPUT < [ +FORM #form, +ONSET #onset, +CLASS #class,
+              +PRED #pred, +CARG #carg, +ID #id, +FROM #from, +TO #to, 
+              +TNT null_tnt ] > ].
+
+
+;;
+;; _fix_me_
+;; this appear to target non-breaking spaces; now treated in the :xml module.
+;; i believe the following two rules can go.                   (19-sep-08; oe)
+;;
 strip-char1-rule := inpmap-x11-rule &
   [ +INPUT   < [ +FORM "/([A-Za-zÅåØøÆæ0-9.\?!\)]+)( )/" ] >,
     +OUTPUT  < [ +FORM "${I1:+FORM:1}" ] > ].
@@ -536,7 +634,13 @@ asterisk-emphasis-rule := inpmap-x21-rule &
 ;;; preceding and following word(s).
 ;;; Includes =#$%~\(§§
 ;;;
-
+;;
+;; _fix_me_
+;; the following two rules seem to want to adjust (or fix-up) tokenization.  i
+;; would suggest taking them out, for the time being, and eventually doing any
+;; adjustments to tokenization that are required upon entry to token mapping;
+;; in a separate, optional rule set.                           (19-sep-08; oe)
+;;
 punct-right-space-rule := inpmap-rule &
   [ +INPUT   < [ +FORM "/([a-zA-ZÅåØøÆæ0-9]+)([=#$%~\(§§])+/", +TNT #tnt,
 		 +ONSET #onset, +CLASS #class ] >,
@@ -568,6 +672,13 @@ plus-plus-rule := inpmap-x11-rule &
 ;;; in "Who arrived?, she asked"  since current suffixing machinery doesn't
 ;;; produce result.  Also for "... two hrs., ..." FIX
 ;;;
+;; _fix_me_
+;; all of the following rules (with the exception of `punct-cluster4-rule')
+;; cannot really be effective at this point: punctuation marks are separated
+;; into individual tokens, i.e. a cluster would have to be a sequence of
+;; tokens.  is it actually still true that the suffixing machinery fails on
+;; these?  can we (at least temporarily) take out the entire block?
+;;                                                             (17-sep-08; oe)
 punct-cluster-rule := inpmap-x11-rule &
   [ +INPUT   < [ +FORM "/([a-zA-ZÅåØøÆæ0-9]+)[.?!](,)/" ] >,
     +OUTPUT  < [ +FORM "${I1:+FORM:1}${I1:+FORM:2}" ] > ].
@@ -605,7 +716,9 @@ punct-cluster6-rule := inpmap-x21-rule &
 ;;;
 ;;; Eliminate spaces for pair of double quotes when space on both sides
 ;;;
-
+;; _fix_me_
+;; now subsumed by the punctuation prefix and suffix rules.     (19-sep-08; oe)
+;;
 quote-pair-space-rule := inpmap-rule &
   [ +INPUT   < [ +FORM "/([\"])/" ],
 	       [ +FORM "/([a-zA-ZÅåØøÆæ0-9]+)([.?]*)/", 
@@ -619,6 +732,11 @@ quote-pair-space-rule := inpmap-rule &
 ;;; Add one more hack for sentence-final double-quote, where we've already
 ;;; swallowed the padded final space
 ;;;
+;; _fix_me_
+;; the quote mark and period would be separate tokens, at this point.  also,
+;; the rule just seems to concatenate the two input groups again, so i wonder
+;; how it actually changes anything?                           (19-sep-08; oe)
+;;
 final-doubleq-rule := inpmap-x11-rule &
   [ +INPUT   < [ +FORM "/(\")([.?!])/" ] >,
     +OUTPUT  < [ +FORM "${I1:+FORM:1}${I1:+FORM:2}" ] > ].
@@ -629,6 +747,20 @@ final-doubleq-rule := inpmap-x11-rule &
 ;;; Same for periods between capital letters: "D.B. Smith", "2.Kim"
 ;;; Add white space on both sides for forward slash
 ;;;
+;; _fix_me_
+;; now we are getting to a very interesting section: adjusting tokenization
+;; further.  i admit i am sceptical of the (large) family of `squished' rules.
+;; but we certainly still need to define our position on hyphens, slashes, and
+;; non-affix punctuation marks (e.g. |:|) that occur sandwiched (except for a
+;; named entity, of course).  breaking at hyphens and slashes (which the PTB
+;; did not, hence the REPP component does not) in some configurations seems a
+;; necessity, but then i would like to have all changes to tokenization early
+;; in the pipeline (though after at least those NEs that can contain hyphens
+;; and slashes).  the squished colon or comma rules, on the other hand, seem
+;; to be of a different nature, fixing non-standard inputs.  initially, can
+;; we put these aside (segregate them into a separate file, say), and come back
+;; to robustness rules for tokenziation once we have the foundations stable?
+;;                                                             (19-sep-08; oe)
 squished-punct1-rule := inpmap-x12-rule &
   [ +INPUT   < [ +FORM 
  "/([\(\*]*)([a-zA-ZÅåØøÆæ\\-]+)([,:])([a-zA-ZÅåØøÆæ@.\\-]+)([.\?!,;\":\)]*)/",
@@ -735,7 +867,12 @@ squished-punct15-rule := inpmap-x12-rule &
 ;;;
 ;;; Eliminate space for double quote when space on both sides
 ;;;
-
+;;
+;; _fix_me_
+;; the following seems wrong: we use a straight quote only for closing quotes,
+;; and the re-attachment should be subsumed by the `suffix' rule below.  can
+;; we eliminate (or put aside) the entire `quote' section?     (19-sep-08; oe)  
+;;                   
 quote-space-rule := inpmap-rule &
   [ +INPUT   < [ +FORM "/([\"])/", +FROM #from ],
 	       [ +FORM "/([a-zA-ZÅåØøÆæ0-9]+)([.?]*)/", +ID #id, +TO #to, 
@@ -919,23 +1056,39 @@ bracketed-comma-rule := inpmap-rule &
 		 +ID #id, +FROM #from, +TO #to, +TNT #tnt ] >, 
      +POSITION "I1<I2<I3" ].
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; re-combine punctuation marks with adjacent tokens, based on directionality
 ;;; of punctuation marks, e.g. opening vs. closing quotes and brackets.  doing
 ;;; one such re-combination at a time is sufficient, as each rewrite rule will
-;;; apply as many times as it possibly can, seeing its own output from earlier
+;;; apply as many times as it possible can, seeing its own output from earlier
 ;;; applications.
 ;;;
-prefix_punctuation_tmr := inpmap-rule &
-  [ +INPUT   < [ +FORM "/([[({“‘]+)/",
-                 +FROM #from ],
-               [ +FORM "/(.+)/",
-		 +ONSET #onset, +CLASS #class, +PRED #pred, +CARG #carg, 
-                 +TO #to, +TNT #tnt ] >,
-    +OUTPUT  < [ +FORM "${I1:+FORM:1}${I2:+FORM:1}",
-		 +ONSET #onset, +CLASS #class, +PRED #pred, +CARG #carg, 
-                 +FROM #from, +TO #to, +TNT #tnt ] >,
-    +POSITION "I1<I2" ].
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;
+;; but first, preserve the current (non-punctuated) from in +CARG, for later
+;; reference, e.g. in constructing +PRED values for generics.  NE rules have
+;; done this already, hence make sure to not overwrite existing +CARGSs.
+;;
+default_carg_tmr := token_mapping_rule &
+[ +INPUT < [ +FORM #form, +ONSET #onset, +CLASS #class,
+             +PRED #pred, +CARG anti_string,
+             +ID #id, +FROM #from, +TO #to, +TNT #tnt ] >,
+  +OUTPUT < [ +FORM #form, +ONSET #onset, +CLASS #class,
+              +PRED #pred, +CARG #form,
+              +ID #id, +FROM #from, +TO #to, +TNT #tnt ] > ].
+
+prefix_punctuation_tmr := token_mapping_rule &
+[ +INPUT < [ +FORM "/([[({“‘]+)/",
+             +FROM #from ],
+           [ +FORM "/(.+)/",
+             +ONSET #onset, +CLASS #class, +PRED #pred, +CARG #carg, 
+             +TO #to, +TNT #tnt ] >,
+  +OUTPUT < [ +FORM "${I1:+FORM:1}${I2:+FORM:1}",
+             +ONSET #onset, +CLASS #class, +PRED #pred, +CARG #carg, 
+             +FROM #from, +TO #to, +TNT #tnt ] >,
+  +POSITION "I1<I2" ].
 
 ;;
 ;; _fix_me_
@@ -946,16 +1099,17 @@ prefix_punctuation_tmr := inpmap-rule &
 ;; earlier.  in either case, we would need a way of keeping a separate |'| in
 ;; the chart, and also re-combine it with the preceding token.  (14-sep-08; oe)
 ;;
-suffix_punctuation_tmr := inpmap-rule &
-  [ +INPUT   < [ +FORM "/(.+)/",
-		 +ONSET #onset, +CLASS #class, +PRED #pred, +CARG #carg, 
-                 +FROM #from, +TNT #tnt ],
-               [ +FORM "/([])}”\"’,;.!?]+)/",
-                 +TO #to ] >,
-    +OUTPUT  < [ +FORM "${I1:+FORM:1}${I2:+FORM:1}",
-		 +ONSET #onset, +CLASS #class, +PRED #pred, +CARG #carg, 
-                 +FROM #from, +TO #to, +TNT #tnt ] >,
-    +POSITION "I1<I2" ].
+suffix_punctuation_tmr := token_mapping_rule &
+[ +INPUT < [ +FORM "/(.+)/",
+             +ONSET #onset, +CLASS #class, +PRED #pred, +CARG #carg, 
+             +FROM #from, +TNT #tnt ],
+           [ +FORM "/([])}”\"’,;.!?]+)/",
+             +TO #to ] >,
+  +OUTPUT < [ +FORM "${I1:+FORM:1}${I2:+FORM:1}",
+              +ONSET #onset, +CLASS #class, +PRED #pred, +CARG #carg, 
+              +FROM #from, +TO #to, +TNT #tnt ] >,
+  +POSITION "I1<I2" ].
+
 
 ;;;
 ;;; Eliminate any string-initial stranded punctuation (from faulty segmentatn)
@@ -983,6 +1137,19 @@ paren-plural-rule := inpmap-x11-rule &
   [ +INPUT   < [ +FORM "/([A-Za-zÅåØøÆæ]*)\\(s\\)/" ] >,
     +OUTPUT  < [ +FORM "${I1:+FORM:1}s" ] > ].
 
+;;
+;; _fix_me_
+;; i believe everything from here on downto `space-after-o-l-rule' is another
+;; family of tokenization adjustment rules.  most seem to aim for robustness,
+;; but again i think they are in the wrong place: if we are to correct faulty
+;; tokenization, we should do it early on, such that everything else works the
+;; way it does anyway.  for example, splitting off |(| at this point (after we
+;; have re-attached prefix and suffix punctuation marks already) would mean we
+;; risk ending up with |(| as a token of its own, or we would have to re-run
+;; the combination rules for prefix and suffix punctuation.  can we take out
+;; this block for the time being, and return to robustness once we have things
+;; stable for properly typed inputs, e.g. CB and WeScience?    (20-sep-08; oe)
+;;
 ;;;
 ;;; Add white space to left of ( and [
 ;;;
@@ -1092,14 +1259,18 @@ rightangle-rule := inpmap-x11-rule &
 ;;; Assign +CLASS for words with leading uppercase, so we keep these unknowns.
 ;;; But for now, not on sentence initial words.
 ;;;
-
+;; _fix_me_
+;; once we avoid leakage of +CLASS information underway, we should no longer
+;; have to do the following two rules (looking at +TAGS.REST.FIRST is hardly
+;; pretty anyway).                                             (20-sep-08; oe)
+;;
 mixed-case-proper-1-rule := inpmap-rule &
    [ +CONTEXT < [ ] >,
      +INPUT < [ +FORM "/([A-ZÅØ])([A-Za-zÅåØøÆæ0-9,.\?]*)/",
 		+TNT #tnt & [ +TAGS.FIRST "NNP" ],
 		+ID #id, +FROM #from, +TO #to ] >,
      +OUTPUT  < [ +FORM "${I1:+FORM:1}${I1:+FORM:2}",
-		  +CLASS capitalized-non-initial,
+		  +CLASS [ +INITIAL -, +CASE capitalized ],
 		  +TNT #tnt, +ID #id, +FROM #from, +TO #to ] >,
      +POSITION "C1<I1" ].
 
@@ -1109,21 +1280,32 @@ mixed-case-proper-2-rule := inpmap-rule &
 		+TNT #tnt & [ +TAGS.REST.FIRST "NNP" ],
 		+ID #id, +FROM #from, +TO #to ] >,
      +OUTPUT  < [ +FORM "${I1:+FORM:1}${I1:+FORM:2}",
-		  +CLASS capitalized-non-initial,
+		  +CLASS [ +INITIAL -, +CASE capitalized ],
 		  +TNT #tnt, +ID #id, +FROM #from, +TO #to ] >,
      +POSITION "C1<I1" ].
 
-;;
-;; finally, convert everything to lower case, for lexical look-up in PET
-;;
-lower_case_tmr := inpmap-011-rule &
-[ +INPUT < [ +FORM "/(.*[[:upper:]].*)/" ] > ,
-  +OUTPUT < [ +FORM "${lc(I1:+FORM:1)}" ] > ].
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; finally, convert everything to lower case, for lexical look-up in PET
+;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+downcase_tmr := one_one_form_tmt &
+[ +INPUT < [ +FORM "/(.*[[:upper:]].*)/",
+             +ONSET #onset, +CLASS #class, +PRED #pred, +CARG #carg, 
+             +ID #id, +FROM #from, +TO #to, +TNT #tnt ] > ,
+  +OUTPUT < [ +FORM "${lc(I1:+FORM:1)}",
+              +ONSET #onset, +CLASS #class, +PRED #pred, +CARG #carg, 
+              +ID #id, +FROM #from, +TO #to, +TNT #tnt ] > ].
 
 ;;;
 ;;; Spelling correction
 ;;;
-
+;; _fix_me_
+;; these should move up towards the beginning of token mapping, such that (for
+;; example, they can also do their work when there is punctuation around them.
+;;                                                             (20-sep-08; oe)
 everytime-rule := inpmap-x12-rule &
   [ +INPUT   < [ +FORM "everytime"] >,
     +OUTPUT  < [ +FORM "every" ],
@@ -1155,6 +1337,7 @@ didnt-rule-2 := inpmap-x21-rule &
     +OUTPUT  < [ +FORM "didn't", +TNT #tnt ] >,
     +POSITION "I1<I2" ].
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; at this point, we multiply out PoS values on all tokens, where for each
 ;;; original token as many additional tokens are created (in the same chart
@@ -1169,33 +1352,38 @@ didnt-rule-2 := inpmap-x21-rule &
 ;;; this kind of PoS multiplication because they have already emptied out their
 ;;; PoS list.
 ;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-recurse-tnt-rule := inpmap-012-rule &
-  [ +INPUT   < [ +FORM #form ,
-                 +TNT.+TAGS [ FIRST #tag , REST #tagrest & *cons* ],
-                 +TNT.+PRBS [ FIRST #prb , REST #prbrest & *cons* ] ] > ,
-    +OUTPUT  < [ +FORM #form,
-		 +ONSET unk_onset,
-                 +TNT.+TAGS < #tag >,
-                 +TNT.+PRBS < #prb > ] ,
-               [ +FORM #form,
-                 +TNT.+TAGS #tagrest,
-                 +TNT.+PRBS #prbrest ] > ,
-    +POSITION "O1=O2" ].
+tnt_recurse_rule := token_mapping_rule &
+[ +INPUT < [ +FORM #form, +ONSET anti_onset,
+             +CLASS #class, +PRED #pred, +CARG #carg,
+             +ID #id, +FROM #from, +TO #to,
+             +TNT [ +TAGS < #tag . #tags & *cons* >,
+                    +PRBS < #prb . #prbs & *cons* > ] ] > ,
+  +OUTPUT < [ +FORM #form, +ONSET unk_onset,
+              +CLASS #class, +PRED #pred, +CARG #carg,
+              +ID #id, +FROM #from, +TO #to,
+              +TNT [ +TAGS < #tag >, +PRBS < #prb > ] ],
+            [ +FORM #form,
+              +CLASS #class, +PRED #pred, +CARG #carg,
+              +ID #id, +FROM #from, +TO #to,
+              +TNT [ +TAGS #tags, +PRBS #prbs ] ] > ,
+  +POSITION "O1=O2" ].
 
-terminate-tnt-rule := inpmap-012-rule &
-  [ +INPUT   < [ +FORM #form,
-                 +TNT.+TAGS < #tag >,
-                 +TNT.+PRBS < #prb > ] >,
-    +OUTPUT  < [ +FORM #form,
-		 +ONSET unk_onset,
-                 +TNT.+TAGS < #tag >,
-                 +TNT.+PRBS < #prb > ] ,
-               [ +FORM #form,
-		 +ONSET con_or_voc,
-                 +TNT.+TAGS < >,
-                 +TNT.+PRBS < > ] >,
-    +POSITION "O1=O2" ].
+tnt_terminate_tmr := token_mapping_rule &
+[ +INPUT < [ +FORM #form, +ONSET anti_onset,
+             +CLASS #class, +PRED #pred, +CARG #carg,
+             +ID #id, +FROM #from, +TO #to,
+             +TNT [ +TAGS < #tag >, +PRBS < #prb > ] ] > ,
+  +OUTPUT < [ +FORM #form, +ONSET unk_onset,
+              +CLASS #class, +PRED #pred, +CARG #carg,
+              +ID #id, +FROM #from, +TO #to,
+              +TNT [ +TAGS < #tag >, +PRBS < #prb > ] ],
+            [ +FORM #form, +ONSET con_or_voc,
+              +CLASS #class, +PRED #pred, +CARG #carg,
+              +ID #id, +FROM #from, +TO #to,
+              +TNT null_tnt ] >,
+  +POSITION "O1=O2" ].
 
 ;;;
 ;;; with singleton PoS readings multiplied out in each chart cell, we can prune
@@ -1209,36 +1397,37 @@ terminate-tnt-rule := inpmap-012-rule &
 ;;; FW, say, should not be bullied out by an unlike NN.         (31-aug-08; oe)
 ;;;
 
-tnt_ditch_unlikely_tmr := inpmap-rule &
+tnt_ditch_unlikely_tmr := token_mapping_rule &
 [ +INPUT < [ +TNT.+PRBS < "/0?\\.0.*/" > ] >,
   +OUTPUT < > ].
 
-tnt_ditch_function_tmr := inpmap-rule &
+tnt_ditch_function_tmr := token_mapping_rule &
 [ +INPUT < [ +TNT.+TAGS 
              < "/CC|DT|EX|IN|MD|PDT|POS|PRP\\$?|RP|TO|UH|WDT|WP|WRB/" > ] >,
   +OUTPUT < > ].
 
-tnt_ditch_punctuation_tmr := inpmap-rule &
+tnt_ditch_punctuation_tmr := token_mapping_rule &
 [ +INPUT < [ +TNT.+TAGS < "/\\$|#|``|''|\\(|\\)|,|\\.|:/" > ] >,
   +OUTPUT < > ].
 
-tnt_filter_dup_fw_tmr := inpmap-rule &
+tnt_filter_dup_fw_tmr := token_mapping_rule &
 [ +CONTEXT  < [ +TNT.+TAGS < "NN" > ] >,
   +INPUT    < [ +TNT.+TAGS < "FW" > ] >,
   +OUTPUT   < >,
   +POSITION "I1=C1" ].
 
-tnt_filter_dup_nnp_tmr := inpmap-rule &
+tnt_filter_dup_nnp_tmr := token_mapping_rule &
 [ +CONTEXT  < [ +TNT.+TAGS < "/FW|NN/" > ] >,
   +INPUT    < [ +TNT.+TAGS < "NNP" > ] >,
   +OUTPUT   < >,
   +POSITION "I1=C1" ].
 
-tnt_filter_dup_nnps_tmr := inpmap-rule &
+tnt_filter_dup_nnps_tmr := token_mapping_rule &
 [ +CONTEXT  < [ +TNT.+TAGS < "NNP" > ] >,
   +INPUT    < [ +TNT.+TAGS < "NNPS" > ] >,
   +OUTPUT   < >,
   +POSITION "I1=C1" ].
+
 
 ;;
 ;; now done upon entry to token mapping, along a three-dimensional hierarchy.
@@ -1254,6 +1443,7 @@ assign-default-class := inpmap-rule &
   +OUTPUT  < [ +FORM #form, +ONSET #onset,
 	       +CLASS non_alphanumeric, +PRED #pred, +CARG #carg,
 	       +ID #id, +FROM #from, +TO #to, +TNT #tnt ] > ].
+
 
 ;;; Would like to be able to assign +PRED value based on +FORM, but the
 ;;; software does not seem to currently allow reference to input's +FORM

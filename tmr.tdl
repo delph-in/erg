@@ -21,9 +21,9 @@
 ;;; as prefixes or suffixes on other tokens.  the process is broken down into a
 ;;; number of (more or less) distinct phases, viz.
 ;;;
-;;; - decoration: filling in missing or underspecified token properties.
 ;;; - normalization: anything the (ideal) tokenizer _should_ have done.
 ;;; - NE recognition: surface-based identification of URLs, numbers, et al.
+;;; - decoration: filling in missing or underspecified token properties.
 ;;; - token combination: re-attach punctuation marks and contracted forms.
 ;;; - sandwiched punctuation
 ;;; - PoS explosion: multiply out alternate PoS readings
@@ -37,67 +37,46 @@
 ;;; token information.
 ;;;
 
-;;
-;; some tokenizers (e.g. the one of acrolinx) already distinguish a number of
-;; token classes.  our REPP tokenizer, however, does not; so, determine class
-;; values here, if need be.  with acrolinx, we might have to map their naming
-;; scheme into our type hierarchy, on the other hand.
-;;
-numeric_tmr := token_class_tmt &
-[ +INPUT < [ +FORM "/[[:digit:]]+/" ] >,
-  +OUTPUT < [ +CLASS numeric ] > ].
-
-alphabetic+upper_tmr := token_class_tmt &
-[ +INPUT < [ +FORM "/[[:upper:]]+/" ] >,
-  +OUTPUT < [ +CLASS alphabetic+upper ] > ].
-
-alphabetic+lower_tmr := token_class_tmt &
-[ +INPUT < [ +FORM "/[[:lower:]]+/" ] >,
-  +OUTPUT < [ +CLASS alphabetic+lower ] > ].
-
-alphabetic+capitalized+mixed_tmr := token_class_tmt &
-[ +INPUT < [ +FORM "/[[:upper:]][[:alpha:]]+/" ] >,
-  +OUTPUT < [ +CLASS alphabetic+capitalized+mixed ] > ].
-
-alphabetic+non_capitalized+mixed_tmr := token_class_tmt &
-[ +INPUT < [ +FORM "/[[:lower:]][[:alpha:]]+/" ] >,
-  +OUTPUT < [ +CLASS alphabetic+non_capitalized+mixed ] > ].
-
-alphanumeric+upper_tmr := token_class_tmt &
-[ +INPUT < [ +FORM "/[[:upper:][:digit:]]+/" ] >,
-  +OUTPUT < [ +CLASS alphanumeric+upper ] > ].
-
-alphanumeric+lower_tmr := token_class_tmt &
-[ +INPUT < [ +FORM "/[[:lower:][:digit:]]+/" ] >,
-  +OUTPUT < [ +CLASS alphanumeric+lower ] > ].
-
-alphanumeric+capitalized+mixed_tmr := token_class_tmt &
-[ +INPUT < [ +FORM "/[[:upper:]][[:alnum:]]+/" ] >,
-  +OUTPUT < [ +CLASS alphanumeric+capitalized+mixed ] > ].
-
-alphanumeric+non_capitalized+mixed_tmr := token_class_tmt &
-[ +INPUT < [ +FORM "/[[:lower:][:digit:]][[:alnum:]]+/" ] >,
-  +OUTPUT < [ +CLASS alphanumeric+non_capitalized+mixed ] > ].
-
-non_alphanumeric_tmr := token_class_tmt &
-[ +OUTPUT < [ +CLASS non_alphanumeric ] > ].
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; correct tokenization `damage', inherited from the PTB conventions.
+;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;
-;; in case we are running without a PoS tagger, or something went wrong in the
-;; creation of token AVMs from our input (in one form or another), make sure to
-;; fully annul part-of-speech information.
+;; convert (PTB-style) ASCII directional quotes to UniCode characters.  when
+;; running from an actual PTB file, these are what we would see as input.
 ;;
-null_tnt_tmr := token_mapping_rule &
-[ +INPUT < [ +FORM #form, +ONSET #onset, +CLASS #class,
-             +PRED #pred, +CARG #carg, +ID #id, +FROM #from, +TO #to,
-             +TNT [ +TAGS < anti_string, ... > ] ] >,
-  +OUTPUT < [ +FORM #form, +ONSET #onset, +CLASS #class,
-              +PRED #pred, +CARG #carg, +ID #id, +FROM #from, +TO #to, 
-              +TNT null_tnt ] > ].
+opening_double_quote := one_one_form_tmt &
+[ +INPUT < [ +FORM "``" ] >,
+  +OUTPUT < [ +FORM "“" ] > ].
+           
+closing_double_quote := one_one_form_tmt &
+[ +INPUT < [ +FORM "''" ] >,
+  +OUTPUT < [ +FORM "”" ] > ].
+           
 
+;;
+;; {|do| |has| |wo| ...} |n't| --> {|don't| |hasn't| |won't| 
+;;
+contracted_negation_tmr := token_mapping_rule &
+[ +INPUT < [ +FORM "/([[:alpha:]]+)/", 
+             +ONSET #onset, +CLASS #class, +PRED #pred, +CARG #carg, 
+             +FROM #from, +TNT #tnt ],
+           [ +FORM "/(n't|N'T)/",
+             +TO #to ] >,
+  +OUTPUT < [ +FORM "${I1:+FORM:1}${I2:+FORM:1}",
+              +ONSET #onset, +CLASS #class, +PRED #pred, +CARG #carg, 
+              +FROM #from, +TO #to, +TNT #tnt ] >,
+  +POSITION "I1<I2" ].
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; lightweight NEs: form-driven generic entries (formerly `ersatz' entries)
 ;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;;
 ;;; email addresses
@@ -112,7 +91,7 @@ email_ne_tmr := ne_tmt &
   +OUTPUT < [ +CLASS email_ne ] > ].
 
 ;;;
-;;; URLs
+;;; uniform resource locators (URLs)
 ;;;
 
 ;;
@@ -136,7 +115,159 @@ url_ne_3_tmr := ne_tmt &
 [ +INPUT < [ +FORM "/<[[:alnum:]_-]+(\\.[[:alnum:]_-]+)+>/" ] >,
   +OUTPUT < [ +CLASS url_ne ] > ].
 
+;;;
+;;; file names
+;;;
 
+;;
+;; fully-qualified Un*x style, starting with a slash, e.g. |/etc/config|.  
+;;
+;; _fix_me_
+;; we require a minimum of two components, such that |/etc| by itself will not
+;; match.  maybe we should allow these too but create an ambiguity here, i.e.
+;; output two tokens, one [ CLASS file_ne }, the other [ CLASS non_ne ]?
+;;                                                              (19-sep-08; oe)
+;;
+file_ne_tmr := ne_tmt &
+[ +INPUT < [ +FORM "/(/[[:alnum:]._-]+){2,}/?/" ] >,
+  +OUTPUT < [ +CLASS file_ne ] > ].
+
+
+;;;
+;;; time-of-day expressions: |9am|, |11:45pm|, |20:15|
+;;;
+
+;;
+;; an |am| or |pm| suffix unambiguously indicates a time expression.  we also
+;; grab all tokens of the form `H:M' where `H' and `M' are numbers in the right
+;; ranges.
+;;
+;; _fix_me_
+;; i wonder about `mix in a ratio of 1:15', which the second rule below would
+;; consider a time-of-day expression.  should we approach those case with more
+;; `optional' NE rules, i.e. ones outputting two tokens?  or should we rather
+;; introduce an abstraction over `time_ne' and `ratio_ne', such that a single
+;; token can activate multiple lexical entries?  once we get regular expression
+;; matching for lexical instantiation (peter is working on that), in principle,
+;; we could just drop `time_ne_2_tmr', make `time_ne_ a sub-type of `ratio_ne',
+;; and put the `H:M' regular expression into the generic lexical entry.  with
+;; great power comes great responsibility :-).                 (19-sep-08; oe)
+;;                       
+time_ne_1_tmr := ne_tmt &
+[ +INPUT < [ +FORM "/(0?[0-9]|1[0-2])(:[0-5][0-9])?([aApP][mM])/" ] >,
+  +OUTPUT  < [ +CLASS time_ne ] > ].
+
+time_ne_2_tmr := ne_tmt &
+[ +INPUT < [ +FORM "/(0?[0-9]|1[0-9]|2[0-4]):[0-5][0-9]/" ] >,
+  +OUTPUT  < [ +CLASS time_ne ] > ].
+
+;;;
+;;; ratios: |1:1000|, |1:100,000|, et al.
+;;;
+
+;;
+;; we make the conservative assumption that the first element not exceed three
+;; digits and not have leading zeros.
+;;
+ratio_ne_1_tmr := ne_tmt &
+[ +INPUT < [ +FORM "/[1-9][0-9]{0,2}:[1-9][0-9]*/" ] >,
+  +OUTPUT < [ +CLASS meas_ne ] > ].   
+
+ratio_ne_2_tmr := ne_tmt &
+[ +INPUT < [ +FORM "/[1-9][0-9]{0,2}:[1-9][0-9]{2}(,[0-9]{1,3})*/" ] >,
+  +OUTPUT < [ +CLASS meas_ne ] > ].   
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; now with NEs out of our way, this would be a good time for adjustments to
+;;; tokenization: introduce additional token boundaries (e.g. for hyphens and 
+;;; slashes) and maybe some robustness rules for `sandwiched' punctuation.
+;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; some tokenizers (e.g. the one of acrolinx) already distinguish a number of
+;;; token classes.  our REPP tokenizer, however, does not; so, determine class
+;;; values here, if need be.  with acrolinx, we might have to map their naming
+;;; scheme into our type hierarchy, on the other hand.
+;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+numeric_class_tmr := token_class_tmt &
+[ +INPUT < [ +FORM "/[[:digit:]]+/" ] >,
+  +OUTPUT < [ +CLASS numeric ] > ].
+
+alphabetic_class_tmr := token_class_tmt &
+[ +INPUT < [ +FORM "/[[:alpha:]]+/" ] >,
+  +OUTPUT < [ +CLASS alphabetic ] > ].
+
+alphanumeric_class_tmr := token_class_tmt &
+[ +INPUT < [ +FORM "/[[:alnum:]_-]+/" ] >,
+  +OUTPUT < [ +CLASS alphanumeric ] > ].
+
+non_alphanumeric_class_tmr := token_class_tmt &
+[ +OUTPUT < [ +CLASS non_alphanumeric ] > ].
+
+;;
+;; further decorate the token class with information about (a) sentence-initial
+;; initial position and (b) capitalization.  because these are attributes of
+;; +CLASS (and there is no way of overwriting), we play a nasty trick on +CARG,
+;; viz. utilize it as a `scratch' slot to prevent cyclic rule applications.  we
+;; (kind of assume) that no external tokenizer will pass in +CARG values, and
+;; if it did, the worst that would happen is that the rules below cannot fire.
+;;
+non_initial_tmr := token_case_tmt &
+[ +CONTEXT < [] >,
+  +INPUT < [ +CARG anti_string ] >,
+  +OUTPUT < [ +CLASS [ +INITIAL - ], +CARG non_string ] >,
+  +POSITION "C1<I1" ].
+
+initial_tmr := token_case_tmt &
+[ +INPUT < [ +CARG anti_string ] >,
+  +OUTPUT < [ +CLASS #class & [ +INITIAL + ], +CARG non_string ] > ].
+
+lower_tmr := token_case_tmt &
+[ +INPUT < [ +FORM "/[[:lower:][:digit:]_-]+/", 
+             +CARG non_string ] >,
+  +OUTPUT < [ +CLASS [ +CASE lower ], 
+              +CARG anti_string ] > ].
+
+upper_tmr := token_case_tmt &
+[ +INPUT < [ +FORM "/[[:upper:][:digit:]_-]+/", 
+             +CARG non_string ] >,
+  +OUTPUT < [ +CLASS [ +CASE upper ], 
+              +CARG anti_string ] > ].
+  
+capitalized_tmr := token_case_tmt &
+[ +INPUT < [ +FORM "/[[:upper:]][[:alnum:]_-]+/", 
+             +CARG non_string ] >,
+  +OUTPUT < [ +CLASS [ +CASE capitalized+mixed ],
+              +CARG anti_string ] > ].
+
+non_capitalized_tmr := token_case_tmt &
+[ +INPUT < [ +FORM "/[[:lower:][:digit:]][[:alnum:]_-]+/", 
+             +CARG non_string ] >,
+  +OUTPUT < [ +CLASS [ +CASE non_capitalized+mixed ],
+              +CARG anti_string ] > ].
+
+;;
+;; in case we are running without a PoS tagger, or something went wrong in the
+;; creation of token AVMs from our input (in one form or another), make sure to
+;; fully annul part-of-speech information.
+;;
+null_tnt_tmr := token_mapping_rule &
+[ +INPUT < [ +FORM #form, +ONSET #onset, +CLASS #class,
+             +PRED #pred, +CARG #carg, +ID #id, +FROM #from, +TO #to,
+             +TNT [ +TAGS < anti_string, ... > ] ] >,
+  +OUTPUT < [ +FORM #form, +ONSET #onset, +CLASS #class,
+              +PRED #pred, +CARG #carg, +ID #id, +FROM #from, +TO #to, 
+              +TNT null_tnt ] > ].
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; re-combine punctuation marks with adjacent tokens, based on directionality
 ;;; of punctuation marks, e.g. opening vs. closing quotes and brackets.  doing
@@ -144,8 +275,23 @@ url_ne_3_tmr := ne_tmt &
 ;;; apply as many times as it possible can, seeing its own output from earlier
 ;;; applications.
 ;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;
+;; but first, preserve the current (non-punctuated) from in +CARG, for later
+;; reference, e.g. in constructing +PRED values for generics.  NE rules have
+;; done this already, hence make sure to not overwrite existing +CARGSs.
+;;
+default_carg_tmr := token_mapping_rule &
+[ +INPUT < [ +FORM #form, +ONSET #onset, +CLASS #class,
+             +PRED #pred, +CARG anti_string,
+             +ID #id, +FROM #from, +TO #to, +TNT #tnt ] >,
+  +OUTPUT < [ +FORM #form, +ONSET #onset, +CLASS #class,
+              +PRED #pred, +CARG #form,
+              +ID #id, +FROM #from, +TO #to, +TNT #tnt ] > ].
+
 prefix_punctuation_tmr := token_mapping_rule &
-[ +INPUT < [ +FORM "/([[({“‘])/",
+[ +INPUT < [ +FORM "/([[({“‘]+)/",
              +FROM #from ],
            [ +FORM "/(.+)/",
              +ONSET #onset, +CLASS #class, +PRED #pred, +CARG #carg, 
@@ -168,7 +314,7 @@ suffix_punctuation_tmr := token_mapping_rule &
 [ +INPUT < [ +FORM "/(.+)/",
              +ONSET #onset, +CLASS #class, +PRED #pred, +CARG #carg, 
              +FROM #from, +TNT #tnt ],
-           [ +FORM "/([])}”\"’,;.!?])/",
+           [ +FORM "/([])}”\"’,;.!?]+)/",
              +TO #to ] >,
   +OUTPUT < [ +FORM "${I1:+FORM:1}${I2:+FORM:1}",
               +ONSET #onset, +CLASS #class, +PRED #pred, +CARG #carg, 
@@ -176,10 +322,13 @@ suffix_punctuation_tmr := token_mapping_rule &
   +POSITION "I1<I2" ].
 
 
-;;
-;; finally, convert everything to lower case, for lexical look-up in PET
-;;
-lower_case_tmr := token_mapping_rule &
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; finally, convert everything to lower case, for lexical look-up in PET
+;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+downcase_tmr := one_one_form_tmt &
 [ +INPUT < [ +FORM "/(.*[[:upper:]].*)/",
              +ONSET #onset, +CLASS #class, +PRED #pred, +CARG #carg, 
              +ID #id, +FROM #from, +TO #to, +TNT #tnt ] > ,
@@ -188,6 +337,7 @@ lower_case_tmr := token_mapping_rule &
               +ID #id, +FROM #from, +TO #to, +TNT #tnt ] > ].
 
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; at this point, we multiply out PoS values on all tokens, where for each
 ;;; original token as many additional tokens are created (in the same chart
@@ -202,33 +352,38 @@ lower_case_tmr := token_mapping_rule &
 ;;; this kind of PoS multiplication because they have already emptied out their
 ;;; PoS list.
 ;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 tnt_recurse_rule := token_mapping_rule &
 [ +INPUT < [ +FORM #form, +ONSET anti_onset,
              +CLASS #class, +PRED #pred, +CARG #carg,
              +ID #id, +FROM #from, +TO #to,
-             +TNT.+TAGS [ FIRST #tag , REST #tags ],
-             +TNT.+PRBS [ FIRST #prb , REST #prbs ] ] > ,
+             +TNT [ +TAGS < #tag . #tags & *cons* >,
+                    +PRBS < #prb . #prbs & *cons* > ] ] > ,
   +OUTPUT < [ +FORM #form, +ONSET unk_onset,
               +CLASS #class, +PRED #pred, +CARG #carg,
               +ID #id, +FROM #from, +TO #to,
-              +TNT.+TAGS < #tag >,
-              +TNT.+PRBS < #prb > ] ,
+              +TNT [ +TAGS < #tag >, +PRBS < #prb > ] ],
             [ +FORM #form,
-              +CLASS #class,
-              +TNT.+TAGS #tags,
-              +TNT.+PRBS #prbs ] > ,
+              +CLASS #class, +PRED #pred, +CARG #carg,
+              +ID #id, +FROM #from, +TO #to,
+              +TNT [ +TAGS #tags, +PRBS #prbs ] ] > ,
   +POSITION "O1=O2" ].
 
 tnt_terminate_tmr := token_mapping_rule &
 [ +INPUT < [ +FORM #form, +ONSET anti_onset,
              +CLASS #class, +PRED #pred, +CARG #carg,
              +ID #id, +FROM #from, +TO #to,
-             +TNT #tnt & null_tnt ] > ,
-  +OUTPUT < [ +FORM #form, +ONSET con_or_voc,
+             +TNT [ +TAGS < #tag >, +PRBS < #prb > ] ] > ,
+  +OUTPUT < [ +FORM #form, +ONSET unk_onset,
               +CLASS #class, +PRED #pred, +CARG #carg,
               +ID #id, +FROM #from, +TO #to,
-              +TNT #tnt ] > ].
+              +TNT [ +TAGS < #tag >, +PRBS < #prb > ] ],
+            [ +FORM #form, +ONSET con_or_voc,
+              +CLASS #class, +PRED #pred, +CARG #carg,
+              +ID #id, +FROM #from, +TO #to,
+              +TNT null_tnt ] >,
+  +POSITION "O1=O2" ].
 
 ;;;
 ;;; with singleton PoS readings multiplied out in each chart cell, we can prune
@@ -273,14 +428,49 @@ tnt_filter_dup_nnps_tmr := token_mapping_rule &
   +OUTPUT   < >,
   +POSITION "I1=C1" ].
 
-assign_nn_pred_tmr := token_mapping_rule &  
+#|
+;;
+;; _fix_me_
+;; the following seems to not work, in that ${lc(I1:+TNT.+TAGS.+FIRST:1)} ends
+;; up as a literal in the result; ditching the `lc(...) makes no difference
+;; either, so i suspect there may be a bug related to the `+TNT.+TAGS.+FIRST'
+;; path.  check with peter.                                    (19-sep-08; oe)
+;;
+generic_pred_tmr := token_mapping_rule &  
 [ +INPUT < [ +FORM #form & "/(.+)/",
              +ONSET #onset & unk_onset, +CLASS #class & non_ne, 
              +PRED anti_string, +CARG #carg,
              +ID #id, +FROM #from, +TO #to,
-             +TNT #tnt & [ +TAGS < "NNS?" > ] ] >,
-  +OUTPUT < [ +FORM #form & "/(.+)/",
-              +ONSET #onset & unk_onset, +CLASS #class & non_ne, 
-              +PRED "_${I1:+FORM:1}_n_rel", +CARG #carg,
+             +TNT #tnt & [ +TAGS < "/(.+)/" > ] ] >,
+  +OUTPUT < [ +FORM #form,
+              +ONSET #onset, +CLASS #class,
+              +PRED "_${I1:+FORM:1}_${lc(I1:+TNT.+TAGS.+FIRST:1)}_rel",
+              +CARG #carg,
               +ID #id, +FROM #from, +TO #to,
               +TNT #tnt ] > ].
+|#
+
+generic_pred_nn_tmr := token_mapping_rule &  
+[ +INPUT < [ +FORM #form,
+             +ONSET #onset & unk_onset, +CLASS #class & non_ne, 
+             +PRED anti_string, +CARG #carg & "/(.+)/",
+             +ID #id, +FROM #from, +TO #to,
+             +TNT #tnt & [ +TAGS < "/NNS?/" > ] ] >,
+  +OUTPUT < [ +FORM #form,
+              +ONSET #onset, +CLASS #class, 
+              +PRED "_${I1:+CARG:1}_n_rel", +CARG #carg,
+              +ID #id, +FROM #from, +TO #to, +TNT #tnt ] > ].
+
+#|
+generic_pred_nn_tmr := token_mapping_rule &  
+[ +INPUT < [ +FORM #form,
+             +ONSET #onset & unk_onset, +CLASS #class & non_ne, 
+             +PRED anti_string, +CARG #carg,
+             +ID #id, +FROM #from, +TO #to,
+             +TNT #tnt & [ +TAGS < "/NNS?/" > ] ] >,
+  +OUTPUT < [ +FORM #form,
+              +ONSET #onset, +CLASS #class, 
+              +PRED "foobar_n_rel", +CARG #carg,
+              +ID #id, +FROM #from, +TO #to, +TNT #tnt ] > ].
+|#
+
