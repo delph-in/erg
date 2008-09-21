@@ -12,7 +12,7 @@
 ;;; compatible to Penn Treebank (PTB) conventions; this may or may not turn out
 ;;; to be a good idea, but if nothing else it makes the core parser compatible
 ;;; with a wide variety of existing tools and pre-processing approaches.  for a
-;;; critical (and subjective) discussion of some tokenization issues, see:
+;;; critical (and subjective) discussion of PTB tokenization issues, see:
 ;;;
 ;;;  http://lingpipe-blog.com/2008/06/26/the-curse-of-intelligent-tokenization/
 ;;;
@@ -23,11 +23,11 @@
 ;;;
 ;;; - normalization: anything the (ideal) tokenizer _should_ have done.
 ;;; - NE recognition: surface-based identification of URLs, numbers, et al.
+;;; - tokenization adjustments: hyphens, slashes, sandwiched punctuation.
 ;;; - decoration: filling in missing or underspecified token properties.
 ;;; - token combination: re-attach punctuation marks and contracted forms.
-;;; - sandwiched punctuation
-;;; - PoS explosion: multiply out alternate PoS readings
-;;; - PoS reduction: prune overlapping PoS readings
+;;; - PoS explosion: multiply out alternate PoS readings as separate tokens.
+;;; - PoS reduction: prune low-probability, unwanted, and overlapping tags.
 ;;;
 ;;; we hope we have (now) arrived at a relatively stable inventory of token
 ;;; properties, of which some typically are only introduced in token mapping;
@@ -55,20 +55,13 @@ closing_double_quote := one_one_form_tmt &
 [ +INPUT < [ +FORM "''" ] >,
   +OUTPUT < [ +FORM "”" ] > ].
            
-
 ;;
 ;; {|do| |has| |wo| ...} |n't| --> {|don't| |hasn't| |won't| 
 ;;
-contracted_negation_tmr := token_mapping_rule &
-[ +INPUT < [ +FORM "/([[:alpha:]]+)/", 
-             +ONSET #onset, +CLASS #class, +PRED #pred, +CARG #carg, 
-             +FROM #from, +TNT #tnt ],
-           [ +FORM "/(n't|N'T)/",
-             +TO #to ] >,
-  +OUTPUT < [ +FORM "${I1:+FORM:1}${I2:+FORM:1}",
-              +ONSET #onset, +CLASS #class, +PRED #pred, +CARG #carg, 
-              +FROM #from, +TO #to, +TNT #tnt ] >,
-  +POSITION "I1<I2" ].
+contracted_negation_tmr := two_one_initial_form_tmt &
+[ +INPUT < [ +FORM "/([[:alpha:]]+)/" ],
+           [ +FORM "/(n't|N'T)/" ] >,
+  +OUTPUT < [ +FORM "${I1:+FORM:1}${I2:+FORM:1}" ] > ].
 
 
 
@@ -178,6 +171,53 @@ ratio_ne_2_tmr := ne_tmt &
   +OUTPUT < [ +CLASS meas_ne ] > ].   
 
 
+;;;
+;;; Numerals
+;;;
+
+;;
+;; days of the month: |1| -- |9|, |10| -- |29|, |30|, and |31|
+;;
+card_or_dom_ne_tmr := ne_tmt &
+[ +INPUT < [ +FORM "/([1-9]|[1-2][0-9]|3[01])/" ] >,
+  +OUTPUT < [ +CLASS card_or_dom_ne ] > ].
+
+;;
+;; (candidate) years: |950|, |1805|, |1957|, |2005|, et al.
+;;
+;; _fix_me_
+;; i would like to split off the |mid-| prefix; i guess it can attach to all
+;; sorts of nouns and has pretty regular semantics too.         (21-sep-08; oe)
+;;
+card_or_year_ne_tmr := ne_tmt &
+[ +INPUT < [ +FORM "/(mid-)?[12]?[0-9]{3}/" ] >,
+  +OUTPUT < [ +CLASS card_or_year_ne ] > ].
+
+; |850| |-20|
+card_ne_1_tmr := inpmap-ne-11-rule &
+[ +INPUT   < [ +FORM "/[+-]?[0-9]+\\.?/" ] >,
+  +OUTPUT  < [ +CLASS card_ne ] > ].
+
+; |23,000| or European |23.000|
+numeral-ne-2-rule := inpmap-ne-11-rule &
+[ +INPUT   < [ +FORM "/-?[0-9]{1,3}[,.][0-9]{3}/" ] >,
+  +OUTPUT  < [ +CLASS card_ne ] > ].
+
+; |23,000,000| or |23.000.000|
+numeral-ne-3-rule := inpmap-ne-11-rule &
+[ +INPUT   < [ +FORM "/-?[0-9]{1,3}[,.][0-9]{1,3}[,.][0-9]{3}/" ] >,
+  +OUTPUT  < [ +CLASS card_ne ] > ].
+
+; |23,000.00| |23,000.-|
+numeral-ne-4-rule := inpmap-ne-11-rule &
+[ +INPUT   < [ +FORM "/-?[0-9]{1,3}[,.][0-9]{3}[,.]([0-9]{2}|-)/" ] >,
+  +OUTPUT  < [ +CLASS card_ne ] > ].
+
+; |.52|
+numeral-ne-5-rule := inpmap-ne-11-rule &
+[ +INPUT   < [ +FORM "/-?[0-9]*[.][0-9]+/" ] >,
+  +OUTPUT  < [ +CLASS card_ne ] > ].
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; now with NEs out of our way, this would be a good time for adjustments to
@@ -213,10 +253,10 @@ non_alphanumeric_class_tmr := token_class_tmt &
 
 ;;
 ;; further decorate the token class with information about (a) sentence-initial
-;; initial position and (b) capitalization.  because these are attributes of
-;; +CLASS (and there is no way of overwriting), we play a nasty trick on +CARG,
-;; viz. utilize it as a `scratch' slot to prevent cyclic rule applications.  we
-;; (kind of assume) that no external tokenizer will pass in +CARG values, and
+;; position and (b) capitalization.  because these are attributes of +CLASS
+;; (and there is no way of overwriting), we play a nasty trick on +CARG, viz.
+;; utilize it as a `scratch' slot to prevent cyclic rule applications.  we
+;; (kind of) assume that no external tokenizer will pass in +CARG values; and
 ;; if it did, the worst that would happen is that the rules below cannot fire.
 ;;
 non_initial_tmr := token_case_tmt &
@@ -290,36 +330,24 @@ default_carg_tmr := token_mapping_rule &
               +PRED #pred, +CARG #form,
               +ID #id, +FROM #from, +TO #to, +TNT #tnt ] > ].
 
-prefix_punctuation_tmr := token_mapping_rule &
-[ +INPUT < [ +FORM "/([[({“‘]+)/",
-             +FROM #from ],
-           [ +FORM "/(.+)/",
-             +ONSET #onset, +CLASS #class, +PRED #pred, +CARG #carg, 
-             +TO #to, +TNT #tnt ] >,
-  +OUTPUT < [ +FORM "${I1:+FORM:1}${I2:+FORM:1}",
-             +ONSET #onset, +CLASS #class, +PRED #pred, +CARG #carg, 
-             +FROM #from, +TO #to, +TNT #tnt ] >,
-  +POSITION "I1<I2" ].
+prefix_punctuation_tmr := two_one_final_form_tmt &
+[ +INPUT < [ +FORM "/([[({“‘]+)/" ],
+           [ +FORM "/(.+)/" ] >,
+  +OUTPUT < [ +FORM "${I1:+FORM:1}${I2:+FORM:1}" ] > ].
 
 ;;
 ;; _fix_me_
 ;; there is a special case here: |'| following a token ending in |s| could be a
 ;; possessive marker (which should remain a token in its own right), or could 
 ;; be a closing single quote.  in principle, the same is true for |"|, but the
-;; `feet' measure unit, possibly, will have been detected during NE recognition
+;; `inches' measure unit, maybe, will have been detected during NE recognition
 ;; earlier.  in either case, we would need a way of keeping a separate |'| in
 ;; the chart, and also re-combine it with the preceding token.  (14-sep-08; oe)
 ;;
-suffix_punctuation_tmr := token_mapping_rule &
-[ +INPUT < [ +FORM "/(.+)/",
-             +ONSET #onset, +CLASS #class, +PRED #pred, +CARG #carg, 
-             +FROM #from, +TNT #tnt ],
-           [ +FORM "/([])}”\"’,;.!?]+)/",
-             +TO #to ] >,
-  +OUTPUT < [ +FORM "${I1:+FORM:1}${I2:+FORM:1}",
-              +ONSET #onset, +CLASS #class, +PRED #pred, +CARG #carg, 
-              +FROM #from, +TO #to, +TNT #tnt ] >,
-  +POSITION "I1<I2" ].
+suffix_punctuation_tmr := two_one_initial_form_tmt &
+[ +INPUT < [ +FORM "/(.+)/" ],
+           [ +FORM "/([])}”\"’,;.!?]+)/" ] >,
+  +OUTPUT < [ +FORM "${I1:+FORM:1}${I2:+FORM:1}" ] > ].
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -329,12 +357,8 @@ suffix_punctuation_tmr := token_mapping_rule &
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 downcase_tmr := one_one_form_tmt &
-[ +INPUT < [ +FORM "/(.*[[:upper:]].*)/",
-             +ONSET #onset, +CLASS #class, +PRED #pred, +CARG #carg, 
-             +ID #id, +FROM #from, +TO #to, +TNT #tnt ] > ,
-  +OUTPUT < [ +FORM "${lc(I1:+FORM:1)}",
-              +ONSET #onset, +CLASS #class, +PRED #pred, +CARG #carg, 
-              +ID #id, +FROM #from, +TO #to, +TNT #tnt ] > ].
+[ +INPUT < [ +FORM "/(.*[[:upper:]].*)/" ] > ,
+  +OUTPUT < [ +FORM "${lc(I1:+FORM:1)}" ] > ].
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -428,7 +452,6 @@ tnt_filter_dup_nnps_tmr := token_mapping_rule &
   +OUTPUT   < >,
   +POSITION "I1=C1" ].
 
-#|
 ;;
 ;; _fix_me_
 ;; the following seems to not work, in that ${lc(I1:+TNT.+TAGS.+FIRST:1)} ends
@@ -436,6 +459,7 @@ tnt_filter_dup_nnps_tmr := token_mapping_rule &
 ;; either, so i suspect there may be a bug related to the `+TNT.+TAGS.+FIRST'
 ;; path.  check with peter.                                    (19-sep-08; oe)
 ;;
+#|
 generic_pred_tmr := token_mapping_rule &  
 [ +INPUT < [ +FORM #form & "/(.+)/",
              +ONSET #onset & unk_onset, +CLASS #class & non_ne, 
@@ -451,6 +475,17 @@ generic_pred_tmr := token_mapping_rule &
 
 |#
 
+;;
+;; _fix_me_
+;; but neither does this version work.  it fails in lexical instantiation (the
+;; `generic_mass_count_noun' entry is the one we want), claiming:
+;;
+;;   type clash under FIRST.+PRED: `predsort' & `"_fooz_n_rel"'
+;;
+;; but `string' is a sub-type of `predsort', so these should unify!  almost as
+;; if the strings resulting from RE captures are weird in some way?
+;;                                                             (21-sep-08; oe)
+;;
 #|
 generic_pred_nn_tmr := token_mapping_rule &  
 [ +INPUT < [ +FORM #form,
@@ -464,7 +499,6 @@ generic_pred_nn_tmr := token_mapping_rule &
               +ID #id, +FROM #from, +TO #to, +TNT #tnt ] > ].
 |#
 
-#|
 generic_pred_nn_tmr := token_mapping_rule &  
 [ +INPUT < [ +FORM #form,
              +ONSET #onset & unk_onset, +CLASS #class & non_ne, 
@@ -473,7 +507,5 @@ generic_pred_nn_tmr := token_mapping_rule &
              +TNT #tnt & [ +TAGS < "/NNS?/" > ] ] >,
   +OUTPUT < [ +FORM #form,
               +ONSET #onset, +CLASS #class, 
-              +PRED "foobar_n_rel", +CARG #carg,
+              +PRED "unknown_n_rel", +CARG #carg,
               +ID #id, +FROM #from, +TO #to, +TNT #tnt ] > ].
-|#
-
