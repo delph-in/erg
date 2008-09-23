@@ -1,23 +1,99 @@
 ;;; -*- mode: fundamental; coding: utf-8; indent-tabs-mode: t; -*-
 
-;;
-;; wiki links
-;;
-!\[\[(?:[^|\]]+\|)?([^|\]]+)\]\]			\1
+;;;
+;;; _fix_me_
+;;; following are a set of `cheap and cheerful' REPP rules to make Wikipedia
+;;; text palatable to parsing with the ERG.  for the time being, we are mostly
+;;; just throwing out all markup.  obviously, in some cases this will inhibit
+;;; adequate analysis.  for example use--mention distinction are often made by
+;;; means of font attributes, typically italics:
+;;;
+;;;   English adjectives include ''big'', ''old'', and ''tired'', ...
+;;;
+;;; we still need to decide how to inject markup information into grammatical
+;;; analysis.                                                  (23-sep-08; oe) 
+;;;
 
-!'{2,4}							''
-!={1,4}							
-!</?b>							
-!<code>.*</code>					<code/>
-!<math>.*</math>					<math/>
-!</?nowiki>						
 ;;
+;; _fix_me_
+;; to treat the `markup escape' properly, i guess, we would have to `ersatz' it
+;; (hiding it from other rules), and later put the original string back in.
+;;                                                              (23-sep-08; oe)
+!</?nowiki>						
+
+;;
+;; wiki links come in two flavours, internal (double brackets) and external
+;; (using a pair of single brackets).  there is at least one occurence of
+;; nesting of internal links, hence use a group for those.  in principle, why
+;; should it be illegitimate to also nest internal with external links?  that
+;; structure, i believe, takes us out of regular languages, as single brackets
+;; could indicate an external link, or could be a prefix or suffix of double
+;; brackets, i.e. an internal link.  yet, with nesting of iterative groups, it
+;; seems, we can `parse' those structures: find all innermost internal links
+;; first, unless we can match no more; then look for external links (a pair of
+;; matching single brackets), one at a time; now search for additional internal
+;; links, before accepting more external ones.  repeat the full procedure until
+;; things stabilize.                                            (23-sep-08; oe)
+;;
+#1
+#2
+!\[\[(?:[^[|\]]+\|)?([^[|\]]+)\]\]			\1
+#
+>2
+!\[(?:[^[\] ]+ )?([^[\]]+)\]				\1
+#
+>1
+
+;;
+;; italics (two ticks), bold (three ticks), bold italics (five ticks).
+;;
+!'{2,5}							''
+
+;;
+;; headings
+;;
+!={2,5}							
+!</?title>						
+
+;;
+;; various font attributes: HTML-style bold, strike-out, underline, et al.
+;;
+!</?b>							
+!</?big>						
+!</?s>							
+!</?small>						
+!</?span>						
+!</?tt>							
+!</?u>							
+
 ;; _fix_me_
 ;; what about sub- and super-scripts?  use `_' and `^'?          (4-sep-08; oe)
 ;;
 !</?su(?:b|p)>						
-!</?title>						
-!</?tt>							
-!#\*+							
-!^::?							
-!</?u\s?>						
+
+;;
+;; some elements introduce their own specialized sub-syntax; as we are not in
+;; the business of parsing Java or LaTeX, just make these a single token (this
+;; resembles our now deprecated `ersatz' strategy).
+;;
+!<code>.*</code>					<code/>
+!<source>.*</source>					<source/>
+!<math>.*</math>					<math/>
+
+;;
+;; line-initial markup: indentation; bulleted, numbered, and definition lists.
+;;
+;; _fix_me_
+;; in principle, lists (of all types) can nest inside of each other.  i expect
+;; these actually call for an iterative group.                  (23-sep-08; oe)
+;;
+!^ *[:*#]+						
+;;
+;; _fix_me_
+;; definition lists, i think, should always introduce sentence breaks.  they
+;; occur relatively rarely with the colon and `body' of the definition on the 
+;; same line, hence we should probably normalize definition lists as part of
+;; the initial text pre-processing.                             (23-sep-08; oe)
+;;
+!^ *;([^:]+):						\1 :
+!^ *;							
