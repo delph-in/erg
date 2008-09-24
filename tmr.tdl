@@ -74,6 +74,12 @@ contracted_negation_tmr := two_one_initial_form_tmt &
 ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+;;
+;; _fix_me_
+;; i wonder whether we should stamp something like [ +CLASS.+ROBUST + ] onto
+;; these tokens.  but then we would also need to make sure, at some point, to
+;; default everyone else to a non-robust value.                 (24-sep-08; oe)
+;;
 sc_didnt_tmr := one_one_form_tmt &
 [ +INPUT < [ +FORM "/([dD])idn;?t/"] >,
   +OUTPUT < [ +FORM "${I1:+FORM:1}didn't" ] > ].
@@ -221,29 +227,6 @@ date_ne_tmr := ne_tmt &
 
 
 ;;;
-;;; decades: |1950s|, |50s|, |1950's|, and |50's|.
-;;;
-;;; _fix_m_
-;;; the latter type (plural of decades and, in principle, other names) actually
-;;; is ambiguous with the possessive (i suspect), e.g. `the 1950's charme is
-;;; not forgotten.'  so, maybe, optional rules for those?        (24-sep-08; oe)
-;;;
-
-decade_ne_1_tmr := ne_tmt &
-[ +INPUT < [ +FORM "/(1[0-9])?[0-9]0[sS]/" ] >,
-  +OUTPUT < [ +CLASS plur_ne ] > ].   
-
-decade_ne_2_tmr := two_one_tmt &
-[ +INPUT < [ +FORM "/((1[0-9])?[0-9]0)/", 
-             +ONSET #onset, +CLASS non_ne,
-             +PRED #pred, +CARG #carg ],
-           [ +FORM "('[sS])", +CLASS non_ne ] >,
-  +OUTPUT < [ +FORM "${I1:+FORM:1}${I2:+FORM:1}", 
-              +ONSET #onset, +CLASS proper_ne,
-              +PRED #pred, +CARG #carg, +TNT null_tnt ] > ].
-
-
-;;;
 ;;; ratios: |1:1000|, |1:100,000|, et al.
 ;;;
 
@@ -261,24 +244,50 @@ ratio_ne_2_tmr := ne_tmt &
 
 
 ;;;
-;;; various kinds of identifiers (accumulated throughout the years); some of
-;;; these are allowed to include punctuation marks that can (later) lead to
-;;; additional token boundaries (i.e. |-| and |/|), hence we need to be fairly
-;;; restrictive about our identifier patters.  in principle, i guess, this is
-;;; something that should be adapted specifically for a target domain and type
-;;; of text.
+;;; measure noun phrases (taking precedence over alphanumeric identifiers)
 ;;;
 
 ;;
-;; _fix_me_
-;; a somewhat brave generalization: what seems common to the (relatively) many
-;; patterns for identifiers in the ERG is the combination of alphabetic and
-;; numeric characters in a single token.  where else (than in names), would we
-;; expect that?  to test our hypothesis, treat all such tokens as identifiers.
-;; plus a few others, of course, that also can include punctuation marks.
-;;                                                             (23-sep-08; oe)
+;; |25cm| or |+37.3ºC|
+;;
+measure_ne_tmr := ne_tmt &
+[ +INPUT < [ +FORM "/[+-]?[0-9]+([,.][0-9]*)?[kKmM\"']|cm|mm|σ|º[CF]?/" ] >,
+  +OUTPUT < [ +CLASS meas_ne ] > ].
+
+;;
+;; |1:1000m|
+;;
+ratio_measure_ne_tmr := ne_tmt &
+[ +INPUT < [ +FORM "/[1-9][0-9]{0,2}:[1-9][0-9]*[kKmM\"']|cm|mm|σ|º[CF]?/" ] >,
+  +OUTPUT < [ +CLASS meas_ne ] > ].   
+
+;;
+;; |US$20|
+;;
+currency_measure_ne := ne_tmt &
+[ +INPUT < [ +FORM "/(AU?|CA?|US)?\\$[0-9]+/" ] >,
+  +OUTPUT < [ +CLASS meas_ne ] > ].
+
+
+;;;
+;;; various kinds of identifiers (accumulated throughout the years); some of
+;;; these are allowed to include punctuation marks that can (later) lead to
+;;; additional token boundaries (i.e. |-| and |/|), hence we need to be fairly
+;;; restrictive about our identifier patterns.  in principle, i guess, this is
+;;; something that should be adapted specifically for a target domain and type
+;;; of text.
+;;;
+;;; _fix_me_
+;;; some of these patterns conflict with others, e.g. `56K data line' should
+;;; be a masure NP, not an identifier.  in all-caps strings, `PRE-1980' would
+;;; be mis-analyzed too.  i am not really sure what to do about these.
+;;;                                                            (24-sep-08; oe)
+
+;;
+;; (at least) one or more letter, followed by digits, e.g. |ABC123DEF|
+;;
 alphanumeric_identifier_ne_1_tmr := ne_tmt &
-[ +INPUT < [ +FORM "/([0-9]+[[:alpha:]]+)+/" ] >,
+[ +INPUT < [ +FORM "/[0-9]*[[:alpha:]]+[0-9]+[[:alnum:]]*/" ] >,
   +OUTPUT < [ +CLASS proper_ne ] > ].
 
 ;;
@@ -302,19 +311,19 @@ alphanumeric_identifier_ne_3_tmr := two_one_tmt &
               +PRED #pred, +CARG #carg, +TNT null_tnt ] > ].
 
 ;;
-;; strictly alphanumeric strings (i.e. including digits), with at least two
+;; the following are maybe taken from chemistry: |B.25| |IL-10| |IL/10|
+;;
+chemistry_identifier_ne_tmr := ne_tmt &
+[ +INPUT < [ +FORM "/[0-9]*[[:upper:]]+[-./][[:upper:]]*[0-9]+/" ] >,
+  +OUTPUT < [ +CLASS proper_ne ] > ].
+
+;;
+;; strongly alphanumeric strings (i.e. including digits), with at least two
 ;; hyphens, e.g. |123-45-6789|.
 ;;
 hyphenated_identifier_ne_tmr := ne_tmt &
 [ +INPUT < [ +FORM 
              "/[[:alpha:]]*[0-9]+[[:alpha:]0-9]*(-[[:alnum:]]+){2,}/" ] >,
-  +OUTPUT < [ +CLASS proper_ne ] > ].
-
-;;
-;; the following are maybe taken from chemistry: |B.25| |IL-10| |IL/10|
-;;
-chemistry_identifier_ne_tmr := ne_tmt &
-[ +INPUT < [ +FORM "/[0-9]*[[:upper:]]+[-./][[:upper:]]*[0-9]+/" ] >,
   +OUTPUT < [ +CLASS proper_ne ] > ].
 
 ;;
@@ -339,24 +348,24 @@ section_number_ne_tmr := ne_tmt &
 ;; but keep the hyphen on the prefix, e.g. |sub-discipline|.
 ;;
 numeric_hyphen_tmr := one_three_tmt &
-[ +INPUT < [ +FORM "/([+-]?[1-9][0-9]*)-([1-9][0-9]*)/",             
+[ +INPUT < [ +FORM "/([+-]?[0-9]+)-([0-9]+)/",             
              +ONSET #onset, +CLASS non_ne,
-             +PRED #pred, +CARG #carg ] >,
+             +PRED #pred, +CARG #carg, +TNT #tnt ] >,
   +OUTPUT < [ +FORM "${I1:+FORM:1}",
               +ONSET #onset, +PRED #pred, +CARG #carg, +TNT null_tnt ],
             [ +FORM "–",
               +ONSET #onset, +PRED #pred, +CARG #carg, +TNT null_tnt ],
             [ +FORM "${I1:+FORM:2}",
-              +ONSET #onset, +PRED #pred, +CARG #carg, +TNT null_tnt ] > ].
+              +ONSET #onset, +PRED #pred, +CARG #carg, +TNT #tnt ] > ].
 
 alphabetic_hyphen_tmr := one_two_tmt &
 [ +INPUT < [ +FORM "/([[:alpha:]]+-)(.+)/",             
              +ONSET #onset, +CLASS non_ne,
-             +PRED #pred, +CARG #carg ] >,
+             +PRED #pred, +CARG #carg, +TNT #tnt ] >,
   +OUTPUT < [ +FORM "${I1:+FORM:1}",
               +ONSET #onset, +PRED #pred, +CARG #carg, +TNT null_tnt ],
             [ +FORM "${I1:+FORM:2}",
-              +ONSET #onset, +PRED #pred, +CARG #carg, +TNT null_tnt ] > ].
+              +ONSET #onset, +PRED #pred, +CARG #carg, +TNT #tnt ] > ].
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -365,6 +374,29 @@ alphabetic_hyphen_tmr := one_two_tmt &
 ;;; at hyphens and dashes.
 ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;;
+;;; decades: |1950s|, |50s|, |1950's|, and |50's|.
+
+decade_ne_1_tmr := ne_tmt &
+[ +INPUT < [ +FORM "/(1[0-9])?[0-9]0[sS]/" ] >,
+  +OUTPUT < [ +CLASS plur_ne ] > ].   
+
+;;
+;; _fix_me_
+;; this latter type (plural of decades and, in principle, other names) actually
+;; is ambiguous with the possessive (i suspect), e.g. `the 1950's style'.  so,
+;; maybe, optional rules for those?                             (24-sep-08; oe)
+;;
+decade_ne_2_tmr := two_one_tmt &
+[ +INPUT < [ +FORM "/((1[0-9])?[0-9]0)/", 
+             +ONSET #onset, +CLASS non_ne,
+             +PRED #pred, +CARG #carg ],
+           [ +FORM "('[sS])", +CLASS non_ne ] >,
+  +OUTPUT < [ +FORM "${I1:+FORM:1}${I2:+FORM:1}", 
+              +ONSET #onset, +CLASS proper_ne,
+              +PRED #pred, +CARG #carg, +TNT null_tnt ] > ].
+
 
 ;;;
 ;;; numerals, including some sub-sets (days of the month or years).
@@ -408,12 +440,12 @@ card_ne_3_tmr := ne_tmt &
 ;;
 ;; ordinals, mostly parallel to the numerals
 ;;
-ord_or_dom_new_tmr := ne_tmt &
-[ +INPUT < [ +FORM "/(2?(1st|2nd|3rd)|(2?[1-9]|1[4-0]|20|30|31)th)/" ] >,
+ord_or_dom_ne_tmr := ne_tmt &
+[ +INPUT < [ +FORM "/(2?(1st|2nd|3rd)|(2?[1-9]|1[04-9]|20|30|31)th)/" ] >,
   +OUTPUT < [ +CLASS ord_or_dom_ne ] > ].
 
 ord_ne_tmr := ne_tmt &
-[ +INPUT < [ +FORM "/[0-9]*((^|[^1])(1st|2nd|3rd)|(11|12|13|[4-0])th)/" ] >,
+[ +INPUT < [ +FORM "/[0-9]*((^|[^1])(1st|2nd|3rd)|(11|12|13|[04-9])th)/" ] >,
   +OUTPUT < [ +CLASS ord_or_dom_ne ] > ].
 
 
@@ -457,7 +489,7 @@ non_initial_tmr := token_case_tmt &
 
 initial_tmr := token_case_tmt &
 [ +INPUT < [ +CARG anti_string ] >,
-  +OUTPUT < [ +CLASS #class & [ +INITIAL + ], +CARG non_string ] > ].
+  +OUTPUT < [ +CLASS [ +INITIAL + ], +CARG non_string ] > ].
 
 lower_tmr := token_case_tmt &
 [ +INPUT < [ +FORM "/[[:lower:][:digit:]_-]+/", 
@@ -484,17 +516,24 @@ non_capitalized_tmr := token_case_tmt &
               +CARG anti_string ] > ].
 
 ;;
+;; finally, we need to make sure no [ +CARG non_string ] values are left, as
+;; these were only meaningful within the set of `decoration' rules above.
+;;
+default_case_tmr := token_case_tmt &
+[ +INPUT < [ +CARG non_string ] >,
+  +OUTPUT < [ +CARG anti_string ] > ].
+
+
+;;
 ;; in case we are running without a PoS tagger, or something went wrong in the
 ;; creation of token AVMs from our input (in one form or another), make sure to
 ;; fully annul part-of-speech information.
 ;;
-null_tnt_tmr := token_mapping_rule &
+null_tnt_tmr := one_one_tmt &
 [ +INPUT < [ +FORM #form, +ONSET #onset, +CLASS #class,
-             +PRED #pred, +CARG #carg, +ID #id, +FROM #from, +TO #to,
-             +TNT [ +TAGS < anti_string, ... > ] ] >,
+             +PRED #pred, +CARG #carg, +TNT [ +TAGS < anti_string, ... > ] ] >,
   +OUTPUT < [ +FORM #form, +ONSET #onset, +CLASS #class,
-              +PRED #pred, +CARG #carg, +ID #id, +FROM #from, +TO #to, 
-              +TNT null_tnt ] > ].
+              +PRED #pred, +CARG #carg, +TNT null_tnt ] > ].
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -512,13 +551,11 @@ null_tnt_tmr := token_mapping_rule &
 ;; reference, e.g. in constructing +PRED values for generics.  NE rules have
 ;; done this already, hence make sure to not overwrite existing +CARGSs.
 ;;
-default_carg_tmr := token_mapping_rule &
+default_carg_tmr := one_one_tmt &
 [ +INPUT < [ +FORM #form, +ONSET #onset, +CLASS #class,
-             +PRED #pred, +CARG anti_string,
-             +ID #id, +FROM #from, +TO #to, +TNT #tnt ] >,
+             +PRED #pred, +CARG anti_string, +TNT #tnt ] >,
   +OUTPUT < [ +FORM #form, +ONSET #onset, +CLASS #class,
-              +PRED #pred, +CARG #form,
-              +ID #id, +FROM #from, +TO #to, +TNT #tnt ] > ].
+              +PRED #pred, +CARG #form, +TNT #tnt ] > ].
 
 prefix_punctuation_tmr := two_one_final_form_tmt &
 [ +INPUT < [ +FORM "/([[({“‘]+)/" ], 
@@ -557,6 +594,17 @@ suffix_punctuation_tmr := two_one_initial_form_tmt &
 ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+;;
+;; even though we originally made sure all tokens had a fully specified +TNT
+;; value, intervening rules could have `leaked' PoS information.  if so, once
+;; again, fully annul the +TNT value.
+;;
+tnt_default_tmr := one_one_tmt &
+[ +INPUT < [ +FORM #form, +ONSET #onset, +CLASS #class,
+             +PRED #pred, +CARG #carg, +TNT [ +TAGS < anti_string, ... > ] ] >,
+  +OUTPUT < [ +FORM #form, +ONSET #onset, +CLASS #class,
+              +PRED #pred, +CARG #carg, +TNT null_tnt ] > ].
+
 tnt_recurse_rule := token_mapping_rule &
 [ +INPUT < [ +FORM #form, +ONSET anti_onset,
              +CLASS #class, +PRED #pred, +CARG #carg,
@@ -592,7 +640,7 @@ tnt_terminate_tmr := token_mapping_rule &
 ;;; with singleton PoS readings multiplied out in each chart cell, we can prune
 ;;; undesirable alternatives, e.g. a foreign word reading when there also is a
 ;;; common noun.  also, ditch PoS readings with very low probability, and ones
-;;; for which no PoS-activated generic entries exist anyway.
+;;; for which no PoS-activated generic entries exist anyway (function words).
 ;;;
 ;;; _fix_me_
 ;;; should we eventually want to include the PoS probabilities as a feature in
@@ -604,13 +652,26 @@ tnt_ditch_unlikely_tmr := token_mapping_rule &
 [ +INPUT < [ +TNT.+PRBS < "/0?\\.0.*/" > ] >,
   +OUTPUT < > ].
 
-tnt_ditch_function_tmr := token_mapping_rule &
-[ +INPUT < [ +TNT.+TAGS 
-             < "/CC|DT|EX|IN|MD|PDT|POS|PRP\\$?|RP|TO|UH|WDT|WP|WRB/" > ] >,
+tnt_ditch_function_1_tmr := token_mapping_rule &
+[ +INPUT < [ +TNT.+TAGS < "/CC|DT|EX|IN|MD|PDT|POS|PRP\\$?|RB[RS]/" > ] >,
   +OUTPUT < > ].
 
+tnt_ditch_function_2_tmr := token_mapping_rule &
+[ +INPUT < [ +TNT.+TAGS < "/RP|TO|UH|WDT|WP|WRB/" > ] >,
+  +OUTPUT < > ].
+
+tnt_ditch_function_3_tmr := token_mapping_rule &
+[ +INPUT < [ +TNT.+TAGS < "\\$|#|``|''|\\(|\\)|,|\\.|:/" > ] >,
+  +OUTPUT < > ].
+
+;;
+;; _fix_me_
+;; experimentally, also ditch PoS information on punctuation-only tokens.  we
+;; appear to get noun and adjective readings for n- and m-dashes, which hardly
+;; can do us any good.                                         (24-sep-08; oe)
+;;
 tnt_ditch_punctuation_tmr := token_mapping_rule &
-[ +INPUT < [ +TNT.+TAGS < "/\\$|#|``|''|\\(|\\)|,|\\.|:/" > ] >,
+[ +INPUT < [ +FORM "/[[:punct:]]+/", +TNT.+TAGS *cons* ] >,
   +OUTPUT < > ].
 
 tnt_filter_dup_fw_tmr := token_mapping_rule &
@@ -630,6 +691,7 @@ tnt_filter_dup_nnps_tmr := token_mapping_rule &
   +INPUT    < [ +TNT.+TAGS < "NNPS" > ] >,
   +OUTPUT   < >,
   +POSITION "I1=C1" ].
+
 
 ;;
 ;; _fix_me_
