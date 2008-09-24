@@ -72,7 +72,6 @@
     #-(or :linux :mswindows)
     (load-libpq nil)))
 
-#+:logon
 (setf ppcre:*use-bmh-matchers* nil)
 
 ; From lkb/src/glue/repp.lsp
