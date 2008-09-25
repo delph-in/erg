@@ -358,8 +358,16 @@ numeric_hyphen_tmr := one_three_tmt &
             [ +FORM "${I1:+FORM:2}",
               +ONSET #onset, +PRED #pred, +CARG #carg, +TNT #tnt ] > ].
 
+;;
+;; when we break up tokens, it is not obvious which tag to assign to the first
+;; segment.  often, especially for unknown words (which most hyphenated tokens
+;; are), the PoS value will reflect the suffix.  for now, empty out +TNT on the
+;; initial segment.  if nothing else, names should still work when capitalized.
+;; for tokens containing multiple hyphens, the rule will apply from the front,
+;; i.e. the final segment is guaranteed to carry the +TNT information.
+;;
 alphabetic_hyphen_tmr := one_two_tmt &
-[ +INPUT < [ +FORM "/([[:alpha:]]+-)(.+)/",             
+[ +INPUT < [ +FORM "/(([[:lower:]]|[[:upper:]]){2,}-)(.+)/",             
              +ONSET #onset, +CLASS non_ne,
              +PRED #pred, +CARG #carg, +TNT #tnt ] >,
   +OUTPUT < [ +FORM "${I1:+FORM:1}",
@@ -377,6 +385,7 @@ alphabetic_hyphen_tmr := one_two_tmt &
 
 ;;;
 ;;; decades: |1950s|, |50s|, |1950's|, and |50's|.
+;;;
 
 decade_ne_1_tmr := ne_tmt &
 [ +INPUT < [ +FORM "/(1[0-9])?[0-9]0[sS]/" ] >,
@@ -462,12 +471,16 @@ numeric_class_tmr := token_class_tmt &
 [ +INPUT < [ +FORM "/[[:digit:]]+/" ] >,
   +OUTPUT < [ +CLASS numeric ] > ].
 
+punct_class_tmr := token_class_tmt &
+[ +INPUT < [ +FORM "/[[:punct:]]+/" ] >,
+  +OUTPUT < [ +CLASS non_alphanumeric ] > ].
+
 alphabetic_class_tmr := token_class_tmt &
 [ +INPUT < [ +FORM "/[[:alpha:]]+/" ] >,
   +OUTPUT < [ +CLASS alphabetic ] > ].
 
 alphanumeric_class_tmr := token_class_tmt &
-[ +INPUT < [ +FORM "/[[:alnum:]_-]+/" ] >,
+[ +INPUT < [ +FORM "/[[:alnum:]._-]+/" ] >,
   +OUTPUT < [ +CLASS alphanumeric ] > ].
 
 non_alphanumeric_class_tmr := token_class_tmt &
@@ -492,26 +505,26 @@ initial_tmr := token_case_tmt &
   +OUTPUT < [ +CLASS [ +INITIAL + ], +CARG non_string ] > ].
 
 lower_tmr := token_case_tmt &
-[ +INPUT < [ +FORM "/[[:lower:][:digit:]_-]+/", 
+[ +INPUT < [ +FORM "/[[:lower:][:digit:]._-]+/", 
              +CARG non_string ] >,
   +OUTPUT < [ +CLASS [ +CASE lower ], 
               +CARG anti_string ] > ].
 
 upper_tmr := token_case_tmt &
-[ +INPUT < [ +FORM "/[[:upper:][:digit:]_-]+/", 
+[ +INPUT < [ +FORM "/[[:upper:][:digit:]._-]+/", 
              +CARG non_string ] >,
   +OUTPUT < [ +CLASS [ +CASE upper ], 
               +CARG anti_string ] > ].
   
 capitalized_tmr := token_case_tmt &
-[ +INPUT < [ +FORM "/[[:upper:]][[:alnum:]_-]+/", 
-             +CARG non_string ] >,
+[ +INPUT < [ +FORM "/[[:upper:]].*[[:lower:]].*[[:upper:]].*/",  
+             +CLASS alphanumeric, +CARG non_string ] >,
   +OUTPUT < [ +CLASS [ +CASE capitalized+mixed ],
               +CARG anti_string ] > ].
 
 non_capitalized_tmr := token_case_tmt &
-[ +INPUT < [ +FORM "/[[:lower:][:digit:]][[:alnum:]_-]+/", 
-             +CARG non_string ] >,
+[ +INPUT < [ +FORM "/[[:lower:][:digit:]].*[[:lower:]].*[[:upper:]].*/", 
+             +CLASS alphanumeric, +CARG non_string ] >,
   +OUTPUT < [ +CLASS [ +CASE non_capitalized+mixed ],
               +CARG anti_string ] > ].
 
@@ -535,6 +548,19 @@ null_tnt_tmr := one_one_tmt &
   +OUTPUT < [ +FORM #form, +ONSET #onset, +CLASS #class,
               +PRED #pred, +CARG #carg, +TNT null_tnt ] > ].
 
+
+;;
+;; now, with +CLASS information available, optionally make any token that is
+;; (a) capitalized and not initial or (b) spelled in mixed case (|LinGO|) a
+;; proper NE.
+;;
+capitalized_name_tmr := add_ne_tmt &
+[ +INPUT < [ +CLASS [ INITIAL -, +CASE capitalized ] ] >,
+  +OUTPUT < [ +CLASS proper_ne ] > ].   
+
+mixed_name_tmr := add_ne_tmt &
+[ +INPUT < [ +CLASS [ +CASE mixed ] ] >,
+  +OUTPUT < [ +CLASS proper_ne ] > ].   
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
