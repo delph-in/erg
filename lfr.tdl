@@ -1,0 +1,91 @@
+;;; -*- Mode: tdl; Coding: utf-8; indent-tabs-mode: nil; -*-
+
+;;;
+;;; upon completion of `lexical parsing' (i.e. application of lexical rules
+;;; until a fix-point is reached), we can now filter lexical entries.  there is
+;;; little point attempting to do that earlier (as PET used to in its original
+;;; `-default-les' mode, where generics were only activated where there seemed
+;;; to be `gaps' in the _initial_ lexical chart, i.e. after lexical lookup).
+;;; the main problem in this approach is the interaction with orthographemics:
+;;; in the initial lexical chart, there will be an edge analysing |UPS| as the
+;;; plural or 3sg present tense form of the preposition |up|.  it is only once
+;;; lexical rules have been processed that we know such hypotheses have turned
+;;; out invalid.  thus, lexical filtering rules below operate on lexical edges,
+;;; lexical entries that have gone through any number of lexical rules, i.e.
+;;; everything that would ordinarily feed into syntactic rules.
+;;; 
+;;; initially, our strategy is conservative: whenever there is a native entry,
+;;; purge all generic entries in the same chart cell, unless there is a good
+;;; reason to keep some.  for now, only capitalization is considered a reason,
+;;; and even there (i.e. for generic names), certain types of native entries
+;;; will filter.
+;;;
+;;; both on tokens and signs, the `native' vs. `generic' distinction is made in
+;;; ONSET values: `con_or_voc' vs. `unk_onset'.
+;;;
+
+;;
+;; throw out generic whenever a native entry is available, unless the token has
+;; mixed capitalization _and_ is non-initial _and_ is not a named entity.
+;;
+generic_non_capital_lfr := lexmap-rule &
+  [ +CONTEXT < [ SYNSEM.PHON.ONSET con_or_voc ] >,
+    +INPUT   < [ SYNSEM.PHON.ONSET unk_onset,
+                 ORTH.CLASS non_ne & [ +INITIAL -, +CASE non_capitalized ] ] >,
+    +OUTPUT  < >,
+    +POSITION "I1=C1" ].
+
+;;
+;; a native name blocks a generic name (but not a named entity).
+;;                                                             (17-sep-08; oe)
+filter-genericcaps-name-pn := lexmap-rule &
+  [ +CONTEXT < [ SYNSEM [ PHON.ONSET con_or_voc,
+                          LKEYS.KEYREL.PRED abstr_named_np_rel ] ] >,
+    +INPUT   < [ SYNSEM [ PHON.ONSET unk_onset,
+                          LKEYS.KEYREL.PRED named_unk_rel ],
+                 ORTH.CLASS non_ne ] >,
+    +OUTPUT  < >,
+    +POSITION "I1=C1" ].
+
+;;
+;; _fix_me_
+;; i do not understand this rule: native entries (the +CONTEXT) should never
+;; have a [CLASS namedentity], or?  if so, this rule would seem superfluous.
+;;                                                             (17-sep-08; oe)
+filter-genericcaps-name-ne := lexmap-rule &
+  [ +CONTEXT < [ ORTH.CLASS namedentity,
+                 SYNSEM.PHON.ONSET con_or_voc ] >,
+    +INPUT   < [ SYNSEM [ PHON.ONSET unk_onset,
+                          LKEYS.KEYREL.PRED named_unk_rel ],
+                 ORTH.CLASS non_ne ] >,
+    +OUTPUT  < >,
+    +POSITION "I1=C1" ].
+
+filter-genericcaps-name-title := lexmap-rule &
+  [ +CONTEXT < [ SYNSEM [ PHON.ONSET con_or_voc,
+                                      LOCAL.CAT.HEAD ttl ] ] >,
+    +INPUT   < [ SYNSEM [ PHON.ONSET unk_onset,
+                          LKEYS.KEYREL.PRED named_unk_rel ],
+                 ORTH.CLASS non_ne ] >,
+    +OUTPUT  < >,
+    +POSITION "I1=C1" ].
+
+;;
+;; _fix_me_
+;; not sure about this one either: anything nominal blocks anything nominal,
+;; unless it is an NE?  that sounds somewhat like it could be a generalization
+;; of `filter-genericcaps-name-pn' above, but i wonder how we could ever see
+;; this configuration, at this point?                          (17-sep-08; oe)
+;; --- in principle, i guess, it can make sense to have more filter rules than
+;; would be strictly required, assuming all stages of pre-processing work just
+;; right.  on the other hand, i still find it hard to work out what to expect
+;; from these rules, so fewer (and simpler) rules would seem desirable too.
+;;
+filter-genericcaps-noun-ne := lexmap-rule &
+  [ +CONTEXT < [ SYNSEM [ LOCAL.CAT.HEAD noun & [ MINORS.MIN norm_nom_rel ],
+                              PHON.ONSET con_or_voc ] ] >,
+    +INPUT   < [ SYNSEM [ LOCAL.CAT.HEAD noun & [ MINORS.MIN norm_nom_rel ],
+                                      PHON.ONSET unk_onset ],
+                 ORTH.CLASS non_ne ] >,
+    +OUTPUT  < >,
+    +POSITION "I1=C1" ].
