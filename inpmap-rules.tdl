@@ -1363,6 +1363,17 @@ didnt-rule-2 := inpmap-x21-rule &
 ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+;;
+;; even though we originally made sure all tokens had a fully specified +TNT
+;; value, intervening rules could have `leaked' PoS information.  if so, once
+;; again, fully annul the +TNT value.
+;;
+tnt_default_tmr := one_one_tmt &
+[ +INPUT < [ +FORM #form, +ONSET #onset, +CLASS #class,
+             +PRED #pred, +CARG #carg, +TNT [ +TAGS < anti_string, ... > ] ] >,
+  +OUTPUT < [ +FORM #form, +ONSET #onset, +CLASS #class,
+              +PRED #pred, +CARG #carg, +TNT null_tnt ] > ].
+
 tnt_recurse_rule := token_mapping_rule &
 [ +INPUT < [ +FORM #form, +ONSET anti_onset,
              +CLASS #class, +PRED #pred, +CARG #carg,
@@ -1398,7 +1409,7 @@ tnt_terminate_tmr := token_mapping_rule &
 ;;; with singleton PoS readings multiplied out in each chart cell, we can prune
 ;;; undesirable alternatives, e.g. a foreign word reading when there also is a
 ;;; common noun.  also, ditch PoS readings with very low probability, and ones
-;;; for which no PoS-activated generic entries exist anyway.
+;;; for which no PoS-activated generic entries exist anyway (function words).
 ;;;
 ;;; _fix_me_
 ;;; should we eventually want to include the PoS probabilities as a feature in
@@ -1410,13 +1421,26 @@ tnt_ditch_unlikely_tmr := token_mapping_rule &
 [ +INPUT < [ +TNT.+PRBS < "/0?\\.0.*/" > ] >,
   +OUTPUT < > ].
 
-tnt_ditch_function_tmr := token_mapping_rule &
-[ +INPUT < [ +TNT.+TAGS 
-             < "/CC|DT|EX|IN|MD|PDT|POS|PRP\\$?|RP|TO|UH|WDT|WP|WRB/" > ] >,
+tnt_ditch_function_1_tmr := token_mapping_rule &
+[ +INPUT < [ +TNT.+TAGS < "/CC|DT|EX|IN|MD|PDT|POS|PRP\\$?|RB[RS]/" > ] >,
   +OUTPUT < > ].
 
+tnt_ditch_function_2_tmr := token_mapping_rule &
+[ +INPUT < [ +TNT.+TAGS < "/RP|TO|UH|WDT|WP|WRB/" > ] >,
+  +OUTPUT < > ].
+
+tnt_ditch_function_3_tmr := token_mapping_rule &
+[ +INPUT < [ +TNT.+TAGS < "\\$|#|``|''|\\(|\\)|,|\\.|:/" > ] >,
+  +OUTPUT < > ].
+
+;;
+;; _fix_me_
+;; experimentally, also ditch PoS information on punctuation-only tokens.  we
+;; appear to get noun and adjective readings for n- and m-dashes, which hardly
+;; can do us any good.                                         (24-sep-08; oe)
+;;
 tnt_ditch_punctuation_tmr := token_mapping_rule &
-[ +INPUT < [ +TNT.+TAGS < "/\\$|#|``|''|\\(|\\)|,|\\.|:/" > ] >,
+[ +INPUT < [ +FORM "/[[:punct:]]+/", +TNT.+TAGS *cons* ] >,
   +OUTPUT < > ].
 
 tnt_filter_dup_fw_tmr := token_mapping_rule &
@@ -1436,7 +1460,6 @@ tnt_filter_dup_nnps_tmr := token_mapping_rule &
   +INPUT    < [ +TNT.+TAGS < "NNPS" > ] >,
   +OUTPUT   < >,
   +POSITION "I1=C1" ].
-
 
 ;;
 ;; now done upon entry to token mapping, along a three-dimensional hierarchy.
