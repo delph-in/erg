@@ -367,7 +367,7 @@ numeric_hyphen_tmr := one_three_tmt &
 ;; i.e. the final segment is guaranteed to carry the +TNT information.
 ;;
 alphabetic_hyphen_tmr := one_two_tmt &
-[ +INPUT < [ +FORM "/(([[:lower:]]|[[:upper:]]){2,}-)(.+)/",             
+[ +INPUT < [ +FORM "/((?:[[:lower:]]|[[:upper:]]){2,}-)(.+)/",             
              +ONSET #onset, +CLASS non_ne,
              +PRED #pred, +CARG #carg, +TNT #tnt ] >,
   +OUTPUT < [ +FORM "${I1:+FORM:1}",
@@ -504,8 +504,13 @@ initial_tmr := token_case_tmt &
 [ +INPUT < [ +CARG anti_string ] >,
   +OUTPUT < [ +CLASS [ +INITIAL + ], +CARG non_string ] > ].
 
+;;
+;; various combinations of initial capitalization and mixed case (see the type
+;; definitions below `token_case' for details).  `alphanumeric' introduces 
+;; +CASE, so the REs in the rules below presuppose an alphanumeric token.
+;;
 capitalized+lower_tmr := token_case_tmt &
-[ +INPUT < [ +FORM "/[[:upper:]][[:lower:][:digit:]._-]*/", 
+[ +INPUT < [ +FORM "/[[:upper:]][[:lower:][:digit:]._-]+/", 
              +CARG non_string ] >,
   +OUTPUT < [ +CLASS [ +CASE capitalized+lower ], 
               +CARG anti_string ] > ].
@@ -519,27 +524,27 @@ capitalized+upper_tmr := token_case_tmt &
 capitalized+mixed_tmr := token_case_tmt &
 [ +INPUT < [ +FORM "/[[:upper:]][[:alnum:]._-]+/", 
              +CARG non_string ] >,
-  +OUTPUT < [ +CLASS [ +CASE capitalized+upper ], 
+  +OUTPUT < [ +CLASS [ +CASE capitalized+mixed ], 
               +CARG anti_string ] > ].
-  
+
+capitalized+non_mixed := token_case_tmt &
+[ +INPUT < [ +FORM "/[[:upper:]]/", 
+             +CARG non_string ] >,
+  +OUTPUT < [ +CLASS [ +CASE capitalized+non_mixed ], 
+              +CARG anti_string ] > ].
+ 
 non_capitalized+lower_tmr := token_case_tmt &
-[ +INPUT < [ +FORM "/[[:lower:]][[:lower:][:digit:]._-]*/", 
+[ +INPUT < [ +FORM "/[[:lower:][:digit:]._-]+/", 
              +CARG non_string ] >,
   +OUTPUT < [ +CLASS [ +CASE non_capitalized+lower ], 
               +CARG anti_string ] > ].
 
-non_capitalized+upper_tmr := token_case_tmt &
-[ +INPUT < [ +FORM "/[[:lower:]][[:upper:][:digit:]._-]+/", 
+non_capitalized+mixed_tmr := token_case_tmt &
+[ +INPUT < [ +FORM "/[[:lower:][:digit:]._-].*[[:upper:]].*/", 
              +CARG non_string ] >,
-  +OUTPUT < [ +CLASS [ +CASE non_capitalized+upper ], 
+  +OUTPUT < [ +CLASS [ +CASE non_capitalized+mixed ], 
               +CARG anti_string ] > ].
   
-non_capitalized+mixed_tmr := token_case_tmt &
-[ +INPUT < [ +FORM "/[[:lower:]][[:alnum:]._-]+/", 
-             +CARG non_string ] >,
-  +OUTPUT < [ +CLASS [ +CASE non_capitalized+upper ], 
-              +CARG anti_string ] > ].
-
 ;;
 ;; finally, we need to make sure no [ +CARG non_string ] values are left, as
 ;; these were only meaningful within the set of `decoration' rules above.
@@ -560,21 +565,6 @@ null_tnt_tmr := one_one_tmt &
   +OUTPUT < [ +FORM #form, +ONSET #onset, +CLASS #class,
               +PRED #pred, +CARG #carg, +TNT null_tnt ] > ].
 
-
-;;
-;; now, with +CLASS information available, optionally make any token that is
-;; (a) capitalized and not initial or (b) spelled in mixed case (|LinGO|) a
-;; proper NE.
-;;
-capitalized_name_tmr := add_ne_tmt &
-[ +CONTEXT < [ +CLASS alphanumeric & [ +INITIAL -, +CASE capitalized ] ] >,
-  +OUTPUT < [ +CLASS proper_ne ] > ].   
-
-#|
-mixed_name_tmr := add_ne_tmt &
-[ +INPUT < [ +CLASS alphanumeric & [ +CASE mixed ] ] >,
-  +OUTPUT < [ +CLASS proper_ne ] > ].   
-|#
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -597,6 +587,14 @@ default_carg_tmr := one_one_tmt &
   +OUTPUT < [ +FORM #form, +ONSET #onset, +CLASS #class,
               +PRED #pred, +CARG #form, +TNT #tnt ] > ].
 
+;;
+;; _fix_me_
+;; there is a problem here: where we `multiply out' tokens earlier, we need to
+;; be able to (re-)attach prefix and suffix punctuation to more than one host.
+;; that would require not consuming the punctuation mark(s) at this point, but
+;; rather pick that up as CONTEXT (and later through out isolated punctuation
+;; marks).                                                      (26-sep-08; oe)
+;;
 prefix_punctuation_tmr := two_one_final_form_tmt &
 [ +INPUT < [ +FORM "/([[({“‘]+)/" ], 
            [ +FORM "/(.+)/" ] >,
@@ -616,6 +614,36 @@ suffix_punctuation_tmr := two_one_initial_form_tmt &
            [ +FORM "/([])}”\"’,;.!?]+)/" ] >,
   +OUTPUT < [ +FORM "${I1:+FORM:1}${I2:+FORM:1}" ] > ].
 
+suffix_apostrophe_tmr := two_one_initial_form_tmt &
+[ +INPUT < [ +FORM "/(.+[^sS])/" ],
+           [ +FORM "/'/" ] >,
+  +OUTPUT < [ +FORM "${I1:+FORM:1}'" ] > ].
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; _fix_me_
+;;; i would prefer doing these rules earlier, but as long as i have no way of
+;;; re-combining +INPUT and +CONTEXT tokens (see my email to peter of today),
+;;; token level ambiguity cannot be introduced before the prefix and suffix
+;;; punctuation rules.                                         (26-sep-08; oe)
+;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;
+;; now, with +CLASS information available, optionally make any token that is
+;; (a) capitalized and not initial or (b) spelled in mixed case (|LinGO|) a
+;; proper NE.
+;;
+capitalized_name_tmr := add_ne_tmt &
+[ +CONTEXT < [ +CLASS alphanumeric & [ +INITIAL -, +CASE capitalized ] ] >,
+  +OUTPUT < [ +CLASS proper_ne ] > ].   
+
+#|
+mixed_name_tmr := add_ne_tmt &
+[ +INPUT < [ +CLASS alphanumeric & [ +CASE mixed ] ] >,
+  +OUTPUT < [ +CLASS proper_ne ] > ].   
+|#
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
