@@ -4824,11 +4824,12 @@ partitive_intadj_phrase := basic_partitive_num_phrase &
 		     CONT.HOOK.INDEX.PNG #png,
                      AGR #agr & [ PNG #png ] ],
              NONLOC.QUE #que ],
-    ARGS < [ SYNSEM [ LOCAL.CAT [ HEAD adj_or_intadj &
-				       [ MOD < [ LOCAL.AGR #agr ] >,
-					 MINORS.ALTMIN superl_rel ],
-				  VAL [ SPEC < anti_synsem_min >,
-					SPR *anti_list* ] ],
+    ARGS < [ SYNSEM [ LOCAL [ CAT [ HEAD adj_or_intadj &
+					 [ MOD < [ LOCAL.AGR #agr ] >,
+					   MINORS.ALTMIN superl_rel ],
+				    VAL [ SPEC < anti_synsem_min >,
+					  SPR *anti_list* ] ],
+			      CONT.HOOK.INDEX non_conj_event ],
 		      MODIFD notmod ] ] >,
     C-CONT [ HOOK.LTOP #nhand,
              RELS <! [ LBL #nhand ] !>,
@@ -6350,7 +6351,8 @@ pp_predp_coord_phr := predp_coord_phr &
   [ SYNSEM [ LOCAL.CAT.HEAD prep,
 	     NONLOC.SLASH 0-dlist ],
     LCONJ-DTR.SYNSEM.LOCAL.CAT.HEAD prep,
-    RCONJ-DTR.SYNSEM.LOCAL.CAT.HEAD v_or_a ].
+    RCONJ-DTR.SYNSEM [ LOCAL.CAT.HEAD v_or_a,
+		       LEX - ] ].
 
 ap_predp_coord_top_phr := ap_predp_coord_phr & top_coord_event_rule &
   [ LCONJ-DTR.SYNSEM.PUNCT.RPUNCT comma_or_no_punct ].
@@ -6423,8 +6425,9 @@ np_coord_rule := nom_coord_rule &
                                  CONT.HOOK [ LTOP #rtop,
                                              INDEX #ind,
                                              XARG #xarg ],
-                                 CONJ.CREL [ L-INDEX.SORT #sort,
-                                             R-INDEX.SORT #sort ],
+                                 CONJ.CREL [ L-INDEX.SORT entity-or-event,
+                                             R-INDEX.SORT entity-or-event &
+							  #sort ],
                                  AGR [ PNG #png,
                                        DIV #div ] ],
                          MODIFD.RPERIPH #rper ],
@@ -6516,6 +6519,8 @@ np_coord_mid_ig_rule := np_coord_mid_rule & mid_coord_infgen_rule.
 
 ; For sequence of coordinated NPs and nbars without final conjunction
 ; Constrain to be GENRE nonformal
+; Restrict right conjunct to be nonprominal
+
 nom_coord_mid_noconj_rule := binary_rule_right_to_left & basic_nom_coord_rule &
   [ SYNSEM [ LOCAL [ CAT.HEAD.CASE non_obliq,
                      CONJ phr-conj & [ CHEAD cnil,
@@ -6531,7 +6536,8 @@ nom_coord_mid_noconj_rule := binary_rule_right_to_left & basic_nom_coord_rule &
                                  RPUNCT comma_punct ],
                          MODIFD.RPERIPH bool ],
                 INFLECTD + ], 
-    RCONJ-DTR [ SYNSEM [ LOCAL [ CAT.HEAD.CASE non_obliq,
+    RCONJ-DTR [ SYNSEM [ LOCAL [ CAT.HEAD [ CASE non_obliq,
+					    MINORS.MIN nonpro_rel ],
                                  CONT.HOOK.INDEX #rind & nonconj_ref-ind,
                                  CONJ cnil ],
                          PUNCT [ LPUNCT no_punct,
@@ -6824,6 +6830,46 @@ nbar_coord_asym_mid_2_rule := mid_coord_rule & nbar_coord_asym_2_rule &
   [ LCONJ-DTR.SYNSEM.LOCAL.CAT.HEAD.MINORS.ALTMIN impl_or_expl_q_rel,
     RCONJ-DTR.SYNSEM.LOCAL.CAT.HEAD.MINORS.ALTMIN impl_or_expl_q_rel ].
 |#
+
+; For coordination of prenominal adj + noun modifiers, as in 
+; "the wooden and marble staircase"
+
+adj_noun_coord_rule := basic_binary_phrase & non_headed_phrase & 
+  [ INFLECTD +,
+    SYNSEM synsem &
+           [ LOCAL [ CAT #cat &
+			 [ HEAD.MOD < [ LOCAL.CONT.HOOK [ LTOP #mltop,
+							  INDEX #mind ] ] >,
+			   VAL [ SPR < synsem >,
+				 COMPS < > ],
+			   POSTHD - ],
+		     CONT.HOOK #hook ],
+	     LEX + & #lex,
+	     NONLOC non-local_none ],
+    ARGS < [ INFLECTD +,
+	     SYNSEM [ LOCAL [ CAT #cat & [ HEAD adj & [ PRD - ],
+					   VAL.COMPS < > ],
+			      CONT.HOOK #hook ],
+		      LEX #lex,
+		      NONLOC non-local_none ] ],
+	   [ INFLECTD -,
+	     SYNSEM [ LOCAL [ CAT [ HEAD noun & 
+					 [ MINORS.MIN gen_nom_nbar_rel ] ],
+			      CONT.HOOK [ LTOP #rltop,
+					  INDEX #rind ],
+			      CONJ lex-conj &
+				   [ CREL.R-INDEX #rnind ] ],
+		      NONLOC non-local_none ] ] >,
+    C-CONT [ RELS <! prep_notense_relation &
+                     [ PRED compound_rel,
+		       LBL #mltop,
+		       ARG1 #mind,
+		       ARG2 #rnind ],
+		     [ PRED udef_q_rel,
+		       ARG0 #rind,
+		       RSTR #rstr ]!>,
+             HCONS <! qeq & [ HARG #rstr,
+			      LARG #rltop ] !> ] ].
 
 ; For now, only conjoin lexical adverbs
 ; Consider collapsing this with p_coord_phr type
@@ -7737,10 +7783,12 @@ paren_float_s_rule := paren_float_rule &
 ; "We visited Turlidfossen (waterfall)."
 ; DPF 09-aug-07 - Block named entities, to avoid spurious ambiguity for e.g.
 ; "Abrams (Browne) arrived"
+; DPF 02-oct-08 - Re 09-aug-07: But this also blocks post-nominal modification
+; after an acronym, as in "the computers (IBM) in Paris are black".  So remove.
+;
 paren_float_nbar_rule := paren_float_rule & head_initial &
   [ NH-DTR.SYNSEM.LOCAL [ CAT nbar_cat &
-                              [ HEAD [ MINORS.MIN gen_nom_nbar_rel,
-                                       --BARE - ],
+                              [ HEAD.--BARE -,
                                 VAL [ SPR < [ OPT - ] >,
 				      SPEC *anti_list* ] ],
                           CONT.HOOK [ LTOP #nhtop,

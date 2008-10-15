@@ -381,6 +381,7 @@
     easy_to_use_a2 on_screen_a2 psyche_out_v2 no_brainer_n2 off_camera_a2
     all_in_all_adv2 must_have_n2 after_market_a2 in_depth_a2
     top_of_the_line_a2 out_of_town_a2 set_up_n2
+    height_abb_n1 weight_abb_n1
     )
   "temporary expedient to avoid generating dual forms")
 
