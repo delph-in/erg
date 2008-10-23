@@ -256,6 +256,7 @@
 |#
 
 (defun idiom-complete-p (tdfs)
+  (declare (ignore tdfs))
   t)
 
 (eval-when #+:ansi-eval-when (:load-toplevel :execute)
