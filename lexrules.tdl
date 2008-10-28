@@ -281,7 +281,7 @@ lex_rule_basic := lex_rule_supermost &
              PUNCT #punct ],
     GENRE #genre ].
 
-lex_rule_infl_affixed := lex_rule_basic &
+lex_rule_infl_affixed := lex_rule_basic & word_or_infl_rule &
   [ INFLECTD +,
     KEY-ARG #keyarg,   
     SYNSEM #synsem,
@@ -1648,6 +1648,55 @@ inverted_quote_lr := lex_rule_basic &
             HCONS <! !> ] ].
 |#
 
+; Foreign or italicized word
+foreign_or_ital_lr := lex_rule_supermost &
+  [ INFLECTD +,
+    STEM #orth,
+    KEY-ARG #keyarg,
+    DTR #stem &
+	[ STEM #orth,
+	  SYNSEM [ LOCAL.CONT.HOOK.LTOP #hand,
+		   NONLOC #nonloc,
+                   PUNCT [ LPUNCT lital_punct,
+			   RPUNCT rital_punct ],
+                   LKEYS #lkeys ],
+          KEY-ARG #keyarg ],
+    SYNSEM [ NONLOC #nonloc,
+	     LEX +,
+	     LKEYS #lkeys,
+             PUNCT.RPUNCT clause_or_no_punct ],
+    C-CONT.HOOK.LTOP #hand,
+    ARGS < #stem > ].
+
+foreign_lr := foreign_or_ital_lr &
+  [ DTR [ INFLECTD na,
+	  SYNSEM.LOCAL.CONT.HOOK.INDEX #index1 ],
+    SYNSEM [ LOCAL [ CAT nomp_cat &
+                        [ HEAD noun & 
+                               [ MOD < >,
+				 MINORS.MIN norm_nom_rel ],
+                          VAL.SPR < > ],
+                    CONT nom-obj &
+                        [ HOOK.INDEX #index,
+                          HCONS <! !> ],
+                    CONJ cnil,
+                    AGR #index & [ PNG.PN 3s ] ],
+	     NONLOC non-local_none ],
+    C-CONT [ HOOK [ LTOP #hand,
+		    INDEX #index ],
+	     RELS <! [ LBL #hand,
+		       PRED fw_seq_rel,
+		       ARG0 #index,
+		       L-INDEX #index1 ]!> ] ].
+
+#|
+italics_lr := foreign_or_ital_lr &
+  [ DTR.SYNSEM.LOCAL #local & [ CONT.HOOK #hook ],
+    SYNSEM.LOCAL #local,
+    C-CONT [ HOOK #hook,
+	     RELS <! !> ] ].
+|#
+
 ;; Punctuation rules
 ;
 ; Making mother be SYNSEM lex_punct_synsem prevents spurious application of
@@ -1685,7 +1734,7 @@ basic_punctuation_rule := lex_rule_supermost & word_or_punct_rule &
     C-CONT.RELS <! !> ].
 
 punctuation_rule := basic_punctuation_rule &
-  [ INFLECTD + & #infl,
+  [ INFLECTD #infl & na_or_+,
     SYNSEM.PUNCT.RCLSTR #rclstr,
     GENRE #genre,
     ARGS < [ INFLECTD #infl,
@@ -1868,23 +1917,60 @@ punctuation_clmark_qmark_rule := punctuation_rule &
     RNAME "LPQ" ].
 
 punctuation_italleft_rule := basic_punctuation_rule &
-  [ INFLECTD +,
+  [ INFLECTD na,
     SYNSEM.PUNCT [ LPUNCT lital_punct,
                    RPUNCT #rpunct,
                    RCLSTR #rclstr ],
-    ARGS < word_or_punct_rule &
-           [ SYNSEM.PUNCT [ RPUNCT #rpunct,
-                            RCLSTR #rclstr ],
-             ALTS.SQPNCT + ] >,
+    ARGS < word_or_infl_or_punct_rule &
+	   [ INFLECTD +,
+	     SYNSEM [ PUNCT [ RPUNCT #rpunct & 
+				     comma_or_rbc_or_clause_or_no_punct,
+			      RCLSTR #rclstr ] ] ] >,
     RNAME "LPIL" ].
 
+; Want to use PHON constraint to prevent dtr from being a dropped italic output
+#|
 punctuation_italright_rule := basic_punctuation_rule &
-  [ INFLECTD +,
+  [ INFLECTD -,
     SYNSEM.PUNCT [ LPUNCT #lpunct,
                    RPUNCT rital_punct & [ PSF #psf ] ],
-    ARGS < word_or_punct_rule &
-           [ SYNSEM.PUNCT [ LPUNCT #lpunct & no_punct,
-                            RPUNCT clause_or_no_punct & [ PSF #psf ] ] ] >,
+    ARGS < [ INFLECTD na_or_+,
+	     SYNSEM [ PHON.ONSET unk_onset,
+		      PUNCT [ LPUNCT #lpunct,
+			      RPUNCT clause_or_no_punct & [ PSF #psf ] ] ] ] >,
+    RNAME "LPIR" ].
+|#
+
+punctuation_italright_rule := basic_punctuation_rule &
+  [ INFLECTD na,
+    SYNSEM.PUNCT [ LPUNCT #lpunct,
+                   RPUNCT rital_punct & [ PSF #psf ],
+		   RCLSTR.RFP + ],
+    ARGS < [ INFLECTD na_or_+,
+	     SYNSEM [ PUNCT [ LPUNCT #lpunct,
+			      RPUNCT clause_or_no_punct & [ PSF #psf ] ] ] ] >,
     RNAME "LPIR" ].
 
+punct_drop_italleft_rule := basic_punctuation_rule &
+  [ INFLECTD +,
+    SYNSEM.PUNCT [ LPUNCT no_punct,
+                   RPUNCT #rpunct,
+                   RCLSTR #rclstr ],
+    ARGS < word_or_infl_rule &
+           [ INFLECTD +,
+	     SYNSEM [ PHON.ONSET con_or_voc,
+		      PUNCT [ RPUNCT #rpunct & no_punct,
+			      RCLSTR #rclstr ] ] ] >,
+    RNAME "LPDL" ].
+
+punct_drop_italright_rule := basic_punctuation_rule &
+  [ INFLECTD +,
+    SYNSEM.PUNCT [ LPUNCT #lpunct,
+                   RPUNCT #rpunct,
+		   RCLSTR.RFP - ],
+    ARGS < [ INFLECTD +,
+	     SYNSEM [ PHON.ONSET con_or_voc,
+		      PUNCT [ LPUNCT #lpunct & no_punct,
+			      RPUNCT #rpunct & clause_or_no_punct ] ] ]>,
+    RNAME "LPDR" ].
 
