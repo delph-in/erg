@@ -64,8 +64,8 @@
 (defparameter *start-symbol* 
   #-:arboretum
   ;'(root_strict)
-  '(root_strict root_informal)
-  ;'(root_strict root_frag)
+  ;'(root_strict root_informal)
+  '(root_strict root_frag)
   ;'(root_strict root_informal root_frag root_inffrag)
   ;'(root_strict root_informal root_frag root_inffrag root_robust)
   ;'(root_formal)
@@ -391,7 +391,8 @@
     punct_dqright_orule punct_rbracket_orule punct_lbracket_orule 
     punct_dqright2_orule punct_dqleft2_orule
     punct_hyphen_orule punct_comma_informal_orule punct_sqleft2_orule
-    punct_qqmark_orule punct_qmark_bang_orule
+    punct_qqmark_orule punct_qmark_bang_orule punct_drop_iright_orule
+    punct_drop_ileft_orule punct_italleft_orule punct_italright_orule 
     paren_float_s paren_float_n
     ; This rule is relatively expensive and of marginal benefit in generation
     adjh_i_ques
