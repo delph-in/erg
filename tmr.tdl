@@ -60,11 +60,6 @@
 ;; adjacent neighbours.  only once that is true, a third and final rule can 
 ;; safely delete the token.
 ;;
-delete_speech_filler_1_tmr := token_mapping_rule &
-[ +CONTEXT < [ ] >,
-  +INPUT < [ +FORM "*DELETE*" ] >,
-  +OUTPUT < >,
-  +POSITION "C1@I1" ].
 
 ;;
 ;; _fix_me_
@@ -76,21 +71,63 @@ delete_speech_filler_1_tmr := token_mapping_rule &
 ;; were created, and if so, `compactify' the chart to eliminate those gaps.
 ;;                                                              (13-jan-08; oe)
 ;;
+
 delete_speech_filler_2_tmr := token_mapping_rule &
 [ +CONTEXT < [ +FORM "*DELETE*",
-               +ID [ LIST #front, LAST #middle ], +FROM #from ] >,
+               +ID [ LIST #middle, LAST #back ], +TO #to ] >,
   +INPUT < [ +FORM #form, +ONSET #onset, +CLASS #class,
-             +PRED  #pred, +CARG #carg,
-	     +ID [ LIST #middle, LAST #back ], +TO #to ] >,
+             +PRED #pred, +CARG #carg,
+	     +ID [ LIST #front, LAST #middle ], +FROM #from ] >,
   +OUTPUT < [ +FORM #form, +ONSET #onset, +CLASS #class,
               +PRED  #pred, +CARG #carg,
               +ID [ LIST #front, LAST #back ], +FROM #from, +TO #to ] >,
   +POSITION "I1<C1, O1@I1, O1@C1" ].
 
+; Before removing all |*delete*| fillers, need to accommodate special case
+; of utterance-initial |*delete*| which is in the same first token position
+; as some ordinary edge, but where we want a new edge starting at the beginning
+; and ending at the end of the second token position.  This will allow us
+; to build an analysis which effectively takes the 'delete' token rather than
+; the unwanted ordinary word token for that first token position.  To do this,
+; we would need to have the following rule only apply where C1 precedes I1,
+; but adding this position constraint for some reason stops the 
+; rule from applying at all.
+
 delete_speech_filler_3_tmr := token_mapping_rule &
-[ +INPUT < [ +FORM "*DELETE*" ] >,
+[ +CONTEXT < [ ] >,
+  +INPUT < [ +FORM "*DELETE*" ] >,
   +OUTPUT < > ].
 
+#|
+delete_speech_filler_3_tmr := token_mapping_rule &
+[ +CONTEXT < [ ] >,
+  +INPUT < [ +FORM "*DELETE*" ] >,
+  +OUTPUT < >,
+  +POSITION "C1<I1" ]
+
+delete_speech_filler_4_tmr := two_one_tmt &
+[ +INPUT < [ +FORM "*DELETE*" ],
+           [ +FORM #form, +ONSET #onset, +CLASS #class,
+             +PRED #pred, +CARG #carg ] >,
+  +OUTPUT < [ +FORM #form, +ONSET #onset, +CLASS #class,
+              +PRED #pred, +CARG #carg ] > ].
+|#
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; Experimental rules for speech input, which has not been pre-segmented to
+;;; disconnect contracted forms like "I'm" or "that's"
+
+apostrophe_speech_tmr := one_two_tmt &
+[ +INPUT < [ +FORM /([[:alpha:]]+)'(s|d|ve|ll|m|re)/, 
+             +ONSET #onset, +PRED #pred, +CARG #carg ] >,
+  +OUTPUT < [ +FORM "${I1:+FORM:1}",
+              +ONSET #onset, +PRED #pred, +CARG #carg, 
+	      +TNT [ +TAGS < "NN" >, +PRBS < "1.0" > ] ],
+            [ +FORM "'${I1:+FORM:2}",
+              +ONSET #onset, +PRED #pred, +CARG #carg, 
+	      +TNT [ +TAGS < anti_string >,
+		     +PRBS < "1.0" > ] ] > ].
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -489,7 +526,7 @@ numeric_hyphen_tmr := one_three_tmt &
 ;;                                                              (12-jan-09; oe)
 ;;
 alphabetic_hyphen_tmr := one_two_tmt &
-[ +INPUT < [ +FORM /(.+-)((?:[[:lower:]]|[[:upper:]])+)/,             
+[ +INPUT < [ +FORM /(.+-)((?:[[:alnum:]]|-)+)/,             
              +ONSET #onset, +CLASS non_ne,
              +PRED #pred, +CARG #carg, +TNT #tnt ] >,
   +OUTPUT < [ +FORM "${I1:+FORM:1}",
