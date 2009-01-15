@@ -40,97 +40,6 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
-;;; application- or task-specific `accomodation' rules (aka hacks :-).  patch
-;;; up the input token lattice as needed.  in principle, such rules should go
-;;; into separate modules, once we provide a mechanism to selectively activate
-;;; rules or sets of rules.
-;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-;;
-;; in parsing ASR word lattices, it appears there are some unwanted `left-over'
-;; tokens.  in pruning tokens, we need to take care not to create gaps in the
-;; token chart, i.e. there are two deletion rules: one to drop a token that is
-;; parallell to a `regular' token, another to drop a token without company in
-;; its chart cell, in which case we need to synthesize as many new tokens as
-;; there are right-adjacent neighbours to the token to be deleted, in each case
-;; left-extending the span of those neighbours.  so, come to think of it, that
-;; seems to call for three rules, actually: while synthesizing new tokens, the
-;; one to be deleted has to remain in the chart, until there are no more right-
-;; adjacent neighbours.  only once that is true, a third and final rule can 
-;; safely delete the token.
-;;
-
-;;
-;; _fix_me_
-;; what will happen if a sole token gets deleted at the end of the chart (or,
-;; equivalently, chart-initially if there is only one cell)?  i believe it may
-;; be desirable to revise the chart mapping engine, so as to automatically
-;; combine vertices that are to the left and right, respectively, of an empty
-;; cell.  in other words, after each rule application, check whether chart gaps
-;; were created, and if so, `compactify' the chart to eliminate those gaps.
-;;                                                              (13-jan-08; oe)
-;;
-
-delete_speech_filler_2_tmr := token_mapping_rule &
-[ +CONTEXT < [ +FORM "*DELETE*",
-               +ID [ LIST #middle, LAST #back ], +TO #to ] >,
-  +INPUT < [ +FORM #form, +ONSET #onset, +CLASS #class,
-             +PRED #pred, +CARG #carg,
-	     +ID [ LIST #front, LAST #middle ], +FROM #from ] >,
-  +OUTPUT < [ +FORM #form, +ONSET #onset, +CLASS #class,
-              +PRED  #pred, +CARG #carg,
-              +ID [ LIST #front, LAST #back ], +FROM #from, +TO #to ] >,
-  +POSITION "I1<C1, O1@I1, O1@C1" ].
-
-; Before removing all |*delete*| fillers, need to accommodate special case
-; of utterance-initial |*delete*| which is in the same first token position
-; as some ordinary edge, but where we want a new edge starting at the beginning
-; and ending at the end of the second token position.  This will allow us
-; to build an analysis which effectively takes the 'delete' token rather than
-; the unwanted ordinary word token for that first token position.  To do this,
-; we would need to have the following rule only apply where C1 precedes I1,
-; but adding this position constraint for some reason stops the 
-; rule from applying at all.
-
-delete_speech_filler_3_tmr := token_mapping_rule &
-[ +CONTEXT < [ ] >,
-  +INPUT < [ +FORM "*DELETE*" ] >,
-  +OUTPUT < > ].
-
-#|
-delete_speech_filler_3_tmr := token_mapping_rule &
-[ +CONTEXT < [ ] >,
-  +INPUT < [ +FORM "*DELETE*" ] >,
-  +OUTPUT < >,
-  +POSITION "C1<I1" ]
-
-delete_speech_filler_4_tmr := two_one_tmt &
-[ +INPUT < [ +FORM "*DELETE*" ],
-           [ +FORM #form, +ONSET #onset, +CLASS #class,
-             +PRED #pred, +CARG #carg ] >,
-  +OUTPUT < [ +FORM #form, +ONSET #onset, +CLASS #class,
-              +PRED #pred, +CARG #carg ] > ].
-|#
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
-;;; Experimental rules for speech input, which has not been pre-segmented to
-;;; disconnect contracted forms like "I'm" or "that's"
-
-apostrophe_speech_tmr := one_two_tmt &
-[ +INPUT < [ +FORM /([[:alpha:]]+)'(s|d|ve|ll|m|re)/, 
-             +ONSET #onset, +PRED #pred, +CARG #carg ] >,
-  +OUTPUT < [ +FORM "${I1:+FORM:1}",
-              +ONSET #onset, +PRED #pred, +CARG #carg, 
-	      +TNT [ +TAGS < "NN" >, +PRBS < "1.0" > ] ],
-            [ +FORM "'${I1:+FORM:2}",
-              +ONSET #onset, +PRED #pred, +CARG #carg, 
-	      +TNT [ +TAGS < anti_string >,
-		     +PRBS < "1.0" > ] ] > ].
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
 ;;; correct tokenization `damage', inherited from the PTB conventions.
 ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -522,11 +431,8 @@ numeric_hyphen_tmr := one_three_tmt &
 ;; for tokens containing multiple hyphens, the rule will apply from the back,
 ;; i.e. the final segment is guaranteed to carry the +TNT information.
 ;;
-;; i just re-tooled this rule a little, see whether dan likes it this way?
-;;                                                              (12-jan-09; oe)
-;;
 alphabetic_hyphen_tmr := one_two_tmt &
-[ +INPUT < [ +FORM /(.+-)((?:[[:alnum:]]|-)+)/,             
+[ +INPUT < [ +FORM /(.+-)([[:alnum:]]+)/,             
              +ONSET #onset, +CLASS non_ne,
              +PRED #pred, +CARG #carg, +TNT #tnt ] >,
   +OUTPUT < [ +FORM "${I1:+FORM:1}",
@@ -539,7 +445,7 @@ alphabetic_hyphen_tmr := one_two_tmt &
 ;; there will be more to do about slashes, no doubt ...         (12-jan-09; oe)
 ;;
 alphabetic_slash_tmr := one_three_tmt &
-[ +INPUT < [ +FORM /(.+)\/((?:[[:lower:]]|[[:upper:]])+)/,             
+[ +INPUT < [ +FORM /(.+)\/([[:alnum:]]+)/,             
              +ONSET #onset, +CLASS non_ne,
              +PRED #pred, +CARG #carg, +TNT #tnt ] >,
   +OUTPUT < [ +FORM "${I1:+FORM:1}",
