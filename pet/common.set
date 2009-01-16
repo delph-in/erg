@@ -1,3 +1,5 @@
+;;; -*- Mode: tdl; Coding: utf-8; indent-tabs-mode: nil; -*-
+
 ;;;
 ;;; This file is part of the ERG.  It should be kept in the same directory as 
 ;;; the accompanying files `english.set' and `global.set'.
@@ -13,7 +15,11 @@ include "global".
 irregular-forms-only.
 
 lex-entries-can-fail.
-; Lexical rules are applied prior to filtering
+
+;;
+;; activate `lexical parsing' as a separate phase, i.e. invoke lexical rules
+;; until a fixpoint is reached (see comments in `lfr.tdl' for background).
+;;
 lex-exhaustive.
 
 ;;
@@ -33,41 +39,27 @@ packing-restrictor := RELS HCONS RNAME.
 mrs-path := "SYNSEM.LOCAL.CONT".
 
 ;;
-;; path to LABEL for relation-to-word mapping, absolute and within a relation
-;;
-label-path := "SYNSEM.LKEYS.--KEYREL.WLINK".
-label-path-tail := "WLINK".
-
-;;
 ;; name of type containing quick check structure
 ;;
 qc-structure := $qc_paths_set.
 
-;;;
-;;; the scoring model, either for on-line use in best-first parsing or off-line
-;;; ranking of complete parse results after parsing.
-;;;
-
-sm := "jhpstg.mem".
-;sm := "chpt.mem".
-
-;;;
-;;; based on selectional dependencies between lexical entries, reduce chart
-;;; right after lexical look-up: `chart-dependencies' is a list of pairs of
-;;; paths into lexical entries.  the type of the node at the end of the first
-;;; path in one lexical entry makes that entry depend on the existence of some
-;;; other lexical entry that has that same type as the value of the node at the
-;;; end of the second path.
-;;;
-;;; _fix_me_
-;;; not entirely sure, but it must (in principle) be possible to saturate a
-;;; dependency from lexical and grammar rules.  say, a lexical entry selected
-;;; for something nominalized, and that relation was introduced by a lexical
-;;; rule, in turn.  unless this is the case already, compute static list of all
-;;; relations introduced by rules (which, presumably, requires another setting
-;;; to declare how to find constructional semantic contributions; C-CONT) and
-;;; consider all such dependencies on lexical entries always saturated.
-;;;                                                          (11-oct-02; oe)
+;;
+;; based on selectional dependencies between lexical entries, reduce the chart
+;; right after lexical look-up: `chart-dependencies' is a list of pairs of
+;; paths into lexical entries.  the type of the node at the end of the first
+;; path in one lexical entry makes that entry depend on the existence of some
+;; other lexical entry that has that same type as the value of the node at the
+;; end of the second path.
+;;
+;; _fix_me_
+;; not entirely sure, but it must (in principle) be possible to saturate a
+;; dependency from lexical and grammar rules.  say, a lexical entry selected
+;; for something nominalized, and that relation was introduced by a lexical
+;; rule, in turn.  unless this is the case already, compute static list of all
+;; relations introduced by rules (which, presumably, requires another setting
+;; to declare how to find constructional semantic contributions; C-CONT) and
+;; consider all such dependencies on lexical entries always saturated.
+;;                                                          (11-oct-02; oe)
 unidirectional-chart-dependencies.
 
 chart-dependencies := 
@@ -77,39 +69,63 @@ chart-dependencies :=
   "SYNSEM.LOCAL.--+ARGIND" "SYNSEM.--SIND"
 .
 
-;;;
-;;; some rules should be constrained to only apply over the entire string, i.e.
-;;; to edges that span the full input; this should improve parsing efficiency
-;;; only, rather than be considered part of the linguistic analyses.
-;;;
+;;
+;; some rules should be constrained to only apply over the entire string, i.e.
+;; to edges that span the full input; this should improve parsing efficiency
+;; only, rather than be considered part of the linguistic analyses.
+;;
 spanning-only-rules := 
   $frag_nocop_s $frag_pp_sl $frag_vp_sl $runon_np
   $frag_l_mod_adv $frag_l_mod_vp $frag_r_mod_np 
   $frag_r_mod_i_pp $frag_r_mod_i_pp $frag_r_mod_s_pp $frag_r_mod_ap.
 
+;;
+;; as of august 2003, PET includes ECL and the generic (R)MRS code; hence, we
+;; need to include the MRS settings from the grammar.
+;;
+postload-lisp-files := "lkb/mrsglobals.lsp".
+
+;;
+;; and as of august 2006, the MRS variable property mapping (VPM) can now be
+;; activated as a configuration parameter.                    (26-aug-06; oe)
+;;
+vpm := "semi".
+
+
 ;;;
-;;; generic lexical entries for unknown words: basically, for each unknown
-;;; token in the input all generic entries are postulated.  optionally, there
-;;; are two devices to filter out generic entries: suffix-based and by virtue
-;;; of POS tag information.  generic entries that require a certain suffix
-;;; (`generic-le-suffixes') only fire if the input form has the suffix.  if
-;;; the input word has one more more POS tags associated to it, these are
-;;; looked up in the `posmapping' table: this table is a list of pairs (tag,
-;;; gle) where `gle' is the name of one of the generic items in `generic-les'.
-;;; a non-empty `posmapping' table will filter all generic entries that are not
-;;; explicitly licensed by a POS tag.
+;;; following are a number of settings for the new (as of late 2008) token
+;;; mapping and lexical filtering support in PET.
 ;;;
+
+;;
+;; first, the general format of chart mapping rules, much like MRS transfer.
+;;
+chart-mapping-context-path  := "+CONTEXT".
+chart-mapping-input-path    := "+INPUT".
+chart-mapping-output-path   := "+OUTPUT".
+chart-mapping-position-path := "+POSITION".
+;;
+;; in lexical instatiation, the list of tokens activating a lexical entry (be
+;; it native or generic) are unified into the lexical entry under this path.
+;;
+lexicon-tokens-path := "TOKENS.+LIST".
+lexicon-last-token-path := "TOKENS.+LAST".
+;;
+;; furthermore, for the various input formats, we need to declare how parts of
+;; input descriptions correspond to the grammar-internal feature geometry; in
+;; the YY input format, for example, token feature structures (aka input items
+;; PET-internally) are created from various parts of the token description.
+;; 
+token-form-path     := "+FORM".       ; [required] string for lexical lookup
+;token-id-path       := "+ID".         ; [optional] list of external ids
+token-from-path     := "+FROM".       ; [optional] surface start position
+token-to-path       := "+TO".         ; [optional] surface end position
+token-postags-path  := "+TNT.+TAGS".  ; [optional] list of POS tags
+token-posprobs-path := "+TNT.+PRBS".  ; [optional] list of POS probabilities
+;;
+;; finally, declare TDL status values for the various new entity types
+;;
 token-mapping-rule-status-values := token-mapping-rule.
 lexical-filtering-rule-status-values := lexical-filtering-rule.
 generic-lexentry-status-values := generic-lex-entry.
 
-;;;
-;;; as of august 2003, PET includes ECL and the generic (R)MRS code; hence, we
-;;; need to include the MRS settings from the grammar.
-;;;
-postload-lisp-files := "lkb/mrsglobals.lsp".
-;;;
-;;; and as of august 2006, the MRS variable property mapping (VPM) can now be
-;;; activated as a configuration parameter.                    (26-aug-06; oe)
-;;;
-vpm := "semi".
