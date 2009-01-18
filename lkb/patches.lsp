@@ -79,73 +79,7 @@
 ; DPF 12-may-08 - Experimental patch to pretokenize string for the benefit
 ; of the tagger (separating punctuation etc)
 (in-package :lkb)
-#|
-(defun repp-for-pet (string &optional tagger)
-  (setf string
-    (progn (run-process (format nil "exec echo \"~a\" | ~a"
-				string 
-				(format nil "~Alkb/token-n-tnt.prl" 
-					lkb::*grammar-directory*))
-			:wait t :output "/tmp/pretok" 
-			:if-output-exists :supersede)
-	   (tsdb::read-file "/tmp/pretok")))
-  (if (and tagger (consp tagger) (keywordp (first tagger)))
-    (multiple-value-bind (tokens length)
-        (case (first tagger)
-          (:tnt
-           (apply 
-            #'tnt
-            (repp string :format :list :verbose nil)
-            (rest tagger))))
-      (loop
-          for (id start end form surface . tags) in tokens
-          for token = (format 
-                       nil 
-                       "(~d, ~d, ~d, 1, \"~a\" \"~a\", 0, \"null\",~
-                       ~{ ~s ~,4f~})" 
-                       id start end 
-                       (escape-string form) (escape-string surface) tags)
-          collect token into tokens
-          finally 
-            (return (values (format nil "~{~a~^ ~}" tokens) length))))
-    (repp string :format :pet :verbose nil)))
-|#
 
-#|
-(defun repp-for-pet (string &optional tagger)
-  (setf string
-    (let ((pretokscript (format nil "~Alkb/token-n-tnt.prl" 
-				   lkb::*grammar-directory*)))
-      (with-open-file (stream "/tmp/pretokin" :direction :output 
-		       :if-does-not-exist :create :if-exists :supersede) 
-	(format stream string))
-      (run-process (format nil "~a < /tmp/pretokin" pretokscript)
-		   :wait t :output "/tmp/pretokout"
-		   :if-output-exists :supersede)
-      (tsdb::read-file "/tmp/pretokout")))
-  (if (and tagger (consp tagger) (keywordp (first tagger)))
-    (multiple-value-bind (tokens length)
-        (case (first tagger)
-          (:tnt
-           (apply 
-            #'tnt
-            (repp string :format :list :verbose nil)
-            (rest tagger))))
-      (loop
-          for (id start end form surface . tags) in tokens
-          for token = (format 
-                       nil 
-                       "(~d, ~d, ~d, 1, \"~a\" \"~a\", 0, \"null\",~
-                       ~{ ~s ~,4f~})" 
-                       id start end 
-                       (escape-string form) (escape-string surface) tags)
-          collect token into tokens
-          finally 
-            (return (values (format nil "~{~a~^ ~}" tokens) length))))
-    (repp string :format :pet :verbose nil)))
-|#
-
-#+:tsdb
 (defun repp-for-pet-with-tagger (string &optional tagger)
   (setf string
     (let ((pretokscript (format nil "~Alkb/token-n-tnt.prl" 
@@ -177,21 +111,6 @@
           finally 
             (return (values (format nil "~{~a~^ ~}" tokens) length))))
     (repp string :format :pet :verbose nil)))
-
-#|
-(defun repp-for-pet-with-tagger (string &optional tagger)
-  (setf string
-    (let ((pretokscript (format nil "~Alkb/token-n-tnt.prl" 
-				   lkb::*grammar-directory*)))
-      (with-open-file (stream "/tmp/pretokin" :direction :output 
-		       :if-does-not-exist :create :if-exists :supersede) 
-	(format stream string))
-      (run-process (format nil "~a < /tmp/pretokin" pretokscript)
-		   :wait t :output "/tmp/pretokout"
-		   :if-output-exists :supersede)
-      (tsdb::read-file "/tmp/pretokout")))
-  (repp-for-pet string tagger))
-|#
 
 (in-package :cl-user)
 
