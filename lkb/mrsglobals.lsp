@@ -24,10 +24,6 @@
 ; (setf *top-level-rel-types*  `(,(vsym "PRON_REL")))
 (setf *top-level-rel-types*  nil)
 
-;;; features for extracting semantics from expanded lexical entries
-; DPF 10-jul-04 - No longer used?
-;(setf *dummy-relations* `(,(vsym "NO_REL") ,(vsym "MESSAGE")))
-
 (defparameter *mrs-to-vit* nil)
 
 (defparameter *mrs-for-language* 'english)
@@ -79,21 +75,19 @@
 (setf *rel-name-path* `(,(vsym "PRED") ))
 
 ;;;
+;;; as of late 2008, the VPM (aka variable property mapping) machinery also 
+;;; defines the correspondence of grammar-internal variable types to variable
+;;; types (or sorts, in MRS XML lingo) on actual MRSs, e.g. `event' == `e', et
+;;; al.  with that mapping as part of the VPM, the old parameters *event-type*
+;;; etc. are no longer needed.  yes, we can!                   (20-jan-09; oe)
+;;;
+(setf *variable-type-mapping* :semi)
+
+;;;
 ;;; context condition in MRS munging rules
 ;;; 
 (defparameter *mrs-rule-condition-path* (list (vsym "CONTEXT")))
 
-;;;
-;;; add these to ERG `mrsglobals.lisp' (although they correspond to initial MRS
-;;; defaults, so we can load the ERG on top of another grammar (and spare some
-;;; debugging effort the day some of the MRS defaults changes :-).
-
-(defparameter *event-type* (vsym "event"))
-(defparameter *event_or_index-type* (vsym "individual"))
-(defparameter *non_expl-ind-type* (vsym "non_expl-ind"))
-(defparameter *handle-type* (vsym "handle"))
-(defparameter *ref-ind-type* (vsym "ref-ind"))
-(defparameter *non_event-type* (vsym "non_event"))
 
 ;;; the following are needed only for the detection of fragments
 ;;; indicated in the LinGO gramar by the value of ROOT
