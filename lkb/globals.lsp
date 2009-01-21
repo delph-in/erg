@@ -382,6 +382,19 @@
     all_in_all_adv2 must_have_n2 after_market_a2 in_depth_a2
     top_of_the_line_a2 out_of_town_a2 set_up_n2
     height_abb_n1 weight_abb_n1
+    ;;
+    ;; generic lexical entries used in parsing only (they often have partial
+    ;; semantics and cause error messages when creating the generator index)
+    ;;
+    generic_adj generic_adj_compar generic_adj_superl generic_adverb
+    generic_card_ne generic_date_ne generic_dom_ne generic_fract_ne
+    generic_mass_count_noun generic_mass_noun generic_meas_noun_ne
+    generic_meas_noun_ne2 genericname genericname_pl generic_number
+    generic_ord_ne generic_pl_noun generic_pl_noun_ne generic_proper_ne
+    generic_time_noun_ne generic_trans_verb_bse generic_trans_verb_pas
+    generic_trans_verb_past generic_trans_verb_pres3sg 
+    generic_trans_verb_presn3sg generic_trans_verb_prp 
+    generic_trans_verb_psp generic_year_ne
     )
   "temporary expedient to avoid generating dual forms")
 
@@ -517,8 +530,3 @@
 ;;; wanted (using an array of Matrix grammars and an interlingua semantics).
 ;;;
 (setf *translate-grid* '(:en . (:en)))
-
-;; when this parameter is set, ersatzes have their CARG set according to surface form
-(setf smaf::*ersatz-carg-path* '(synsem lkeys keyrel carg))
-
-(defparameter *ersatzes-with-no-carg* nil)

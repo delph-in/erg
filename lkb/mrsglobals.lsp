@@ -98,6 +98,18 @@
 
 (setf *true-type* (vsym "+"))
 
+;;;
+;;; disable so-called `CARG injection' on so-called `ersatz' lexical entries.
+;;; this mechanism was unprincipled in the first place (firing on everything
+;;; whose orthography ended in the literal string "ersatz"), and now that the
+;;; ERG has moved into the chart mapping universe (PET only, so far), generic
+;;; lexical entries are treated differently anyway.  `ersatz'ing was a remnant
+;;; from the YY days, and in this one case at least we are happy to have put 
+;;; it behind us :-).                                          (21-jan-09; oe)
+;;;
+(setf smaf::*ersatz-carg-path* nil)
+
+;;;
 ; DPF Upped from 100 to 200
 ; DPF 1-Jul-03 Upped from 200 to 500 due to treatment of unspec_loc_rel for
 ; e.g. free relatives.  Maybe should make this generic rel more specific.
