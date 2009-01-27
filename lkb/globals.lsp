@@ -89,8 +89,8 @@
 ;;; easier access to the token in the right periphery, the last element of the 
 ;;; tokens list is made re-entrant with *lexicon-last-token-path*.
 ;;;
-(setf *lexicon-tokens-path* nil)
-(setf *lexicon-last-token-path* nil)
+(setf *lexicon-tokens-path* '(TOKENS +LIST))
+(setf *lexicon-last-token-path* '(TOKENS +LAST))
 
 ;;; Set to true for arboretum, enabling parsing with robust rules and lexicon
 ;;; (this assumes that :arboretum was pushed onto *features* before compiling
