@@ -81,7 +81,17 @@
 (setf *fragment-start-symbols*
   '(root_strict root_informal root_frag 
     root_lex root_phr root_conj root_subord))
-  
+
+;;;
+;;; as we move into the chart mapping universe, lexical entries behave similar
+;;; to rules: the list of input tokens that license a lexical entry are unified
+;;; into *lexicon-tokens-path* (when set).  furthermore, to give the grammarian
+;;; easier access to the token in the right periphery, the last element of the 
+;;; tokens list is made re-entrant with *lexicon-last-token-path*.
+;;;
+(setf *lexicon-tokens-path* nil)
+(setf *lexicon-last-token-path* nil)
+
 ;;; Set to true for arboretum, enabling parsing with robust rules and lexicon
 ;;; (this assumes that :arboretum was pushed onto *features* before compiling
 ;;; the LKB and loading the grammar).  Then (after indexing lexicon for 
