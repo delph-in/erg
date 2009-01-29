@@ -454,3 +454,5 @@
       nil
    ; default inflection position for multi-word entries is rightmost
     (length orths)))
+
+(setf lkb::*repp-debug-p* nil)
