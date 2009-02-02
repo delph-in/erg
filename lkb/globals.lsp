@@ -192,6 +192,7 @@
     and_conj_slash and_or_conj_1 and_or_conj_2 and_or_conj_3 
     and_or_conj_4 and_or_conj_5 and_conj_amp and_conj_2_amp
     apostrophe_s_lex apostrophe_s_3_lex apostrophe_s_4_lex
+    apostrophe_s_12_lex apostrophe_s_14_lex
     mister missus mr_title_2 doctor_ttl dr_ttl_2 prof_title mrs_title_2
     ms_title_2 mount_ttl_2 number_abb_title number_abb_title_2 
     number_abb2_title number_abb2_title_2 order_abb_ttl order_abb_ttl_2
@@ -339,7 +340,7 @@
     approximately_abb_3 appointment_abb_n1 appointment_abb_n2 seaside_n2
     gallon_abb_n1 gallon_abb_n2 millimeter_abb_n2 milliliter_abb_n2
     foot_abb_n2 centimeter_abb_n2 meter_abb_n2 kg_abb_n1 kg_abb_n2 km2_abb_n1
-    with_p_abb2 with_p_abb3 figure_abb_n1
+    with_p_abb2 with_p_abb3 with_p_abb4 with_p_abb5 figure_abb_n1
     fig_abb obs_abb_a1 obs_abb_a2 please_abb_adv please_abb_adv3
     please_abb_adv4 please_abb_root route_abb_ttl route_abb_ttl2
     route_abb_n1 route_abb_n2
