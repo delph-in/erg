@@ -107,6 +107,7 @@
 ;;; from the YY days, and in this one case at least we are happy to have put 
 ;;; it behind us :-).                                          (21-jan-09; oe)
 ;;;
+#+:smaf
 (setf smaf::*ersatz-carg-path* nil)
 
 ;;;
