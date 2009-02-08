@@ -240,7 +240,6 @@
 ;;; require that no idiomatic relation remain.  (20-feb-05; dan & oe phx - sfo)
 ;;;
 
-#|
 (defun idiom-complete-p (tdfs)
   (let* ((mrs (and (tdfs-p tdfs)
                    (mrs::extract-mrs-from-fs (tdfs-indef tdfs))))
@@ -253,11 +252,11 @@
                     for ep in (mrs:psoa-liszt mrs)
                     when (idiom-rel-p ep) return nil
                     finally (return t)))))
-|#
-
+#|
 (defun idiom-complete-p (tdfs)
   (declare (ignore tdfs))
   t)
+|#
 
 (eval-when #+:ansi-eval-when (:load-toplevel :execute)
 	   #-:ansi-eval-when (load eval)
