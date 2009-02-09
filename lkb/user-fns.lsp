@@ -239,7 +239,6 @@
 ;;; (or nothing, for the time being).  post-transfer, the filter can then just
 ;;; require that no idiomatic relation remain.  (20-feb-05; dan & oe phx - sfo)
 ;;;
-
 (defun idiom-complete-p (tdfs)
   (let* ((mrs (and (tdfs-p tdfs)
                    (mrs::extract-mrs-from-fs (tdfs-indef tdfs))))
@@ -252,11 +251,6 @@
                     for ep in (mrs:psoa-liszt mrs)
                     when (idiom-rel-p ep) return nil
                     finally (return t)))))
-#|
-(defun idiom-complete-p (tdfs)
-  (declare (ignore tdfs))
-  t)
-|#
 
 (eval-when #+:ansi-eval-when (:load-toplevel :execute)
 	   #-:ansi-eval-when (load eval)
@@ -443,15 +437,16 @@
 	   #-:ansi-eval-when (load eval compile)
   (setf *gen-extract-surface-hook* 'gen-extract-surface))
 
-; DPF 20-oct-06 - Enable newly enhanced treatment of affixation with
-; multi-words, provided that the LKB version is recent enough.
-
+;;
+;; DPF 20-oct-06: Enable newly enhanced treatment of affixation with 
+;; multi-words.
+;;
+;; _fix_me_
+;; a value of `nil' means that inflection can occur at any position, so that
+;; we get both prefix punctuation and one or more suffixes: |(co- workers)|.  
+;; however, the problem in this new universe is that we get spurious analyses
+;; too, e.g. |co- (workers)|.                                   (9-feb-09; oe)
+;;
 (defun find-infl-pos (unifs orths sense-id)
-  (declare (ignore unifs sense-id))
-  (if (and (fboundp 'lkb::lkb-version-after-p)
-           (lkb::lkb-version-after-p "2006/10/19 15:55:27"))
-      nil
-   ; default inflection position for multi-word entries is rightmost
-    (length orths)))
-
-(setf lkb::*repp-debug-p* nil)
+  (declare (ignore unifs orths sense-id))
+  nil)
