@@ -2,9 +2,9 @@
 
 (setf *www-title* :erg)
 
-(setf *www-custom-js* (merge-pathnames *load-truename* "erg.js"))
+(setf *www-custom-js* (merge-pathnames "erg.js" *load-truename*))
 
-(setf *www-introduction* (merge-pathnames *load-truename* "erg.html"))
+(setf *www-introduction* (merge-pathnames "erg.html" *load-truename*))
 
 (setf *www-comparisons* nil)
 
