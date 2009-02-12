@@ -190,7 +190,7 @@
     be_th_cop_were_neg_subj_1 be_th_cop_were_neg_subj_2 need_not_v3
     u_pro you_guys you_people yall yall_2 yall_3 you_all
     and_conj_slash and_or_conj_1 and_or_conj_2 and_or_conj_3 
-    and_or_conj_4 and_or_conj_5 and_conj_amp and_conj_2_amp
+    and_or_conj_4 and_or_conj_5 and_or_conj_6 and_conj_amp and_conj_2_amp
     apostrophe_s_lex apostrophe_s_3_lex apostrophe_s_4_lex
     apostrophe_s_12_lex apostrophe_s_14_lex
     mister missus mr_title_2 doctor_ttl dr_ttl_2 prof_title mrs_title_2
@@ -251,7 +251,7 @@
     a_one_adj_2 a_quarter_adj2 i_2 i_guess_disc_2 i_guess_disc_4
     i_mean_disc_2 i_must_say_root_2 i_must_say_root_4 i_think_disc_2
     or_conj_1a or_conj_2a order_n1a order_n2a order_ttla oregon_n2
-    one_adj_digit his_her_poss his_her_poss_2 backcountry_n1
+    one_adj_digit his_her_poss his_her_poss_2 his_her_poss_3 backcountry_n1
     3d_adj eight_day_num eight_day_num_yofc eighteen_day_num 
     eighteen_day_num_yofc eighteenth_day_num eighth_day_num eleven_day_num 
     eleven_day_num_yofc eleventh_day_num fifteen_day_num 
@@ -362,7 +362,8 @@
     yer_pro e_g_pp2 e_g_disc_adv2 e_g_a2 e_g_pp3 e_g_disc_adv3 e_g_a3
     after_all_adv2 year_abb_n1 year_abb_n2 years_abb_n1
     full-grown_a2 because_abb because_of_abb_p worthwhile_a2 worthwhile_a4
-    t_marked_a1 t_marked_a3 u_shaped_a2 slash_per_p slash_per_p2
+    t_marked_a1 t_marked_a3 u_shaped_a2 slash_per_p slash_per_p2 slash_per_p3
+    slash_per_p4 slash_per_p5 
     be_inv_are be_inv_is be_inv_was be_inv_were come_v3 go_v3 lie_v4 run_v4
     stand_v3 micro_a2 mid_isect super_deg1 øvre_n2 temperature_abb_n1
     zero_det liquify_v1 liquify_v2 used_to_aux_nonfin_2 and_num hafta_v1
@@ -393,6 +394,8 @@
     all_in_all_adv2 must_have_n2 after_market_a2 in_depth_a2
     top_of_the_line_a2 out_of_town_a2 set_up_n2
     height_abb_n1 weight_abb_n1
+    care_of_prep_2 care_of_prep_3 m_z_n2
+    punct_3dots_l_2 punct_3dots_l_3
     ;;
     ;; generic lexical entries used in parsing only (they often have partial
     ;; semantics and cause error messages when creating the generator index)
@@ -523,6 +526,13 @@
 (setf *bypass-equality-check* :filter)
 
 ;;;
+;;; Increase size of transfer edge limit, since trigger rules currently not
+;;; as effective as one might wish
+
+#+:logon
+(setf mt::*transfer-edge-limit* 10000)
+
+;;;
 ;;; with recent LKB versions (as of 23-jul-05), there is now better support for
 ;;; the (still primitive) `remote' generation mode: a `translation grid' can be
 ;;; configured from any number of LKB processes, each potentially prepared to
@@ -541,3 +551,4 @@
 ;;; wanted (using an array of Matrix grammars and an interlingua semantics).
 ;;;
 (setf *translate-grid* '(:en . (:en)))
+
