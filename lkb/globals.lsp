@@ -526,13 +526,6 @@
 (setf *bypass-equality-check* :filter)
 
 ;;;
-;;; Increase size of transfer edge limit, since trigger rules currently not
-;;; as effective as one might wish
-
-#+:logon
-(setf mt::*transfer-edge-limit* 10000)
-
-;;;
 ;;; with recent LKB versions (as of 23-jul-05), there is now better support for
 ;;; the (still primitive) `remote' generation mode: a `translation grid' can be
 ;;; configured from any number of LKB processes, each potentially prepared to
