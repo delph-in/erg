@@ -75,3 +75,109 @@
 (setf ppcre:*use-bmh-matchers* nil)
 
 
+;; DPF 20-Feb-09
+;; Patches to allow better generation of unknown words.
+
+;; To test
+;; (tsdb::tsdb :cpu :mrs :file t)
+;; (mt::parse-interactively "Kim arrived in 2222.")
+
+;; To do:
+;; 
+;; In order to stay consistent with reg-ex assumptions that can refer to 
+;; course sense distinctions like "_n_, _v_, _a_" in trigger rules,
+;; fix PRED name for unknowns to keep four fields, using both the coarse
+;; sense distinctions and the subsense for the actual tags, prefixed
+;; with "unk-" to avoid collisions with manual lexical entries,
+;; So not "_frob_nn_rel" but "_frob_n_unk-nn_rel", and similarly
+;; "_frob_v_unk-vb_rel", "_frob_a_unk-jj_rel", "_frob_a_unk-rb_rel", etc. 
+
+;; 
+;; Change identification of the subset of generic lex entries used for 
+;; generation (currently based on their being on the list 
+;; *generic-lexical-entries* set manually in erg/mrs/globals.lsp).  
+;; Instead should mark them as relevant for generation, maybe with 
+;; [+CLASS generation], where 'generation' would be a supertype of some 
+;; existing +CLASS values like 'proper_ne'.  So index-for-generator() could 
+;; find these by the combination of +CLASS and +ONSET (since native entries
+;; are unmarked for +CLASS). Perhaps still (now automatically) add them to 
+;; *generic-lexical-entries* as currently used in generation.
+
+(in-package :lkb)
+
+;; Redefined from lkb/src/main/generics.lsp
+(defun gen-instantiate-generics (ep)
+  (loop
+      with ids
+      with pred = (mrs::rel-pred ep)
+      with carg = (loop
+                      for role in (mrs:rel-flist ep)
+                      when (eq (mrs:fvpair-feature role) *generics-carg*)
+                      return (mrs:fvpair-value role))
+      with predlist = (unless carg (cl-ppcre:split "_" pred))
+      ;; Input is an 'exploded' predname, sans underscore: ("" "foo" "n" "rel")
+      ;; Assuming predname was either "_foo_v_unk-vbz_rel" or "_foo_vbz_rel"
+      with tag = (when predlist 
+		   (or (and (fifth predlist) (fourth predlist))
+		       (third predlist)))
+      with surface = (or (and carg
+			      (substitute #\space #\_ carg :test #'char=))
+			 (and predlist
+			      (stem-generic (second predlist) tag)))
+      for gle in (rest %generics-index%)
+      when (or (equal pred (gle-pred gle))
+	       (gle-tag-p tag gle))
+      do
+        (let* ((id (format nil "~@:(~a[~a]~)" (gle-id gle) surface))
+               (id (intern id :lkb)))
+          (if (get-lex-entry-from-id id)
+            (push id ids)
+            (multiple-value-bind (tdfs orth)
+                (instantiate-generic-lexical-entry gle surface pred carg)
+              (when tdfs
+                (let ((new
+                       (make-lex-entry
+                        :orth (list orth) :id id :full-fs tdfs)))
+                  (with-slots (psorts) *lexicon*
+                    (setf (gethash id psorts) new))
+                  (mrs::extract-lexical-relations new)
+                  (push id ids))))))
+      finally (return ids)))
+
+;; Redefined from lkb/src/mrs/lexlookup.lisp
+;; Allows for unknown pred names starting with leading underscore
+;; Note: index-for-generator() currently does not index 'day_rel' or 'yofc_rel'
+;; from the generic entries.
+;;
+(in-package :mrs)
+
+(defun lexical-rel-p (rel-name)
+  (or (gethash rel-name *relation-index*)
+      (and (stringp rel-name) (equal (subseq rel-name 0 1) "_"))
+      (member rel-name '(lkb::day_rel lkb::yofc_rel))))
+
+(in-package :lkb)
+
+(defun gle-tag-p (tag gle)
+  (let ((id (gle-id gle)))
+    (or (and (eq id 'guess_n_gle) 
+	     (member tag '("nn" "unk-nn") :test #'string-equal))
+	(and (eq id 'guess_v_gle) 
+	     (member tag '("vb" "vbz" "vbd" "vbg" "vbn"
+		           "unk-vb" "unk-vbz" "unk-vbd" "unk-vbg" "unk-vbn")
+			  :test #'string-equal))
+	(and (eq id 'generic_adj) 
+	     (member tag '("jj" "unk-jj") :test #'string-equal))
+	(and (eq id 'generic_adverb) 
+	     (member tag '("rb" "unk-rb") :test #'string-equal)))))
+
+;; This function is just a place-holder. It should eventually either do a 
+;; look-up in a very large table of |surface stem tag| for 'all' English 
+;; words, or else compute the stem given the surface and the tag, possibly
+;; given by a tagger which also reports the stem.
+;;
+(defun stem-generic (string tag)
+  (declare (ignore tag))
+  ;; Compute stem based on tag somehow
+  string)
+
