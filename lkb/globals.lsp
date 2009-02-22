@@ -401,9 +401,9 @@
     ;; semantics and cause error messages when creating the generator index)
     ;;
     generic_adj generic_adj_compar generic_adj_superl generic_adverb
-    generic_card_ne generic_date_ne generic_dom_ne generic_fract_ne
-    generic_mass_count_noun generic_mass_noun generic_meas_noun_ne
-    generic_meas_noun_ne2 genericname genericname_pl generic_number
+    generic_card_ne generic_date_ne generic_dom_card_ne generic_dom_ord_ne
+    generic_fract_ne generic_mass_count_noun generic_mass_noun 
+    generic_meas_noun_ne genericname genericname_pl generic_number
     generic_ord_ne generic_pl_noun generic_pl_noun_ne generic_proper_ne
     generic_time_noun_ne generic_trans_verb_bse generic_trans_verb_pas
     generic_trans_verb_past generic_trans_verb_pres3sg 
@@ -511,7 +511,7 @@
 (defparameter *generic-lexical-entries*
   '((generic_proper_ne :generate)
     (generic_card_ne :generate) (generic_ord_ne :generate)
-    (generic_dom_ne :generate) (generic_dom_ord_ne :generate)
+    (generic_dom_card_ne :generate) (generic_dom_ord_ne :generate)
     (generic_year_ne :generate) (generic_date_ne :generate) 
     (generic_adj :generate) (generic_adverb :generate)
     (guess_n_gle :generate) (guess_v_gle :generate)))
