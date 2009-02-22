@@ -509,12 +509,10 @@
 ;;; grammar has to supply among its user functions :-{).        (7-apr-05; oe)
 ;;;
 (defparameter *generic-lexical-entries*
-  '((generic_proper_ne :generate)
-    (generic_card_ne :generate) (generic_ord_ne :generate)
-    (generic_dom_ne :generate) (generic_dom_ord_ne :generate)
-    (generic_year_ne :generate) (generic_date_ne :generate) 
-    (generic_adj :generate) (generic_adverb :generate)
-    (guess_n_gle :generate) (guess_v_gle :generate)))
+  '((named_gle :generate) (guess_n_gle :generate)
+    (card_gle :generate) (ord_gle :generate)
+    (decade_gle :generate) (yofc_gle :generate)
+    (dofw_gle :generate) (dofm_gle :generate)))
 
 (defparameter *non-idiom-root*
     'root_non_idiom )
@@ -546,5 +544,4 @@
 ;;; wanted (using an array of Matrix grammars and an interlingua semantics).
 ;;;
 (setf *translate-grid* '(:en . (:en)))
-
 
