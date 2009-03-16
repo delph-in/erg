@@ -117,9 +117,7 @@
       with predlist = (unless carg (cl-ppcre:split "_" pred))
       ;; Input is an 'exploded' predname, sans underscore: ("" "foo" "n" "rel")
       ;; Assuming predname was either "_foo_v_unk-vbz_rel" or "_foo_vbz_rel"
-      with tag = (when predlist 
-		   (or (and (fifth predlist) (fourth predlist))
-		       (third predlist)))
+      with tag = (when predlist (third predlist))
       with surface = (or (and carg
 			      (substitute #\space #\_ carg :test #'char=))
 			 (and predlist
@@ -161,15 +159,15 @@
 (defun gle-tag-p (tag gle)
   (let ((id (gle-id gle)))
     (or (and (eq id 'guess_n_gle) 
-	     (member tag '("nn" "unk-nn") :test #'string-equal))
+	     (member tag '("n" "nn" "unk-nn") :test #'string-equal))
 	(and (eq id 'guess_v_gle) 
-	     (member tag '("vb" "vbz" "vbd" "vbg" "vbn"
+	     (member tag '("v" "vb" "vbz" "vbd" "vbg" "vbn"
 		           "unk-vb" "unk-vbz" "unk-vbd" "unk-vbg" "unk-vbn")
 			  :test #'string-equal))
 	(and (eq id 'generic_adj) 
-	     (member tag '("jj" "unk-jj") :test #'string-equal))
+	     (member tag '("j" "jj" "unk-jj") :test #'string-equal))
 	(and (eq id 'generic_adverb) 
-	     (member tag '("rb" "unk-rb") :test #'string-equal)))))
+	     (member tag '("r" "rb" "unk-rb") :test #'string-equal)))))
 
 ;; This function is just a place-holder. It should eventually either do a 
 ;; look-up in a very large table of |surface stem tag| for 'all' English 

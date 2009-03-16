@@ -63,9 +63,9 @@
 
 (defparameter *start-symbol* 
   #-:arboretum
-  ;'(root_strict)
+  '(root_strict)
   ;'(root_strict root_informal)
-  '(root_strict root_frag)
+  ;'(root_strict root_frag)
   ;'(root_strict root_informal root_frag root_inffrag)
   ;'(root_strict root_informal root_frag root_inffrag root_robust)
   ;'(root_formal)
