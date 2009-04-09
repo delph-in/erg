@@ -122,12 +122,9 @@
   '(STEM RELS HCONS RNAME)
   "restrictor used when parsing with ambiguity packing")
 
-;;; (setf *chart-packing-p* t)
-
 ;;;
 ;;; increase dag pool size
 ;;;
-
 (defparameter *dag-pool-size* 200000)
 (defparameter *dag-pool*
   (if (and (pool-p *dag-pool*) 
@@ -453,9 +450,7 @@
 ;;; that INSTLOC values in QEQs be re-entrant for it to work as intended.
 ;;;                                                            (14-jul-04; oe)
 (setf *gen-packing-p* t)
-
 (setf *gen-filtering-p* t)
-
 (setf *gen-equate-qeqs-p* t)
 
 ; DPF 27-Nov-03 - Finally noticed that on the current clever approach to
@@ -476,10 +471,9 @@
 ;;; as of mid-december 2003, the generator allows specification of the non-foot
 ;;; daughters in adjunction rules; make this conditional on LKB source version,
 ;;; so the grammar still loads into older LKBs.                (18-dec-03; oe)
-
 ;;;
 ;;; index accessibility filtering is incompatible with two-phase generation,
-;;; and should also not be needed anymore.                     (14-jul-04; oe)
+;;; which should not be needed anymore, anyway.                (14-jul-04; oe)
 ;;;                          
 (setf *intersective-rule-names* nil
   #+:null

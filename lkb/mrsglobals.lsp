@@ -41,7 +41,7 @@
 (setf *construction-semantics-path*
   `(,(vsym "C-CONT") ,(vsym "RELS") ,(vsym "LIST")))
 
-(setf *c-cont-check-path* 
+(setf lkb::*c-cont-check-path* 
   `(,(vsym "C-CONT")))
 
 (setf *psoa-top-h-path* nil
