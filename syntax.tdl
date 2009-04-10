@@ -3142,10 +3142,10 @@ proper_np_phrase := norm_bare_np_phrase &
                MODIFD #modif ] ] >,
     C-CONT.RELS <! [ PRED proper_q_rel ] !> ].
                       
+#|
 proper_np_noconj := proper_np_phrase &
   [ ARGS < [ SYNSEM.LOCAL.CONT.HOOK.INDEX nonconj_ref-ind ] > ].
 
-#|
 proper_np_conj := proper_np_phrase &
   [ ARGS < [ SYNSEM [ LOCAL.CONT.HOOK.INDEX conj_ref-ind,
                       MODIFD hasmod ] ] > ].
@@ -3585,7 +3585,8 @@ np_n_cmpnd_phr := n_n_cmpnd_phr &
     NH-DTR [ INFLECTD -,
              SYNSEM [ LOCAL [ CAT [ HEAD noun &
                                    [ MINORS [ MIN named_or_meas_rel,
-                                              ALTMIN impl_or_proper_q_rel ],
+                                              ALTMIN impl_or_proper_q_rel,
+					      NORM norm_rel ],
                                      PRD - ],
                                     VAL [ SPR *anti_list*,
                                           SUBJ < > ] ] ],
@@ -3763,11 +3764,13 @@ np_city_state_phr := norm_np_name_cmpnd_phr &
 ; for "[story involving] cats"
 ; DPF 16-sept-08 - Added HD.DTR..HEAD noun_or_nomger to block spurious 
 ; analysis for |rule-based|.
+; DPF 05-apr-09 - But this also blocks |pea-sized| which we want.  So have to
+; live with extra analysis for |rule-based|
 
 basic_noun_n_cmpnd_phr := n_n_cmpnd_phr &
   [ SYNSEM.MODIFD.LPERIPH #lperiph,
     HD-DTR.SYNSEM abstr_lex_synsem & 
-                    [ LOCAL.CAT.HEAD noun_or_nomger & 
+                    [ LOCAL.CAT.HEAD noun_or_nomger_or_nadj & 
 				     [ MINORS.MIN nbar_or_nger_rel ],
                       LEX + ],
     NH-DTR 
@@ -3851,6 +3854,10 @@ noun_title_cmpnd_phr := basic_n_n_cmpnd_phr &
 ; DPF 30-oct-06 - Stopped passing up of ALTMIN from dtr to mother, since
 ; we want to coordinate "large and medium-sized" where "large" says ALTMIN
 ; is norm_rel.  Instead, stamp norm_rel on mother's ALTMIN.
+; DPF 05-apr-09 - FIX: We currently can't parse "inch-sized" since we don't
+; want measure nouns as nonheads in noun-noun compounds ("*inch string" vs.
+; "three-inch string"), yet we normally build "pea-sized" first as an N-N
+; compound which then undergoes this rule.
 
 n-adj_phrase := basic_unary_phrase &
   [ SYNSEM 
@@ -3928,6 +3935,9 @@ n-adj_phrase := basic_unary_phrase &
 ; DPF 7-feb-08 - Preserve CONJ value from right dtr to mother
 ; Also, removed POSTHD - to allow e.g.'The mountains are snow-covered'
 ; So in order to still block "Abrams-put"
+; DPF 05-apr-09 - Considered removing first dtr's NORM no_rel since we want 
+; to allow e.g. 'inch-wide', but this would also allow "being interviewed"
+; as compound, so let's not, and FIX some other way.
 
 basic_n_v-or-adj_cmpnd_phr := binary_punct_phrase &
   [ INFLECTD +,
@@ -5660,7 +5670,7 @@ np_pred_rule := binary_rule_right_to_left & np_pred_phr.
 
 bare_np_rule := rule & bare_np_phrase.
 ;bare_nomger_rule := rule & bare_nomger_phrase.
-proper_np_rule := rule & proper_np_noconj.
+proper_np_rule := rule & proper_np_phrase.
 ;proper_np_conj_rule := rule & proper_np_conj.
 num_np_rule := rule & num_np_noconj.
 ;num_np_conj_rule := rule & num_np_conj.
@@ -6924,6 +6934,49 @@ nbar_coord_mid_noconj_rule := nom_coord_mid_noconj_rule &
                       qeq & [ HARG #rstr,
                               LARG #rtop ] !> ] ].
 
+; DPF 05-apr-09 - Restrict to parenthesized NPs, as in "students (Kim, Pat)"
+np_coord_top_noconj_rule := binary_rule_right_to_left & basic_nom_coord_rule &
+  [ INFLECTD +,
+    SYNSEM [ LOCAL [ CAT [ HEAD.CASE non_obliq,
+			   VAL.SPR < > ],
+                     CONJ cnil ],
+             PUNCT [ LPUNCT lparen_punct,
+                     PAIRED no_ppair,
+                     RPUNCT #rpunct ] ],
+    LCONJ-DTR [ SYNSEM [ LOCAL [ CAT [ HEAD.CASE non_obliq,
+				       VAL.SPR *olist* ],
+                                 CONT.HOOK.INDEX #lind & nonconj_ref-ind,
+                                 CONJ cnil ],
+                         PUNCT [ LPUNCT lparen_punct,
+                                 RPUNCT comma_punct ] ],
+                INFLECTD + ], 
+    RCONJ-DTR [ SYNSEM [ LOCAL [ CAT [ HEAD [ CASE non_obliq,
+					      MINORS.MIN nonpro_rel ],
+				       VAL.SPR *olist* ],
+				 CONT.HOOK.INDEX #rind & nonconj_ref-ind,
+                                 CONJ cnil ],
+                         PUNCT [ LPUNCT no_punct,
+                                 RPUNCT #rpunct,
+				 RCLSTR.RPAREN + ],
+                         MODIFD.RPERIPH bool ],
+                INFLECTD + ],
+    ORTH [ FROM #from, TO #to ],
+    C-CONT [ HOOK [ INDEX #cind & conj-ind ],
+             RELS <! [ PRED udef_q_rel,
+                           ARG0 #cind,
+                           RSTR #harg,
+			   CFROM #from, CTO #to ],
+                         basic_conj_relation &
+                         [ LBL #ctop,
+                           PRED implicit_conj_rel,
+                           ARG0 #cind & non_expl,
+                           L-INDEX #lind,
+                           R-INDEX #rind,
+			   CFROM #from, CTO #to ] !>,
+             HCONS <! qeq & [ HARG #harg,
+			      LARG #ctop ] !> ],
+    GENRE nonformal ].
+
 ; Exclude proper name nbar coord for now at least.
 ; DPF 26-aug-04 - Generalized dtrs' HEAD from noun to noun_or_nomger
 ; DPF 25-feb-05 - Added unif of NORM on mother and dtrs to preserve
@@ -7112,6 +7165,9 @@ nbar_coord_mid_ig_rule := nbar_coord_mid_rule & mid_coord_infgen_rule.
 ; and children" but allow "my husband and children"
 ; DPF 2-Mar-05 - Removed ALTMIN explicit_q_rel because it prevented
 ; 'without husband and children'.
+; DPF 09-apr-09 - Block mid-coord right dtr, since that conjunction will
+; always be plural, and thus falsely permit e.g. "Abrams, cat and dog" as
+; a plural NP.
 
 nbar_coord_asym_rule := nbar_coord_rule &
   [ INFLECTD +,
@@ -7121,7 +7177,8 @@ nbar_coord_asym_rule := nbar_coord_rule &
                 SYNSEM.LOCAL.CAT.VAL.SPR < [ LOCAL.AGR [ PNG.PN 3s,
                                                          DIV - ] ] > ],
     RCONJ-DTR [ INFLECTD +,
-                SYNSEM.LOCAL.CAT.VAL.SPR < [ LOCAL.AGR.PNG.PN 3p ] > ] ].
+                SYNSEM.LOCAL [ CAT.VAL.SPR < [ LOCAL.AGR.PNG.PN 3p ] >,
+			       CONJ lex-conj ] ] ].
 
 nbar_coord_asym_2_rule := nbar_coord_rule &
   [ INFLECTD +,

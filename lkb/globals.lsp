@@ -63,11 +63,11 @@
 
 (defparameter *start-symbol* 
   #-:arboretum
-  '(root_strict)
-  ;'(root_strict root_informal)
+  ;'(root_strict)
+  ;'(root_informal)
   ;'(root_strict root_frag)
-  ;'(root_strict root_informal root_frag root_inffrag)
-  ;'(root_strict root_informal root_frag root_inffrag root_robust)
+  '(root_informal root_frag root_inffrag)
+  ;'(root_informal root_frag root_inffrag root_robust)
   ;'(root_formal)
   #+:arboretum
   '(root_strict root_strict_robust)
@@ -375,7 +375,7 @@
     a_det_rbst a_det_2_rbst a_det_3_rbst an_det_rbst an_det_2_rbst
     its_poss_rbst let_rbst_v1 let_rbst_v2 permit_rbst_v1 recommend_rbst_v1
     advise_rbst_v1 allow_rbst_v1 enable_rbst_v1 suggest_rbst_v1 
-    foot_apostr_n1 avec_nbar threshhold_n1 awful_adv
+    foot_apostr_n1 avec_nbar threshhold_n1 awful_adv broke_robust
     ; Exclude contracted auxiliaries for the time being
     be_c_am_cx be_c_am_cx_2 be_c_are_cx be_c_is_cx be_c_is_cx_2
     be_id_am_cx be_id_am_cx_2 be_id_are_cx be_id_is_cx be_id_is_cx_2
