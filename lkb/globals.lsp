@@ -154,7 +154,12 @@
 
 (defparameter *label-template-type* 'label)
 
-;;; for the compare function 
+;;; the default sentence
+(defparameter *last-parses*
+  (let ((symbol (find-symbol "*LAST-PARSES*" :lkb)))
+    (if (and (boundp symbol) (rest (symbol-value symbol)))
+      (symbol-value symbol)
+      '("Abrams hired two competent programmers."))))
 
 ; For character encoding
 (defparameter cdb::*cdb-ascii-p* nil)
