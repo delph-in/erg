@@ -1,0 +1,123 @@
+;;; -*- Mode: tdl; Coding: utf-8; -*-
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; re-combine punctuation marks with adjacent tokens, based on directionality
+;;; of punctuation marks, e.g. opening vs. closing quotes and brackets.  doing
+;;; one such re-combination at a time is sufficient, as each rewrite rule will
+;;; apply as many times as it possible can, seeing its own output from earlier
+;;; applications.
+;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;
+;; but first, preserve the current (non-punctuated) from in +CARG, for later
+;; reference, e.g. in constructing +PRED values for generics.  NE rules have
+;; done this already, hence make sure to not overwrite existing +CARGSs.
+;;
+default_carg_tmr := one_one_tmt &
+[ +INPUT < [ +FORM #form, +ONSET #onset, +CLASS #class,
+             +PRED #pred, +CARG anti_string, +TNT #tnt ] >,
+  +OUTPUT < [ +FORM #form, +ONSET #onset, +CLASS #class,
+              +PRED #pred, +CARG #form, +TNT #tnt ] > ].
+
+;;
+;; _fix_me_
+;; when re-attaching pre- or suffix punctuation to NEs, we should find a way of
+;; forcing the application of corresponding punctuation rules eventually.  as
+;; things are now, an NE with adjacent punctuation creates spurious ambiguity:
+;; |oe@yy.com.| is matched as an NE prior to re-attaching the period.  when the
+;; token with the trailing period is sent through the morphology, two analyses
+;; are created, one with, another without a `punct_period' expectation.  both
+;; succeed, as there is no testing against a lexical stem with the generic LE.
+;; for NEs, at least, i think one could work around this by adding properties 
+;; to each token, +PRFX and +SFFX, say, each a list of strings.  in the case of
+;; |oe@yy.com.|, the suffix punctuation rule would add to the +SFFX front, say:
+;; [ +SFFX < "." > ].  the corresponding orthographemic rules would then have
+;; to `pop' the list (to make things simpler, non-generic tokens could leave 
+;; +SFFX underspecified), and at some point (syntactic rules, for example), an
+;; empty +SFFX (and +PRFX ) would be the pre-requisite to any further rule
+;; applications.  --- discuss this with dan one day.            (8-feb-09; oe)
+;;
+
+;;
+;; _fix_me_
+;; there is a problem here: where we `multiply out' tokens earlier, we need to
+;; be able to (re-)attach prefix and suffix punctuation to more than one host.
+;; that would require not consuming the punctuation mark(s) at this point, but
+;; rather pick them up as CONTEXT (and later throw out any isolated punctuation
+;; marks).                                                      (26-sep-08; oe)
+;;
+prefix_punctuation_tmr := two_one_final_form_tmt &
+[ +INPUT < [ +FORM ^([[({“‘]+)$ ], 
+           [ +FORM ^(.+)$ ] >,
+  +OUTPUT < [ +FORM "${I1:+FORM:1}${I2:+FORM:1}" ] > ].
+
+;;
+;; _fix_me_
+;; there is a special case here: |'| following a token ending in |s| could be a
+;; possessive marker (which should remain a token in its own right), or could 
+;; be a closing single quote.  in principle, the same is true for |"|, but the
+;; `inches' measure unit, maybe, will have been detected during NE recognition
+;; earlier.  in either case, we would need a way of keeping a separate |'| in
+;; the chart, and also re-combine it with the preceding token.  (14-sep-08; oe)
+;;
+;; _fix_me_
+;; in principle, the single closing quote should be in the suffix class too,
+;; but we need to address the token-level ambiguity first.      (13-nov-08; oe)
+;;
+suffix_punctuation_tmr := two_one_initial_form_tmt &
+[ +INPUT < [ +FORM ^(.+)$ ],
+           [ +FORM ^([])}”",;.!?]+)$ ] >,
+  +OUTPUT < [ +FORM "${I1:+FORM:1}${I2:+FORM:1}" ] > ].
+
+suffix_apostrophe_tmr := two_one_initial_form_tmt &
+[ +INPUT < [ +FORM ^(.+[^sS])$ ],
+           [ +FORM ^(['’][])}”",;.!?]?)$ ] >,
+  +OUTPUT < [ +FORM "${I1:+FORM:1}${I2:+FORM:1}" ] > ].
+
+;;
+;; two similar rules, converting (some) directional GML tokens into affixes
+;;
+prefix_markup_tmr := two_one_final_form_tmt &
+[ +INPUT < [ +FORM ^([({`“]*¦i)$ ], 
+           [ +FORM ^(.+)$ ] >,
+  +OUTPUT < [ +FORM "${I1:+FORM:1}${I2:+FORM:1}" ] > ].
+
+suffix_markup_tmr := two_one_initial_form_tmt &
+[ +INPUT < [ +FORM ^(.+)$ ],
+           [ +FORM ^(i¦[?,.!)}”"]*)$ ] >,
+  +OUTPUT < [ +FORM "${I1:+FORM:1}${I2:+FORM:1}" ] > ].
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; _fix_me_
+;;; i would prefer doing these rules earlier, but as long as i have no way of
+;;; re-combining +INPUT and +CONTEXT tokens (see my email to peter of today),
+;;; token level ambiguity cannot be introduced before the prefix and suffix
+;;; punctuation rules.                                         (26-sep-08; oe)
+;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;
+;; now, with +CLASS information available, optionally make any token that is
+;; (a) capitalized and not initial or (b) spelled in mixed case (|LinGO|) a
+;; proper NE.
+;;
+;; _fix_me_
+;; the ERG lexicon includes a few entries (e.g. titles like |Mr.| and |Jr.|)
+;; with capitalized orthography.  currently capitalized NEs are about the only
+;; class of generics that can survive alongside a native entry (in the lexical
+;; filtering phase), hence it might make sense to prune unwanted tokens here,
+;; even though that means knowledge about the ERG lexicon is applied at token
+;; mapping already.                                            (23-jan-09; oe)
+;;
+capitalized_name_tmr := add_ne_tmt &
+[ +CONTEXT < [ +CLASS alphanumeric & [ +INITIAL -, +CASE capitalized ] ] >,
+  +OUTPUT < [ +CLASS proper_ne ] > ].   
+
+mixed_name_tmr := add_ne_tmt &
+[ +CONTEXT < [ +CLASS alphanumeric & [ +CASE mixed ] ] >,
+  +OUTPUT < [ +CLASS proper_ne ] > ].   
+

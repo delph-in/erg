@@ -1,0 +1,161 @@
+;;; -*- Mode: tdl; Coding: utf-8; -*-
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; at this point, we multiply out PoS values on all tokens, where for each
+;;; original token as many additional tokens are created (in the same chart
+;;; cell) as there are PoS readings.  at this point, we start distinguishing
+;;; between tokens that activate native lexical entries (LEs), vs. those that
+;;; activate generic LEs.  in the token universe, this distinction is made by
+;;; virtue of +ONSET, with unk_onset reserved for generic LEs.  the two sets
+;;; do not overlap, i.e. for a single original token with two PoS readings, we
+;;; end up with a total of three new tokens.  the pair of rules below resembles
+;;; a recursive function, terminating once the PoS list has been reduced to 
+;;; a singleton element.  form-based named entities identified earlier avoid
+;;; this kind of PoS multiplication because they have already emptied out their
+;;; PoS list.
+;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;
+;; even though we originally made sure all tokens had a fully specified +TNT
+;; value, intervening rules could have `leaked' PoS information.  if so, once
+;; again, fully annul the +TNT value.
+;;
+tnt_default_tmr := one_one_tmt &
+[ +INPUT < [ +FORM #form, +ONSET #onset, +CLASS #class,
+             +PRED #pred, +CARG #carg, +TNT [ +TAGS < anti_string, ... > ] ] >,
+  +OUTPUT < [ +FORM #form, +ONSET #onset, +CLASS #class,
+              +PRED #pred, +CARG #carg, +TNT null_tnt ] > ].
+
+tnt_recurse_tmr := token_mapping_rule &
+[ +INPUT < [ +FORM #form, +ONSET anti_onset,
+             +CLASS #class, +PRED #pred, +CARG #carg,
+             +ID #id, +FROM #from, +TO #to,
+             +TNT [ +TAGS < #tag . #tags & *cons* >,
+                    +PRBS < #prb . #prbs & *cons* > ] ] > ,
+  +OUTPUT < [ +FORM #form, +ONSET unk_onset,
+              +CLASS #class, +PRED #pred, +CARG #carg,
+              +ID #id, +FROM #from, +TO #to,
+              +TNT [ +TAGS < #tag >, +PRBS < #prb > ] ],
+            [ +FORM #form,
+              +CLASS #class, +PRED #pred, +CARG #carg,
+              +ID #id, +FROM #from, +TO #to,
+              +TNT [ +TAGS #tags, +PRBS #prbs ] ] > ,
+  +POSITION "O1@I1, O2@I1" ].
+
+tnt_terminate_tmr := token_mapping_rule &
+[ +INPUT < [ +FORM #form, +ONSET anti_onset,
+             +CLASS #class, +PRED #pred, +CARG #carg,
+             +ID #id, +FROM #from, +TO #to,
+             +TNT [ +TAGS < #tag >, +PRBS < #prb > ] ] > ,
+  +OUTPUT < [ +FORM #form, +ONSET unk_onset,
+              +CLASS #class, +PRED #pred, +CARG #carg,
+              +ID #id, +FROM #from, +TO #to,
+              +TNT [ +TAGS < #tag >, +PRBS < #prb > ] ],
+            [ +FORM #form, +ONSET con_or_voc,
+              +CLASS #class, +PRED #pred, +CARG #carg,
+              +ID #id, +FROM #from, +TO #to,
+              +TNT null_tnt ] >,
+  +POSITION "O1@I1, O2@I1" ].
+
+;;;
+;;; with singleton PoS readings multiplied out in each chart cell, we can prune
+;;; undesirable alternatives, e.g. a foreign word reading when there also is a
+;;; common noun.  also, ditch PoS readings with very low probability, and ones
+;;; for which no PoS-activated generic entries exist anyway (function words).
+;;;
+
+tnt_ditch_unlikely_tmr := token_mapping_rule &
+[ +INPUT < [ +TNT.+PRBS < ^0?\.0.*$ > ] >,
+  +OUTPUT < > ].
+
+tnt_ditch_function_1_tmr := token_mapping_rule &
+[ +INPUT < [ +TNT.+TAGS < ^CC|DT|EX|IN|MD|PDT|POS|PRP\$?|RB[RS]$ > ] >,
+  +OUTPUT < > ].
+
+tnt_ditch_function_2_tmr := token_mapping_rule &
+[ +INPUT < [ +TNT.+TAGS < ^RP|TO|UH|WDT|WP|WRB$ > ] >,
+  +OUTPUT < > ].
+
+tnt_ditch_function_3_tmr := token_mapping_rule &
+[ +INPUT < [ +TNT.+TAGS < ^\$|#|``|''|\(|\)|,|\.|:$ > ] >,
+  +OUTPUT < > ].
+
+;;
+;; _fix_me_
+;; experimentally, also ditch PoS information on punctuation-only tokens.  we
+;; appear to get noun and adjective readings for n- and m-dashes, which hardly
+;; can do us any good.                                         (24-sep-08; oe)
+;;
+tnt_ditch_punctuation_tmr := token_mapping_rule &
+[ +INPUT < [ +FORM ^[[:punct:]]+$, +TNT.+TAGS *cons* ] >,
+  +OUTPUT < > ].
+
+;;;
+;;; _fix_me_
+;;; should we eventually want to include the PoS probabilities as a feature in
+;;; parse selection, this kind of pruning should disappear: a high-probability
+;;; FW, say, should not be bullied out by an unlikely NN.       (31-aug-08; oe)
+;;;
+tnt_filter_dup_fw_tmr := token_mapping_rule &
+[ +CONTEXT  < [ +TNT.+TAGS < "NN" > ] >,
+  +INPUT    < [ +TNT.+TAGS < "FW" > ] >,
+  +OUTPUT   < >,
+  +POSITION "I1@C1" ].
+
+tnt_filter_dup_nnp_tmr := token_mapping_rule &
+[ +CONTEXT  < [ +TNT.+TAGS < ^FW|NN$ > ] >,
+  +INPUT    < [ +TNT.+TAGS < "NNP" > ] >,
+  +OUTPUT   < >,
+  +POSITION "I1@C1" ].
+
+tnt_filter_dup_nnps_tmr := token_mapping_rule &
+[ +CONTEXT  < [ +TNT.+TAGS < "NNP" > ] >,
+  +INPUT    < [ +TNT.+TAGS < "NNPS" > ] >,
+  +OUTPUT   < >,
+  +POSITION "I1@C1" ].
+
+;;
+;; _fix_me_
+;; the old `posmapping' setting in PET contained the following comment by dan
+;; (from sep-07):
+;; 
+;;   Tried doing without the adjective, since TNT appears to mostly guess both
+;;   an adjective and a noun, and our generic mass-count noun can almost always
+;;   do the work of the adjective.  This would avoid large amounts of spurious
+;;   ambiguity for most occurrences of these pairs.  But unfortunately TNT 
+;;   doesn't always guess both, so we need JJ when it's the only guess.  Maybe
+;;   we can effect this with the new token-mapping machinery ...
+;;
+;; the following rule should have that effect.                 (21-jan-09; oe)
+;;
+;; DPF 24-mar-09 - Unfortunately, this simple rule goes wrong sometimes.  For 
+;; "the tallest and most unk-word cat" the |unk-word| has to be an adjective,
+;; so we can't just throw it away.  We'll try using the probabilities
+;; from the tagger for a more sensitive rule.
+;;
+tnt_filter_dup_jj_tmr := token_mapping_rule &
+[ +CONTEXT  < [ +TNT [ +TAGS < "NN" >, +PRBS < ^0?\.[2-9].*$ > ] ] >,
+  +INPUT    < [ +TNT.+TAGS < "JJ" > ] >,
+  +OUTPUT   < >,
+  +POSITION "I1@C1" ].
+
+;;
+;; on all tokens that we expect to activate generic entries, make the +PRED
+;; value reflect the orthography and PoS tag.
+;;
+generic_pred_tmr := token_mapping_rule &  
+[ +INPUT < [ +FORM #form,
+             +ONSET #onset & unk_onset, +CLASS #class & non_ne, 
+             +PRED anti_string, +CARG #carg & ^(.+)$,
+             +ID #id, +FROM #from, +TO #to,
+             +TNT #tnt & [ +TAGS < ^([[:alpha:]])(.*)$ > ] ] >,
+  +OUTPUT < [ +FORM #form,
+              +ONSET #onset, +CLASS #class,
+              +PRED "_${lc(I1:+CARG:1)}_${lc(I1:+TNT.+TAGS.FIRST:1)}_unk_rel",
+              +CARG #carg,
+              +ID #id, +FROM #from, +TO #to,
+              +TNT #tnt ] >,
+  +POSITION "O1@I1" ].

@@ -1,0 +1,118 @@
+;;; -*- Mode: tdl; Coding: utf-8; -*-
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; some tokenizers (e.g. the one of acrolinx) already distinguish a number of
+;;; token classes.  our REPP tokenizer, however, does not; so, determine class
+;;; values here, if need be.  with acrolinx, we might have to map their naming
+;;; scheme into our type hierarchy, on the other hand.
+;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+numeric_class_tmr := token_class_tmt &
+[ +INPUT < [ +FORM ^[[:digit:]]+$ ] >,
+  +OUTPUT < [ +CLASS numeric ] > ].
+
+punct_class_tmr := token_class_tmt &
+[ +INPUT < [ +FORM ^[[:punct:]]+$ ] >,
+  +OUTPUT < [ +CLASS non_alphanumeric ] > ].
+
+alphabetic_class_tmr := token_class_tmt &
+[ +INPUT < [ +FORM ^[[:alpha:]]+$ ] >,
+  +OUTPUT < [ +CLASS alphabetic ] > ].
+
+alphanumeric_class_tmr := token_class_tmt &
+[ +INPUT < [ +FORM ^[[:alnum:]._-]+$ ] >,
+  +OUTPUT < [ +CLASS alphanumeric ] > ].
+
+non_alphanumeric_class_tmr := token_class_tmt &
+[ +OUTPUT < [ +CLASS non_alphanumeric ] > ].
+
+;;
+;; further decorate the token class with information about (a) sentence-initial
+;; position and (b) capitalization.  because these are attributes of +CLASS
+;; (and there is no way of overwriting), we play a nasty trick on +CARG, viz.
+;; utilize it as a `scratch' slot to prevent cyclic rule applications.  we
+;; (kind of) assume that no external tokenizer will pass in +CARG values; and
+;; if it did, the worst that would happen is that the rules below cannot fire.
+;;
+
+;;
+;; while we have tokenized off punctuation marks, the `initial' position is a
+;; somwhat fuzzy notion.  we want to ignore punctuation-only tokens, i.e. the 
+;; quote marks in |``Cookies'', she said.| do not make |Cookies| non-initial.
+;; but neither should |,| or |she| be regarded initial, hence we need to allow
+;; the +CONTEXT token anywhere to the left, not just immediately preceding.
+;;
+non_initial_tmr := token_case_tmt &
+[ +CONTEXT < [+FORM ^.*[^[:punct:]].*$ ] >,
+  +INPUT < [ +CARG anti_string, +ID #id, +FROM #from, +TO #to ] >,
+  +OUTPUT < [ +CLASS [ +INITIAL - ], +CARG non_string,
+              +ID #id, +FROM #from, +TO #to ] >,
+  +POSITION "C1<<I1, O1@I1" ].
+
+initial_tmr := one_one_token_case_tmt &
+[ +INPUT < [ +CARG anti_string ] >,
+  +OUTPUT < [ +CLASS [ +INITIAL + ], +CARG non_string ] > ].
+
+;;
+;; various combinations of initial capitalization and mixed case (see the type
+;; definitions below `token_case' for details).  `alphanumeric' introduces 
+;; +CASE, so the REs in the rules below presuppose an alphanumeric token.
+;;
+capitalized+lower_tmr := one_one_token_case_tmt &
+[ +INPUT < [ +FORM ^[[:upper:]][[:lower:][:digit:]._-]+$, 
+             +CARG non_string ] >,
+  +OUTPUT < [ +CLASS [ +CASE capitalized+lower ], 
+              +CARG anti_string ] > ].
+
+capitalized+upper_tmr := one_one_token_case_tmt &
+[ +INPUT < [ +FORM ^[[:upper:]][[:upper:][:digit:]._-]+$, 
+             +CARG non_string ] >,
+  +OUTPUT < [ +CLASS [ +CASE capitalized+upper ], 
+              +CARG anti_string ] > ].
+
+capitalized+mixed_tmr := one_one_token_case_tmt &
+[ +INPUT < [ +FORM ^[[:upper:]][[:alnum:]._-]+$, 
+             +CARG non_string ] >,
+  +OUTPUT < [ +CLASS [ +CASE capitalized+mixed ], 
+              +CARG anti_string ] > ].
+
+capitalized+non_mixed_tmr := one_one_token_case_tmt &
+[ +INPUT < [ +FORM ^[[:upper:]]$, 
+             +CARG non_string ] >,
+  +OUTPUT < [ +CLASS [ +CASE capitalized+non_mixed ], 
+              +CARG anti_string ] > ].
+ 
+non_capitalized+lower_tmr := one_one_token_case_tmt &
+[ +INPUT < [ +FORM ^[[:lower:][:digit:]._-]+$, 
+             +CARG non_string ] >,
+  +OUTPUT < [ +CLASS [ +CASE non_capitalized+lower ], 
+              +CARG anti_string ] > ].
+
+non_capitalized+mixed_tmr := one_one_token_case_tmt &
+[ +INPUT < [ +FORM ^[[:lower:][:digit:]._-].*[[:upper:]].*$, 
+             +CARG non_string ] >,
+  +OUTPUT < [ +CLASS [ +CASE non_capitalized+mixed ], 
+              +CARG anti_string ] > ].
+  
+;;
+;; finally, we need to make sure no [ +CARG non_string ] values are left, as
+;; these were only meaningful within the set of `decoration' rules above.
+;;
+no_case_tmr := one_one_token_case_tmt &
+[ +INPUT < [ +CARG non_string ] >,
+  +OUTPUT < [ +CARG anti_string ] > ].
+
+
+;;
+;; in case we are running without a PoS tagger, or something went wrong in the
+;; creation of token AVMs from our input (in one form or another), make sure to
+;; fully annul part-of-speech information.
+;;
+null_tnt_tmr := one_one_tmt &
+[ +INPUT < [ +FORM #form, +ONSET #onset, +CLASS #class,
+             +PRED #pred, +CARG #carg, +TNT [ +TAGS < anti_string, ... > ] ] >,
+  +OUTPUT < [ +FORM #form, +ONSET #onset, +CLASS #class,
+              +PRED #pred, +CARG #carg, +TNT null_tnt ] > ].

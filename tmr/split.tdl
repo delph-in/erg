@@ -1,0 +1,72 @@
+;;; -*- Mode: tdl; Coding: utf-8; -*-
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; now with NEs out of our way, this would be a good time for adjustments to
+;;; tokenization: introduce additional token boundaries (e.g. for hyphens and 
+;;; slashes) and maybe some robustness rules for `sandwiched' punctuation.
+;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;
+;; make hyphen a token in its own right between numbers (an n-dash, actually),
+;; e.g. |50-60|.  otherwise, break at hyphens following alphabetic prefixes,
+;; but keep the hyphen on the prefix, e.g. |sub-| |discipline|.
+;;
+numeric_hyphen_tmr := one_three_tmt &
+[ +INPUT < [ +FORM ^([+-]?[0-9]+(?:\.[0-9]*)?)-([0-9]+(?:\.[0-9]*)?)$,
+             +ONSET #onset, +CLASS non_ne,
+             +PRED #pred, +CARG #carg, +TNT #tnt ] >,
+  +OUTPUT < [ +FORM "${I1:+FORM:1}",
+              +ONSET #onset, +PRED #pred, +CARG #carg, +TNT #tnt ],
+            [ +FORM "–",
+              +ONSET con_or_voc, +PRED #pred, +CARG #carg, +TNT null_tnt ],
+            [ +FORM "${I1:+FORM:2}",
+              +ONSET #onset, +PRED #pred, +CARG #carg, +TNT #tnt ] > ].
+
+;;
+;; _fix_me_
+;; when we break up tokens, it is not obvious which tag to assign to the first
+;; segment.  often, especially for unknown words (which most hyphenated tokens
+;; are), the PoS value will reflect the suffix.  for now, copy over +TNT to the
+;; initial segment.  if nothing else, names should still work when capitalized,
+;; for tokens containing multiple hyphens, the rule will apply from the rear,
+;; i.e. the final segment is guaranteed to carry the +TNT information.
+;; i just re-tooled this rule a little, see whether dan likes it this way?
+;;                                                              (12-jan-09; oe)
+alphabetic_hyphen_tmr := one_two_tmt &
+[ +INPUT < [ +FORM ^(.+-)([[:alnum:]]+-?)$,             
+             +ONSET #onset, +CLASS non_ne,
+             +PRED #pred, +CARG #carg, +TNT #tnt ] >,
+  +OUTPUT < [ +FORM "${I1:+FORM:1}",
+              +ONSET #onset, +PRED #pred, +CARG #carg, +TNT #tnt ],
+            [ +FORM "${I1:+FORM:2}",
+              +ONSET #onset, +PRED #pred, +CARG #carg, +TNT #tnt ] > ].
+
+;;
+;; with the new addition of derivational lexical rules, immediately re-attach
+;; certain (verbal) prefixes (e.g. |mis-| and |re-|).  it is a bit unfortunate
+;; that we end up duplicating information from the orthographemic annotation
+;; on those rules in token mapping, but i imagine the linguistic arguments for
+;; this particular treatment are overwhelming.
+;;
+derivational_prefix_tmr := two_one_final_form_tmt &
+[ +INPUT < [ +FORM ^((?:mis|p?re)-)$ ],
+           [ +FORM ^([[:alnum:]]+)$ ] >,
+  +OUTPUT < [ +FORM "${I1:+FORM:1}${I2:+FORM:1}" ] > ].
+
+;;
+;; _fix_me_
+;; there will be more to do about slashes, no doubt ...         (12-jan-09; oe)
+;;
+alphabetic_slash_tmr := one_three_tmt &
+[ +INPUT < [ +FORM ^(.+)/([[:alnum:]]+)$,             
+             +ONSET #onset, +CLASS non_ne,
+             +PRED #pred, +CARG #carg, +TNT #tnt ] >,
+  +OUTPUT < [ +FORM "${I1:+FORM:1}",
+              +ONSET #onset, +PRED #pred, +CARG #carg, +TNT #tnt ],
+            [ +FORM "/",
+              +ONSET con_or_voc, +PRED #pred, +CARG #carg, +TNT null_tnt ],
+            [ +FORM "${I1:+FORM:2}",
+              +ONSET #onset, +PRED #pred, +CARG #carg, +TNT #tnt ] > ].
