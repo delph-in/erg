@@ -182,7 +182,12 @@
 ;; 31-mar-09
 ;; For now, keeping the old definition in batch-check.lsp, since the ERG's
 ;; diff-lists all generate the warning, which the new code sends to ostream.
+;; This patch will disappear as soon as the latest LKB improvements are
+;; incorporated into the logon branch
+;;
 (in-package :lkb)
+
+#+:logon
 (defun check-dag-diff-list (dag id path &optional (ostream t))
   (let* ((list-dag (dag-path-val (list *diff-list-list*) dag))
          (last-dag (dag-path-val (list *diff-list-last*) dag)))

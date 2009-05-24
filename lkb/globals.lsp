@@ -65,8 +65,8 @@
   #-:arboretum
   ;'(root_strict)
   ;'(root_informal)
-  ;'(root_strict root_frag)
-  '(root_informal root_frag root_inffrag)
+  '(root_strict root_frag)
+  ;'(root_informal root_frag root_inffrag)
   ;'(root_informal root_frag root_inffrag root_robust)
   ;'(root_formal)
   #+:arboretum
@@ -332,6 +332,7 @@
     till_cp_p1 till_cp_p2 till_p1 till_p2 thru_p thru_a1
     how_bout how_bout_s how_bout_vp brine_cured_a2 account_n3 account_n4
     first_day_num ord1ersatz second_day_num ord2ersatz ord3ersatz
+    second_abb_n1 second_abb_n2 second_n2 second_n3
     1000s_n1 100s_n1 100s_n2 more_or_less_nc_deg
     oslofjorden_n1 like_minded_a2 like_minded_a3 quick_adv1
     bc_temp_1 bc_temp_2 ad_temp_1 ad_temp_2 x_to_y_adj_- x_to_y_nbar_hyphen
@@ -358,7 +359,7 @@
     texas_n2 utah_n2 vermont_n2 virginia_n2 washington_n2 washingtondc_n2
     washingtondc_n4 washingtondc_n5 washingtondc_n6 washingtondc_n8
     washingtondc_n9 westvirginia_n2 wisconsin_n2 wyoming_n2 goodwill_n1 
-    okay_s_adv2 e_mail_n1 e_mail_n2 e_mail_n3 e_mail_n4 hotell_post_ttl 
+    okay_s_adv2 okay_s_adv3 e_mail_n1 e_mail_n2 e_mail_n3 e_mail_n4 
     se_isect sw_isect ne_isect nw_isect northwest_adj2 northeast_adj2
     southwest_adj2 southeast_adj2 doubtlessly spec_n1 hon_abb_a1 them_abb
     yer_pro e_g_pp2 e_g_disc_adv2 e_g_a2 e_g_pp3 e_g_disc_adv3 e_g_a3
@@ -374,7 +375,7 @@
     but+rather_np_conj overall_a2 anti_a2
     till_p3 today_adv3 today_np2 miscellaneous_abb_a1 private_abb_a1
     standup_a1 standup_a3 departure_abb_n1 arrival_abb_n1 arriving_abb_a1
-    criteria_n1 
+    criteria_n1 noontime
     off_prtcl_2 lean_to_n2 non_a1 non_a2 the_rbst_1 the_rbst_2 the_rbst_3
     the_rbst_4 the_rbst_5 the_rbst_6 the_rbst_7 
     a_det_rbst a_det_2_rbst a_det_3_rbst an_det_rbst an_det_2_rbst
@@ -398,6 +399,9 @@
     height_abb_n1 weight_abb_n1
     care_of_prep_2 care_of_prep_3 m_z_n2
     punct_3dots_l_2 punct_3dots_l_3
+    reference_abb_n1 reference_abb_pl_n1 circa_abb_deg_2 circa_abb_deg_1
+    e_g_cma_p1 e_g_cma_p2 e_g_cma_p3 e_g_cma_p4 e_g_cma_p5 e_g_cma_p6
+    e_g_cma_p7 
     ;;
     ;; generic lexical entries used in parsing only (they often have partial
     ;; semantics and cause error messages when creating the generator index)
@@ -418,7 +422,7 @@
   '(punct_bang_orule punct_semicol_orule punct_colon_orule punct_sqright_orule
     punct_sqleft_orule punct_dqleft_orule punct_rparen_orule punct_lparen_orule
     punct_dqright_orule punct_rbracket_orule punct_lbracket_orule 
-    punct_dqright2_orule punct_dqleft2_orule
+    punct_dqright2_orule punct_dqleft2_orule punct_rp_comma_orule
     punct_hyphen_orule punct_comma_informal_orule punct_sqleft2_orule
     punct_qqmark_orule punct_qmark_bang_orule punct_drop_iright_orule
     punct_drop_ileft_orule punct_italleft_orule punct_italright_orule 

@@ -70,11 +70,6 @@ word_or_lexrule := word_or_lexrule_min & sign &
 ; derived or inflected forms - used at least in the rule for italicized or
 ; foreign word sequences.
 
-#|
-word_or_infl_or_punct_rule := sign_min.
-word_or_punct_rule := word_or_infl_or_punct_rule.
-word_or_infl_rule := word_or_lexrule & word_or_infl_or_punct_rule.
-|#
 word_or_infl_or_punct_rule := word_or_lexrule.
 word_or_punct_rule := word_or_infl_or_punct_rule.
 word_or_infl_rule := word_or_infl_or_punct_rule.
@@ -127,7 +122,10 @@ synsem := synsem_min2.
 
 expressed_synsem :< synsem.
 
-canonical_synsem := expressed_synsem.
+; No gaps
+canonical_or_unexpressed := synsem_min0.
+
+canonical_synsem := expressed_synsem & canonical_or_unexpressed.
 
 canonical_lex_or_phrase_synsem := canonical_synsem & lex_or_phrase.
     
@@ -184,7 +182,7 @@ gap := expressed_non_canonical &
 			    CONJ #conj,
 			    AGR #agr ] > ] ] ].
 
-unexpressed_min := synsem_min0.
+unexpressed_min := canonical_or_unexpressed.
 unexpressed := unexpressed_min & synsem_min2 &
   [ NONLOC [ SLASH 0-dlist,
              REL 0-dlist,
@@ -519,7 +517,11 @@ noun_adjable := basic_noun & noun_adj.
 
 ; DPF 10-Apr-02 - Added n_or_p since want to allow gerunds to undergo noptcomp
 ; rule, to get e.g."way of saying that Kim arrives"
-gerund := noun_or_gerund & adverbee & v_or_g & n_or_p & disc_adverbee.
+; DPF 19-may-09 - Now that we make verbal gerunds as phrases, try dropping
+; v_or_g supertype, to avoid spurious ambiguity for e.g. "not hiring kim".
+; May lead to larger clean-up of head types. FIX?
+; gerund := noun_or_gerund & adverbee & v_or_g & n_or_p & disc_adverbee.
+gerund := noun_or_gerund & adverbee & n_or_p & disc_adverbee.
 gerund_full := gerund & vc_add.
 
 ; For derived entries like the "eyed" of "wide-eyed"
@@ -560,7 +562,7 @@ basic_adv := func & non_noun_or_adv & subst_or_adv.
 ; via 'adv_addition' lexical rule.
 basic_lexadv := basic_adv & disc_adverbee.
 negadv := basic_lexadv & adverbee.
-lexadv := basic_lexadv.
+lexadv := basic_lexadv & a_or_adv.
 
 reg_adv := basic_adv & disc_adverbee & p_or_adv &
            a_or_adv & n_or_adv.
@@ -631,6 +633,9 @@ conj-s := verbal & conj_or_frag & verb_or_conj-s.
 
 ; For 'foreign' words, typically marked as italicized
 fw := head & [ MOD < > ].
+
+; Speech filler words in word lattices
+spfill := head & [ MOD < > ].
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;  Sorts for atomic values
@@ -946,6 +951,37 @@ hook := hook_min &
   [ LTOP handle,
     INDEX semarg,
     XARG *top* ].
+
+; DPF 22-may-09 - The feature --SLTOP is introduced in response to our
+; decision to conform more closely to the semantic algebra, in
+; particular ensuring that heads identify their LBL with each of their
+; complements unless they take that complement LBL as an argument (as
+; with sent.  complements). The challenge to composition arises in
+; across-the-board extraction, as in "Him, we like and admire"
+; (assuming for this example that we've dispensed with the
+; pronoun_q_rel, so the LBL of the complement's pron_rel should be
+; identified with its verbal head).  If we just unify the SLASH values
+; of the conjoined VPs in the above example, we then wrongly get the
+; same LBL for both _like_v_rel and _admire_v_rel.  The new solution:
+; have the various SLASH-introduction constructions keep the LBL of
+; the SLASH value unbound, instead identifying the LTOP of the slashed
+; argument (or adjunct) with this new attribute --SLTOP on the mother.
+; This attribute will ordinarily then be passed up the tree with the
+; help of enriched basic lexical types which identify their --SLTOP
+; with that of their complements (the same as lexical threading for
+; SLASH). In the filler-head construction the filler's LTOP is
+; identified with this --SLTOP.  But in coordinate structures, the
+; link is broken, so the coordinate phrase simply identifies the
+; phrase's --SLTOP with the left conjunct (arbitrarily).  This results
+; in a well-scoped structure, though there's surely a better solution
+; somewhere.  [Note that we first tried making the coordinate structure
+; identify its own LTOP with its --SLTOP, but this fails with multiple
+; coordinate structures like "Don't toss paper and other garbage on
+; streets and in the terrain."  since each of the two coordinate
+; complements would each identify their --SLTOP with their own LTOP,
+; and then the verb "toss" would in turn make its --SLTOP unify with
+; both of these, wrongly resulting in the LTOP of the first complement
+; identified with that of the second.]
 
 hookgap := hook &
   [ --SLTOP handle ].
@@ -2279,6 +2315,7 @@ _in+general_a_1_rel := miscprep_rel.
 _in+lieu+of_p_rel :< miscprep_rel.
 _in+part_p_1_rel := miscprep_rel.
 _in+particular_p_1_rel := miscprep_rel.
+_in+situ_a_1_rel := miscprep_rel.
 _in+the+know_a_1_rel := miscprep_rel.
 _in+the+meanwhile_p_rel := miscprep_rel.
 _in_p_rel :< nontemp_loc_sp_rel.
@@ -2451,6 +2488,7 @@ _upstream_p_state_rel := _upstream_p_rel & state_loc_rel.
 _upstream+of_p_rel :< dir_or_state_nontemp_rel.
 _upstream+of_p_dir_rel := _upstream+of_p_rel & dir_rel.
 _upstream+of_p_state_rel := _upstream+of_p_rel & state_loc_rel.
+_versus_p_rel :< miscprep_rel.
 _via_p_rel :< miscprep_rel.
 _vis-a-vis_p_rel := miscprep_rel.
 _viz_p_rel :< miscprep_rel.
@@ -2575,7 +2613,7 @@ nonaux_event_rel := non_ellipt_rel.
 norm_non_ellipt_rel := non_ellipt_rel & norm_rel.
 non_freerel_rel := independent_rel.
 no_rel := non_freerel_rel & non_conj_rel & event_or_degree_or_no_rel &
-          nonaux_event_rel & non_number_rel.
+          nonaux_event_rel & non_number_rel & quantity_or_no_rel.
 ; Hack to prevent 'this/that' from being modified by non-wh rel clauses
 ; which it would do if this were instead a subtype of norm_rel.
 deictic_sg_rel := norm_non_num_rel.
@@ -2712,8 +2750,10 @@ nominalize_rel := basic_hcomp_nom_rel & nbar_or_nger_rel.
 gerund_rel := non_temp_nonpro_rel.
 ; For SEM-I
 nominalization_rel := nom_rel.
+; Ordinary nbars or numerals
+nbar_or_num_rel := nom_rel.
 ; nom_rels for nouns that can undergo nbar-coordination (avoiding proper names)
-gen_nom_nbar_rel := nom_rel.
+gen_nom_nbar_rel := nbar_or_num_rel.
 ; nom_rels for nouns that can appear in noun_noun compounds (excluding e.g. 
 ; number-nouns)
 nom_nbar_rel := gen_nom_nbar_rel & nbar_or_nger_rel & nbar_or_dofm_rel.
@@ -2727,16 +2767,17 @@ temp_nondim_rel := temp_abstr_rel & gen_nom_nbar_rel & reg_or_temp_nom_rel.
 ; Used in NP-N-cmpnd rule, to include measure-NP phrases.
 named_or_meas_rel :< norm_rel.
 ; Used in munging rules to make reversible the implicit quantifier
-abstr_named_rel :< named_or_meas_rel.
+abstr_named_rel :< norm_rel.
 gen_named_rel := abstr_named_rel.
 named_np_or_num_rel :< gen_named_rel.
 abstr_named_np_rel :< named_np_or_num_rel.
-named_np_rel := abstr_named_np_rel & reg_nom_rel & norm_nom_or_place_rel.
+named_np_rel := abstr_named_np_rel & reg_nom_rel & norm_nom_or_place_rel &
+		named_or_meas_rel.
 named_num_or_seq_rel :< nom_rel.
 ; DPF 03-may-04 ; Changed non_temp_nonpro_rel to nom_nocmpnd_rel, to prevent
 ; these from appearing in N-N-compounds
 named_num_rel := named_np_or_num_rel & nom_nocmpnd_rel & nonpro_or_num_rel &
-                 named_num_or_seq_rel & norm_nom_or_place_rel.
+               named_num_or_seq_rel & norm_nom_or_place_rel & nbar_or_num_rel.
 num_seq_nom_rel := named_num_or_seq_rel & non_temp_nom_rel & 
 		   nonpro_or_num_rel & named_np_or_num_rel.
 ;named_card_rel := named_num_rel & card_rel.
@@ -2883,7 +2924,8 @@ _piece_n_of-i_rel := quantum_n_of_rel.
 ; For X to Y constructions
 
 basic_interval_rel := unspec_diadic_nom_rel & abstr_named_rel.
-interval_rel := basic_interval_rel.
+; named_num_or_seq_rel for |items 1 - 3|
+interval_rel := basic_interval_rel & named_num_or_seq_rel.
 ; For "to" of "May 23 to 25"
 interval_modable_rel := basic_interval_rel & modable_nom_rel.
 
@@ -2952,7 +2994,7 @@ abstr_adj_rel := basic_adj_rel & event_arg_dim_rel.
 adj_rel := abstr_adj_rel & independent_mod_rel.
 norm_adj_rel :< adj_rel.
 expl_adj_rel := basic_adj_rel & independent_rel.
-it_adj_rel := abstr_adj_rel.
+it_adj_rel := abstr_adj_rel & independent_rel.
 const_or_meas_rel := predsort.
 meas_adj_rel := abstr_adj_rel & const_or_meas_rel.
 adj_personal_rel :< adj_rel.
@@ -3065,6 +3107,8 @@ nontemp_loc_sp_rel := dir_or_state_nontemp_rel & nontemp_sp_or_nonsp_rel &
 
 interval_p_start_rel :< miscprep_rel.
 interval_p_end_rel := miscprep_rel.
+; For |5-10 ft. tall|
+interval_meas_rel := interval_p_end_rel & const_or_meas_rel.
 
 ; for 'talk to/with X (about Y)', 'speak' etc
 to_or_with_p_rel :< dir_or_state_nontemp_rel.
@@ -3124,9 +3168,10 @@ sup_deg_rel :< very_deg_rel.
 
 ; For specifiers of "the", including "only" and "just"
 just_only_degree_rel :< degree_rel.
+; 'exactly in the center'
 just_only_very_deg_rel := just_only_degree_rel & very_deg_rel.
 just_only_notvery_deg_rel := just_only_degree_rel.
-; 'exactly in the center'
+; 'far into the park'
 just_only_much_deg_rel := just_only_notvery_deg_rel & much_deg_rel.
 just_only_deg_rel := just_only_notvery_deg_rel & deg_rel.
 
@@ -3197,7 +3242,9 @@ _be_v_nv_rel :< cop_id_rel.
 person_name_rel := cop_id_rel.
 _colon_v_id_rel := cop_id_rel.
 unspec_adj_rel :< adj_rel.
-quantity_rel :< reg_diadic_nom_rel.
+; To restrict heads in appositives
+quantity_or_no_rel := predsort.
+quantity_rel := reg_diadic_nom_rel & quantity_or_no_rel.
 prednom_state_rel :< reg_diadic_nom_rel.
 defequal_v_rel := v_event_rel.
 
@@ -3289,6 +3336,7 @@ _so+on_c_rel :< conj_rel.
 _vice+versa_c_rel :< conj_rel.
 _to+name+a+few_c_rel :< conj_rel.
 _not+to+mention_c_rel :< conj_rel.
+_together-with_c_rel :< conj_rel.
 _yet_c_rel :< conj_rel.
 _even_c_rel :< conj_rel.
 _albeit_c_rel :< conj_rel.
@@ -3552,6 +3600,7 @@ edited := formal & standard.
 prescrip := formal.
 nonformal := genre.
 informal := nonformal & standard.
+spoken := nonformal.
 robust := nonformal.
 
 dialect := *sort*.
