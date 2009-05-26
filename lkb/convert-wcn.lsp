@@ -1,4 +1,4 @@
-:pa lkb
+(in-package :lkb)
 
 #|
 runon_s
