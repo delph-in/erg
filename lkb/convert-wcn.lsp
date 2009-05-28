@@ -107,7 +107,8 @@ type_n3 := n_-_m-nocnh_le &
 |#
 		    
 (defun convert-wcn (wcn-file result-items)
-  (with-open-file
+  (let (result-string)
+   (with-open-file
       (istream wcn-file :direction :input)
     (let ((token-num 41)
 	  (item-pos -1))
@@ -132,7 +133,7 @@ type_n3 := n_-_m-nocnh_le &
   (loop for elem in result-items
 		    do (setf result-string 
 			 (concatenate 'string result-string (format nil "~a" elem))))
-  result-string)
+  result-string))
               
 ;(defparameter *wcn-prob-threshold* 0.01)
 (defparameter *wcn-prob-threshold* 0.1)
