@@ -212,4 +212,3 @@ difference list at ~a in ~a" (reverse path) id)
         do
           (setf list-dag rest-dag))
     t))
-
