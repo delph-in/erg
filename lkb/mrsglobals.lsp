@@ -119,6 +119,30 @@
 ; e.g. free relatives.  Maybe should make this generic rel more specific.
 (setf *maximum-genindex-relations* 500)
 
+;;;
+;;; a function currently only used in the paraphraser transfer grammar, to do
+;;; post-parsing normalization of predicates associated to unknown words.  see
+;;; the discussion on the `developers' list in May 2009 for background.  this
+;;; should in principle be incorporated into MRS read-out already, i.e. there
+;;; should be a way of registering MRS post-processing hooks.   (2-jun-09; oe)
+;;;
+(defun normalize-mrs (mrs)
+  (loop
+      for ep in (psoa-liszt mrs)
+      for pred = (rel-pred ep)
+      when (stringp pred) do
+        (multiple-value-bind (start end starts ends)
+            (ppcre:scan "^_([^_]+)/(?:VBD|VBN)_u_unknown_rel$" pred)
+          (when (and start end)
+            (let* ((form (subseq pred (aref starts 0) (aref ends 0)))
+                   (stems (lkb::one-step-morph-analyse (string-upcase form)))
+                   (stem (first (rassoc 'lkb::past_verb_orule stems))))
+              (when stem
+                (setf (rel-pred ep)
+                  (format nil "_~a_v_rel" (string-downcase stem))))))))
+  mrs)
+
+
 (defparameter *var-extra-conversion-table*
 '(
   ((png.gen fem) . (gender f))
