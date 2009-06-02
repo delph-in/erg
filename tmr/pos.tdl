@@ -65,6 +65,7 @@ tnt_terminate_tmr := token_mapping_rule &
 ;;; undesirable alternatives, e.g. a foreign word reading when there also is a
 ;;; common noun.  also, ditch PoS readings with very low probability, and ones
 ;;; for which no PoS-activated generic entries exist anyway (function words).
+;;; this final step eases debugging, reducing the size of the token chart.
 ;;;
 
 tnt_ditch_unlikely_tmr := token_mapping_rule &
@@ -97,11 +98,26 @@ tnt_ditch_punctuation_tmr := token_mapping_rule &
 ;;; _fix_me_
 ;;; should we eventually want to include the PoS probabilities as a feature in
 ;;; parse selection, this kind of pruning should disappear: a high-probability
-;;; FW, say, should not be bullied out by an unlikely NN.       (31-aug-08; oe)
+;;; FW, say, should not be ellbowed out by an unlikely NN.     (31-aug-08; oe)
 ;;;
 tnt_filter_dup_fw_tmr := token_mapping_rule &
 [ +CONTEXT  < [ +TNT.+TAGS < "NN" > ] >,
   +INPUT    < [ +TNT.+TAGS < "FW" > ] >,
+  +OUTPUT   < >,
+  +POSITION "I1@C1" ].
+
+;; 
+;; [DPF 23-apr-09] words ending in "-ing" can get tagged both as noun and as
+;; verb, but since the grammar has gerund rules, drop the noun and keep the 
+;; verb.
+;; _fix_me_
+;; is there a reason to prefer the gerund over the vanilla noun?  it means a
+;; little extra ambiguity when followed by a PP[of], which the generic gerund
+;; optionally picks up as a complement.                         (24-may-09; oe)
+;;
+tnt_filter_dup_vbg_tmr := token_mapping_rule &
+[ +CONTEXT  < [ +TNT.+TAGS < "VBG" > ] >,
+  +INPUT    < [ +TNT.+TAGS < "NN" > ] >,
   +OUTPUT   < >,
   +POSITION "I1@C1" ].
 
@@ -131,24 +147,14 @@ tnt_filter_dup_nnps_tmr := token_mapping_rule &
 ;;
 ;; the following rule should have that effect.                 (21-jan-09; oe)
 ;;
-;; DPF 24-mar-09 - Unfortunately, this simple rule goes wrong sometimes.  For 
+;; [DPF 24-mar-09]  Unfortunately, this simple rule goes wrong sometimes.  For 
 ;; "the tallest and most unk-word cat" the |unk-word| has to be an adjective,
-;; so we can't just throw it away.  We'll try using the probabilities
-;; from the tagger for a more sensitive rule.
+;; so we can't just throw it away.  We'll try using the probabilities from the
+;; tagger for a more sensitive rule.
 ;;
 tnt_filter_dup_jj_tmr := token_mapping_rule &
 [ +CONTEXT  < [ +TNT [ +TAGS < "NN" >, +PRBS < ^0?\.[2-9].*$ > ] ] >,
   +INPUT    < [ +TNT.+TAGS < "JJ" > ] >,
-  +OUTPUT   < >,
-  +POSITION "I1@C1" ].
-
-;; DPF 23-apr-09
-;; words ending in "-ing" can get tagged both as noun and as verb, but
-;; since the grammar has gerund rules, drop the noun and keep the verb.
-;;
-tnt_filter_dup_ing_tmr := token_mapping_rule &
-[ +CONTEXT  < [ +TNT.+TAGS < "VBG" > ] >,
-  +INPUT    < [ +TNT.+TAGS < "NN" > ] >,
   +OUTPUT   < >,
   +POSITION "I1@C1" ].
 
@@ -161,10 +167,11 @@ generic_pred_tmr := token_mapping_rule &
              +ONSET #onset & unk_onset, +CLASS #class & non_ne, 
              +PRED anti_string, +CARG #carg & ^(.+)$,
              +ID #id, +FROM #from, +TO #to,
-             +TNT #tnt & [ +TAGS < ^([[:alpha:]])(.*)$ > ] ] >,
+             +TNT #tnt & [ +TAGS < ^(.*)$ > ] ] >,
   +OUTPUT < [ +FORM #form,
               +ONSET #onset, +CLASS #class,
-              +PRED "_${lc(I1:+CARG:1)}_${lc(I1:+TNT.+TAGS.FIRST:1)}_unk_rel",
+              +PRED 
+              "_${lc(I1:+CARG:1)}/${lc(I1:+TNT.+TAGS.FIRST:1)}_u_unknown_rel",
               +CARG #carg,
               +ID #id, +FROM #from, +TO #to,
               +TNT #tnt ] >,

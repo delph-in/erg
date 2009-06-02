@@ -403,18 +403,21 @@
     e_g_cma_p1 e_g_cma_p2 e_g_cma_p3 e_g_cma_p4 e_g_cma_p5 e_g_cma_p6
     e_g_cma_p7 
     ;;
-    ;; generic lexical entries used in parsing only (they often have partial
-    ;; semantics and cause error messages when creating the generator index)
+    ;; generic lexical entries used for unknown words in parsing (and, in some
+    ;; cases, unknown predicates in generation); these tend to have a partial
+    ;; semantics and cause error messages when creating the generator index.
     ;;
     generic_adj generic_adj_compar generic_adj_superl generic_adverb
     generic_card_ne generic_date_ne generic_dom_card_ne generic_dom_ord_ne
     generic_fract_ne generic_mass_count_noun generic_mass_noun 
-    generic_meas_noun_ne genericname genericname_pl generic_number
+    generic_meas_np_ne generic_meas_n_ne 
+    genericname genericname_pl generic_number
     generic_ord_ne generic_pl_noun generic_pl_noun_ne generic_proper_ne
     generic_time_noun_ne generic_trans_verb_bse generic_trans_verb_pas
     generic_trans_verb_past generic_trans_verb_pres3sg 
     generic_trans_verb_presn3sg generic_trans_verb_prp 
     generic_trans_verb_psp generic_year_ne
+    gen_generic_mass_count_noun gen_generic_trans_verb
     )
   "temporary expedient to avoid generating dual forms")
 
@@ -509,15 +512,36 @@
 ;;; by unknown (singleton) relations in the generator input that actually have
 ;;; a CARG.  a new, temporary lexical entry is created and has the CARG value 
 ;;; destructively inserted (using instantiate-generic-lexical-entry(), which a
-;;; grammar has to supply among its user functions :-{).        (7-apr-05; oe)
+;;; grammar has to supply among its user functions :-{).         (7-apr-05; oe)
 ;;;
-(defparameter *generic-lexical-entries*
-  '((generic_proper_ne :generate)
-    (generic_card_ne :generate) (generic_ord_ne :generate)
-    (generic_dom_card_ne :generate) (generic_dom_ord_ne :generate)
-    (generic_year_ne :generate) (generic_date_ne :generate) 
-    (generic_adj :generate) (generic_adverb :generate)
-    (guess_n_gle :generate) (guess_v_gle :generate)))
+;;; in response to encouragement from a japanese colleague, we now support the
+;;; use of generics without a CARG in generation, e.g. underspecified nouns or
+;;; verbs.  for an input like "_baz_v_1_rel", these entries are activated on
+;;; the basis of a `trigger' predicate (match-pred()), which is given a full EP
+;;; for inspection (in principle at least, the predicate should make sure the
+;;; role set of the EP is compatible with the generic lexical entry, rejecting
+;;; for example relational nouns).  when successful, the predicate returns the
+;;; string to be used as the stem for the newly created lexical entry (for our
+;;; example input above, that would be |baz|).                   (2-jun-09; oe)
+;;;
+(labels ((match-pred (ep tag)
+           (let ((pred (string (mrs:rel-pred ep)))
+                 (re (format nil "^_([^_]+)_~a(?:_[^_]+)?_rel$" tag)))
+             (multiple-value-bind (start end starts ends)
+                 (ppcre:scan re pred)
+               (declare (ignore start end))
+               (when (and starts ends)
+                 (subseq pred (aref starts 0) (aref ends 0)))))))
+  (setf *generic-lexical-entries*
+    `((generic_proper_ne :generate)
+      (generic_card_ne :generate) (generic_ord_ne :generate)
+      (generic_dom_card_ne :generate) (generic_dom_ord_ne :generate)
+      (generic_year_ne :generate) (generic_date_ne :generate) 
+      (generic_adj :generate) (generic_adverb :generate)
+      (gen_generic_mass_count_noun
+       :generate ,#'(lambda (ep) (match-pred ep "n")))
+      (gen_generic_trans_verb
+       :generate ,#'(lambda (ep) (match-pred ep "v"))))))
 
 (defparameter *non-idiom-root*
     'root_non_idiom )
