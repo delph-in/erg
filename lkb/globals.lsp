@@ -537,6 +537,10 @@
       (generic_card_ne :generate) (generic_ord_ne :generate)
       (generic_dom_card_ne :generate) (generic_dom_ord_ne :generate)
       (generic_year_ne :generate) (generic_date_ne :generate) 
+      ;;
+      ;; _fix_me_
+      ;; adjectives and adverbs should use match-pred() too.    (2-jun-09; oe)
+      ;;
       (generic_adj :generate) (generic_adverb :generate)
       (gen_generic_mass_count_noun
        :generate ,#'(lambda (ep) (match-pred ep "n")))
