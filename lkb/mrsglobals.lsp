@@ -127,6 +127,12 @@
 ;;; should be a way of registering MRS post-processing hooks.   (2-jun-09; oe)
 ;;;
 (defun normalize-mrs (mrs)
+  ;;
+  ;; _fix_me_
+  ;; we still need to generalize this better, for the various parts of speech,
+  ;; corresponding orthographemic rules, and template for creating normalized
+  ;; predicates.                                                (2-jun-09; oe)
+  ;;
   (loop
       for ep in (psoa-liszt mrs)
       for pred = (rel-pred ep)
