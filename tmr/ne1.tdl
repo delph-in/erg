@@ -78,7 +78,7 @@ file_ne_tmr := ne_tmt &
 ;; introduce an abstraction over `time_ne' and `ratio_ne', such that a single
 ;; token can activate multiple lexical entries?  once we get regular expression
 ;; matching for lexical instantiation (peter is working on that), in principle,
-;; we could just drop `time_ne_2_tmr', make `time_ne_ a sub-type of `ratio_ne',
+;; we could just drop `time_ne_2_tmr', make `time_ne' a sub-type of `ratio_ne',
 ;; and put the `H:M' regular expression into the generic lexical entry.  with
 ;; great power comes great responsibility :-).                 (19-sep-08; oe)
 ;;                       
@@ -86,21 +86,19 @@ time_ne_1_tmr := ne_tmt &
 [ +INPUT < [ +FORM ^(0?[0-9]|1[0-2])([:.][0-5][0-9])?([aApP][mM])$ ] >,
   +OUTPUT  < [ +CLASS time_ne ] > ].
 
-;;
-;; _fix_me_
-;; dan wanted to add a period |.| as a possible separator, which seems to make
-;; this rule overlap with floating point numbers (which have run already)?
-;;                                                             (12-jan-09; oe)
-;; DPF 28-apr-09 - oe was right to be sceptical.  This rule blocks ordinary
-;; decimals since it applies first.  So we'll generalize the +CLASS value
-;; from 'time_ne' to 'time_or_card_ne'
-;; _fix_me_
-;; but 15:30, i think, should not be viewed as a cardinal; so we probably need
-;; two separate rules.                                         (24-may-09; oe)
-;;
 time_ne_2_tmr := ne_tmt &
-[ +INPUT < [ +FORM ^(0?[0-9]|1[0-9]|2[0-4])[:.][0-5][0-9]$ ] >,
+[ +INPUT < [ +FORM ^(0?[0-9]|1[0-9]|2[0-4]):[0-5][0-9]$ ] >,
+  +OUTPUT  < [ +CLASS time_ne ] > ].
+
+;;
+;; to also match |10.30| as a candiate time, there is an underspecification of
+;; times and floating point numbers; this is a separate rule to avoid matching
+;; |15:30| as a candidate cardinal.
+;;
+time_ne_3_tmr := ne_tmt &
+[ +INPUT < [ +FORM ^(0?[0-9]|1[0-9]|2[0-4])\.[0-5][0-9]$ ] >,
   +OUTPUT  < [ +CLASS card_or_time_ne ] > ].
+
 
 ;;;
 ;;; dates
@@ -160,29 +158,13 @@ fraction_ne_tmr := ne_tmt &
 ;;;
 
 ;;
-;; Single token: |25cm| or |+37.3ºC|
+;; single token: |25cm| or |+37.3ºC|
 ;;
 
 measure_ne_tmr := ne_tmt &
 [ +INPUT < [ +FORM 
           ^[+-±~]?[0-9]+([,.][0-9]*)?([kKmMgGµ"']+|[ckmn]m|σ|Å|[º°][CF]?)$ ] >,
   +OUTPUT < [ +CLASS meas_ne ] > ].
-
-;;
-;; Two tokens: |+37.3 ºC|
-;; DPF 17-may-09 - For some reason PET doesn't see the lexical entry with
-;; ORTH |ºC| even though the LKB does.  So handle with this rule.
-;; _fix_me_
-;; i would like to debug this.  in principle, i suspect, we might see |six ºC|.
-;; hence i am suspicious of these multi-token rules.            (24-may-09; oe)
-;;
-measure_2token_ne_tmr := two_one_tmt &
-[ +INPUT < [ +FORM ^([+-±~]?[0-9]+([,.][0-9]*)?)$ ],
-	   [ +FORM ^([º°][CF]?)$,
-	     +PRED #pred, +CARG #carg ] >,
-  +OUTPUT < [ +FORM "${I1:+FORM:1} ${I2:+FORM:1}",
-              +PRED #pred, +CARG #carg,
-	      +CLASS meas_ne, +ONSET unk_onset, +TNT null_tnt ] > ].
 
 ;;
 ;; |1:1000m|
@@ -234,11 +216,11 @@ alphanumeric_identifier_ne_2_tmr := ne_tmt &
 ;;
 alphanumeric_identifier_ne_3_tmr := two_one_tmt &
 [ +INPUT < [ +FORM ^([0-9]+\([[:alpha:]]+[[:alnum:]]*)$, 
-             +ONSET #onset, +CLASS non_ne,
+             +TRAIT #trait, +CLASS non_ne,
              +PRED #pred, +CARG #carg ],
            [ +FORM ")", +CLASS non_ne ] >,
   +OUTPUT < [ +FORM "${I1:+FORM:1})", 
-              +ONSET #onset, +CLASS proper_ne,
+              +TRAIT #trait, +CLASS proper_ne,
               +PRED #pred, +CARG #carg, +TNT null_tnt ] > ].
 
 ;;
@@ -259,9 +241,14 @@ chemistry_identifier_ne_tmr := ne_tmt &
 ;; strongly alphanumeric strings (i.e. including digits), with at least two
 ;; hyphens, e.g. |123-45-6789|.
 ;;
+;; _fix_me_
+;; dan relaxed this rule to not require at least one numeral, with the effect
+;; of matching, say, |up-to-date| as a proper name (only).  i now reverted the
+;; rule to its original form, but we should look at the cases that called for
+;; relaxation, to see whether we can safely match them as identifiers.
+;;                                                              (3-jun-09; oe)
 hyphenated_identifier_ne_tmr := ne_tmt &
-[ +INPUT < [ +FORM 
-             ^[[:alpha:]0-9]+[[:alpha:]0-9]*(-[[:alnum:]]+){2,}$ ] >,
+[ +INPUT < [ +FORM ^[[:alpha:]]*[0-9]+[[:alpha:]0-9]*(-[[:alnum:]]+){2,}$ ] >,
   +OUTPUT < [ +CLASS proper_ne ] > ].
 
 ;;
