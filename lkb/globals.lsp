@@ -417,7 +417,7 @@
     generic_trans_verb_past generic_trans_verb_pres3sg 
     generic_trans_verb_presn3sg generic_trans_verb_prp 
     generic_trans_verb_psp generic_year_ne
-    gen_generic_mass_count_noun gen_generic_trans_verb
+    gen_generic_noun gen_generic_verb
     )
   "temporary expedient to avoid generating dual forms")
 
@@ -537,15 +537,10 @@
       (generic_card_ne :generate) (generic_ord_ne :generate)
       (generic_dom_card_ne :generate) (generic_dom_ord_ne :generate)
       (generic_year_ne :generate) (generic_date_ne :generate) 
-      ;;
-      ;; _fix_me_
-      ;; adjectives and adverbs should use match-pred() too.    (2-jun-09; oe)
-      ;;
-      (generic_adj :generate) (generic_adverb :generate)
-      (gen_generic_mass_count_noun
-       :generate ,#'(lambda (ep) (match-pred ep "n")))
-      (gen_generic_trans_verb
-       :generate ,#'(lambda (ep) (match-pred ep "v"))))))
+      (generic_adj :generate ,#'(lambda (ep) (match-pred ep "a")))
+      (generic_adverb :generate ,#'(lambda (ep) (match-pred ep "a")))
+      (gen_generic_noun :generate ,#'(lambda (ep) (match-pred ep "n")))
+      (gen_generic_verb :generate ,#'(lambda (ep) (match-pred ep "v"))))))
 
 (defparameter *non-idiom-root*
     'root_non_idiom )
