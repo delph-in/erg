@@ -24,7 +24,7 @@
 
 ;;; Lexical files
 
-(defparameter *orth-path* '(stem))
+(defparameter *orth-path* '(orth))
 
 (defparameter *list-tail* '(rest))
 
@@ -119,7 +119,7 @@
 
 (defparameter *packing-restrictor*
   ;'(STEM RELS HCONS RNAME RPUNCT)
-  '(STEM RELS HCONS RNAME)
+  '(ORTH RELS HCONS RNAME)
   "restrictor used when parsing with ambiguity packing")
 
 ;;;

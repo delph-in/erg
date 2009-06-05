@@ -74,36 +74,3 @@
 
 (setf ppcre:*use-bmh-matchers* nil)
 
-;; 31-mar-09
-;; For now, keeping the old definition in batch-check.lsp, since the ERG's
-;; diff-lists all generate the warning, which the new code sends to ostream.
-;; This patch will disappear as soon as the latest LKB improvements are
-;; incorporated into the logon branch
-;;
-(in-package :lkb)
-
-#+:logon
-(defun check-dag-diff-list (dag id path &optional (ostream t))
-  (let* ((list-dag (dag-path-val (list *diff-list-list*) dag))
-         (last-dag (dag-path-val (list *diff-list-last*) dag)))
-    (when
-        (and
-         (null (top-level-features-of list-dag))
-         (null (top-level-features-of last-dag))
-         (eq-or-subtype list-dag *list-type*)
-         (eq-or-subtype last-dag *list-type*))
-      (format *batch-check-diff-list-strict* "~%WARNING: malformed but 'acceptable' \
-difference list at ~a in ~a" (reverse path) id)
-      (return-from check-dag-diff-list))
-    (loop
-        with rest-dag
-        while (not (eq list-dag
-                       last-dag))
-        do
-          (setf rest-dag (dag-path-val '(rest) list-dag))
-          (when (null rest-dag)
-            (format ostream "~%WARNING: malformed difference list at ~a in ~a" (reverse path) id)
-            (return-from check-dag-diff-list))
-        do
-          (setf list-dag rest-dag))
-    t))

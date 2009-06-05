@@ -74,17 +74,17 @@
                    (and (digit-char-p (char name cur))
                         (= (incf cur) end))))))))
 
-(defun make-unknown-word-sense-unifications (word-string &optional stem)
+(defun make-unknown-word-sense-unifications (word-string &optional orth)
   ;;; this assumes we always treat unknown words as proper names
   ;;; uncomment the *unknown-word-types* in globals.lsp
   ;;; to activate this
   (when word-string
     (list 
        (make-unification :lhs
-          (create-path-from-feature-list '(STEM FIRST))
-          :rhs (make-u-value :type (or stem word-string)))
+          (create-path-from-feature-list '(ORTH FIRST))
+          :rhs (make-u-value :type (or orth word-string)))
        (make-unification :lhs
-          (create-path-from-feature-list '(STEM REST))
+          (create-path-from-feature-list '(ORTh REST))
           :rhs (make-u-value :type 'lkb::*null*))
        (make-unification
         :lhs (create-path-from-feature-list '(SYNSEM LKEYS KEYREL CARG))
@@ -97,7 +97,7 @@
          (if carg '(SYNSEM LKEYS KEYREL CARG) '(SYNSEM LKEYS KEYREL PRED))))
     (loop
         with dag = (tdfs-indef tdfs)
-        for path in (list '(STEM FIRST) spath)
+        for path in (list '(ORTH FIRST) spath)
         for foo = (existing-dag-at-end-of dag path)
         when foo do (setf (dag-type foo) *string-type*))
     (let* ((surface (or
