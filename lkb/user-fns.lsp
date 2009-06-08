@@ -317,10 +317,10 @@
 ;;; the following temporary expedient attempts to get capitalization more right
 ;;; than we used to do in generator outputs.  still, for acronyms like `IBM' or
 ;;; complex names including lower case elements, i see no alternative to using
-;;; STEM to spell out the actual (canonical) surface form.  that would seem to
+;;; ORTH to spell out the actual (canonical) surface form.  that would seem to
 ;;; require that we re-view assumptions about capitalization across the lexicon
 ;;; et al.  but the LKB should probably do that one day!        (30-aug-05; oe)
-;;; --- as of late, the ERG lexicon actually contains (some) STEM values that
+;;; --- as of late, the ERG lexicon actually contains (some) ORTH values that
 ;;; reflect canonical capitalization; the modified code below will now try to
 ;;; either (a) respect the orthography from the lexicon, as long as it contains
 ;;; at least one upper-case letter and is string-equal() to the inflected form

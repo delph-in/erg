@@ -118,7 +118,7 @@
 (defparameter *chart-packing-p* t)
 
 (defparameter *packing-restrictor*
-  ;'(STEM RELS HCONS RNAME RPUNCT)
+  ;'(ORTH RELS HCONS RNAME RPUNCT)
   '(ORTH RELS HCONS RNAME)
   "restrictor used when parsing with ambiguity packing")
 
@@ -401,7 +401,8 @@
     punct_3dots_l_2 punct_3dots_l_3
     reference_abb_n1 reference_abb_pl_n1 circa_abb_deg_2 circa_abb_deg_1
     e_g_cma_p1 e_g_cma_p2 e_g_cma_p3 e_g_cma_p4 e_g_cma_p5 e_g_cma_p6
-    e_g_cma_p7 
+    e_g_cma_p7 outta_p1
+    arriving_abb_a1 them_abb1 them_abb2
     ;;
     ;; generic lexical entries used for unknown words in parsing (and, in some
     ;; cases, unknown predicates in generation); these tend to have a partial
@@ -507,7 +508,7 @@
 ;;;
 ;;; a new facility as of April 2005: initially for use in the generator only, 
 ;;; provide a set of generic lexical entries (i.e. actual instances) that get
-;;; specialized according to their `surface' form, i.e. the value for STEM and
+;;; specialized according to their `surface' form, i.e. the value for ORTH and
 ;;; CARG (or the equivalent in non-ERG grammars); specialization is triggered
 ;;; by unknown (singleton) relations in the generator input that actually have
 ;;; a CARG.  a new, temporary lexical entry is created and has the CARG value 
