@@ -90,14 +90,16 @@
         :lhs (create-path-from-feature-list '(SYNSEM LKEYS KEYREL CARG))
         :rhs (make-u-value :type (string-downcase word-string))))))
 
-(defun instantiate-generic-lexical-entry (gle surface pred &optional carg)
+(defun instantiate-generic-lexical-entry (gle surface &optional pred carg)
   (let ((tdfs (copy-tdfs-elements
                (lex-entry-full-fs (if (gle-p gle) (gle-le gle) gle))))
         (spath
-         (if carg '(SYNSEM LKEYS KEYREL CARG) '(SYNSEM LKEYS KEYREL PRED))))
+         (if carg
+           '(SYNSEM LKEYS KEYREL CARG)
+           (and pred '(SYNSEM LKEYS KEYREL PRED)))))
     (loop
         with dag = (tdfs-indef tdfs)
-        for path in (list '(ORTH FIRST) spath)
+        for path in (append '((ORTH FIRST)) (list spath))
         for foo = (existing-dag-at-end-of dag path)
         when foo do (setf (dag-type foo) *string-type*))
     (let* ((surface (or
@@ -109,18 +111,21 @@
                         (format nil "~as" surface)))
                      surface))
            (unifications
-            (list 
-             (make-unification
-              :lhs (create-path-from-feature-list
-                    (append *orth-path* *list-head*))
-              :rhs (make-u-value :type surface))
-             (make-unification
-              :lhs (create-path-from-feature-list
-                    (append *orth-path* *list-tail*))
-              :rhs (make-u-value :type *empty-list-type*))
-             (make-unification
-              :lhs (create-path-from-feature-list spath)
-              :rhs (make-u-value :type (or carg pred)))))
+            (append
+             (list 
+              (make-unification
+               :lhs (create-path-from-feature-list
+                     (append *orth-path* *list-head*))
+               :rhs (make-u-value :type surface))
+              (make-unification
+               :lhs (create-path-from-feature-list
+                     (append *orth-path* *list-tail*))
+               :rhs (make-u-value :type *empty-list-type*)))
+             (when spath
+               (list
+                (make-unification
+                 :lhs (create-path-from-feature-list spath)
+                 :rhs (make-u-value :type (or carg pred)))))))
            (indef (process-unifications unifications))
            (indef (and indef (create-wffs indef)))
            (overlay (and indef (make-tdfs :indef indef))))
