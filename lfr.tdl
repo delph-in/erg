@@ -37,9 +37,9 @@ generic_non_ne+native_lfr := lexical_filtering_rule &
   +POSITION "I1@C1" ].
 
 ;;
-;; a native name, however, should suppress generic names, even NE ones.
-;; DPF 27-apr-09 - Restrict this to singular native names, since otherwise
-;; get unwanted blocking for acronyms like "EDS" given the native name "Ed"
+;; a native name, however, should suppress generic names, even NE ones.  this
+;; is restricted to singular native names, since otherwise we get unwanted 
+;; blocking for acronyms like |EDS|, given the native name |Ed|.
 ;;
 proper_ne+name_lfr := lexical_filtering_rule &
 [ +CONTEXT < [ SYNSEM [ PHON.ONSET con_or_voc,
@@ -52,49 +52,47 @@ proper_ne+name_lfr := lexical_filtering_rule &
   +POSITION "I1@C1" ].
 
 ;;
-;; native mass nouns also suppress generic names, even NE ones
+;; mass nouns (both native and generic) also suppress generic names, even 
+;; NE ones.  this reflects what dan calls the `tyranny of mass nouns', i.e. 
+;; the assumptions that there are no syntactic contexts where a proper name 
+;; would be needed for coverage (thus glossing over differences in the 
+;; associated semantics, for improved parsing efficiency).
 ;;
-native_noun+name_lfr := lexical_filtering_rule &
+mass_noun+name_lfr := lexical_filtering_rule &
+[ +CONTEXT < [ SYNSEM [ LOCAL [ CAT.HEAD noun,
+                                AGR [ PNG.PN 3s,
+                                      IND - ] ] ] ] >,
+  +INPUT < [ SYNSEM [ PHON.ONSET unk_onset,
+                      LKEYS.KEYREL.PRED named_rel ] ] >,
+  +OUTPUT  < >,
+  +POSITION "I1@C1" ].
+
+;;
+;; avoid analyzing currency symbols (like |US$|), which appear capitalized, as
+;; generic names
+;; 
+currency+name_lfr := lexical_filtering_rule &
 [ +CONTEXT < [ SYNSEM [ PHON.ONSET con_or_voc,
-                        LOCAL [ CAT.HEAD noun,
-                                AGR [ PNG.PN 3s, DIV + ] ] ] ] >,
+                        LOCAL.CAT.HEAD noun & 
+                                       [ MINORS.MIN mnp_symb_rel ] ] ] >,
   +INPUT < [ SYNSEM [ PHON.ONSET unk_onset,
                       LKEYS.KEYREL.PRED named_rel ] ] >,
   +OUTPUT  < >,
   +POSITION "I1@C1" ].
 
 ;; 
-;; discard generic names (even NE ones) for |I| (and possibly other pronouns),
-;; as the rule stands now.
-;; _fix_me_
-;; seeing that |I| is the only pronoun that is standardly capitalized, should
-;; we maybe make the +CONTEXT more specific.  what are the chances of someone
-;; launching a |Live You| product?                              (13-nov-08; oe)
+;; discard generic names (even NE ones) for |I|, a pronoun that is standardly
+;; capitalized.
 ;;
 proper_ne+pronoun_lfr := lexical_filtering_rule &
 [ +CONTEXT < [ SYNSEM [ PHON.ONSET con_or_voc,
+                        LOCAL [ CAT.HEAD.CASE nom,
+                                AGR.PNG.PN 1s ],
                         LKEYS.KEYREL.PRED pron_rel ] ] >,
   +INPUT < [ SYNSEM [ PHON.ONSET unk_onset,
                       LKEYS.KEYREL.PRED named_rel ] ] >,
   +OUTPUT  < >,
   +POSITION "I1@C1" ].
-
-;;
-;; likewise, discard a generic name for tokens like |Jr.| (post-head titles)
-;;
-;; _fix_me_
-;; but |The Church -- Turing thesis| makes this rule doubtful.  why did we
-;; think it would be justified in the first place?              (23-oct-08; oe)
-;;
-#|
-proper_ne+title_lfr := lexical_filtering_rule &
-[ +CONTEXT < [ SYNSEM [ PHON.ONSET con_or_voc,
-                        LOCAL.CAT.HEAD ttl ] ] >,
-  +INPUT < [ SYNSEM [ PHON.ONSET unk_onset,
-                      LKEYS.KEYREL.PRED named_rel ] ] >,
-  +OUTPUT  < >,
-  +POSITION "I1=C1" ].
-|#
 
 ;;
 ;; a named entity corresponding to a name kills a PoS-activated generic name,
@@ -107,3 +105,23 @@ generic_name+ne_name_lfr := lexical_filtering_rule &
              ORTH.CLASS non_ne ] >,
   +OUTPUT < >,
   +POSITION "I1@C1" ].
+
+
+;;
+;; generic entries followed by punctuation will typically admit two readings,
+;; one of them including the punctuation marks as part of the generic, as e.g.
+;; in (sentence-final) |oe@yy.com.|  these are rarely (if ever) desirable, so
+;; delete edges whose tokens bear final punctuation if they have not undergone
+;; punctuation affixation rule(s).  and likewise for prefixing punctuation.
+;;
+generic_right_punct_lfr := lexical_filtering_rule &
+[ +INPUT < [ ORTH.FORM ^.+[])}”",;.!?-]$,
+             SYNSEM [ PHON.ONSET unk_onset,
+                      PUNCT.RPUNCT no_punct ] ] >,
+  +OUTPUT < > ].
+
+generic_left_punct_lfr := lexical_filtering_rule &
+[ +INPUT < [ ORTH.FORM ^[[({“‘].+$,
+             SYNSEM [ PHON.ONSET unk_onset,
+                      PUNCT.LPUNCT no_punct ] ] >,
+  +OUTPUT < > ].

@@ -81,6 +81,8 @@ file_ne_tmr := ne_tmt &
 ;; we could just drop `time_ne_2_tmr', make `time_ne' a sub-type of `ratio_ne',
 ;; and put the `H:M' regular expression into the generic lexical entry.  with
 ;; great power comes great responsibility :-).                 (19-sep-08; oe)
+;; DPF 27-jun-09 - Let's try the option of abstracting over time_ne and meas_ne
+;; (what the ratio rules introduce).
 ;;                       
 time_ne_1_tmr := ne_tmt &
 [ +INPUT < [ +FORM ^(0?[0-9]|1[0-2])([:.][0-5][0-9])?([aApP][mM])$ ] >,
@@ -88,7 +90,7 @@ time_ne_1_tmr := ne_tmt &
 
 time_ne_2_tmr := ne_tmt &
 [ +INPUT < [ +FORM ^(0?[0-9]|1[0-9]|2[0-4]):[0-5][0-9]$ ] >,
-  +OUTPUT  < [ +CLASS time_ne ] > ].
+  +OUTPUT  < [ +CLASS meas_or_time_ne ] > ].
 
 ;;
 ;; to also match |10.30| as a candiate time, there is an underspecification of
@@ -175,12 +177,30 @@ ratio_measure_ne_tmr := ne_tmt &
   +OUTPUT < [ +CLASS meas_ne ] > ].   
 
 ;;
-;; |US$20|
+;; |US$20| and the like: break into two tokens, to get a bracketing compatible
+;; with [US$ [20 billion]] for a string like |US$20 billion|.
 ;;
-currency_measure_ne_tmr := ne_tmt &
-[ +INPUT < [ +FORM ^(AU?|CA?|HK|NZ|US)?\$[0-9]+$ ] >,
-  +OUTPUT < [ +CLASS meas_ne ] > ].
-
+;; _fix_me_
+;; dan and i concluded that we should introduce a `currency_ne' instead, with
+;; a corresponding generic entry, i.e. drop |US$| et al. from the lexicon (at
+;; present, some of the entries allowed by this rule are missing, e.g. |C$|).
+;; to maintain some parallelism with currency names that can be ordinary words
+;; (e.g. `pound'), the rule below should synthesize a PRED value (rather than
+;; put a CARG on currency NEs), e.g. `_us$_n_currency_rel'.  another rule will
+;; be needed for just |US$| (and in principle |€| and other currency symbols),
+;; to also match them as currency NEs, and at that point the `currency+name'
+;; lexical filtering rule could be discarded.            (dan & oe, 29-jul-09)
+;;
+currency_measure_ne_tmr := one_two_tmt &
+[ +INPUT < [ +FORM ^((?:AU?|CA?|HK|NZ|US)?\$)([0-9]+([\.,][0-9]*)?)$,
+             +TRAIT #trait, +CLASS non_ne,
+             +PRED #pred, +CARG #carg ] >,
+  +OUTPUT < [ +FORM "${I1:+FORM:1}", 
+              +TRAIT native_trait, +CLASS non_ne,
+              +PRED #pred, +CARG #carg, +TNT null_tnt ],
+	    [ +FORM "${I1:+FORM:2}", 
+              +TRAIT #trait, +CLASS non_ne,
+              +PRED #pred, +CARG #carg, +TNT null_tnt ] > ].
 
 ;;;
 ;;; various kinds of identifiers (accumulated throughout the years); some of

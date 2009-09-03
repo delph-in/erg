@@ -401,7 +401,7 @@
     punct_3dots_l_2 punct_3dots_l_3
     reference_abb_n1 reference_abb_pl_n1 circa_abb_deg_2 circa_abb_deg_1
     e_g_cma_p1 e_g_cma_p2 e_g_cma_p3 e_g_cma_p4 e_g_cma_p5 e_g_cma_p6
-    e_g_cma_p7 outta_p1
+    e_g_cma_p7 outta_p1 furthermore_root_pre_2
     arriving_abb_a1 them_abb1 them_abb2
     ;;
     ;; generic lexical entries used for unknown words in parsing (and, in some

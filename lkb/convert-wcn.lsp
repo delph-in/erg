@@ -62,3 +62,4 @@
       (list (format nil 
 		    "(~A, ~A, ~A, <0:0>, ~A, ~s, 0, ~s) " 
 		    token-num item-pos (+ 1 item-pos) 1 token "null")))))
+

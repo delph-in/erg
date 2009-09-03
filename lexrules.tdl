@@ -248,13 +248,11 @@ lex_rule_supermost := phrase_or_lexrule & word_or_lexrule &
                    [ CONT [ RELS [ LIST #rfirst,
                                    LAST #rlast ],
                             HCONS [ LIST #hcfirst,
-                                    LAST #hclast ] ] ],
-	     PHON.ONSET #onset ],
+                                    LAST #hclast ] ] ] ],
     ORTH [ TO #to,
 	   CLASS #class ],
     ARGS.FIRST [ ORTH [ TO #to,
-			CLASS #class ],
-		 SYNSEM.PHON.ONSET #onset ],
+			CLASS #class ] ],
     C-CONT [ RELS [ LIST #rmiddle,
                     LAST #rlast ],
              HCONS [ LIST #hcmiddle,
@@ -278,7 +276,9 @@ lex_rule_basic := lex_rule_supermost &
                                     RPUNCT no_punct ] ],
           GENRE #genre ],
     SYNSEM [ LOCAL.CONJ cnil,
-             PUNCT #punct ],
+             PUNCT #punct,
+	     PHON.ONSET #onset ],
+    ARGS.FIRST.SYNSEM.PHON.ONSET #onset,
     GENRE #genre ].
 
 lex_rule_infl_affixed := lex_rule_basic & word_or_infl_rule &
@@ -603,14 +603,14 @@ vp_ellipsis_expl := vp_ellipsis &
 ; This incorrectly orders the by_pp before all remaining comps - wrong for
 ; double-NP verbs, and incomplete for verbs with other oblique arguments,
 ; since this allows only one order.  But this latter is a general problem.
-
 ; DPF 3-Nov-01 - Removed [CONT..E-INDEX.E.ASPECT perf*] since this allows wrong
 ; generation.  Why was it here?
-
 ; DPF 28-jun-07 - Made ALTMIN event_dim_rel, to prevent application of
 ; the subconj_prdp_ell rule to passive VPs.
+; DPF 19-jun-09 - Added parent type word_or_infl_rule so drop_ital rules
+; will also apply to passive verb forms.
 
-basic_passive_verb_lr := lex_rule_basic &
+basic_passive_verb_lr := lex_rule_basic & word_or_infl_rule &
   [ INFLECTD +,
     DTR #dtr &
         [ ALTS.PASSIVE +,
@@ -665,6 +665,57 @@ norm_passive_verb_lr := basic_passive_verb_lr &
     SYNSEM passive_synsem &
            [ LOCAL.CAT.VAL.COMPS < [ LOCAL.CONT.HOOK.INDEX #subjind,
                                      NONLOC #snonloc ], ... > ] ].
+
+; 'was referred to as ...'
+prep_passive_verb_lr := basic_passive_verb_lr &
+  [ DTR.SYNSEM [ LOCAL.CAT.VAL [ SUBJ < [ --SIND #sind, 
+					NONLOC #snonloc ] >,
+				 COMPS [ FIRST phr_synsem &
+					     [ --MIN #min & selected_rel,
+					       LOCAL [ CAT [ HEAD prep,
+							     VAL.COMPS < > ],
+						       CONT #objcont ],
+					       NONLOC #ononloc,
+					       --SIND #objind ],
+					 REST #comps ] ],
+		 LKEYS.KEYREL #keyrel ],
+    SYNSEM prep_passive_synsem &
+           [ LOCAL [ CAT.VAL [ SUBJ < [ LOCAL.CONT #objcont,
+					--SIND #objind,
+					NONLOC #ononloc ] >,
+			       COMPS [ FIRST [ --MIN #min ],
+				   REST [ FIRST [ LOCAL.CONT.HOOK.INDEX #sind,
+						  NONLOC #snonloc ],
+					  REST #comps ] ] ],
+		     CONT.HOOK.XARG #objind ],
+		 LKEYS.KEYREL #keyrel ] ].
+
+; "this chapter has been added to" (dtr has opt NP complement)
+prep_passive_trans_verb_lr := basic_passive_verb_lr &
+  [ DTR.SYNSEM 
+     [ LOCAL.CAT.VAL [ SUBJ < [ --SIND #sind, 
+				NONLOC #snonloc ] >,
+		       COMPS [ FIRST [ LOCAL.CAT.HEAD noun,
+				       OPT + ],
+			       REST [ FIRST [ --MIN #min & 
+						    selected_rel,
+					      LOCAL [ CAT [ HEAD prep,
+							    VAL.COMPS < > ],
+						      CONT #objcont ],
+					      NONLOC #ononloc,
+					      --SIND #objind ],
+				      REST #comps ] ] ],
+       LKEYS.KEYREL #keyrel ],
+    SYNSEM prep_passive_synsem &
+        [ LOCAL [ CAT.VAL [ SUBJ < [ LOCAL.CONT #objcont,
+				     --SIND #objind,
+				     NONLOC #ononloc ] >,
+			    COMPS [ FIRST [ --MIN #min ],
+				    REST [ FIRST [ LOCAL.CONT.HOOK.INDEX #sind,
+						   NONLOC #snonloc ],
+					   REST #comps ] ] ],
+		  CONT.HOOK.XARG #objind ],
+	  LKEYS.KEYREL #keyrel ] ].
 
 ;; This has the same problem as the passive lexical rule.  Since we derive the
 ;; gerund from the present particple, we somehow have to filter out the
@@ -1000,6 +1051,7 @@ month_det_lr := date_det_lr &
 
 ; "Tuesday": NP => Determiner
 ;          "(on) Tuesday" => "Tuesday morning"
+; DPF 13-aug-09 - Restrict dtr to singular: "*Tuesdays morning"
 
 weekday_det_lr := date_det_lr &
   [ SYNSEM [ LOCAL.CAT [ HEAD [ MINORS [ MIN #min,
@@ -1007,7 +1059,8 @@ weekday_det_lr := date_det_lr &
                                 MOD < > ],
                        VAL.SPEC < [ --MIN day_part_rel ] > ],
              LKEYS.KEYREL.PRED #min ],
-    DTR.SYNSEM [ LOCAL.CAT.HEAD.MINORS.MIN dofw_rel,
+    DTR.SYNSEM [ LOCAL [ CAT.HEAD.MINORS.MIN dofw_rel,
+			 AGR.PNG.PN 3s ],
                  LKEYS.KEYREL.PRED dofw_rel ] ].
 
 #|
@@ -1066,6 +1119,7 @@ adj_noun_abstract_lr := adj_noun_lr &
 attr_adj_lr := lex_rule &
   [ ORTH #orth,
     DTR [ ORTH #orth,
+	  ALTS.ATTRJ +,
 	  SYNSEM pred_adj_synsem &
 	         [ LOCAL [ CAT [ HEAD [ MOD #mod,
                                         MINORS.MIN #min ],
@@ -1569,13 +1623,15 @@ bipart_lr := lex_rule_supermost &
                    NONLOC #nonloc,
                    PUNCT #punct & [ LPUNCT no_punct,
                                     RPUNCT no_punct ],
-                   LKEYS #lkeys ],
+                   LKEYS #lkeys,
+		   PHON.ONSET #onset ],
           KEY-ARG #keyarg ],
     SYNSEM [ LOCAL #local &
                    [ CONT.HOOK.INDEX.IND - ],
              NONLOC #nonloc,
              LKEYS #lkeys,
-             PUNCT #punct ],
+             PUNCT #punct,
+	     PHON.ONSET #onset ],
     C-CONT [ RELS <! !>,
              HCONS <! !> ],
     ARGS < #stem > ].
@@ -1607,7 +1663,8 @@ inverted_quote_lr := lex_rule_basic &
                     AGR #agr,
                     CTXT #ctxt ],
             LKEYS #lkeys,
-            NONLOC #nonlocal ] ],
+            NONLOC #nonlocal,
+	    PHON.ONSET #onset ] ],
    SYNSEM quoting_verb_inv_synsem &
           [ LOCAL [ CAT [ HEAD #head &
                                [ TAM #tam,
@@ -1622,7 +1679,8 @@ inverted_quote_lr := lex_rule_basic &
                     AGR #agr & [ PNG.PN #pn ],
 		    CTXT #ctxt ],
             LKEYS #lkeys,
-	    NONLOC #nonlocal ],
+	    NONLOC #nonlocal,
+	    PHON.ONSET #onset ],
    ARGS < #dtr >,
    C-CONT [ RELS <! !>,
             HCONS <! !> ] ].
@@ -1638,12 +1696,16 @@ foreign_or_ital_lr := lex_rule_supermost &
 		   NONLOC #nonloc,
                    PUNCT [ LPUNCT lital_punct,
 			   RPUNCT rital_punct ],
-                   LKEYS #lkeys ],
-          KEY-ARG #keyarg ],
+                   LKEYS #lkeys,
+		   PHON.ONSET #onset ],
+          KEY-ARG #keyarg,
+          GENRE #genre ],
     SYNSEM [ NONLOC #nonloc,
 	     LEX +,
 	     LKEYS #lkeys,
-             PUNCT.RPUNCT clause_or_no_punct ],
+             PUNCT.RPUNCT clause_or_no_punct,
+	     PHON.ONSET #onset ],
+    GENRE #genre,
     C-CONT.HOOK.LTOP #hand,
     ARGS < #stem > ].
 
@@ -1778,11 +1840,13 @@ punctuation_rparen_rule := basic_punctuation_rule &
   [ INFLECTD #infl,
     SYNSEM.PUNCT [ LPUNCT #lpunct,
                    RPUNCT rparen_punct & [ PSF #pred ],
-                   RCLSTR.RPAREN + ],
+                   RCLSTR [ RPAREN +,
+			    RFP #rfp ] ],
     ARGS < [ INFLECTD #infl,
              SYNSEM.PUNCT [ LPUNCT #lpunct & no_punct,
                             RPUNCT clause_or_pair_or_no_punct &
-                                   [ PSF #pred ] ],
+                                   [ PSF #pred ],
+			    RCLSTR.RFP #rfp ],
              GENRE #genre ] >,
     GENRE #genre,
     RNAME "LPRP" ].
@@ -1809,7 +1873,9 @@ punctuation_dqright_rule := basic_punctuation_rule &
     ARGS < [ INFLECTD #infl,
              SYNSEM.PUNCT [ LPUNCT #lpunct & no_punct,
                             RPUNCT.PSF #pred,
-                            RCLSTR #rclstr ] ] >,
+                            RCLSTR #rclstr ],
+             GENRE #genre ] >,
+    GENRE #genre,
     RNAME "LPDR" ].
 
 punctuation_dqleft_rule := basic_punctuation_rule &
@@ -1819,7 +1885,9 @@ punctuation_dqleft_rule := basic_punctuation_rule &
                    RCLSTR #rclstr ],
     ARGS < [ INFLECTD #infl,
              SYNSEM.PUNCT [ RPUNCT #rpunct,
-                            RCLSTR #rclstr ] ] >,
+                            RCLSTR #rclstr ],
+             GENRE #genre ] >,
+    GENRE #genre,
     RNAME "LPDL" ].
 
 punctuation_sqright_rule := basic_punctuation_rule &
@@ -1831,7 +1899,9 @@ punctuation_sqright_rule := basic_punctuation_rule &
              SYNSEM.PUNCT [ LPUNCT #lpunct & no_punct,
                             RPUNCT comma_or_clause_or_no_punct &
                                    [ PSF #pred ],
-                            RCLSTR #rclstr ] ] >,
+                            RCLSTR #rclstr ],
+             GENRE #genre ] >,
+    GENRE #genre,
     RNAME "LPSR" ].
 
 punctuation_sqleft_rule := basic_punctuation_rule &
@@ -1842,7 +1912,9 @@ punctuation_sqleft_rule := basic_punctuation_rule &
     ARGS < [ INFLECTD #infl,
              SYNSEM.PUNCT [ RPUNCT #rpunct,
                             RCLSTR #rclstr ],
-             ALTS.SQPNCT + ] >,
+             ALTS.SQPNCT +,
+             GENRE #genre ] >,
+    GENRE #genre,
     RNAME "LPSL" ].
 
 punctuation_hyphen_rule := basic_punctuation_rule &
@@ -1854,7 +1926,9 @@ punctuation_hyphen_rule := basic_punctuation_rule &
              SYNSEM.PUNCT [ LPUNCT #lpunct & no_punct,
                             RPUNCT no_punct &
                                    [ PSF #pred ],
-                            RCLSTR #rclstr ] ] >,
+                            RCLSTR #rclstr ],
+             GENRE #genre ] >,
+    GENRE #genre,
     RNAME "LPHR" ].
 
 punctuation_bang_rule := punctuation_rule &
@@ -1906,41 +1980,57 @@ punctuation_italleft_rule := basic_punctuation_rule &
 	   [ INFLECTD +,
 	     SYNSEM [ PUNCT [ RPUNCT #rpunct & 
 				     comma_or_rbc_or_clause_or_no_punct,
-			      RCLSTR #rclstr ] ] ] >,
+			      RCLSTR #rclstr ] ],
+             GENRE #genre ] >,
+    GENRE #genre,
     RNAME "LPIL" ].
 
 punctuation_italright_rule := basic_punctuation_rule &
   [ INFLECTD na,
     SYNSEM.PUNCT [ LPUNCT #lpunct & lital_or_no_punct,
                    RPUNCT rital_punct & [ PSF #psf ],
-		   RCLSTR.RFP + ],
+		   RCLSTR [ RPAREN #rparen,
+			    RFP + ] ],
     ARGS < [ INFLECTD na_or_+,
 	     SYNSEM [ PUNCT [ LPUNCT #lpunct,
-			      RPUNCT clause_or_no_punct & [ PSF #psf ] ] ] ] >,
+			      RPUNCT clause_or_no_punct & [ PSF #psf ],
+			      RCLSTR.RPAREN #rparen ] ],
+             GENRE #genre ] >,
+    GENRE #genre,
     RNAME "LPIR" ].
 
 punct_drop_italleft_rule := basic_punctuation_rule &
-  [ INFLECTD +,
+  [ INFLECTD #infl,
     SYNSEM.PUNCT [ LPUNCT no_punct,
                    RPUNCT #rpunct,
                    RCLSTR #rclstr ],
     ARGS < word_or_infl_rule &
-           [ INFLECTD +,
+           [ INFLECTD #infl,
 	     SYNSEM [ PHON.ONSET con_or_voc,
 		      PUNCT [ RPUNCT #rpunct & no_punct,
-			      RCLSTR #rclstr ] ] ] >,
+			      RCLSTR #rclstr ] ],
+             GENRE #genre ] >,
+    GENRE #genre,
     RNAME "LPDL" ].
 
 punct_drop_italright_rule := basic_punctuation_rule &
-  [ INFLECTD +,
+  [ INFLECTD #infl,
     SYNSEM.PUNCT [ LPUNCT #lpunct,
                    RPUNCT #rpunct,
-		   RCLSTR.RFP - ],
-    ARGS < [ INFLECTD +,
+		   RCLSTR [ RPAREN #rparen,
+			    RFP - ] ],
+    ARGS < [ INFLECTD #infl,
 	     SYNSEM [ PHON.ONSET con_or_voc,
 		      PUNCT [ LPUNCT #lpunct & no_punct,
-			      RPUNCT #rpunct & clause_or_no_punct ] ] ]>,
+			      RPUNCT #rpunct & clause_or_no_punct,
+			      RCLSTR.RPAREN #rparen ] ],
+             GENRE #genre ] >,
+    GENRE #genre,
     RNAME "LPDR" ].
+
+; DPF 09-aug-09 - Restrict these prefixing rules to native entries, since
+; there is little benefit in decomposition of unknown words, and it's hard
+; to get the PHON.ONSET right for native (con) vs generic (unk)
 
 verb_prefix_rule := lex_rule_supermost &
   [ INFLECTD +,
@@ -1955,7 +2045,9 @@ verb_prefix_rule := lex_rule_supermost &
 			   CTXT #ctxt ],
                    PUNCT #punct & [ LPUNCT no_punct,
                                     RPUNCT no_punct ],
-		   NONLOC #nonloc ],
+		   NONLOC #nonloc,
+		   LKEYS.KEYREL [ CFROM #from, CTO #to ],
+		   PHON.ONSET con_or_voc ],
           KEY-ARG #keyarg,
           GENRE #genre ],
     SYNSEM derived_verb_synsem &
@@ -1965,10 +2057,12 @@ verb_prefix_rule := lex_rule_supermost &
 	     CONJ cnil,
 	     CTXT #ctxt ],
 	   PUNCT #punct,
-	   NONLOC #nonloc ],
+	   NONLOC #nonloc,
+	   PHON.ONSET con ],
     GENRE #genre,
     KEY-ARG #keyarg,
     ARGS < #stem >,
     C-CONT [ RELS <! [ LBL #lbl,
-		       ARG1 #vindex ] !>,
+		       ARG1 #vindex,
+		       CFROM #from, CTO #to ] !>,
              HCONS <! !> ] ].
