@@ -69,6 +69,7 @@
   ;'(root_informal root_frag root_inffrag)
   ;'(root_informal root_frag root_inffrag root_robust)
   ;'(root_formal)
+  ;'(root_decl)
   #+:arboretum
   '(root_strict root_strict_robust)
    "specifing valid parses")
@@ -375,7 +376,7 @@
     but+rather_np_conj overall_a2 anti_a2
     till_p3 today_adv3 today_np2 miscellaneous_abb_a1 private_abb_a1
     standup_a1 standup_a3 departure_abb_n1 arrival_abb_n1 arriving_abb_a1
-    criteria_n1 noontime
+    criteria_n1 noontime tv_n2
     off_prtcl_2 lean_to_n2 non_a1 non_a2 the_rbst_1 the_rbst_2 the_rbst_3
     the_rbst_4 the_rbst_5 the_rbst_6 the_rbst_7 
     a_det_rbst a_det_2_rbst a_det_3_rbst an_det_rbst an_det_2_rbst
@@ -395,7 +396,7 @@
     whatsoever1 whatsoever_det whosoever_n1
     easy_to_use_a2 on_screen_a2 psyche_out_v2 no_brainer_n2 off_camera_a2
     all_in_all_adv2 must_have_n2 after_market_a2 in_depth_a2
-    top_of_the_line_a2 out_of_town_a2 set_up_n2
+    top_of_the_line_a2 out_of_town_a2 set_up_n2 
     height_abb_n1 weight_abb_n1
     care_of_prep_2 care_of_prep_3 m_z_n2
     punct_3dots_l_2 punct_3dots_l_3

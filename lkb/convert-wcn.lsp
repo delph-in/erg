@@ -63,3 +63,28 @@
 		    "(~A, ~A, ~A, <0:0>, ~A, ~s, 0, ~s) " 
 		    token-num item-pos (+ 1 item-pos) 1 token "null")))))
 
+
+#|
+Example:
+
+------------------------------------------------------------------------
+Input file "filename":
+
+name M_13.slf
+numaligns 8
+posterior 1
+align 0 *DELETE* 0.991102 of 0.00889821
+align 1 okay 0.728816 ok 0.0982883 oh 0.09352 uh 0.0448835 i 0.0255941 that 0.00446913 a 0.00442908
+align 2 *DELETE* 0.946564 i 0.0448191 a 0.0086172
+align 3 *DELETE* 0.953943 i 0.0460573
+align 4 go 0.740513 *DELETE* 0.109779 okay 0.0704799 just 0.0465463 got 0.0128683 or 0.00966086 right 0.00882356 a 0.00132935
+align 5 through 1
+align 6 the 1
+align 7 door 1
+------------------------------------------------------------------------
+Output from calling 
+(convert-wcn "filename" nil)
+
+(42, 0, 1, <0:0>, 1, "*DELETE*", 0, "null") (44, 1, 2, <0:0>, 1, "okay", 0, "null") (51, 2, 3, <0:0>, 1, "*DELETE*", 0, "null") (54, 3, 4, <0:0>, 1, "*DELETE*", 0, "null") (56, 4, 5, <0:0>, 1, "go", 0, "null") (64, 5, 6, <0:0>, 1, "through", 0, "null") (65, 6, 7, <0:0>, 1, "the", 0, "null") (66, 7, 8, <0:0>, 1, "door", 0, "null")
+
+|#
