@@ -11,11 +11,10 @@
 (setf *www-sample* "Try pressing return in this window!")
 
 (setf *www-roots*
-  '(("sentences" lkb::root_strict "$root_strict" t)
-    ("fragments" lkb::root_frag "$root_frag" nil)
-    ("infinitives" lkb::root_inffrag "$root_inffrag" nil)
-    ("slang" lkb::root_informal "$root_informal" nil)
-    ("errors" lkb::root_robust "$root_robust" nil)))
+  '(("sentences" lkb::root_informal "$root_standard" t)
+    ("fragments" lkb::root_inffrag "$root_inffrag" nil)
+    ("less ambiguity" lkb::root_strict "$root_strict" nil)
+    ("minor errors" lkb::root_robust "$root_robust" nil)))
 
 (setf *www-generics* t)
 

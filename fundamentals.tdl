@@ -52,14 +52,7 @@ word_or_lexrule_min := sign_min.
 ; ALTS allow lexical entries to block lexical rule application
 ; ORTHTYPE distinguishes orthographic class (e.g. alphanumeric or mixed-case.
 word_or_lexrule := word_or_lexrule_min & sign &
-  [ SYNSEM [ PHON.ONSET.--TL #tl,
-	     LKEYS.KEYREL [ CFROM #from,
-			    CTO #to ] ],
-    ALTS alts_min,
-    ORTH [ CLASS #class, FROM #from, TO #to, FORM #form ],
-    TOKENS tokens &
-           [ +LIST #tl & < [ +CLASS #class, +FROM #from, +FORM #form ], ... >,
-             +LAST.+TO #to ] ].
+  [ ALTS alts_min ].
 
 ; Group 'word' together with punctuation rules to distinguish basic words from
 ; derived or inflected forms - used at least in the rule for italicized or
@@ -69,8 +62,17 @@ word_or_infl_or_punct_rule := word_or_lexrule.
 word_or_punct_rule := word_or_infl_or_punct_rule.
 word_or_infl_rule := word_or_infl_or_punct_rule.
 
-word := word_or_infl_rule & word_or_punct_rule &
-  [ SYNSEM [ PUNCT.PNCTPR ppair ] ].
+basic_word := word_or_infl_rule & word_or_punct_rule &
+  [ SYNSEM [ PHON.ONSET.--TL #tl,
+	     LKEYS.KEYREL [ CFROM #from,
+			    CTO #to ] ],
+    ORTH [ CLASS #class, FROM #from, TO #to, FORM #form ],
+    TOKENS tokens &
+           [ +LIST #tl & < [ +CLASS #class, +FROM #from, +FORM #form ], ... >,
+             +LAST.+TO #to ] ].
+
+word := basic_word &
+  [ SYNSEM.PUNCT.PNCTPR ppair ].
 
 orthog := *cons* &
 [ FORM string,
@@ -396,6 +398,7 @@ v_or_g_or_dadv := head.
 p_or_adv_or_comp := head.
 p_or_adv := n_or_p_or_v_or_adv & p_or_adv_or_dadv & n_or_a_or_p_or_adv &
             n_or_p_or_adv & p_or_adv_or_comp.
+adv_or_comp := p_or_adv_or_comp.
 subst_or_adv := head.
 
 subst := non_frag & subst_or_adv.
@@ -423,8 +426,7 @@ n_or_p_or_adv := head.
 n_or_v_or_a := subst.
 
 n_or_p :=  n_or_p_or_v & n_or_p_or_frag & n_or_p_or_a & n_or_p_or_adv.
-n_or_a := n_or_v_or_a &
- [ --BARE bool ].
+;n_or_a := n_or_v_or_a.
 
 ; DPF 3-apr-05 - Added poss-able to allow for locative inversion using subjh.
 a_or_p := v_or_a_or_p & n_or_p_or_a & poss-able.
@@ -441,7 +443,12 @@ nom_or_ttl := basic_nom_or_ttl.
 noun_or_ttl := nom_or_ttl.
 
 ; For constraint on head-spec rule.
-n_or_a_or_det := n_or_a_or_adv_or_det.
+; DPF 8-aug-07 - The hack feature --BARE is used to prevent underspecified
+; mass-count nouns from undergoing the robust bare-pl-sg rule, since they
+; can already undergo the ordinary bare-plural rule.
+;
+n_or_a_or_det := n_or_a_or_adv_or_det &
+ [ --BARE bool ].
 
 det := func & poss-able & n_or_a_or_det.
 
@@ -470,7 +477,7 @@ mobile := head.
 ; in order to admit "towns not obvious on the map"
 ; DPF 12-feb-08 - Add a_or_adv to adj_or_intadj so we can coordinate
 ; integer adjectives as in "six or seven cats"
-adj_or_intadj := n_or_a & a_or_p & adverbee & nominal_or_verbal &
+adj_or_intadj := n_or_v_or_a & a_or_p & adverbee & nominal_or_verbal &
                  v_or_g_or_a_or_int & a_or_adv.
 
 v_or_a := v_or_g_or_a & n_or_v_or_a & non_noun.
@@ -510,12 +517,7 @@ noun_or_gerund := supnoun.
 ;noun_adj := supnoun.
 noun_adj := subst.
 
-; DPF 8-aug-07 - The hack feature --BARE is used to prevent underspecified
-; mass-count nouns from undergoing the robust bare-pl-sg rule, since they
-; can already undergo the ordinary bare-plural rule.
-
-basic_noun := n_or_a & noun_or_nomger & n_or_adv & noun_or_gerund & 
-              noun_or_ttl.
+basic_noun := noun_or_nomger & n_or_adv & noun_or_gerund & noun_or_ttl.
 
 noun := basic_noun.
 noun_adjable := basic_noun & noun_adj.
@@ -564,7 +566,7 @@ verb_full := verb & vc_add.
 ; DPF 24-jul-05 - Removed nominal as supertype of comp since we use a rule to
 ; convert NP-subject-taking VPs into CP-taking ones, with distinct semantic
 ; linking.
-comp := verbal & poss-able & mobile & p_or_adv_or_comp &
+comp := verbal & poss-able & mobile & adv_or_comp &
   [ MOD *anti_list* ].
 comp_full := comp & vc_add.
 
@@ -578,7 +580,7 @@ basic_lexadv := basic_adv & disc_adverbee.
 negadv := basic_lexadv & adverbee.
 lexadv := basic_lexadv & a_or_adv.
 
-reg_adv := basic_adv & disc_adverbee & p_or_adv &
+reg_adv := basic_adv & disc_adverbee & p_or_adv & adv_or_comp &
            a_or_adv & n_or_adv.
 adv := reg_adv & mobile.
 adv_nonmob := reg_adv.
@@ -607,17 +609,17 @@ lp_punct_hd := punct_pair_hd.
 rp_punct_hd := punct_pair_hd.
 
 nomger := noun_or_nomger & nom_or_ttl.
-nomger_mob := nomger & mobile & [ CASE acc ].
+nomger_mob := nomger & mobile & [ CASE non_nom ].
 
 ; The following types are used to enable strict subcategorization (the usual 
 ; case)
 
-noun_mob := noun & mobile & [ CASE acc ].
+noun_mob := noun & mobile & [ CASE non_nom ].
 partn := basic_noun.
 partn_mobile := partn & mobile.
-gerund_mob := gerund & mobile & [ CASE acc ].
+gerund_mob := gerund & mobile & [ CASE non_nom ].
 ; For 'long' of 'for too long'
-grad_n := partn_mobile & [ CASE acc ].
+grad_n := partn_mobile & [ CASE non_nom ].
 interv_n := noun.
 
 ; For types that can undergo number-partitive:'five of them','ten feet of rope'
@@ -959,13 +961,6 @@ event_relation := arg0_relation &
 ; optional sentential complements, so need to have that argument position in
 ; the higher verb's relation be underspecified.  We give up some type-checking
 ; benefits here, but gain cleaner treatment of optionality.
-
-hook_min := *top*.
-hook := hook_min &
-  [ LTOP handle,
-    INDEX semarg,
-    XARG *top* ].
-
 ; DPF 22-may-09 - The feature --SLTOP is introduced in response to our
 ; decision to conform more closely to the semantic algebra, in
 ; particular ensuring that heads identify their LBL with each of their
@@ -997,8 +992,12 @@ hook := hook_min &
 ; both of these, wrongly resulting in the LTOP of the first complement
 ; identified with that of the second.]
 
-hookgap := hook &
-  [ --SLTOP handle ].
+hook_min := *top*.
+hook := hook_min &
+  [ LTOP handle,
+    INDEX semarg,
+    XARG *top*,
+    --SLTOP handle ].
 
 mrs_min := *avm*.
 mrs_min0 := mrs_min &
@@ -1339,7 +1338,8 @@ param := non_expl_or_param.
 ; Nominal sorts
 nominal-sort := *sort*.
 entity-or-event := nominal-sort.
-entity := entity-or-event.
+basic_entity := entity-or-event.
+entity := basic_entity.
 nonloc := entity.
 human := nonloc.
 location := nominal-sort.
@@ -1348,8 +1348,10 @@ time := location & entity-or-event.
 ; coordination as in "*We arrived here and the chair."
 place := location.
 nom-event := entity-or-event.
-; DPF 03-may-04 - No longer used
-;number := nominal-sort.
+; DPF 14-nov-09 - Can't make integers be of SORT number distinct from
+; 'entity' (tempting, to block "Abrams one") because we also want
+; "Kim is ten" which we currently treat as identity-copula with NP "ten"
+;number := basic_entity.
 
 ; modable_rel distinguishes those relations whose nominal lexical entries can 
 ; undergo a syntactic rule to produce a modifier phrase, as in "we'll meet
@@ -2519,7 +2521,7 @@ _whither_p_rel := dir_rel.
 _whence_p_rel := dir_rel.
 _while_x_rel := miscprep_rel.
 _whilst_x_rel := miscprep_rel.
-_with_p_rel := to_or_with_p_rel.
+_with_p_rel := to_or_with_p_rel & state_loc_rel.
 _within_p_rel := dir_or_state_nontemp_rel.
 _within_p_dir_rel := _within_p_rel & dir_rel.
 _within_p_state_rel := _within_p_rel & state_loc_rel.
@@ -2539,27 +2541,27 @@ _please_x_rel := adv_rel.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Determiner preds
 
-_a+little_q_rel := explicit_quant_noagr_q_rel.
-_a+bit_q_rel := explicit_quant_noagr_q_rel.
+_a+little_q_rel := explicit_noagr_nodef_q_rel.
+_a+bit_q_rel := explicit_noagr_nodef_q_rel.
 _a_q_rel := some_q_rel & def_udef_a_q_rel.
 _such+a_q_rel := some_q_rel.
 _what+a_q_rel := some_q_rel.
 _many+a_q_rel := some_q_rel.
 _another_q_rel := some_q_rel.
 _any_q_rel := any_q_rel.
-both_all_udef_q_rel := quant_rel.
+both_all_udef_q_rel := nodef_q_rel.
 both_all_q_rel := both_all_udef_q_rel.
 _both_q_rel := basic_def_explicit_q_rel & both_all_q_rel.
-_each_q_rel := explicit_quant_noagr_q_rel.
+_each_q_rel := explicit_noagr_nodef_q_rel.
 _either_q_rel := explicit_quant_agr_q_rel.
 _enough_q_rel := explicit_quant_agr_q_rel.
 _every_q_rel := every_q_rel.
 _half_q_rel := explicit_quant_agr_q_rel.
-_less_q_rel := explicit_quant_noagr_q_rel.
-_little_q_rel := explicit_quant_noagr_q_rel.
+_less_q_rel := explicit_noagr_nodef_q_rel.
+_little_q_rel := explicit_noagr_nodef_q_rel.
 _more_q_than_rel := explicit_quant_agr_q_rel.
 _most_q_rel := explicit_quant_agr_q_rel.
-_neither_q_rel := explicit_quant_noagr_q_rel.
+_neither_q_rel := explicit_noagr_nodef_q_rel.
 _no_q_rel := no_q_rel.
 _some_q_rel := some_q_rel.
 _some_q_indiv_rel := some_q_rel.
@@ -2570,13 +2572,13 @@ _these_q_dem_rel := demon_near_q_rel.
 _this_q_dem_rel := demon_near_q_rel.
 _those_q_dem_rel := demon_far_q_rel.
 _twice_q_rel := explicit_quant_agr_q_rel.
-_umpteen_q_rel := explicit_quant_noagr_q_rel.
+_umpteen_q_rel := explicit_noagr_nodef_q_rel.
 _which_q_rel := which_q_rel.
 _any+more_q_rel := explicit_quant_agr_q_rel.
 _no+more_q_rel := explicit_quant_agr_q_rel.
 _some+more_q_rel := explicit_quant_agr_q_rel.
 _less+than+a_q_rel := some_q_rel.
-_part_q_rel := explicit_quant_noagr_q_rel.
+_part_q_rel := explicit_noagr_nodef_q_rel.
 _a+third_q_rel := explicit_quant_agr_q_rel.
 _a+fourth_q_rel := explicit_quant_agr_q_rel.
 
@@ -2588,16 +2590,22 @@ iforce := predsort.
 basic-comm := iforce.
 prop-or-comm := iforce.
 prop-or-ques := iforce.
+prop-or-pol-ques := prop-or-ques.
 prop-or-like := iforce.
-basic-prop := prop-or-ques & prop-or-like.
+basic-prop := prop-or-pol-ques & prop-or-like.
 punct-prop-comm := iforce.
 prop-comm := prop-or-comm & punct-prop-comm.
 prop := basic-prop & prop-comm.
 comm := basic-comm & prop-comm.
-abstr-ques := iforce.
-basic-ques := abstr-ques & prop-or-ques.
-punct-ques := iforce.
-ques := basic-ques & punct-ques.
+
+ques := prop-or-ques.
+basic-wh-ques := ques.
+basic-pol-ques := ques & prop-or-pol-ques.
+
+punct-ques := ques.
+pol-ques := basic-pol-ques & punct-ques.
+wh-ques := basic-wh-ques & punct-ques.
+
 ; Subtype to distinguish complementizer "like" from "that", to block
 ; '*Kim said like Sandy left' and '*it looks that Sandy left"
 like-iforce := prop-or-like.
@@ -2662,9 +2670,10 @@ quant_or_wh_rel := quant_or_deg_rel.
 quant_rel := quant_or_wh_rel.
 non_freerel_q_or_meas_rel := non_freerel_rel.
 non_freerel_q_rel := non_freerel_q_or_meas_rel & quant_rel.
+nodef_q_rel := quant_rel.
 impl_or_expl_q_rel := non_freerel_q_rel & i_or_e_quant_or_deg_rel.
 ; Used in bare plurals
-impl_or_proper_q_rel := quant_rel.
+impl_or_proper_q_rel := nodef_q_rel.
 ; Used for superlative adjs
 impl_or_the_q_rel := quant_rel.
 ; Used in appositive rule
@@ -2673,13 +2682,16 @@ implicit_q_rel := impl_or_proper_q_rel & def_or_udef_q_rel & impl_or_the_q_rel.
 explicit_or_proper_q_rel := quant_or_wh_rel.
 explicit_q_rel := impl_or_expl_q_rel & explicit_or_proper_q_rel.
 ; Determiners with these relations show agreement with of_PP in partitives
-explicit_quant_agr_q_rel := explicit_q_rel.
+explicit_quant_agr_q_rel := explicit_nodef_q_rel.
 ; These don't
 explicit_quant_or_udef_noagr_q_rel := impl_or_expl_q_rel.
 explicit_quant_noagr_q_rel := explicit_q_rel & 
                               explicit_quant_or_udef_noagr_q_rel.
+explicit_noagr_nodef_q_rel := explicit_quant_noagr_q_rel & nodef_q_rel.
+explicit_nodef_q_rel := explicit_q_rel & nodef_q_rel.
+
 ; For '(exactly) three chairs'
-num_q_rel := explicit_q_rel.
+num_q_rel := explicit_nodef_q_rel.
 
 ; DPF 19-Oct-02 - This is to allow not only ordinary bare plurals, but also
 ; "afternoons" which must be the one that takes an optional PP-of and
@@ -2698,8 +2710,8 @@ udef_q_rel := implicit_q_rel & explicit_quant_or_udef_noagr_q_rel &
 some-any_q_rel := explicit_quant_agr_q_rel & def_udef_some_a_q_rel.
 some_q_rel := some-any_q_rel & indef_or_udef_or_meas_rel.
 any_q_rel := some-any_q_rel.
-every_q_rel := explicit_q_rel.
-no_q_rel := explicit_q_rel.
+every_q_rel := explicit_nodef_q_rel.
+no_q_rel := explicit_nodef_q_rel.
 def_q_rel := def_or_udef_q_rel & def_or_meas_rel & def_udef_a_q_rel.
 
 def_implicit_q_rel := def_q_rel & implicit_q_rel.
@@ -2707,33 +2719,33 @@ basic_def_explicit_q_rel := def_q_rel & explicit_quant_noagr_q_rel &
                             def_or_proper_q_rel & appos-able_rel.
 def_explicit_q_rel := basic_def_explicit_q_rel.
 ; Used only in MINORS.MIN
-nondef_explicit_q_rel := explicit_q_rel & indef_or_udef_or_meas_rel.
+nondef_explicit_q_rel := explicit_q_rel & indef_or_udef_or_meas_rel &
+			 nodef_q_rel.
 ; Used for monthdet, to allow use of compositional head-spec rule, to allow
 ; "the January 11 meeting"
 ; DPF 31-jan-09 - But cannot use compos.head-spec rule for "January 11" since
 ; this wrongly makes the LBL of "11" the LTOP of the NP, so it would get bound
 ; both by the restrictor of the quantifier and as the LBL of the verb.
 ;
-defmonth_q_rel := impl_or_proper_q_rel &
-                  basic_def_explicit_q_rel.
+defmonth_q_rel := impl_or_proper_q_rel & basic_def_explicit_q_rel.
 
 ; Used by NP-N-cmpnd rule:
-meas_np_or_proper_q_rel := explicit_or_proper_q_rel.
+meas_np_or_proper_q_rel := explicit_or_proper_q_rel & nodef_q_rel.
 ; Used for lexical NPs including proper names
 ; It is distinct from i_or_e_quant_or_deg_rel to prevent relative clauses
 ; from attaching to proper names with no specifier.
-num_or_proper_q_rel := non_freerel_q_rel & def_or_proper_q_rel &
+num_or_proper_q_rel := non_freerel_q_rel & def_or_proper_q_rel & nodef_q_rel &
                        explicit_or_proper_q_rel & appos-able_rel.
 proper_q_rel := num_or_proper_q_rel & impl_or_proper_q_rel.
 number_q_rel := num_or_proper_q_rel & impl_or_proper_q_rel.
 ; For determiners that can appear e.g. with 'same' (also excluding 'both')
 def_or_demon_q_rel := quant_rel.
 pronoun_q_rel := non_freerel_q_rel & def_or_demon_q_rel.
-demonstrative_q_rel := explicit_q_rel & def_or_proper_q_rel & 
+demonstrative_q_rel := explicit_nodef_q_rel & def_or_proper_q_rel & 
                        def_or_demon_q_rel & appos-able_rel.
 demon_near_q_rel := demonstrative_q_rel.
 demon_far_q_rel := demonstrative_q_rel.
-basic_free_relative_q_rel := explicit_quant_noagr_q_rel.
+basic_free_relative_q_rel := explicit_noagr_nodef_q_rel.
 free_relative_q_rel := basic_free_relative_q_rel.
 free_relative_ever_q_rel := basic_free_relative_q_rel.
 _the_q_rel := basic_def_explicit_q_rel & def_or_demon_q_rel &
@@ -3009,6 +3021,8 @@ _one_n_1_rel := nom_nocmpnd_rel & nonpro_rel & gen_nom_nbar_rel.
 
 basic_pron_rel := non_temp_nom_rel & abstr_named_rel.
 pron_rel := basic_pron_rel.
+; For partitives
+pron_part_rel := basic_pron_rel.
 ; For WH and REL "who, whom" which can appear as second complement of "give"
 ; even though ordinary pronouns cannot, but which like other pronouns cannot
 ; appear as specifier of possessive 's: "*who's".
@@ -3099,12 +3113,13 @@ loc_abstr_rel := prep_mod_rel.
 dir_or_state_rel := loc_abstr_rel & dir_state_modable_rel.
 dir_or_state_nontemp_rel := dir_or_state_rel & nontemp_prep_rel.
 dir_rel := dir_or_state_nontemp_rel & dir_or_unsp_loc_rel.
-state_loc_rel := dir_or_state_nontemp_rel.
+misc_or_state_loc_rel := prep_mod_rel.
+state_loc_rel := dir_or_state_nontemp_rel & misc_or_state_loc_rel.
 generic_loc_rel := loc_abstr_rel.
 
-temp_loc_rel := loc_abstr_rel & independent_mod_rel.
+temp_loc_rel := independent_mod_rel & state_loc_rel.
 
-miscprep_rel := nontemp_prep_rel.
+miscprep_rel := nontemp_prep_rel & misc_or_state_loc_rel.
 
 part_nom_rel := predsort.
 part_of_rel := reg_diadic_nom_rel & part_nom_rel.
@@ -3128,7 +3143,8 @@ temp_sp_or_nonsp_rel := temp_loc_rel.
 
 ; Used for implicit locative, as in "Kim arrived Tuesday" or "Kim is here"
 loc_nonsp_rel := unspec_loc_rel.
-nontemp_loc_nonsp_rel := loc_nonsp_rel & nontemp_sp_or_nonsp_rel.
+nontemp_loc_nonsp_rel := loc_nonsp_rel & nontemp_sp_or_nonsp_rel &
+			 dir_or_state_nontemp_rel.
 temp_loc_nonsp_rel := loc_nonsp_rel & temp_sp_or_nonsp_rel.
 
 ; For specific locatives whether temporal or not
@@ -3408,6 +3424,7 @@ thing_rel := norm_nom_rel.
 manner_rel := norm_nom_rel.
 reason_rel := norm_nom_rel.
 title_rel := basic_nom_rel.
+pre_title_rel := reg_or_temp_nom_rel.
 addressee_rel := basic_nom_rel.
 
 v_event_arg1_rel := aux_event_rel & v_event_rel.
@@ -3652,6 +3669,7 @@ spoken := g-medium.
 standard := genre.
 edited := formal & standard.
 informal := nonformal & standard.
+nonstandard := nonformal.
 prescrip := formal.
 robust := nonformal.
 

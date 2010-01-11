@@ -71,7 +71,7 @@
   ;'(root_formal)
   ;'(root_decl)
   #+:arboretum
-  '(root_strict root_robust)
+  '(root_standard root_robust_s root_lex root_frag root_inffrag)
    "specifing valid parses")
 
 ;;;

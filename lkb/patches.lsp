@@ -74,3 +74,150 @@
 
 (setf ppcre:*use-bmh-matchers* nil)
 
+;; In lkb/src/main/generics.lsp
+;; check that carg is string before calling substitute() to get `surface'
+
+;; Also, in lkb/src/mrs/generate.lsp, delete ersatz section with #+:logon
+;; from generate-from-mrs-internal().
+
+(defun gen-instantiate-generics (ep)
+  (loop
+      with ids
+      with pred = (mrs::rel-pred ep)
+      with carg = (loop
+                      for role in (mrs:rel-flist ep)
+                      when (eq (mrs:fvpair-feature role) *generics-carg*)
+                      return (mrs:fvpair-value role))
+      with surface = (and (stringp carg)
+			  (substitute #\space #\_ carg :test #'char=))
+      with *package* = (find-package :lkb)
+      for gle in (rest %generics-index%)
+      for test
+      = (when (gle-test gle) (ignore-errors (funcall (gle-test gle) ep)))
+      when (or test (and carg (equal pred (gle-pred gle))))
+      do
+        (let* ((id (format nil "~@:(~a[~a]~)" (gle-id gle) (or test surface)))
+               (id (intern id :lkb)))
+          (if (get-lex-entry-from-id id)
+            (push id ids)
+            (multiple-value-bind (tdfs orth)
+                (instantiate-generic-lexical-entry
+                 gle (or test surface) pred carg)
+              (when tdfs
+                (let ((new
+                       (make-lex-entry
+                        :orth (list orth) :id id :full-fs tdfs)))
+                  ;;
+                  ;; _fix_me_
+                  ;; we should encapsulate the write access on the lexicon as a
+                  ;; method cache-psort() or the like.           (7-jun-09; oe)
+                  ;;
+                  (with-slots (psorts) *lexicon*
+                    (setf (gethash id psorts) new))
+                  (mrs::extract-lexical-relations new)
+                  (push id ids))))))
+      finally (return ids)))
+
+(defun generate-from-mrs-internal (input-sem &key nanalyses)
+
+  ;; (ERB 2003-10-08) For aligned generation -- if we're in first only
+  ;; mode, break up the tree in *parse-record* for reference by
+  ;; ag-gen-lex-priority and ag-gen-rule-priority.  Store in *found-configs*.
+  #+:arboretum
+  (populate-found-configs)
+
+  ;;
+  ;; inside the generator, apply the VPM in reverse mode to map to grammar-
+  ;; internal variable types, properties, and values.  the internal MRS, beyond
+  ;; doubt, is what we should use for lexical instantiations and Skolemization.
+  ;; regarding trigger rules and the post-generation MRS compatibility test, on
+  ;; the other hand, we have a choice.  in principle, these should operate in
+  ;; the external (SEM-I) MRS namespace (the real MRS layer); however, trigger
+  ;; rules are created from FSs (using grammar-internal nomenclature) and, more
+  ;; importantly, the post-generation test uses the grammar-internal hierarchy
+  ;; to test for predicate, variable type, and property subsumption.  hence, it
+  ;; is currently convenient to apply these MRS-level operations with grammar-
+  ;; internal names, i.e. at an ill-defined intermediate layer.
+  ;;
+  ;; _fix_me_
+  ;; the proper solution to all this mysery will be to create separate SEM-I
+  ;; hierarchies, i.e. enrich the SEM-I files with whatever underspecifications
+  ;; the grammar wants to provide at the MRS level, and then import that file
+  ;; into its own, grammar-specific namespace.  one day soon, i hope, i might
+  ;; actually get to implementing this design ...               (22-jan-09; oe)
+  ;;
+  (setf input-sem (mt:map-mrs input-sem :semi :backward))
+  
+  (setf *generator-internal-mrs* input-sem)
+  (with-package (:lkb)
+    (clear-gen-chart)
+    (setf *cached-category-abbs* nil)
+
+    ;;
+    ;; no need to even try generating when there is no relation index
+    ;;
+    (unless (and (hash-table-p mrs::*relation-index*)
+                 (> (hash-table-count mrs::*relation-index*) 0))
+      (error 'generator-uninitialized))
+    
+    (let ((*gen-packing-p* (if *gen-first-only-p* nil *gen-packing-p*))
+          lex-results lex-items grules lex-orderings 
+          tgc tcpu conses symbols others)
+      (time-a-funcall
+       #'(lambda () 
+           (multiple-value-setq (lex-results grules lex-orderings)
+             (mrs::collect-lex-entries-from-mrs input-sem))
+           (multiple-value-setq (lex-items grules lex-orderings)
+             (filter-generator-lexical-items 
+              (apply #'append lex-results) grules lex-orderings)))
+       #'(lambda (tgcu tgcs tu ts tr scons ssym sother &rest ignore)
+           (declare (ignore tr ignore))
+           (setf tgc (+ tgcu tgcs) tcpu (+ tu ts)
+                 conses (* scons 8) symbols (* ssym 24) others sother)))
+      (setq %generator-statistics%
+        (pairlis '(:ltgc :ltcpu :lconses :lsymbols :lothers)
+                 (list tgc tcpu conses symbols others)))
+      
+      (when *debugging* (print-generator-lookup-summary lex-items grules))
+      
+      (let ((rel-indexes nil) (rel-indexes-n -1) (input-rels 0))
+        (dolist (lex lex-items)
+          (loop
+              with eps = (mrs::found-lex-main-rels lex)
+              initially (setf (mrs::found-lex-main-rels lex) 0)
+              for ep in eps
+              for index = (ash 1 (or (getf rel-indexes ep)
+                                     (setf (getf rel-indexes ep)
+                                           (incf rel-indexes-n))))
+              do 
+                (setf (mrs::found-lex-main-rels lex)
+                  (logior (mrs::found-lex-main-rels lex) index))))
+        (dolist (grule grules)
+          (when (mrs::found-rule-p grule)
+            (loop
+                with eps = (mrs::found-rule-main-rels grule)
+                initially (setf (mrs::found-rule-main-rels grule) 0)
+                for ep in eps
+                for index = (ash 1 (or (getf rel-indexes ep)
+                                       (setf (getf rel-indexes ep)
+                                             (incf rel-indexes-n))))
+                do
+                  (setf (mrs::found-rule-main-rels grule)
+                    (logior (mrs::found-rule-main-rels grule) index)))))
+        (setf %generator-unknown-eps% nil)
+        (loop
+            for ep in (mrs::psoa-liszt input-sem)
+            do
+              (if (getf rel-indexes ep)
+                (setq input-rels
+                   (logior input-rels (ash 1 (getf rel-indexes ep))))
+                (push ep %generator-unknown-eps%)))
+        (when %generator-unknown-eps%
+           (error 'unknown-predicates :eps %generator-unknown-eps%))
+
+        #+:debug
+        (setf %rel-indexes rel-indexes %input-rels input-rels)
+        
+        (chart-generate
+         input-sem input-rels lex-items grules lex-orderings rel-indexes
+         *gen-first-only-p* :nanalyses nanalyses)))))
