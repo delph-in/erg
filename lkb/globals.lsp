@@ -65,8 +65,8 @@
   #-:arboretum
   ;'(root_strict)
   ;'(root_informal)
-  '(root_strict root_frag)
-  ;'(root_informal root_frag root_inffrag)
+  ;'(root_strict root_frag)
+  '(root_informal root_frag root_inffrag)
   ;'(root_informal root_frag root_inffrag root_robust)
   ;'(root_formal)
   ;'(root_decl)
@@ -195,7 +195,7 @@
     and_conj_slash and_or_conj_1 and_or_conj_2 and_or_conj_3 
     and_or_conj_4 and_or_conj_5 and_or_conj_6 and_conj_amp and_conj_2_amp
     apostrophe_s_lex apostrophe_s_3_lex apostrophe_s_4_lex
-    apostrophe_s_12_lex apostrophe_s_14_lex
+    apostrophe_s_12_lex apostrophe_s_14_lex apostrophe_s_nq_2_lex
     mister missus mr_title_2 doctor_ttl dr_ttl_2 prof_title mrs_title_2
     ms_title_2 mount_ttl_2 number_abb_title number_abb_title_2 
     number_abb2_title number_abb2_title_2 order_abb_ttl order_abb_ttl_2
