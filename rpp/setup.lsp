@@ -12,6 +12,7 @@
 (read-repp (lkb-pathname (parent-directory "rpp") "latex.rpp"))
 (read-repp (lkb-pathname (parent-directory "rpp") "ascii.rpp"))
 (read-repp (lkb-pathname (parent-directory "rpp") "wiki.rpp"))
+(read-repp (lkb-pathname (parent-directory "rpp") "bioscope.rpp"))
 (read-repp (lkb-pathname (parent-directory "rpp") "erg.rpp"))
 (read-repp (lkb-pathname (parent-directory "rpp") "tokenizer.rpp"))
 (setf *repp-calls* '(:xml :ascii))
