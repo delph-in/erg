@@ -16,7 +16,7 @@
 (read-repp (lkb-pathname (parent-directory "rpp") "quotes.rpp"))
 (read-repp (lkb-pathname (parent-directory "rpp") "erg.rpp"))
 (read-repp (lkb-pathname (parent-directory "rpp") "tokenizer.rpp"))
-(setf *repp-calls* '(:xml :ascii))
+(setf *repp-calls* '(:xml :ascii :quotes))
 (setf *repp-characterize-p* t)
 (setf *repp-characterization-beam* 2)
 (setf *repp-interactive* '(:tokenizer :xml :ascii :quotes :erg))
