@@ -80,6 +80,24 @@
 >bioscope
 
 ;;
+;; our treatment of quote marks continues to evolve.  as of february 2010, it
+;; seems we need to support two distinct scenarios: (a) inputs using standard
+;; typography (quotes either are directional already or can be diambiguated by
+;; adjacency to preceding or following whitespace) vs. (b) inputs that already
+;; have been pre-tokenized or otherwise damaged (as in the current CoNLL 2010
+;; training data), where we stand no chance of disambiguating quote marks.  in
+;; downstream processing, we thus need to handle six types of quotes: genuine
+;; directional quotes (|“|, |”|, |‘|, and |’|) and ambiguous, straight ones
+;; (|"| and |'|).  the former group can be restricted to opening and closing
+;; functions, and in the case of closing quotes also to apostrophes and units
+;; of measure (feet and inches, or seconds and minutes; for which in `proper'
+;; typography the double prime and prime symbols could be used); the straight
+;; quotes, on the other hand, need to be considered ambiguous between opening
+;; and closing, apostrophe, or prime usages.                    (9-feb-10; oe)
+;;
+>quotes
+
+;;
 ;; two special cases involving periods: map ASCII ellipsis (|...|) to a single
 ;; UniCode character (|…|), and convert |..| between numbers into an n-dash,
 ;; i.e. a numeric range (typically tokenized off, i.e. |42| |–| |43|).  maybe
@@ -102,50 +120,6 @@
 ;; like |non–source-aware| [users].
 ;;
 !([—…])							 \1 
-
-;;
-;; deviating from the PTB conventions, we use one-character double quote marks
-;; (i.e. |“| and |"| instead of |``| and |''|); much like the PTB, however, we
-;; aim to disambiguate neutral quotes (|"| and |''|) at the string level, i.e.
-;; opening quotes are preceded by a token boundary (white space), with a small
-;; number of additional, token-initial characters than can intervene.  anything
-;; else, we assume, is a closing quote.  rather than the proper UniCode closing
-;; quote (|”|), however, use a straight double quote (|"|), which can double as
-;; a unit of measure (feet).  do the same for single quotes, using apostrophes
-;; (|'|) rather than proper closing quotes (|’|), to allow ambiguity with the
-;; possessive maker, specifically when following |s|.  to not create spurious
-;; ambiguity, preserve UniCode closing quotes, if used in the input.
-;;
-;; convert quotes to single characters prior to tokenizing off other characters
-;; (group #1 below) to make adjacent whitespace detection easier, as e.g. in
-;; |``$20!''|.
-;;
-;; _fix_me_
-;; in principle, i just discovered, there are separate prime and double prime
-;; UniCode characters, intended for the units of measure.  i doubt we see them
-;; in any of the existing data sets, but in carefully edited documents, they
-;; may show up eventually.  assuming these are never used as quotes, we should
-;; probably preserve them here.  but as for the distinction between straight
-;; and closing quotes, i now suspect we might see the closing quotes as a unit
-;; of measure too.  hence, consider ditching straight quotes altogether.
-;;                                                              (23-jan-09; oe)
-;;
-!``								“
-!(^| [[({]*)("|'')						\1“
-!''								”
-!`								‘
-!(^| [[({]*)'							\1‘
-
-;;
-;; normalize stylistic variance in (directional) quote marks.  once these rules
-;; are complete, we are down to only six quote marks: |“|, |”|, |"|, |‘|, |’|,
-;; and |'|.  of these, the straight ones (the traditional ASCII characters) are
-;; ambiguous between being a closing quote and something else.
-;;
-![„«]								“
-![»]								”
-![‚‹]								‘
-![›]								’
 
 ;;
 ;; remove space after initial |O'| and |L'|, i.e. irish and romance names, to
@@ -211,9 +185,17 @@
 ;; i doubt that |she cannot participate on monday| has the reading of her being
 ;; able to `not participate' (stay out of the way) on monday.  or does it?
 ;;                                                              (19-sep-08; oe)
-!([^ ])['’]([dDmMsS]) 						\1 '\2 
-!([^ ])['’](ll|LL|re|RE|ve|VE) 					\1 '\2 
-!([^ ])(n['’]t|N['’]T) 						\1 \2 
+;;
+;; as it stands, we violate what we said above about quotes: in the contracted
+;; auxiliaries and possessives, we use a straight (ASCII) quote to represent
+;; the the apostrophe, not the closing single quote (as would recommended by
+;; the UniCode standard).  the cost of conversion would be relatively high in
+;; this case: many lexical entries would need to be duplicated for `correct'
+;; quote mode, and still be kept with ASCII apostrophes for robust mode.
+;;
+!([^ ])[’']([dDmMsS]) 						\1 '\2 
+!([^ ])[’'](ll|LL|re|RE|ve|VE) 					\1 '\2 
+!([^ ])(n[’']t|N[’']T) 						\1 \2 
 
 
 ;;
