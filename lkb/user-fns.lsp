@@ -84,7 +84,7 @@
           (create-path-from-feature-list '(ORTH FIRST))
           :rhs (make-u-value :type (or orth word-string)))
        (make-unification :lhs
-          (create-path-from-feature-list '(ORTh REST))
+          (create-path-from-feature-list '(ORTH REST))
           :rhs (make-u-value :type 'lkb::*null*))
        (make-unification
         :lhs (create-path-from-feature-list '(SYNSEM LKEYS KEYREL CARG))

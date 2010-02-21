@@ -74,12 +74,6 @@
 
 (setf ppcre:*use-bmh-matchers* nil)
 
-;; In lkb/src/main/generics.lsp
-;; check that carg is string before calling substitute() to get `surface'
-
-;; Also, in lkb/src/mrs/generate.lsp, delete ersatz section with #+:logon
-;; from generate-from-mrs-internal().
-
 (defun gen-instantiate-generics (ep)
   (loop
       with ids
@@ -97,7 +91,8 @@
       when (or test (and carg (equal pred (gle-pred gle))))
       do
         (let* ((id (format nil "~@:(~a[~a]~)" (gle-id gle) (or test surface)))
-               (id (intern id :lkb)))
+               (id (intern id :lkb))
+	       (test (when test (gen-lemma test))))
           (if (get-lex-entry-from-id id)
             (push id ids)
             (multiple-value-bind (tdfs orth)
@@ -117,6 +112,17 @@
                   (mrs::extract-lexical-relations new)
                   (push id ids))))))
       finally (return ids)))
+
+(defun gen-lemma (surface)
+  (let ((lemmas (one-step-morph-analyse (string-upcase surface))))
+    (if lemmas
+	(string-downcase (first (first lemmas)))
+      (string-downcase surface))))
+
+;; DPF 15-feb-10 - In lkb/mrs/generate.lisp, in generate-from-mrs-internal()
+;; Deleted section on treatment of `ersatz' entries, which
+;; were supplanted with the advent of chart mapping machinery.
+;; FIX: if okay, update source file
 
 (defun generate-from-mrs-internal (input-sem &key nanalyses)
 
@@ -221,3 +227,41 @@
         (chart-generate
          input-sem input-rels lex-items grules lex-orderings rel-indexes
          *gen-first-only-p* :nanalyses nanalyses)))))
+
+;; DPF 15-feb-10 - In lkb/rmrs/rmrs-convert.lisp, in convert-rmrs-ep-to-mrs()
+;; Temporary patch to accommodate conversion of EPs with 
+;; unknown-word predicates.  FIX ...
+
+(defun convert-rmrs-ep-to-mrs (ep rargs)
+  (let* ((problems nil)
+	 (rmrs-pred (rel-pred ep))
+	 (semi-entries (find-semi-entries rmrs-pred)))
+	(let*
+	    ((string-p (cond ((every #'(lambda (semi-res)
+					 (semi-res-stringp semi-res))
+				     semi-entries)
+			      t)
+			     ((every #'(lambda (semi-res)
+					 (not (semi-res-stringp semi-res)))
+				     semi-entries)
+			      nil)
+			     (t (push 
+				 (format nil "~A ambiguous between string and non-string" rmrs-pred)
+				 problems)
+				nil)))
+	     (new-ep
+	      (make-rel
+	       :handel (rel-handel ep)
+	       :parameter-strings (rel-parameter-strings ep)
+     ;;;   :extra (rel-extra ep)  FIX
+	       :pred (convert-rmrs-pred-to-mrs rmrs-pred string-p)
+	       :flist (cons (convert-rmrs-main-arg (car (rel-flist ep))
+						   rmrs-pred semi-entries)
+			    (loop for rarg in rargs
+				collect
+				  (deparsonify rarg semi-entries)))
+               :str (rel-str ep)
+	       :cfrom (rel-cfrom ep)
+	       :cto (rel-cto ep))))
+	  (values new-ep problems))))
+

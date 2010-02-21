@@ -40,10 +40,6 @@
 
 (defparameter *diff-list-last* 'last)
 
-;(defparameter *lex-rule-suffix* "_INFL_RULE"
-; "creates the inflectional rule name from the information
-;   in irregs.tab - for PAGE compatability")
-
 (defparameter *lex-rule-suffix* ""
  "creates the inflectional rule name from the information
    in irregs.tab - for PAGE compatability")
@@ -65,8 +61,8 @@
   #-:arboretum
   ;'(root_strict)
   ;'(root_informal)
-  ;'(root_strict root_frag)
-  '(root_informal root_frag root_inffrag)
+  '(root_strict root_frag)
+  ;'(root_informal root_frag root_inffrag)
   ;'(root_informal root_frag root_inffrag root_robust)
   ;'(root_formal)
   ;'(root_decl)
@@ -169,10 +165,6 @@
 (setf *characterize-p* t)
 
 (defparameter *discriminant-path* '(SYNSEM LOCAL MINORS MIN))
-
-;;; Hide lexical rule nodes in parse tree
-;;; (setf  *dont-show-lex-rules* t)
-;;; this belongs in the user-prefs file, not here
 
 (defparameter *duplicate-lex-ids* 
   '(will_aux_neg_2 would_aux_neg_2 do1_neg_2 hadnt_aux_1 hadnt_aux_2
@@ -382,6 +374,7 @@
     a_det_rbst a_det_2_rbst a_det_3_rbst an_det_rbst an_det_2_rbst
     its_poss_rbst let_rbst_v1 let_rbst_v2 permit_rbst_v1 recommend_rbst_v1
     advise_rbst_v1 allow_rbst_v1 enable_rbst_v1 suggest_rbst_v1 
+    a_a_det_rbst an_an_det_rbst
     foot_apostr_n1 avec_nbar threshhold_n1 awful_adv broke_robust
     ; Exclude contracted auxiliaries for the time being
     be_c_am_cx be_c_am_cx_2 be_c_are_cx be_c_is_cx be_c_is_cx_2
@@ -409,6 +402,7 @@
     ;; cases, unknown predicates in generation); these tend to have a partial
     ;; semantics and cause error messages when creating the generator index.
     ;;
+    #|
     generic_adj generic_adj_compar generic_adj_superl generic_adverb
     generic_card_ne generic_date_ne generic_dom_card_ne generic_dom_ord_ne
     generic_fract_ne generic_mass_count_noun generic_mass_noun 
@@ -420,6 +414,7 @@
     generic_trans_verb_presn3sg generic_trans_verb_prp 
     generic_trans_verb_psp generic_year_ne
     gen_generic_noun gen_generic_verb
+    |#
     )
   "temporary expedient to avoid generating dual forms")
 
@@ -528,7 +523,8 @@
 ;;;
 (labels ((match-pred (ep tag)
            (let ((pred (string (mrs:rel-pred ep)))
-                 (re (format nil "^_([^_]+)_~a(?:_[^_]+)?_rel$" tag)))
+                 (re (format nil "_([^_]+)/[~a~a](?:[^_]+)_u(?:_[^_]+)?_rel$" 
+			     (string-upcase tag) (string-downcase tag))))
              (multiple-value-bind (start end starts ends)
                  (ppcre:scan re pred)
                (declare (ignore start end))
@@ -539,10 +535,10 @@
       (generic_card_ne :generate) (generic_ord_ne :generate)
       (generic_dom_card_ne :generate) (generic_dom_ord_ne :generate)
       (generic_year_ne :generate) (generic_date_ne :generate) 
-      (generic_adj :generate ,#'(lambda (ep) (match-pred ep "a")))
-      (generic_adverb :generate ,#'(lambda (ep) (match-pred ep "a")))
-      (gen_generic_noun :generate ,#'(lambda (ep) (match-pred ep "n")))
-      (gen_generic_verb :generate ,#'(lambda (ep) (match-pred ep "v"))))))
+      (generic_adj :generate ,#'(lambda (ep) (match-pred ep "J")))
+      (generic_adverb :generate ,#'(lambda (ep) (match-pred ep "R")))
+      (gen_generic_noun :generate ,#'(lambda (ep) (match-pred ep "N")))
+      (gen_generic_verb :generate ,#'(lambda (ep) (match-pred ep "V"))))))
 
 (defparameter *non-idiom-root*
     'root_non_idiom )
