@@ -232,36 +232,188 @@
 ;; Temporary patch to accommodate conversion of EPs with 
 ;; unknown-word predicates.  FIX ...
 
+
+(in-package :mrs)
 (defun convert-rmrs-ep-to-mrs (ep rargs)
-  (let* ((problems nil)
+ (let* ((problems nil)
 	 (rmrs-pred (rel-pred ep))
-	 (semi-entries (find-semi-entries rmrs-pred)))
-	(let*
-	    ((string-p (cond ((every #'(lambda (semi-res)
-					 (semi-res-stringp semi-res))
-				     semi-entries)
-			      t)
-			     ((every #'(lambda (semi-res)
-					 (not (semi-res-stringp semi-res)))
-				     semi-entries)
-			      nil)
-			     (t (push 
-				 (format nil "~A ambiguous between string and non-string" rmrs-pred)
-				 problems)
-				nil)))
-	     (new-ep
+	 (mrs-pred (convert-rmrs-pred-to-mrs rmrs-pred))
+	 (semi-pred (or (mt::find-semi-entries mrs-pred)
+			mrs-pred)))
+   (if semi-pred
+	(let ((new-ep
 	      (make-rel
 	       :handel (rel-handel ep)
 	       :parameter-strings (rel-parameter-strings ep)
-     ;;;   :extra (rel-extra ep)  FIX
-	       :pred (convert-rmrs-pred-to-mrs rmrs-pred string-p)
-	       :flist (cons (convert-rmrs-main-arg (car (rel-flist ep))
-						   rmrs-pred semi-entries)
+              :extra (rel-extra ep)
+	       :pred semi-pred
+	       :flist (cons (convert-rmrs-main-arg (car (rel-flist ep)))
 			    (loop for rarg in rargs
 				collect
-				  (deparsonify rarg semi-entries)))
-               :str (rel-str ep)
+				  (deparsonify rarg)))
+              :str (rel-str ep)
 	       :cfrom (rel-cfrom ep)
 	       :cto (rel-cto ep))))
-	  (values new-ep problems))))
+	  (values new-ep problems))
+     (values nil
+	      (list (format nil "No entry found in SEM-I for ~A" 
+			    rmrs-pred))))))
 
+;; In mrs/generate.lisp
+;; Enable generator compliance rules, uncommenting the #+:null here
+(in-package :lkb)
+(defun generate-from-mrs-internal (input-sem &key nanalyses)
+
+  ;; (ERB 2003-10-08) For aligned generation -- if we're in first only
+  ;; mode, break up the tree in *parse-record* for reference by
+  ;; ag-gen-lex-priority and ag-gen-rule-priority.  Store in *found-configs*.
+  #+:arboretum
+  (populate-found-configs)
+
+  ;;
+  ;; inside the generator, apply the VPM in reverse mode to map to grammar-
+  ;; internal variable types, properties, and values.  the internal MRS, beyond
+  ;; doubt, is what we should use for lexical instantiations and Skolemization.
+  ;; regarding trigger rules and the post-generation MRS compatibility test, on
+  ;; the other hand, we have a choice.  in principle, these should operate in
+  ;; the external (SEM-I) MRS namespace (the real MRS layer); however, trigger
+  ;; rules are created from FSs (using grammar-internal nomenclature) and, more
+  ;; importantly, the post-generation test uses the grammar-internal hierarchy
+  ;; to test for predicate, variable type, and property subsumption.  hence, it
+  ;; is currently convenient to apply these MRS-level operations with grammar-
+  ;; internal names, i.e. at an ill-defined intermediate layer.
+  ;;
+  ;; _fix_me_
+  ;; the proper solution to all this mysery will be to create separate SEM-I
+  ;; hierarchies, i.e. enrich the SEM-I files with whatever underspecifications
+  ;; the grammar wants to provide at the MRS level, and then import that file
+  ;; into its own, grammar-specific namespace.  one day soon, i hope, i might
+  ;; actually get to implementing this design ...               (22-jan-09; oe)
+  ;;
+  (setf input-sem (mt:map-mrs input-sem :semi :backward))
+  
+  ;;
+  ;; as of late in 2006, progress on the SMAF front required dan to change all
+  ;; `ersatz' entries (as they are currently identified by sub-string match on
+  ;; their orthography :-{) to be [ CARG *top* ].  while recorded derivations
+  ;; in [incr tsdb()] do not preserve the actual surface form, reconstructing
+  ;; derivations and reading off MRSs results in ill-formed EPs, viz. ones with
+  ;; an underdetermined CARG.  to at least allow re-generation from such MRSs,
+  ;; attempt to frob our input MRS as needed.                   (23-dec-06; oe)
+  ;;
+  #+:logon
+  (loop
+      with carg = (mrs:vsym "CARG")
+      for ep in (mrs:psoa-liszt input-sem)
+      for pred = (mrs:rel-pred ep)
+      for constant
+      = (cond
+         ((string-equal pred "yofc_rel") "DecimalErsatz")
+         ((string-equal pred "card_rel") "DecimalErsatz")
+         ((string-equal pred "ord_rel") "DecimalErsatz")
+         ((string-equal pred "dofw_rel") "DateErsatz")
+         ((string-equal pred "dofm_rel") "DateErsatz")
+         ((string-equal pred "gen_numval_rel") "DecadeErsatz")
+         ((string-equal pred "numbered_hour_rel") "HourErsatz")
+         ((string-equal pred "named_rel") "NameErsatz")
+         (t "CARG"))
+      for parameterizedp = (consp (gethash pred mrs::*relation-index*))
+      do
+        (loop
+            for role in (mrs:rel-flist ep)
+            for value = (mrs:fvpair-value role)
+            when (eq (mrs:fvpair-feature role) carg) do
+              (when (or (eq value *toptype*) (eq value *string-type*))
+                (setf (mrs:fvpair-value role) constant))
+              (setf parameterizedp nil)
+            finally
+              (when parameterizedp
+                (push
+                 (mrs::make-fvpair :feature carg :value constant)
+                 (mrs:rel-flist ep)))))
+                          
+  ;; DPF: patch - re-enabled use of fixup rules, and filled in LTOP if missing
+  (let ((fixup (and (or (mrs:psoa-top-h input-sem)
+			(setf (mrs:psoa-top-h input-sem) 
+			  (mrs::make-var :id 
+					 (funcall mrs::*variable-generator*)
+					 :type "h")))
+		    (mt::transfer-mrs input-sem :filter nil :task :comply))))
+    (when (rest fixup)
+      (error 'generation/fixup-ambiguity :mrss fixup))
+    (when fixup
+      (setf input-sem (mt::edge-mrs (first fixup)))))
+  
+  (setf *generator-internal-mrs* input-sem)
+  (with-package (:lkb)
+    (clear-gen-chart)
+    (setf *cached-category-abbs* nil)
+
+    ;;
+    ;; no need to even try generating when there is no relation index
+    ;;
+    (unless (and (hash-table-p mrs::*relation-index*)
+                 (> (hash-table-count mrs::*relation-index*) 0))
+      (error 'generator-uninitialized))
+    
+    (let ((*gen-packing-p* (if *gen-first-only-p* nil *gen-packing-p*))
+          lex-results lex-items grules lex-orderings 
+          tgc tcpu conses symbols others)
+      (time-a-funcall
+       #'(lambda () 
+           (multiple-value-setq (lex-results grules lex-orderings)
+             (mrs::collect-lex-entries-from-mrs input-sem))
+           (multiple-value-setq (lex-items grules lex-orderings)
+             (filter-generator-lexical-items 
+              (apply #'append lex-results) grules lex-orderings)))
+       #'(lambda (tgcu tgcs tu ts tr scons ssym sother &rest ignore)
+           (declare (ignore tr ignore))
+           (setf tgc (+ tgcu tgcs) tcpu (+ tu ts)
+                 conses (* scons 8) symbols (* ssym 24) others sother)))
+      (setq %generator-statistics%
+        (pairlis '(:ltgc :ltcpu :lconses :lsymbols :lothers)
+                 (list tgc tcpu conses symbols others)))
+      
+      (when *debugging* (print-generator-lookup-summary lex-items grules))
+      
+      (let ((rel-indexes nil) (rel-indexes-n -1) (input-rels 0))
+        (dolist (lex lex-items)
+          (loop
+              with eps = (mrs::found-lex-main-rels lex)
+              initially (setf (mrs::found-lex-main-rels lex) 0)
+              for ep in eps
+              for index = (ash 1 (or (getf rel-indexes ep)
+                                     (setf (getf rel-indexes ep)
+                                           (incf rel-indexes-n))))
+              do 
+                (setf (mrs::found-lex-main-rels lex)
+                  (logior (mrs::found-lex-main-rels lex) index))))
+        (dolist (grule grules)
+          (when (mrs::found-rule-p grule)
+            (loop
+                with eps = (mrs::found-rule-main-rels grule)
+                initially (setf (mrs::found-rule-main-rels grule) 0)
+                for ep in eps
+                for index = (ash 1 (or (getf rel-indexes ep)
+                                       (setf (getf rel-indexes ep)
+                                             (incf rel-indexes-n))))
+                do
+                  (setf (mrs::found-rule-main-rels grule)
+                    (logior (mrs::found-rule-main-rels grule) index)))))
+        (setf %generator-unknown-eps% nil)
+        (loop
+            for ep in (mrs::psoa-liszt input-sem)
+            do
+              (if (getf rel-indexes ep)
+                (setq input-rels
+                   (logior input-rels (ash 1 (getf rel-indexes ep))))
+                (push ep %generator-unknown-eps%)))
+        (when %generator-unknown-eps%
+           (error 'unknown-predicates :eps %generator-unknown-eps%))
+
+        #+:debug
+        (setf %rel-indexes rel-indexes %input-rels input-rels)
+        
+        (chart-generate
+         input-sem input-rels lex-items grules lex-orderings rel-indexes
+         *gen-first-only-p* :nanalyses nanalyses)))))
