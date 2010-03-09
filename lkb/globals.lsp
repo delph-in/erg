@@ -442,11 +442,11 @@
 ;;;
 (labels ((match-pred (ep tag)
            (let ((pred (string (mrs:rel-pred ep)))
-                 (re (format nil "_([^_]+)/[~a~a](?:[^_]+)_u(?:_[^_]+)?_rel$" 
-			     (string-upcase tag) (string-downcase tag))))
+                 (re (format nil "^_([^_]+)_~a(?:_[^_]+)?_rel$" tag)))
              (multiple-value-bind (start end starts ends)
                  (ppcre:scan re pred)
                (declare (ignore start end))
+             (format t "|~a| ~a ~a~%~%" pred starts ends)
                (when (and starts ends)
                  (subseq pred (aref starts 0) (aref ends 0)))))))
   (setf *generic-lexical-entries*
@@ -454,10 +454,10 @@
       (generic_card_ne :generate) (generic_ord_ne :generate)
       (generic_dom_card_ne :generate) (generic_dom_ord_ne :generate)
       (generic_year_ne :generate) (generic_date_ne :generate) 
-      (generic_adj :generate ,#'(lambda (ep) (match-pred ep "J")))
-      (generic_adverb :generate ,#'(lambda (ep) (match-pred ep "R")))
-      (gen_generic_noun :generate ,#'(lambda (ep) (match-pred ep "N")))
-      (gen_generic_verb :generate ,#'(lambda (ep) (match-pred ep "V"))))))
+      (generic_adj :generate ,#'(lambda (ep) (match-pred ep "a")))
+      (generic_adverb :generate ,#'(lambda (ep) (match-pred ep "a")))
+      (gen_generic_noun :generate ,#'(lambda (ep) (match-pred ep "n")))
+      (gen_generic_verb :generate ,#'(lambda (ep) (match-pred ep "v"))))))
 
 (defparameter *non-idiom-root*
     'root_non_idiom )

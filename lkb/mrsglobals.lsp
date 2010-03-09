@@ -136,11 +136,11 @@
     ("(?:FW|NN)" nil "_~a_n_unknown_rel")
     ("NNS" nil "_~a_n_unknown_rel")
     ("RB" nil "_~a_a_unknown_rel")
-    ("VBP?" :third_sg_fin_verb_orule "_~a_v_unknown_rel")
-    ("VBD" :past_verb_orule "_~a_v_unknown_rel")
-    ("VBG" :prp_verb_orule "_~a_v_unknown_rel")
-    ("VBN" :psp_verb_orule "_~a_v_unknown_rel")
-    ("VBZ" :third_sg_fin_verb_orule "_~a_v_unknown_rel")))
+    ("VBP?" :v_3s-fin_olr "_~a_v_unknown_rel")
+    ("VBD" :v_pst_olr "_~a_v_unknown_rel")
+    ("VBG" :v_prp_olr "_~a_v_unknown_rel")
+    ("VBN" :v_psp_olr "_~a_v_unknown_rel")
+    ("VBZ" :v_3s-fin_olr "_~a_v_unknown_rel")))
 
 (defun normalize-mrs (mrs)
   (loop
@@ -151,8 +151,7 @@
             for (tag rule pattern) in *mrs-normalization-heuristics*
             for re = (format nil "^_([^_]+)/~a_u_unknown_rel$" tag)
             thereis 
-              (multiple-value-bind (start end starts ends)
-                  (ppcre:scan re pred)
+              (multiple-value-bind (start end starts ends) (ppcre:scan re pred)
                 (when (and start end)
                   (let* ((form (subseq pred (aref starts 0) (aref ends 0)))
                          (form (string-upcase form)))
