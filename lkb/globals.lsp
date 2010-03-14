@@ -335,7 +335,7 @@
     reference_abb_n1 reference_abb_pl_n1 circa_abb_deg_2 circa_abb_deg_1
     e_g_cma_p1 e_g_cma_p2 e_g_cma_p3 e_g_cma_p4 e_g_cma_p5 e_g_cma_p6
     e_g_cma_p7 outta_p1 furthermore_root_pre_2
-    arriving_abb_a1
+    arriving_abb_a1 goodbye_n2 goodbye_root_pre_2 very_first_adj1
     )
   "temporary expedient to avoid generating dual forms")
 
