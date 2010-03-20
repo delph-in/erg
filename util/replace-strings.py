@@ -1,7 +1,12 @@
 #!/usr/bin/env python
 # encoding: utf-8
 """
-untitled.py
+replace-strings.py
+
+Utility script to make all the substitions from the subs_file passed with -s arg on the command line (whitespace-separated
+source-target pairs).
+
+Runs on the filename argument passed it, backing up the original file with the 'orig' suffix.
 
 Created by Andrew MacKinlay on 2010-02-22.
 Copyright (c) 2010 __MyCompanyName__. All rights reserved.
@@ -38,11 +43,17 @@ def read_subs_and_replace(subs_fname, replaceable_fnames):
                 orig_in_order.append(orig)
             except ValueError:
                 print >> sys.stderr, "WARNING: Ignoring line in substitutions file '%s' as it has an incorrect number of items. Syntax is a one whitespace-separated word-pair per line" % line
-    sub_search_re = re.compile(r'(?P<head>\A|[^\w-])(?P<body>%s)(?P<tail>[^\w-]|\Z)' % r'|'.join(re.escape(orig) for orig in orig_in_order))
+    terms_re_component = r'|'.join(re.escape(orig) for orig in orig_in_order)
+    sub_search_re = re.compile(r'''
+        (?:\A|(?<=[^\w-])) # zero-width lookbehind: require a string boundary or 
+                           # any character that's not in [A-Za-z0-9_-] before the replaced string
+        (%s)      # the matched string itself
+        (?:(?=[^\w-])|\Z) # similar to beginniing boundary: zero-width lookahead assertion 
+    ''' % terms_re_component, re.VERBOSE)
     # would be nice to use zero-width '\b' here but that would allow eg '-' at boundaries which is not what we want, I don't think.
     
     def get_repl(found_match):
-        return found_match.group('head') + subs[found_match.group('body')] + found_match.group('tail')
+        return subs[found_match.group(0)]
     
     for fname in replaceable_fnames:
         fname_orig = fname + backup_suff
