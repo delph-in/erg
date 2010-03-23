@@ -41,41 +41,55 @@ default_carg_tmr := one_one_tmt &
 ;; applications.  --- discuss this with dan one day.            (8-feb-09; oe)
 ;;
 
-;;
-;; _fix_me_
-;; there is a problem here: where we `multiply out' tokens earlier, we need to
-;; be able to (re-)attach prefix and suffix punctuation to more than one host.
-;; that would require not consuming the punctuation mark(s) at this point, but
-;; rather pick them up as CONTEXT (and later throw out any isolated punctuation
-;; marks).                                                      (26-sep-08; oe)
-;;
-prefix_punctuation_tmr := two_one_final_form_tmt &
-[ +INPUT < [ +FORM ^([[({“‘]+)$ ], 
-           [ +FORM ^(.+)$ ] >,
-  +OUTPUT < [ +FORM "${I1:+FORM:1}${I2:+FORM:1}" ] > ].
+prefix_punctuation_tmr := prefix_punctuation_tmt &
+[ +CONTEXT < [ +FORM ^([[({“‘"]+)$ ] >,
+  +INPUT < [ +FORM ^(.+)$ ] >,
+  +OUTPUT < [ +FORM "${C1:+FORM:1}${I1:+FORM:1}" ] > ].
 
 ;;
 ;; _fix_me_
-;; there is a special case here: |'| following a token ending in |s| could be a
-;; possessive marker (which should remain a token in its own right), or could 
-;; be a closing single quote.  in principle, the same is true for |"|, but the
-;; `inches' measure unit, maybe, will have been detected during NE recognition
-;; earlier.  in either case, we would need a way of keeping a separate |'| in
-;; the chart, and also re-combine it with the preceding token.  (14-sep-08; oe)
-;;
+;; there is a special case in suffix punctation: an apostrophe following a 
+;; token ending in |s| could be a possessive marker (which should remain a 
+;; token in its own right), or could be a closing single quote (which should
+;; be suffixed onto the preceding token).  in principle, the same is true for 
+;; double closing quotes (or double primes), but the `inches' measure unit, 
+;; maybe, will have been detected during NE recognition earlier.
+;;                                                              (20-mar-10; oe)
 ;; _fix_me_
-;; in principle, the single closing quote should be in the suffix class too,
-;; but we need to address the token-level ambiguity first.      (13-nov-08; oe)
+;; one might wonder about cases like: [the] |factor(s)'s| [importance], but at
+;; least today i am not enough of a perfectionist for that.     (23-mar-10; oe)
 ;;
-suffix_punctuation_tmr := two_one_initial_form_tmt &
-[ +INPUT < [ +FORM ^(.+)$ ],
-           [ +FORM ^([])}”",;.!?]+)$ ] >,
-  +OUTPUT < [ +FORM "${I1:+FORM:1}${I2:+FORM:1}" ] > ].
+ambiguous_apostrophe_tmr := token_mapping_rule &
+[ +CONTEXT < [ +FORM ^(.*[sS])$,
+               +CLASS #class, +TRAIT #trait, +PRED #pred, +CARG #carg,
+               +ID [ LIST #front, LAST #middle ], +FROM #from,
+               +TNT #tnt ],
+             [ +FORM ^[’']$, +ID [ LIST #middle, LAST #back ], +TO #to ] >,
+  +OUTPUT < [ +FORM "${I1:+FORM:1}${I2:+FORM:1}",
+              +CLASS #class, +TRAIT #trait, +PRED #pred, +CARG #carg,
+              +ID [ LIST #front, LAST #back ], +FROM #from, +TO #to,
+              +TNT #tnt  ] >,
+  +POSITION "C1<C2, O1@C1, O1@C2" ].
 
-suffix_apostrophe_tmr := two_one_initial_form_tmt &
-[ +INPUT < [ +FORM ^(.+[^sS])$ ],
-           [ +FORM ^(['’][])}”",;.!?]?)$ ] >,
-  +OUTPUT < [ +FORM "${I1:+FORM:1}${I2:+FORM:1}" ] > ].
+suffix_apostrophe_tmr := suffix_punctuation_tmt &
+[ +INPUT < [ +FORM ^(.*[^sS])$ ] >,
+  +CONTEXT < [ +FORM ^([’'])$ ] >,
+  +OUTPUT < [ +FORM "${I1:+FORM:1}${C1:+FORM:1}" ] > ].
+
+suffix_punctuation_tmr := suffix_punctuation_tmt &
+[ +INPUT < [ +FORM ^(.+)$ ] >,
+  +CONTEXT < [ +FORM ^([])}”",;.!?]+)$ ] >,
+  +OUTPUT < [ +FORM "${I1:+FORM:1}${C1:+FORM:1}" ] > ].
+
+ditch_stray_punctuation_tmr := token_mapping_rule &
+[ +INPUT < [ +FORM ^[[({“‘"]|[])}”",;.!?]$ ] >,
+  +OUTPUT < > ].
+
+ditch_stray_apostrophe_tmr := token_mapping_rule &
+[ +CONTEXT < [ +FORM ^.*[^sS]$ ] >,
+  +INPUT < [ +FORM ^[’']$ ] >,
+  +OUTPUT < >,
+  +POSITION "C1<I1" ].
 
 ;;
 ;; two similar rules, converting (some) directional GML tokens into affixes
