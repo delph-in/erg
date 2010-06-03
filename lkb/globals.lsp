@@ -446,7 +446,6 @@
              (multiple-value-bind (start end starts ends)
                  (ppcre:scan re pred)
                (declare (ignore start end))
-             (format t "|~a| ~a ~a~%~%" pred starts ends)
                (when (and starts ends)
                  (subseq pred (aref starts 0) (aref ends 0)))))))
   (setf *generic-lexical-entries*
