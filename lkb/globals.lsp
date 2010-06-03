@@ -80,6 +80,13 @@
     root_lex root_phr root_conj root_subord))
 
 ;;;
+;;; two settings that (somewhat redundantly) support picking the head daughter
+;;; in constructions.
+;;;
+(setf *head-path* '(synsem local cat head))
+(setf *head-daughter-path* '(hd-dtr))
+
+;;;
 ;;; as we move into the chart mapping universe, lexical entries behave similar
 ;;; to rules: the list of input tokens that license a lexical entry are unified
 ;;; into *lexicon-tokens-path* (when set).  furthermore, to give the grammarian
