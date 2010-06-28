@@ -61,8 +61,8 @@
   #-:arboretum
   ;'(root_strict)
   ;'(root_informal)
-  '(root_strict root_frag)
-  ;'(root_informal root_frag root_inffrag)
+  ;'(root_strict root_frag)
+  '(root_informal root_frag root_inffrag)
   ;'(root_informal root_frag root_inffrag root_robust)
   ;'(root_formal)
   ;'(root_decl)
@@ -343,6 +343,8 @@
     e_g_cma_p1 e_g_cma_p2 e_g_cma_p3 e_g_cma_p4 e_g_cma_p5 e_g_cma_p6
     e_g_cma_p7 outta_p1 furthermore_root_pre_2
     arriving_abb_a1 goodbye_n2 goodbye_root_pre_2 very_first_adj1
+    the_1_rbst the_2_rbst the_3_rbst the_4_rbst the_5_rbst the_6_rbst
+    the_7_rbst
     )
   "temporary expedient to avoid generating dual forms")
 
