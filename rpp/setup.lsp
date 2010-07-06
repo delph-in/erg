@@ -1,5 +1,11 @@
 (in-package :lkb)
 
+;;;
+;;; Copyright (c) 2009 -- 2010 Stephan Oepen (oe@ifi.uio.no); 
+;;; see `LICENSE' for conditions.
+;;;
+
+
 (clear-repp)
 
 ;;;
