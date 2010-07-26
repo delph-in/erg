@@ -38,15 +38,17 @@
 			 (concatenate 'string result-string (format nil "~a" elem))))
   result-string))
               
+#|
 ;(defparameter *wcn-prob-threshold* 0.01)
 (defparameter *wcn-prob-threshold* 0.1)
 (setf tsdb::*tsdb-maximal-number-of-results* 1)
 (setf tsdb::*tsdb-maximal-number-of-analyses* 1)
 (setf tsdb::*tsdb-trees-hook* t)
-(setf tsdb::*tsdb-trees-hook* "lkb::parse-tree-structure")
 (setf tsdb::*tsdb-write-mrs-p* t)
+(setf tsdb::*tsdb-trees-hook* "lkb::parse-tree-structure")
 (setf tsdb::*tsdb-semantix-hook* nil)
 (setf tsdb::*tsdb-maximal-number-of-edges* 500000)
+|#
 
 (defun produce-input-items-from-wcn (token-num item-pos token prob 
 				     next-token next-prob)
