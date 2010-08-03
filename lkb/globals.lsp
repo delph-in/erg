@@ -58,10 +58,10 @@
    "The feature giving the mother in a grammar rule")
 
 (defparameter *start-symbol* 
-  #-:speech
+  #-:arboretum
+  ;'(root_strict)
+  ;'(root_informal)
   '(root_strict root_frag)
-  #+:speech
-  '(root_informal root_spoken root_spoken_frag)
   ;'(root_informal root_frag root_inffrag)
   ;'(root_informal root_frag root_inffrag root_robust)
   ;'(root_formal)
@@ -350,7 +350,7 @@
   '(w_bang_plr w_semicol_plr w_sqright_plr
     w_sqleft_plr w_dqleft_plr w_rparen_plr w_lparen_plr
     w_dqright_plr w_rbrack_plr w_lbrack_plr w_comma-rp_plr
-    w_hyphen_plr w_comma-nf_plr w_double_semicol_plr
+    w_hyphen_plr w_comma-nf_plr
     w_qqmark_plr w_qmark-bang_plr w_drop-iright_plr
     w_drop-ileft_plr w_italleft_plr w_italright_plr 
     v_prp-nf_olr
