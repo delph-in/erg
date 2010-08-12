@@ -58,16 +58,17 @@
    "The feature giving the mother in a grammar rule")
 
 (defparameter *start-symbol* 
+  #-:speech 
   #-:arboretum
-  ;'(root_strict)
-  ;'(root_informal)
-  ;'(root_strict root_frag)
-  '(root_informal root_frag root_inffrag)
+  '(root_strict root_frag)
+  #+:speech
+  '(root_informal root_spoken root_spoken_frag)
+  ;'(root_informal root_frag root_inffrag)
   ;'(root_informal root_frag root_inffrag root_robust)
   ;'(root_formal)
   ;'(root_decl)
   #+:arboretum
-  '(root_standard root_robust_s root_lex root_frag root_inffrag)
+  '(root_standard root_question root_robust_s root_lex root_frag root_inffrag)
    "specifing valid parses")
 
 ;;;
@@ -343,8 +344,6 @@
     e_g_cma_p1 e_g_cma_p2 e_g_cma_p3 e_g_cma_p4 e_g_cma_p5 e_g_cma_p6
     e_g_cma_p7 outta_p1 furthermore_root_pre_2
     arriving_abb_a1 goodbye_n2 goodbye_root_pre_2 very_first_adj1
-    the_1_rbst the_2_rbst the_3_rbst the_4_rbst the_5_rbst the_6_rbst
-    the_7_rbst
     )
   "temporary expedient to avoid generating dual forms")
 
@@ -352,7 +351,7 @@
   '(w_bang_plr w_semicol_plr w_sqright_plr
     w_sqleft_plr w_dqleft_plr w_rparen_plr w_lparen_plr
     w_dqright_plr w_rbrack_plr w_lbrack_plr w_comma-rp_plr
-    w_hyphen_plr w_comma-nf_plr
+    w_hyphen_plr w_comma-nf_plr w_double_semicol_plr
     w_qqmark_plr w_qmark-bang_plr w_drop-iright_plr
     w_drop-ileft_plr w_italleft_plr w_italright_plr 
     v_prp-nf_olr
