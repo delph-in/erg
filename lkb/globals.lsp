@@ -58,8 +58,7 @@
    "The feature giving the mother in a grammar rule")
 
 (defparameter *start-symbol* 
-  #-:speech 
-  #-:arboretum
+  #-(or :speech :arboretum)
   '(root_strict root_frag)
   #+:speech
   '(root_informal root_spoken root_spoken_frag)
