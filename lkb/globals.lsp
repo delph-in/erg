@@ -269,10 +269,15 @@
     singular_abb_n2 thanks_abb_root_post thanks_abb_root_pre thanks_abb_v1
     st_abb_n1 st_abb_n2 with_p_abb prep_abb_n1 prep_abb_n2
     reverend_abb_n1 reverend_abb_n2
-    be_c_am_cx_neg_1 be_c_are_cx_neg_1 be_c_is_cx_neg_1 be_id_am_cx_neg_1
-    be_id_are_cx_neg_1 be_id_is_cx_neg_1 be_nv_is_cx_neg_1
-    be_th_cop_is_cx_neg_1 
-    had_aux_cx_neg_1 had_better_cx_neg_1 has_aux_cx_neg_1 have_aux_cx_neg_1 
+    be_c_am_cx_neg_1 be_c_are_cx_neg_1 be_c_are_cx_neg_2
+    be_c_is_cx_neg_1 be_c_is_cx_neg_2 be_id_am_cx_neg_1 be_id_am_cx_neg_2
+    be_id_are_cx_neg_1 be_id_are_cx_neg_2 be_id_is_cx_neg_1 be_id_is_cx_neg_2
+    be_nv_is_cx_neg_1 be_nv_is_cx_neg_2
+    be_th_cop_is_cx_neg_1 be_th_cop_is_cx_neg_2
+    had_aux_cx_neg_1 had_aux_cx_neg_2 
+    had_better_cx_neg_1 had_better_cx_neg_2
+    has_aux_cx_neg_1 has_aux_cx_neg_2 have_aux_cx_neg_1 have_aux_cx_neg_2
+    had_best_cx had_best_cx_2 had_best_cx_3 had_best_cx_neg_1 had_best_cx_neg_2
     both_conj either_conj first_conj
     till_cp_p1 till_cp_p2 till_p1 till_p2 thru_p thru_a1
     how_bout how_bout_s how_bout_vp account_n3 account_n4
@@ -311,8 +316,8 @@
     be_inv_are be_inv_is be_inv_was be_inv_were come_v3 go_v3 lie_v4 run_v4
     stand_v3 micro_a2 mid_isect super_deg1 temperature_abb_n1
     zero_det liquify_v1 liquify_v2 used_to_aux_nonfin_2 and_num hafta_v1
-    be_inv_is_cx be_inv_are_cx 
-    had_better_cx had_better_cx_2
+    be_inv_is_cx be_inv_is_cx_2 be_inv_are_cx be_inv_are_cx_2 
+    had_better_cx had_better_cx_2 had_better_cx_3
     but+rather_np_conj overall_a2 anti_a2
     till_p3 today_adv3 today_np2 miscellaneous_abb_a1 private_abb_a1
     standup_a1 standup_a3 departure_abb_n1 arrival_abb_n1 arriving_abb_a1
@@ -325,14 +330,20 @@
     a_a_det_rbst an_an_det_rbst
     foot_apostr_n1 avec_nbar threshhold_n1 awful_adv broke_robust
     ; Exclude contracted auxiliaries for the time being
-    be_c_am_cx be_c_am_cx_2 be_c_are_cx be_c_is_cx be_c_is_cx_2
-    be_id_am_cx be_id_am_cx_2 be_id_are_cx be_id_is_cx be_id_is_cx_2
-    be_it_cop_is_cx be_it_cop_is_cx_2 be_nv_is_cx be_nv_is_cx_2
-    be_th_cop_is_cx be_th_cop_is_cx_2 had_aux_cx had_aux_cx_2 has_aux_cx
-    has_aux_cx_2 have_bse_aux_cx_1 have_bse_aux_cx_2 have_fin_aux_cx
-    have_fin_aux_cx_2 had_aux_cx had_aux_cx_2 has_aux_cx has_aux_cx_2
+    be_c_am_cx be_c_am_cx_2 be_c_am_cx_3 be_c_are_cx be_c_are_cx_2
+    be_c_is_cx be_c_is_cx_2 be_c_is_cx_3
+    be_id_am_cx be_id_am_cx_2 be_id_am_cx_3
+    be_id_are_cx be_id_are_cx_2 be_id_is_cx be_id_is_cx_2 be_id_is_cx_3
+    be_it_cop_is_cx be_it_cop_is_cx_2 be_it_cop_is_cx_3
+    be_nv_is_cx be_nv_is_cx_2 be_nv_is_cx_3
+    be_th_cop_is_cx be_th_cop_is_cx_2 be_th_cop_is_cx_3
+    had_aux_cx had_aux_cx_2 had_aux_cx_3 has_aux_cx has_aux_cx_2 
+    has_aux_cx_3 have_bse_aux_cx_1 have_bse_aux_cx_2 have_bse_aux_cx_3
+    have_fin_aux_cx have_fin_aux_cx_2 have_fin_aux_cx_3
+    had_aux_cx had_aux_cx_2 has_aux_cx has_aux_cx_2
     have_bse_aux_cx_1 have_bse_aux_cx_2 have_fin_aux_cx have_fin_aux_cx_2
-    will_aux_pos_cx will_aux_pos_cx_2 would_aux_pos_cx would_aux_pos_cx_2
+    will_aux_pos_cx will_aux_pos_cx_2 will_aux_pos_cx_3
+    would_aux_pos_cx would_aux_pos_cx_2 would_aux_pos_cx_3
     whatsoever1 whatsoever_det whosoever_n1
     easy_to_use_a2 on_screen_a2 psyche_out_v2 no_brainer_n2 off_camera_a2
     all_in_all_adv2 must_have_n2 after_market_a2 in_depth_a2
@@ -343,6 +354,9 @@
     e_g_cma_p1 e_g_cma_p2 e_g_cma_p3 e_g_cma_p4 e_g_cma_p5 e_g_cma_p6
     e_g_cma_p7 outta_p1 furthermore_root_pre_2
     arriving_abb_a1 goodbye_n2 goodbye_root_pre_2 very_first_adj1
+    the_1_rbst the_2_rbst the_3_rbst the_4_rbst the_5_rbst the_6_rbst 
+    the_7_rbst
+    one_digit_adj
     )
   "temporary expedient to avoid generating dual forms")
 
