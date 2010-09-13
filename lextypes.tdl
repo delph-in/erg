@@ -1943,17 +1943,18 @@ particle_NP_subst := particle_subst &
 ; DPF 28-Oct-01 - Removed constraint on COMPS to be lex_synsem and LEX +, since
 ; this blocked lexical PPs from serving as particles, as in "He drew me away".
 ; Instead, identify single-word particles by constraint on RELS - a hack.
+; DPF 2010-08-31 - Re 28-Oct-01: Removed this hack, instead constraining
+; particle to be abstr_lex_synsem.
 
 generic_NP_particle_subst := trans_subst & abstr_lex_synsem &
   [ LOCAL [ CAT.VAL.COMPS < [ OPT - ],
-                            synsem &
-                          [ --MIN #cmin & selected_rel,
-                            LOCAL [ CAT.HEAD a_or_p & [ PRD - ],
-                                    CONT.RELS <! !> ],
-                            NONLOC [ SLASH 0-dlist,
-                                     REL 0-dlist,
-                                     QUE 0-dlist ],
-                            OPT - ], ... > ],
+			    abstr_lex_synsem &
+			    [ --MIN #cmin & selected_rel,
+			      LOCAL.CAT.HEAD a_or_p & [ PRD - ],
+			      NONLOC [ SLASH 0-dlist,
+				       REL 0-dlist,
+				       QUE 0-dlist ],
+			      OPT - ], ... > ],
     LEX +,
     LKEYS.--COMPKEY #cmin ].
 
@@ -2614,7 +2615,8 @@ cp_fin_inf_intrans_verb := fin_or_inf_cp_prop+ques_verb & cp_intrans_subst &
 
 ; 'wonder'
 cp_ques_fin_inf_intrans_verb := cp_fin_inf_intrans_verb &
-  [ LOCAL.CAT.VAL.COMPS < [ LOCAL.CAT.VAL.SUBJ *anti_list*,
+  [ LOCAL.CAT.VAL.COMPS < [ LOCAL.CAT.VAL.SUBJ < >,
+			    NONLOC.SLASH 0-dlist,
                             --SIND.SF ques ] > ].
 
 cp_intrans_passivable_verb := cp_intrans_verb & cp_passivable_verb.
@@ -7680,12 +7682,17 @@ n_-_pr-there-x_le := norm_pronoun_word &
 ; to block "*Who's cat", but this runs afoul of constraint on ditransitives
 ; like "show" to avoid "*he showed Browne it."  So find a better solution...
 ; FIX
+; DPF 2010-08-31 - Changed [SPR anti_synsem_min]  to unexpressed since this 
+; was blocking e.g. |who in this town ...|.  But note "Exactly who won?", so
+; FIX to allow some limited range of specifiers.
 
 ; 'who, what'
 n_wh_pro_lexent := que_word & basic_pronoun_word &
   [ SYNSEM ref_pro_synsem &
 	 [ LOCAL [ CAT [ HEAD.MINORS.MIN pron_nonlocal_rel,
-                         VAL [ SPR < anti_synsem_min & [ OPT - ] >,
+                         VAL [ SPR < unexpressed & 
+				     [ OPT -,
+				       --MIN deg_rel ] >,
 			       COMPS < [ OPT +,
                                          --MIN wh_the_hell_rel,
                                          LOCAL [ CAT.HEAD wh_adv,
@@ -8175,7 +8182,7 @@ tag_synsem := lex_synsem &
 ;; DPF 24-aug-06 - Moved LPERIPH bool down to subtypes, since want to make
 ;; comparative "more" be LPERIPH na, to prevent further modification as in
 ;; "*happy more cats"
-;; DPF 2010-08-21 - Added INDEX non_conj_event to ensure that right-node-raise
+;; DPF 2010-08-21 - Added INDEX non_conj_sement to ensure that right-node-raise
 ;; rule does not apply to non-conjoined adjectives.  (Without this constraint,
 ;; RNR applied in |sequences are the same in every person|).
 
@@ -8184,7 +8191,7 @@ basic_adj_synsem_lex_or_phrase := canonical_synsem &
             CAT [ HEAD [ MINORS.MIN basic_adj_rel ],
 		  VAL [ SUBJ < >,
 			SPCMPS < > ] ],
-            CONT.HOOK [ INDEX non_conj_event,
+            CONT.HOOK [ INDEX non_conj_sement,
 			XARG #agr ] ],
     MODIFD notmod ].
 
@@ -8859,7 +8866,8 @@ aj_-_i-spn_le := adj_intrans_notb_lexent.
 ; <todo>
 ; </type>
 aj_-_i-spn-att_le := adj_intrans_notb_lexent &
-  [ SYNSEM basic_attr_adj_synsem ].
+  [ SYNSEM basic_attr_adj_synsem &
+	   [ MODIFD.LPERIPH + ] ].
 
 ; 'many/much' - allows QUE specifier ('how many')
 ; DPF 12-jul-06 - Added LPERIPH + to block e.g. "*the tall many chairs"
@@ -13724,7 +13732,8 @@ p_np_i-prd-an_le := pred_a_prep_lexent &
 free_rel_pro_word := noncr-hm-nab & basic_pronoun_word &
   [ SYNSEM synsem &
 	   [ LOCAL [ CAT [ HEAD partn & [ MOD < > ],
-			   VAL [ SPR < [ --MIN just_only_deg_rel,
+			   VAL [ SPR < synsem &
+				       [ --MIN just_only_deg_rel,
 					 LOCAL [ CAT.HEAD adv,
 						 CONT.HOOK.LTOP #lbl ],
 					 NONLOC [ QUE 0-dlist,
@@ -13761,8 +13770,9 @@ free_rel_pro_word := noncr-hm-nab & basic_pronoun_word &
 
 n_freerel_pro_lexent := free_rel_pro_word &
   [ SYNSEM [ LOCAL [ CAT.HEAD [ PRD -,
-                                MINORS [ MIN reg_nom_rel & #pred,
-                                         ALTMIN free_relative_ever_q_rel ] ],
+                                MINORS #minors &
+				       [ MIN reg_nom_rel & #pred,
+					 ALTMIN free_relative_ever_q_rel ] ],
 		     CONT [ HOOK.INDEX #ind & [ PNG.PN 3,
                                                 SORT entity ],
                             RELS <! relation & #altkeyrel, #keyrel !> ] ],
@@ -13770,7 +13780,8 @@ n_freerel_pro_lexent := free_rel_pro_word &
                      ALTKEYREL #altkeyrel ],
 	     NONLOC.SLASH 1-dlist &
                    <! [ CAT.HEAD noun & [ MOD < >,
-                                          PRD - ],
+                                          PRD -,
+					  MINORS #minors ],
                         CONT.HOOK.INDEX #ind,
                         AGR non_expl-ind ] !> ] ].
 
@@ -13817,7 +13828,7 @@ n_-_pr-fr-ever-sg_le := n_freerel_pro_lexent &
 
 n_freerel_pro_adv_lexent := free_rel_pro_word &
   [ SYNSEM [ LOCAL [ CAT.HEAD.MINORS [ MIN #min,
-				       ALTMIN free_relative_q_rel,
+				       ALTMIN #altmin & free_relative_q_rel,
 				       NORM prep_mod_rel ],
 		     CONT [ HOOK.INDEX.PNG.PN 3s,
 			    RELS <! relation, 
@@ -13831,11 +13842,13 @@ n_freerel_pro_adv_lexent := free_rel_pro_word &
                                      ARG2 #ind ] !> ] ],
              LKEYS [ KEYREL #keyrel & [ PRED #min ],
                      ALTKEYREL #keyrel,
-                     ALT2KEYREL #alt2key ],
+                     ALT2KEYREL #alt2key & [ PRED #slmin ] ],
 	     NONLOC.SLASH 1-dlist &
                    <! [ CAT.HEAD prep & 
                                  [ MOD < synsem &
-                                         [ --SIND #arg ] > ],
+                                         [ --SIND #arg ] >,
+				   MINORS [ MIN #slmin,
+					    ALTMIN #altmin ] ],
                         CONT.HOOK [ LTOP #lochand,
                                     XARG #arg ] ] !> ] ].
 
@@ -15906,7 +15919,7 @@ cm_np-vp_that_le := sor_compl_word &
 				  CASE nom,
 				  AUX -,
 				  MINORS.MIN verb_aspect_rel ],
-			   VAL.COMPS < [ LOCAL [ CAT.HEAD 
+			   VAL.COMPS < [ LOCAL [ CAT.HEAD verb &
 						     [ TAM #tam & indic_tam &
 							   [ TENSE real_tense,
 							     MOOD #mood ],
@@ -16244,7 +16257,7 @@ comp_whether_if_fin_lexent := whether_compl_word & basic_sor_compl_word &
   [ SYNSEM [ LOCAL [ CAT [ HEAD comp &
                                 [ VFORM fin,
                                   MINORS.MIN verb_aspect_rel ],
-                           VAL.COMPS < [ LOCAL [ CAT.HEAD 
+                           VAL.COMPS < [ LOCAL [ CAT.HEAD verb &
                                                      [ TAM #tam,
 						       --ADDIN [ ADDTAM #tam,
 								 ADDPN #pn ] ],
@@ -16275,12 +16288,13 @@ cm_np-vp_wh_le := comp_whether_if_fin_lexent &
 ; <nex>
 ; <todo>
 ; </type>
-cm_np-vp_if-ic_le := comp_whether_if_fin_lexent & sor_compl_word &
+cm_np-vp_if-ic_le := comp_whether_if_fin_lexent &
   [ SYNSEM.LOCAL.CAT [ HEAD [ CASE acc,
                               MINORS.NORM no_rel ],
-                       VAL.COMPS < [ LOCAL 
-                                     [ CAT.HEAD.TAM indic_tam,
-                                       CONT.HOOK.INDEX.SF prop-or-ques ]] > ]].
+                       VAL [ SUBJ < >,
+			     COMPS < [ LOCAL 
+                                      [ CAT.HEAD.TAM indic_tam,
+                                        CONT.HOOK.INDEX.SF prop-or-ques ]]>]]].
 
 ; <type val="cm_np-vp_if-sv_le">
 ; <description>Cmplzr, 'if' subjctv
@@ -16376,7 +16390,7 @@ cm_vp_wh_le := whether_compl_word &
 	   [ LOCAL [ CAT [ HEAD comp &
                                 [ VFORM inf,
                                   MINORS.MIN verb_aspect_rel ],
-			   VAL [ SUBJ < anti_synsem_min >,
+			   VAL [ SUBJ < >,
 				 COMPS #comps &
                                       < [ LOCAL [ CAT [ HEAD comp &
 							  [ VFORM inf ],
@@ -18139,16 +18153,7 @@ av_-_dg-jom_le := adv_degree_spec_lexent &
   [ SYNSEM.LOCAL.CAT.HEAD.MINORS.MIN just_only_much_deg_rel ].
 
 
-; Set [HS-LEX +] which adj_synsem identifies with the spr's SPEC..HS-LEX,
-; which is what the head-spec rule uses to set LEX on phrase, so we block
-; '*the lake most beautiful' but allow 'the most beautiful lake'
-; <type val="av_-_dg-sup_le">
-; <description>Deg, superl                      
-; <ex>The most famous dog won.
-; <nex>
-; <todo>
-; </type>
-av_-_dg-sup_le := basic_adv_degree_spec_lexent &
+av_-_dg-sup_lexent := basic_adv_degree_spec_lexent &
   [ SYNSEM.LOCAL.CAT [ HEAD.MINORS [ MIN this_that_deg_rel,
                                      ALTMIN superl_rel ],
 		       VAL [ SPR < [ --MIN very_deg_rel ] >,
@@ -18156,7 +18161,7 @@ av_-_dg-sup_le := basic_adv_degree_spec_lexent &
 			     SPCMPS < > ],
 		       HS-LEX + ] ].
 
-av_pp_dg-sup_le := basic_adv_degree_spec_lexent &
+av_pp_dg-sup_lexent := basic_adv_degree_spec_lexent &
   [ SYNSEM [ LOCAL.CAT [ HEAD.MINORS [ MIN this_that_deg_rel,
                                      ALTMIN superl_rel ],
                          VAL [ SPR < [ --MIN very_deg_rel ] >,
@@ -18170,6 +18175,43 @@ av_pp_dg-sup_le := basic_adv_degree_spec_lexent &
 					  OPT - ] > ],
                          HS-LEX + ],
              LKEYS.--COMPKEY #cmin ] ].
+
+; Set [HS-LEX +] which adj_synsem identifies with the spr's SPEC..HS-LEX,
+; which is what the head-spec rule uses to set LEX on phrase, so we block
+; '*the lake most beautiful' but allow 'the most beautiful lake'
+; <type val="av_-_dg-sup_le">
+; <description>Deg, superl                      
+; <ex>The most famous dog won.
+; <nex>
+; <todo>
+; </type>
+av_-_dg-sup_le := av_-_dg-sup_lexent.
+
+; <type val="av_pp_dg-sup_le">
+; <description>Deg, superl, PP-complement
+; <ex>The most famous dog of all won.
+; <nex>
+; <todo>
+; </type>
+av_pp_dg-sup_le := av_pp_dg-sup_lexent.
+
+; <type val="av_-_dg-sup-av_le">
+; <description>Deg, superl, for adverbs only                     
+; <ex>Who sang the most beautifully?
+; <nex>
+; <todo>
+; </type>
+av_-_dg-sup-av_le := av_-_dg-sup_lexent &
+  [ SYNSEM.LOCAL.CAT.VAL.SPEC < [ LOCAL.CAT.HEAD adv ] > ].
+
+; <type val="av_pp_dg-sup_le">
+; <description>Deg, superl, PP-complement, for adverbs only
+; <ex>Who sang the most beautifully of all?
+; <nex>
+; <todo>
+; </type>
+av_pp_dg-sup-av_le := av_pp_dg-sup_lexent &
+  [ SYNSEM.LOCAL.CAT.VAL.SPEC < [ LOCAL.CAT.HEAD adv ] > ].
 
 ; Only for degree specs of determiners: 'not all, not many, not every'
 ; <type val="av_-_dg-det_le">

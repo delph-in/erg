@@ -61,8 +61,8 @@
   #-(or :speech :arboretum)
   '(root_strict root_frag)
   #+:speech
-  '(root_informal root_spoken root_spoken_frag)
-  ;'(root_informal root_frag root_inffrag)
+  ;'(root_informal root_spoken root_spoken_frag)
+  '(root_informal root_frag root_inffrag)
   ;'(root_informal root_frag root_inffrag root_robust)
   ;'(root_formal)
   ;'(root_decl)
@@ -349,7 +349,7 @@
     all_in_all_adv2 must_have_n2 after_market_a2 in_depth_a2
     top_of_the_line_a2 out_of_town_a2 set_up_n2 
     height_abb_n1 weight_abb_n1
-    care_of_prep_2 care_of_prep_3 m_z_n2
+    care_of_prep_2 care_of_prep_3 m_z_n2 a_lot_adv2
     reference_abb_n1 reference_abb_pl_n1 circa_abb_deg_2 circa_abb_deg_1
     e_g_cma_p1 e_g_cma_p2 e_g_cma_p3 e_g_cma_p4 e_g_cma_p5 e_g_cma_p6
     e_g_cma_p7 outta_p1 furthermore_root_pre_2

@@ -2671,11 +2671,11 @@ h_adj_sl_phrase := head_adj_int_phrase &
 
 adj_n_int_phrase := adj_head_int_phrase &
   [ HD-DTR [ SYNSEM.LOCAL.CAT [ HEAD basic_nom_or_ttl,
-                                VAL [ SPR.FIRST 
+				VAL [ SPR.FIRST 
 					   [ LOCAL.CAT.HEAD.MINORS.MIN #min,
 					     --MIN #min & quant_rel ],
 				      COMPS < > ] ],
-             INFLECTD #infl ],
+	     INFLECTD #infl ],
     NH-DTR [ SYNSEM [ LOCAL [ CAT.VAL.SUBJ *synlist*,
 			      CONT.HOOK.INDEX event & [ E.TENSE no_tense ] ],
                       LEX +,
@@ -2701,10 +2701,12 @@ adj_n_phrase := adj_n_int_phrase &
 ; "the first five cats" and "the same five cats"
 ; DPF 25-may-09 - Re 07-nov-07 - This was also blocking "*the tall many cats"
 ; but now doing this with the lexical type for normal adjectives
+; DPF 2010-09-01 - Re 25-may-09: But still want to block "*the tall very cat"
+; so add LPERIPH na_or_-.
 ;
 adj_adjn_phrase := adj_n_int_phrase &
   [ HD-DTR.SYNSEM [ LOCAL.CAT.HEAD nom_or_ttl,
-                    MODIFD lmod ] ].
+                    MODIFD lmod & [ LPERIPH na_or_- ] ] ].
 
 ; DPF 29-Nov-02 - Removed NH-DTR..HEAD..TENSE no_tense, since the adjunct
 ; now provides the HOOK for the mother, including E-INDEX, which must be
@@ -2956,13 +2958,17 @@ extracted_adj_int_phrase := basic_extracted_adj_phrase &
 ; "Why is Kim in Berlin?". 
 ; DPF 02-jul-09 - Added HD-DTR..MC na to VP variant, to exclude spurious 
 ; extraction from filler-head dtr, such as "which arrive".
+; DPF 2010-sept-08 - Added SLASH..MIN nondir_or_adv_rel to
+; ensure that when the adjunct is extracted, it is not interpreted as
+; directional.
 
 extracted_adj_int_vp_phrase := extracted_adj_int_phrase &
-  [ SYNSEM.LOCAL [ CAT [ HEAD [ AUX -,
-                                MOD *anti_list* ],
-                         VAL.SUBJ *synlist*,
-                         POSTHD + ],
-                   CONT [ HOOK.XARG individual ] ],
+  [ SYNSEM [ LOCAL [ CAT [ HEAD [ AUX -,
+				  MOD *anti_list* ],
+			   VAL.SUBJ *synlist*,
+			   POSTHD + ],
+		     CONT [ HOOK.XARG individual ] ],
+	     NONLOC.SLASH.LIST.FIRST.CAT.HEAD.MINORS.MIN nondir_or_adv_rel ],
     HD-DTR.SYNSEM.LOCAL.CAT.MC na ].
 
 ;; DPF 20-oct-09 - Cannot recall why this rule is needed, so try excluding it
@@ -5113,6 +5119,9 @@ num_noun_sequence_phrase := binary_phrase &
 ;; DPF 2010-jul-21 - Changed SUBJ < > to SUBJ < anti_synsem_min > to block
 ;; free relatives in appositives and as possessive NPs.  Maybe not strictly
 ;; impossible, but let's exclude them for now.  FIX?
+;; DPF 2010-sept-09 - Changed HD-DTR..SPR *olist* to *anti_list*, since we
+;; recently added second SPR list element (anti_synsem) which is marked OPT - 
+;; (for reasons not immediately recallable).
 
 free_rel_phrase := head_initial_infl & head_compositional &
   [ SYNSEM [ LOCAL [ CAT [ HEAD n_or_p,
@@ -5128,39 +5137,32 @@ free_rel_phrase := head_initial_infl & head_compositional &
 			 REL 0-dlist ],
              LEX -,
              PUNCT.PNCTPR #ppair ],
-    HD-DTR.SYNSEM [ LOCAL [ CAT [ HEAD.MINORS [ MIN #min & independent_rel,
-                                                ALTMIN #altmin ],
+    HD-DTR.SYNSEM [ LOCAL [ CAT [ HEAD.MINORS.MIN independent_rel,
                                   VAL [ COMPS < >,
-                                        SPR *olist*,
+					SPR *anti_list*,
                                         SUBJ *olist* ] ],
                             CONT.HOOK.XARG #hand ],
                     NONLOC [ QUE 1-dlist & <! ref-ind !>,
                              SLASH 1-dlist &
                                  <! #loc !> ],
                     PUNCT.RPUNCT no_punct ],
-    NH-DTR.SYNSEM [ LOCAL [ CAT [ HEAD verbal & [ VFORM fin_or_inf,
-                                                  INV - ],
-                                  VAL [ SPR *olist*,
+    NH-DTR.SYNSEM [ LOCAL [ CAT [ HEAD verb & [ VFORM fin,
+						INV -,
+						TAM.MOOD indicative ],
+                                  VAL [ SUBJ *olist*,
+					SPR *olist*,
                                         COMPS < > ],
                                   MC - ],
                             CONT [ HOOK [ LTOP #hand,
                                           INDEX.SF prop ] ] ],
                     NONLOC [ SLASH 1-dlist &
-                                   <! #loc &
-                                    [ CAT [ HEAD.MINORS [ MIN #min,
-                                                          ALTMIN #altmin ],
-                                            VAL [ COMPS < >,
-                                                  SPR *olist* ] ] ] !>,
+                                   <! #loc & [ CAT.VAL [ COMPS < >,
+							 SPR *olist* ] ] !>,
                              QUE 0-dlist,
                              REL 0-dlist ],
                     PUNCT.PNCTPR #ppair ],
     C-CONT [ RELS <! !>,
 	     HCONS <! !> ] ].
-
-free_rel_fin_phrase := free_rel_phrase &
-  [ NH-DTR.SYNSEm.LOCAL.CAT [ HEAD verb & [ VFORM fin,
-                                            TAM.MOOD indicative ],
-                              VAL.SUBJ *olist* ] ].
 
 ; For "two hundred twenty remain"
 ; DPF 31-May-02 - Added [ARGS..FIRST..HEAD.PRD -] to block "a/an"
@@ -5203,6 +5205,8 @@ free_rel_fin_phrase := free_rel_phrase &
 ; We'll see if this was too ambitious.
 ; DPF 28-apr-08 - Well, yes, too ambitious - this blocks "a hundred" with
 ; partitive_num_nocomp.  So move notmod down to partitive_intadj_phrase.
+; DPF 2010-08-31 - Re 14-mar-05: But this also blocks "the two oldest", so
+; push constraint down to subtype partitive_np_num_phrase.
 
 basic_partitive_num_phrase := unary_phrase & phrasal &
   [ SYNSEM [ LOCAL [ CAT [ HEAD partn &
@@ -5219,8 +5223,7 @@ basic_partitive_num_phrase := unary_phrase & phrasal &
                            HC-LEX - ],
                      CONT nom-obj,
                      CONJ cnil,
-                     AGR #agr ],
-             MODIFD.LPERIPH na ],
+                     AGR #agr ] ],
     ARGS < [ INFLECTD +,
              SYNSEM 
 	      [ LOCAL 
@@ -5261,7 +5264,8 @@ partitive_np_num_phrase := basic_partitive_num_phrase &
 					     CONT.HOOK.LTOP #hand ],
 				     NONLOC.QUE 0-dlist ],
 				   anti_synsem_min & [ OPT - ] > ],
-	     NONLOC.QUE #que ],
+	     NONLOC.QUE #que,
+             MODIFD.LPERIPH na ],
     ARGS < [ SYNSEM [ LOCAL [ CAT [ HEAD intadj_or_comp &
 					 [ MINORS.ALTMIN norm_rel ],
 				    VAL [ SPR *olist* ] ],
@@ -5334,7 +5338,8 @@ partitive_intadj_phrase := basic_partitive_num_phrase &
 			   HS-LEX - ],
 		     CONT.HOOK.INDEX.PNG #png,
                      AGR #agr & [ PNG #png ] ],
-             NONLOC.QUE #que ],
+             NONLOC.QUE #que,
+	     MODIFD notmod ],
     ARGS < [ SYNSEM [ LOCAL [ CAT [ HEAD adj_or_intadj &
 					 [ MOD < [ LOCAL.AGR #agr ] >,
 					   MINORS.ALTMIN superl_rel ],
@@ -5918,12 +5923,15 @@ subjh_rule_decl := subjh_rule_basic & decl_phrase &
 
 ;; DPF 2010-jul-24 - FIX: Identifying PSF and SF wrongly makes [SF ques]
 ;; for "Kim wondered, who arose?"
+;; DPF 2010-sept-10 - Since all filler-head rules require MC na_or_- for
+;; the hd-dtr, we can constrain this rule to be SLASH 0-dlist.
 
 subjh_mc_rule := subjh_rule_decl & head_subj_phrase &
   [ SYNSEM [ LOCAL [ CAT [ HEAD [ VFORM fin,
                                   TAM indic_tam ],
                            MC + ],
                      CONT.HOOK.INDEX.SF #pred & prop-or-pol-ques-or-comm ],
+	     NONLOC.SLASH 0-dlist,
              PUNCT.RPUNCT.PSF #pred ] ].
 
 ; Constrain nh-dtr to be HEAD n_or_v to exclude locative inversion in
@@ -6272,7 +6280,9 @@ filler_head_rule_non_wh := binary_rule_right_to_left &
              HCONS <! !> ] ].
 
 ; DPF 21-jan-10 - For now, change RPUNCT from comma_or_clause_or_pair_punct,
-; but see note from 05-sept-05 above.
+; but see note from 05-sept-05 above.  In particular, we will eventually
+; want to generate e.g. |More coffee? she asked, along with |Victory! he
+; exclaimed.  FIX.
 
 filler_head_rule_non_wh_edgen := filler_head_rule_non_wh &
   [ NH-DTR.SYNSEM.PUNCT.RPUNCT comma_or_pair_punct ].
@@ -6281,9 +6291,6 @@ filler_head_rule_non_wh_infgen := filler_head_rule_non_wh &
   [ HD-DTR.SYNSEM.LEX -,
     NH-DTR.SYNSEM.PUNCT.RPUNCT no_punct,
     GENRE nonformal ].
-
-; DPF 20-Oct-01 - Changed HEAD.INV + to HEAD.INV +* (and same for AUX) to 
-; allow for coordination of inverted and non-inverted sentences.
 
 filler_head_rule_wh_root := binary_rule_left_to_right & 
 			    head_filler_phrase_wh_fin & wh_interrog_fin & 
@@ -7992,9 +7999,7 @@ no_copula_id_vp_rule := no_copula_id_phrase & rule.
 
 no_copula_nosubj_rule := no_copula_nosubj_phrase & rule.
 
-;free_rel_inf_rule := binary_rule_left_to_right & free_rel_inf_phrase.
-
-free_rel_fin_rule := binary_rule_left_to_right & free_rel_fin_phrase.
+free_rel_rule := binary_rule_left_to_right & free_rel_phrase.
 
 partitive_num_nocomp_rule := partitive_num_nocomp_phrase & rule.
 
