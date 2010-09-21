@@ -356,7 +356,7 @@
     arriving_abb_a1 goodbye_n2 goodbye_root_pre_2 very_first_adj1
     the_1_rbst the_2_rbst the_3_rbst the_4_rbst the_5_rbst the_6_rbst 
     the_7_rbst
-    one_digit_adj
+    one_digit_adj at_date_p
     )
   "temporary expedient to avoid generating dual forms")
 
