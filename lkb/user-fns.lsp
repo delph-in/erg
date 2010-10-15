@@ -161,7 +161,11 @@
          (prefix
           (if version
             (remove-if-not #'alphanumericp (symbol-value version))
-            "ERG")))
+            "ERG"))
+         #+:speech
+         (prefix (concatenate 'string "S" prefix))
+         #+:educ
+         (prefix (concatenate 'string "E" prefix)))
     (setf *psorts-temp-file* 
       (make-pathname :name (concatenate 'string prefix ".lex") 
 		     :host (pathname-host (lkb-tmp-dir))
