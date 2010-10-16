@@ -111,12 +111,71 @@ verb_prefix_rule &
    RNAME "LUNV",
    C-CONT.RELS <! [ PRED "_un-_a_rvrs_rel" ] !> ].
 
-;; Mal rule for inversion on non-auxilaries,
-;; i.e., lack of do support.
-;; DPF 21-apr-10 - Not yet ready to support this rule, so block
-#|
-sailr_mv_mal := mal_sai &
-  [ GENRE robust,
-    RNAME "SAIR" ].
-|#
+;;; From arboretum/mal-inflr.tdl
 
+;; Disagreement rules, one for each direction.  Pair synsem with
+;; "wrong" forms: The dog bark/the dogs barks.
+;;
+;; Constrain this one to only apply to pronominal subject, to avoid spurious
+;; analysis using both this rule and the mal_plur_noun_irule
+;; DPF 25-jun-10 - But we also want to catch e.g. "my knees hurts", so let's
+;; try blocking --BARE +, to avoid the above spuriosity.
+;;
+non_third_sg_fin_v_rbst :=
+%suffix (!s !ss) (!ss !ssses) (ss sses) (!ty !ties) (ch ches) (sh shes) (x xes) (z zes)
+lex_rule_infl_affixed &
+[ GENRE robust,
+  ND-AFF +,
+  SYNSEM.LOCAL non_third_sg_fin_verb &
+	[ CAT.VAL.SUBJ < [ LOCAL.CAT.HEAD [ --BARE -,
+					    MINORS.MIN nonpart_nom_rel ] ] > ],
+  RNAME "MN3S" ].
+
+;; DPF 2010-08-16 - Block subject extraction, to avoid spurious analysis for
+;; "What do Kim and Abrams ..."
+third_sg_fin_v_rbst := lex_rule_infl_affixed &
+[ GENRE robust,
+  ND-AFF -,
+  ORTH #stem,
+  DTR [ ORTH #stem,
+	SYNSEM.LOCAL.CAT [ HEAD mal_verb & [ --MAL3SG + ],
+	                   VAL.SUBJ < canonical_synsem > ] ],
+  SYNSEM.LOCAL third_sg_fin_verb,
+  RNAME "M3S" ].
+
+;; DPF 10-May-04 - We take plural marking on noun as intended (not to be
+;; corrected), so only have one mal infl-rule for nouns to correct 
+;; 'two dog bark' to 'two dogs bark'.  We will need a statistical preference 
+;; mechanism to choose one of the two possible corrections for 'dog bark':
+;; either 'dogs bark' or 'a/the dog barks'.  But have to have both, since
+;; 'he bark' should presumably get corrected to 'he barks' (not 'they bark').
+;; DPF 07-feb-10 - Changed DTR..MIN norm_nom_rel to reg_nom_rel, so it also
+;; applies to measure nouns, as in "they ran twenty six mile."
+;; Note that CASE on dtr must be nom to avoid spurious ambiguity for e.g.
+;; direct objects where there is no constraint on number.
+;; DPF 30-mar-10 - Restrict this to only apply when the determiner is overt, 
+;; to avoid spurious ambiguity for e.g. "she told her brother borrow her book"
+;; where `brother' formerly got made a plural.  So now we assume that number
+;; on nouns is as the writer intended, unless there is a determiner present,
+;; which might indicate competing number, as in "most thing are important"
+;; the verb to match robustly when needed.
+;; DPF 07-apr-10 - But still getting too much spurious ambiguity, as in
+;; "His soup is".  So restrict further to just deictic dets for now.
+
+plur_noun_irule_rbst := lex_rule_infl_affixed &
+[ GENRE robust,
+  ND-AFF -,
+  ORTH #stem,
+  SYNSEM.LOCAL.CAT.HEAD.--BARE +,
+  DTR [ ORTH #stem,
+	SYNSEM.LOCAL.CAT [ HEAD [ MINORS.MIN reg_nom_rel,
+				  CASE nom ],
+			   VAL.SPR < canonical_synsem &
+				     [ --MIN demonstrative_q_rel ] > ] ],
+  SYNSEM.LOCAL plur_noun,
+  RNAME "MPLN" ].
+
+; For |Kim, Abrams(,) and Browne|
+w_paren_comma-nf_plr :=
+%suffix (!. !.\(,\))
+punctuation_comma_rule.
