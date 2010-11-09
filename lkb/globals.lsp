@@ -193,19 +193,27 @@
     be_th_cop_were_neg_2 be_c_were_neg_subj_1
     be_c_were_neg_subj_2 be_id_were_neg_subj_1 be_id_were_neg_subj_2
     be_th_cop_were_neg_subj_1 be_th_cop_were_neg_subj_2 need_not_v3
-    u_pro you_people yall yall_2 yall_3 you_all
+    u_pro you_people yall yall_2 yall_3 yall_4 yall_5 you_all
     and_or_conj_1 and_or_conj_2 and_or_conj_3 
     and_or_conj_4 and_or_conj_5 and_or_conj_6 and_conj_amp
     apostrophe_s_3_lex apostrophe_s_4_lex
     apostrophe_s_12_lex apostrophe_s_14_lex apostrophe_s_nq_2_lex
+    esquire_ttl_abb2
     mister missus mister_abb_n1 doctor_abb_n1 professor_abb_n1 missus_abb_n1
     number_abb_n2 number_abb_n3 number_abb_n4 number_abb_n5 number_char_n1
     order_abb_n1 order_abb_n2 president_abb_n1 president_abb_n2
+    governor_abb_n1 governor_abb_n2 lieutenant_abb_n1 
+    lieutenant_general_abb_n1 lieutenant_general_abb_n2 madame_abb_n1
+    madame_abb_n2 rev_abb_n1 senora_abb_n1 
     aint_be_c_am_neg_2 aint_be_c_are_neg_1
     aint_be_c_am_neg_1
-    aint_be_c_are_neg_2 aint_be_c_is_neg_2 aint_be_id_am_neg_2
-    aint_be_id_are_neg_2 aint_be_id_is_neg_2 aint_be_th_cop_are_neg_2
-    aint_be_th_cop_is_neg_2 aint_pl_have_aux_2 aint_sg_have_aux_2
+    aint_be_c_are_neg_2 aint_be_id_am_neg_1 aint_be_c_is_neg_2 
+    aint_be_id_are_neg_1 aint_be_id_am_neg_2 
+    aint_be_id_are_neg_2 aint_be_id_is_neg_2 aint_be_th_cop_are_neg_1
+    aint_be_th_cop_is_neg_1 aint_be_th_cop_are_neg_2
+    aint_be_th_cop_is_neg_2 aint_pl_have_aux_2 
+    aint_be_nv_are_neg_1 aint_be_nv_are_neg_2 aint_be_nv_is_neg_1
+    aint_be_nv_is_neg_2 aint_pl_have_aux_1
     be_c_am_neg_2 be_c_are_neg_2 be_c_was_neg_2 
     be_c_was_neg_subj_2 be_c_were_neg_2 be_c_were_neg_subj_2
     be_id_am_neg_2 be_id_are_neg_2 be_id_is_neg_2 be_id_was_neg_2
@@ -227,7 +235,7 @@
     saturday_n2 sunday_n3 monday_n3 tuesday_n3 wednesday_n3 thursday_n3 
     friday_n3 saturday_n3 thursday_n4 thursday_n5 or_else_1
     whom2 yours_truly_pn1 hour_n2 couple_adj
-    customer_abb_n1 customer_abb_n2 
+    customer_abb_n1 customer_abb_n2 olds_abb_n1 organization_abb_n1
     april_abb_n1 april_abb_n3 august_abb_n1 august_abb_n3
     december_abb_n1 december_abb_n3 february_abb_n1 february_abb_n3
     january_abb_n1 january_abb_n3 july_abb_n1 july_abb_n3
@@ -263,15 +271,19 @@
     he_stutter_1_rbst he_stutter_2_rbst he_stutter_3_rbst
     she_stutter_1_rbst she_stutter_2_rbst she_stutter_3_rbst
     it_stutter_1_rbst it_stutter_2_rbst it_stutter_3_rbst
-    telephone_abb_n1 telephone_abb_n2 adj_abb_n1 adv_abb_n1 anat_abb_n1
-    centimeter_abb_n1 comparative_abb_n1 customer_abb_n1 customer_abb_n2
-    diameter_abb_n1 foot_abb_n1 geometry_abb_n1 illustration_abb_n1
-    illustration_abb_n3 imp_abb_n1 imp_abb_a1 meter_abb_n1 milliliter_abb_n1
+    telephone_abb_n1 telephone_abb_n2 telephone_abb_n3 telephone_abb_n4
+    adj_abb_n1 adv_abb_n1 anat_abb_n1
+    comparative_abb_n1 customer_abb_n1 customer_abb_n2
+    diameter_abb_n1 division_abb_n1 
+    foot_abb_n1 geometry_abb_n1 illustration_abb_n1
+    illustration_abb_n3 imp_abb_n1 imp_abb_a1 including_abb_a1 
+    including_abb_a2
+    meter_abb_n1 milliliter_abb_n1
     okay_s_adv2 millimeter_abb_n1 minute_abb_n1 minute_abb_n2 noun_abb_n1
     plural_abb_n1 plural_abb_n2 prep_abb_n1 scripture_abb_n1 singular_abb_n1 
     singular_abb_n2 thanks_abb_root_post thanks_abb_root_pre thanks_abb_v1
     st_abb_n1 st_abb_n2 with_p_abb prep_abb_n1 prep_abb_n2
-    reverend_abb_n1 reverend_abb_n2
+    reverend_abb_n1 reverend_abb_n2 road_abb_post_ttl rv_abb_n1
     be_c_am_cx_neg_1 be_c_are_cx_neg_1 be_c_are_cx_neg_2
     be_c_is_cx_neg_1 be_c_is_cx_neg_2 be_id_am_cx_neg_1 be_id_am_cx_neg_2
     be_id_are_cx_neg_1 be_id_are_cx_neg_2 be_id_is_cx_neg_1 be_id_is_cx_neg_2
@@ -292,13 +304,22 @@
     colour_n1 anywhere_n2 everywhere_n2 nowhere_n2 
     someplace_n2 sometime_n2 somewhere_n2 en_route_pp_2 round_trip_n2 hour_n5
     hour_n2 hour_n3 hour_n4 approximately_abb approximately_abb_2 
-    approximately_abb_3 appointment_abb_n1 appointment_abb_n2 seaside_n2
+    apartment_abb_n1 apartment_abb_n2 apartments_abb_n1
+    approximately_abb approximately_abb_2 approximately_abb_3
+    appointment_abb_n1 appointment_abb_n2 british_abb_a1 british_abb_a2
+    channel_abb_n1 channel_abb_n2 equation_abb_n1 mount_abb_n1
     gallon_abb_n1 gallon_abb_n2 millimeter_abb_n2 milliliter_abb_n2
-    foot_abb_n2 centimeter_abb_n2 meter_abb_n2 kg_abb_n1 kg_abb_n2 km2_abb_n1
+    foot_abb_n2 centimeter_abb_n1 centimeter_abb_n2 meter_abb_n2 
+    kg_abb_n1 kg_abb_n2 km2_abb_n1 decibel_abb_n1 deciliter_abb_n1
+    cent_abb_n1 cent_abb_n2 cents_abb_n1 fv_abb_n1 hertz_abb_n1
+    kcal_abb_n1 kilo_x_abb_n1 kj_abb_n1 kroner_abb_n1 lb_abb_n1
+    lb_abb_n2 milliamp_abb_n1 nanometer_abb_n1 nanosecond_abb_n1
+    quart_abb_n1
     with_p_abb2 with_p_abb3 with_p_abb4 with_p_abb5 figure_abb_n1
     fig_abb obs_abb_a1 obs_abb_a2 please_abb_adv please_abb_adv3
-    please_abb_root route_abb_n1 route_abb_n2
-    orig_abb orig_abb_2 specif_abb specif_abb_2 adj_abb_n1 adj_abb_n2
+    please_abb_root route_abb_n1 route_abb_n2 hms_abb_n1 
+    orig_abb orig_abb_2 pe_abb_n2 
+    specif_abb specif_abb_2 adj_abb_n1 adj_abb_n2 square_abb_a1 square_abb_a2
     anat_abb_n2 adv_abb_n1 adv_abb_n2 as_abb_post_ttl esp_abb_2 esp_abb_3
     alabama_n2 alaska_n2 arizona_n2 arkansas_n2 california_n2
     connecticut_n2 florida_n2 georgia_n2 hawaii_n2 idaho_n2 iowa_n2
@@ -309,14 +330,15 @@
     pennsylvania_n2 rhodeisland_n2 southcarolina_n2 southdakota_n2 tennessee_n2
     texas_n2 utah_n2 vermont_n2 virginia_n2 washington_n2 washingtondc_n2
     washingtondc_n4 washingtondc_n5 washingtondc_n6  westvirginia_n2 
-    wisconsin_n2 wyoming_n2 goodwill_n1 
+    wisconsin_n2 wyoming_n2 goodwill_n1 seaside_n2
     okay_s_adv2 okay_s_adv3 e_mail_n1 e_mail_n2 e_mail_n3
-    doubtlessly spec_n1 hon_abb_a1 them_abb
+    doubtlessly spec_n1 hon_abb_a1 them_abb them_abb_2
     yer_pro e_g_pp2 e_g_disc_adv2 e_g_a2 e_g_pp3 e_g_disc_adv3 e_g_a3
     year_abb_n1 year_abb_n2 years_abb_n1
     full-grown_a2 because_abb because_of_abb_p worthwhile_a2 worthwhile_a4
     slash_per_p slash_per_p2 slash_per_p3 slash_per_p4 slash_per_p5 
-    be_inv_are be_inv_is be_inv_was be_inv_were come_v3 go_v3 lie_v4 run_v4
+    be_inv_are be_inv_is be_inv_was be_inv_were be_inv_be come_v3 go_v3 
+    lie_v4 run_v4
     stand_v3 micro_a2 mid_isect super_deg1 temperature_abb_n1
     zero_det liquify_v1 liquify_v2 used_to_aux_nonfin_2 and_num hafta_v1
     be_inv_is_cx be_inv_is_cx_2 be_inv_are_cx be_inv_are_cx_2 
@@ -354,12 +376,17 @@
     height_abb_n1 weight_abb_n1
     care_of_prep_2 care_of_prep_3 m_z_n2 a_lot_adv2
     reference_abb_n1 reference_abb_pl_n1 circa_abb_deg_2 circa_abb_deg_1
+    circa_abb_3_p circa_abb_p
     e_g_cma_p1 e_g_cma_p2 e_g_cma_p3 e_g_cma_p4 e_g_cma_p5 e_g_cma_p6
     e_g_cma_p7 outta_p1 furthermore_root_pre_2
     arriving_abb_a1 goodbye_n2 goodbye_root_pre_2 very_first_adj1
+    literally_deg_abb
     the_1_rbst the_2_rbst the_3_rbst the_4_rbst the_5_rbst the_6_rbst 
     the_7_rbst
-    one_digit_adj at_date_p
+    one_digit_adj at_date_p a_very_few_a1 also_root when_np_rel non_adjp
+    not_mrk round anyplace_n1 judgement_n1 the_most_deg the_most_deg_2
+    weekend_n2 weekend_nc_n2 weekend_pl_def_2 weekend_sg_def_2
+    generic_trans_verb_pas
     )
   "temporary expedient to avoid generating dual forms")
 
@@ -381,17 +408,36 @@
     ; The following rule allows that-S as a fragment, but with MRS the same
     ; as for an ordinary matrix S, so we don't use it for generation.      
     cl_cp-frg_c
+    ;; The following rule allows relative clause fragments - probably should
+    ;; add some semantics of its own; block for now
+    cl_rel-frg_c 
     ; The following rule allows inverted quoting verbs, as in "said Kim",
     ; giving unnecessary variation in generation.
     v_inv-quot_dlr
-    ; The following rule allows adverbs and PPs after verbs but preceding
+    ; The following rules allow adverbs and PPs after verbs but preceding
     ; complements (one part of 'heavy-NP shift' phenomena)
     hd-aj_vmod_c
+    hd-aj_vmod-s_c
     ;;
     ;; suggested in email by dan (9-feb-08), suppress in-situ WH pronouns.
     ;;
     sb-hd_q_c
     robust_np_sg robust_subjh_sg robust_subjh_pl
+    ;;
+    ;; Let's try doing without these variants that add commas around
+    ;; relative clauses, which should really only be for non-restrictives,
+    ;; a distinction the grammar does not currently make.
+    ;; But now notice that without these, we cannot generate e.g.
+    ;; |Kim, who arrived, ...| because we require comma-marked rel-cl for
+    ;; proper names, to avoid spurious ambiguity without the commas.  So
+    ;; don't block the full rel-cl with commas.
+    ;;
+    ; hdn-aj_rc-pr_c 
+    hdn-aj_redrel-pr_c
+    ;;
+    ;; For debugging, block punctuation rules
+    ;;
+    ; w_comma_plr w_period_plr w_qmark_plr
    ))
 
 (setf *semantics-index-path* '(SYNSEM LOCAL CONT HOOK INDEX))
@@ -477,6 +523,7 @@
       (generic_card_ne :generate) (generic_ord_ne :generate)
       (generic_dom_card_ne :generate) (generic_dom_ord_ne :generate)
       (generic_year_ne :generate) (generic_date_ne :generate) 
+      (generic_pl_noun_ne :generate)
       (generic_adj :generate ,#'(lambda (ep) (match-pred ep "a")))
       (generic_adverb :generate ,#'(lambda (ep) (match-pred ep "a")))
       (gen_generic_noun :generate ,#'(lambda (ep) (match-pred ep "n")))
