@@ -11,7 +11,7 @@
 ;;; re-combine punctuation marks with adjacent tokens, based on directionality
 ;;; of punctuation marks, e.g. opening vs. closing quotes and brackets.  doing
 ;;; one such re-combination at a time is sufficient, as each rewrite rule will
-;;; apply as many times as it possible can, seeing its own output from earlier
+;;; apply as many times as it possibly can, seeing its own output from earlier
 ;;; applications.
 ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -54,19 +54,20 @@ default_carg_tmr := one_one_tmt &
 ;; safe-guarding against this in the +INPUT seems a little baroque, but i fail
 ;; to come up with an easier solution.
 ;;
-;; DPF 01-sept-10 - Use separate rule for straight single quote, to avoid
-;; ill-formed chart in case the quote is intended as a possessive, as in
-;; |neighbors ' cat|.
+;; straight quote are treated separately because they can attach both to the
+;; left and to the right; to prevent fragmented token lattices, this means we
+;; also need to preserve the original token to which a straight quote attaches
+;; in the chart.
+;;
+prefix_straight_quote_tmr := prefix_straight_quote_tmt &
+[ +CONTEXT < [ +FORM ^(["'])$ ],
+             [ +FORM ^(.*[^[({“"‘'].*)$ ] >,
+  +OUTPUT < [ +FORM "${C1:+FORM:1}${C2:+FORM:1}" ] > ].
 
 prefix_punctuation_tmr := prefix_punctuation_tmt &
-[ +CONTEXT < [ +FORM ^([[({“"‘]+)$ ] >,
-  +INPUT < [ +FORM ^(.*[^[({“"‘].*)$ ] >,
+[ +CONTEXT < [ +FORM ^([[({“‘])$ ] >,
+  +INPUT < [ +FORM ^(.*[^[({“"‘'].*)$ ] >,
   +OUTPUT < [ +FORM "${C1:+FORM:1}${I1:+FORM:1}" ] > ].
-
-prefix_punctuation_quote_tmr := prefix_punctuation_ctxt_tmt &
-[ +CONTEXT < [ +FORM ^([']+)$ ],
-	     [ +FORM ^(.*[^['].*)$ ] >,
-  +OUTPUT < [ +FORM "${C1:+FORM:1}${C2:+FORM:1}" ] > ].
 
 ;;
 ;; _fix_me_
@@ -100,14 +101,19 @@ ambiguous_apostrophe_tmr := token_mapping_rule &
               +FROM #from2, +TO #to2 ] >,
   +POSITION "C1<I1, O1@C1, O1@I1, O2@I1" ].
 
+suffix_straight_quote_tmr := suffix_straight_quote_tmt &
+[ +CONTEXT < [ +FORM ^(.*[^sS])$ ],
+             [ +FORM ^(["'])$ ] >,
+  +OUTPUT < [ +FORM "${C1:+FORM:1}${C2:+FORM:1}" ] > ].
+
 suffix_apostrophe_tmr := suffix_punctuation_tmt &
 [ +INPUT < [ +FORM ^(.*[^sS])$ ] >,
-  +CONTEXT < [ +FORM ^([’'])$ ] >,
-  +OUTPUT < [ +FORM "${I1:+FORM:1}${C1:+FORM:1}" ] > ].
+  +CONTEXT < [ +FORM "’" ] >,
+  +OUTPUT < [ +FORM "${I1:+FORM:1}’" ] > ].
 
 suffix_punctuation_tmr := suffix_punctuation_tmt &
 [ +INPUT < [ +FORM ^(.*[^])}”",;.!?].*)$ ] >,
-  +CONTEXT < [ +FORM ^([])}”",;.!?]+)$ ] >,
+  +CONTEXT < [ +FORM ^([])}”,;.!?])$ ] >,
   +OUTPUT < [ +FORM "${I1:+FORM:1}${C1:+FORM:1}" ] > ].
 
 ditch_apostrophe_tmr := token_mapping_rule &
@@ -157,7 +163,7 @@ ditch_markup_tmr := token_mapping_rule &
 ;; class of generics that can survive alongside a native entry (in the lexical
 ;; filtering phase), hence it might make sense to prune unwanted tokens here,
 ;; even though that means knowledge about the ERG lexicon is applied at token
-;; mapping already.                                            (23-jan-09; oe)
+;; mapping time already.                                        (23-jan-09; oe)
 ;;
 capitalized_name_tmr := add_ne_tmt &
 [ +CONTEXT < [ +CLASS alphanumeric & [ +INITIAL -, +CASE capitalized ] ] >,
