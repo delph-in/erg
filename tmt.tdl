@@ -38,8 +38,25 @@ generic_token_cons := generic_token_list & *cons* &
 [ FIRST.+TRAIT generic_trait, REST generic_token_list ].
 generic_token_null := generic_token_list & *null*.
 
+;;
+;; _fix_me_
+;; in token mapping, the original +TNT list (of tags and probabilities) can be
+;; rewritten; native tokens, for example, will end up with an empty list, and
+;; generic tokens `multiply out' all elements from the input list.  to preserve
+;; information about the top-ranked PoS hypotheses in (all) token FSs that end
+;; up as part of a derivation (recorded in [incr tsdb()], say), the rules make
+;; sure to set (and then leave intact) the value of +TNT.+MAIN.  i am wondering
+;; whether it would be possible to reverse the logic of what we do, i.e. leave
+;; the original list intact and selectively move active values to another part
+;; of the token FS, where lexical entries could look for it.  not quite sure,
+;; however, how that would work for the rules that `multiply out' PoS tags and
+;; create as many generic tokens as there were elements in the original list.
+;;                                                              (18-nov-10; oe)
+tnt_main := *top* &
+[ +TAG string, +PRB string ].
+
 tnt := *top* &
-[ +MAIN string,
+[ +MAIN tnt_main,
   +TAGS *list*,
   +PRBS *list* ].
 
@@ -245,9 +262,9 @@ one_two_all_form_tmt := one_two_tmt &
 
 token_class_null_tnt_tmt := one_one_tmt &
 [ +INPUT < [ +FORM #form, +TRAIT #trait, +CLASS no_class,
-             +PRED #pred, +CARG #carg ] >,
+             +PRED #pred, +CARG #carg, +TNT.+MAIN #main ] >,
   +OUTPUT < [ +FORM #form, +TRAIT #trait, +CLASS non_ne,
-              +PRED #pred, +CARG #carg, +TNT null_tnt ] > ].
+              +PRED #pred, +CARG #carg, +TNT null_tnt & [ +MAIN #main ] ] > ].
 
 token_class_tmt := one_one_tmt &
 [ +INPUT < [ +FORM #form, +TRAIT #trait, +CLASS no_class,
@@ -318,18 +335,20 @@ suffix_straight_quote_tmt := token_mapping_rule &
 ;;                                                              (26-sep-08; oe)
 ne_tmt := one_one_tmt &
 [ +INPUT < [ +FORM #form, +CLASS non_ne,
-             +PRED #pred, +CARG #carg ] >,
+             +PRED #pred, +CARG #carg, +TNT.+MAIN #main ] >,
   +OUTPUT < [ +FORM #form, +TRAIT generic_trait, +CLASS named_entity,
-              +PRED #pred, +CARG #carg, +TNT null_tnt ] > ].
+              +PRED #pred, +CARG #carg, +TNT null_tnt & [ +MAIN #main ] ] > ].
 
 add_ne_tmt := token_mapping_rule &
 [ +CONTEXT < [ +FORM #form, +CLASS non_ne,
                +PRED #pred, +CARG #carg,
-               +ID #id, +FROM #from, +TO #to ] >,
+               +ID #id, +FROM #from, +TO #to,
+               +TNT.+MAIN #main ] >,
   +INPUT < >,
   +OUTPUT < [ +FORM #form, +TRAIT generic_trait, +CLASS named_entity,
               +PRED #pred, +CARG #carg,
-              +ID #id, +FROM #from, +TO #to, +TNT null_tnt ] >,
+              +ID #id, +FROM #from, +TO #to, 
+              +TNT null_tnt & [ +MAIN #main ] ] >,
   +POSITION "O1@C1" ].
 
 ;;;

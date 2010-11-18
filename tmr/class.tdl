@@ -5,6 +5,35 @@
 ;;; see `LICENSE' for conditions.
 ;;;
 
+;;
+;; in case we are running without a PoS tagger, or something went wrong in the
+;; creation of token AVMs from our input (in one form or another), make sure to
+;; fully annul part-of-speech information.
+;;
+null_tnt_tmr := one_one_tmt &
+[ +INPUT < [ +FORM #form, +TRAIT #trait, +CLASS #class,
+             +PRED #pred, +CARG #carg, +TNT [ +TAGS < anti_string, ... > ] ] >,
+  +OUTPUT < [ +FORM #form, +TRAIT #trait, +CLASS #class,
+              +PRED #pred, +CARG #carg, +TNT null_tnt ] > ].
+
+;;
+;; if available, preserve the top-ranked PoS hypotheses in +TNT.+MAIN.  we need
+;; to do this early, as token mapping rules (NE patterns, for example) may drop
+;; the +TNT list before we get to the PoS phase.
+;;
+tnt_initialize_tmr := token_mapping_rule &
+[ +INPUT < [ +FORM #form, +TRAIT #trait,
+             +CLASS #class, +PRED #pred, +CARG #carg,
+             +ID #id, +FROM #from, +TO #to,
+             +TNT [ +MAIN.+TAG anti_string, 
+                    +TAGS #tags & [ FIRST #tag ], 
+                    +PRBS #prbs & [ FIRST #prb ] ] ] >,
+  +OUTPUT < [ +FORM #form, +TRAIT #trait,
+              +CLASS #class, +PRED #pred, +CARG #carg,
+              +ID #id, +FROM #from, +TO #to,
+              +TNT [ +MAIN [ +TAG #tag, +PRB #prb ],
+                     +TAGS #tags, +PRBS #prbs ] ] >,
+  +POSITION "O1@I1" ].
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -117,15 +146,3 @@ non_capitalized+mixed_tmr := one_one_token_case_tmt &
 no_case_tmr := one_one_token_case_tmt &
 [ +INPUT < [ +CARG non_string ] >,
   +OUTPUT < [ +CARG anti_string ] > ].
-
-
-;;
-;; in case we are running without a PoS tagger, or something went wrong in the
-;; creation of token AVMs from our input (in one form or another), make sure to
-;; fully annul part-of-speech information.
-;;
-null_tnt_tmr := one_one_tmt &
-[ +INPUT < [ +FORM #form, +TRAIT #trait, +CLASS #class,
-             +PRED #pred, +CARG #carg, +TNT [ +TAGS < anti_string, ... > ] ] >,
-  +OUTPUT < [ +FORM #form, +TRAIT #trait, +CLASS #class,
-              +PRED #pred, +CARG #carg, +TNT null_tnt ] > ].
