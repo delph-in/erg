@@ -102,3 +102,20 @@
      (values nil
 	      (list (format nil "No entry found in SEM-I for ~A" 
 			    rmrs-pred))))))
+
+;; PSQL is not happy with the default "*" for reqd-fields, so supply the
+;; necessary list explicitly via grammar-fields()
+(in-package :lkb)
+(defmethod retrieve-entry2 ((lex mu-psql-lex-database) name &key (reqd-fields '("*")))
+  (let ((reqd-fields (grammar-fields lex))
+	(qname (psql-quote-literal name)))
+    (get-records lex
+		 (format nil
+			 "SELECT ~a FROM (SELECT rev.* FROM public.rev as rev JOIN lex_cache USING (name,userid,modstamp) WHERE lex_cache.name = ~a UNION SELECT rev.* FROM rev JOIN lex_cache USING (name,userid,modstamp) WHERE lex_cache.name = ~a) as foo"
+			 (fields-str lex reqd-fields)
+			 qname qname))))
+
+;; Avoid bogus complaint about PSQL server version - now outdated information
+(defmethod check-psql-server-version ((lex mu-psql-lex-database))
+  t)
+
