@@ -48,6 +48,13 @@
 
 (defparameter *display-type-hierarchy-on-load* nil)
 
+;;; Lexical database
+
+(defparameter *lexdb-dump-source* "LinGO")
+(defparameter *lexdb-dump-lang* "EN")
+(defparameter *lexdb-dump-country* "US")
+
+
 ;;; Parsing
 
 (defparameter *chart-limit* 100)
@@ -380,7 +387,7 @@
     e_g_cma_p1 e_g_cma_p2 e_g_cma_p3 e_g_cma_p4 e_g_cma_p5 e_g_cma_p6
     e_g_cma_p7 outta_p1 furthermore_root_pre_2
     arriving_abb_a1 goodbye_n2 goodbye_root_pre_2 very_first_adj1
-    literally_deg_abb
+    literally_deg_abb the_both_pn1
     the_1_rbst the_2_rbst the_3_rbst the_4_rbst the_5_rbst the_6_rbst 
     the_7_rbst
     one_digit_adj at_date_p a_very_few_a1 also_root when_np_rel non_adjp
