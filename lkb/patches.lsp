@@ -103,19 +103,47 @@
 	      (list (format nil "No entry found in SEM-I for ~A" 
 			    rmrs-pred))))))
 
-;; PSQL is not happy with the default "*" for reqd-fields, so supply the
-;; necessary list explicitly via grammar-fields()
+;; DPF 2011-feb-27
+;; Recent versions of Postgres (since 2010) are not happy with the string
+;; value "*" as a variable over columns, as given for reqd-flds in e.g. 
+;; retrieve-entry2().  So replaced these values '("*") with '(*) in four
+;; functions in lkb/src/lexdb files as below (removing the double quotes).
+;; (The same change would probably be needed in psql-lex-database2.lsp for
+;; single-user users.)
+
 (in-package :lkb)
-(defmethod retrieve-entry2 ((lex mu-psql-lex-database) name &key (reqd-fields '("*")))
-  (let ((reqd-fields (grammar-fields lex))
-	(qname (psql-quote-literal name)))
+
+;; In psql-lex-database.lsp
+(defmethod retrieve-entry2 ((lex mu-psql-lex-database) name &key (reqd-fields '(*)))
+  (let ((qname (psql-quote-literal name)))
     (get-records lex
 		 (format nil
 			 "SELECT ~a FROM (SELECT rev.* FROM public.rev as rev JOIN lex_cache USING (name,userid,modstamp) WHERE lex_cache.name = ~a UNION SELECT rev.* FROM rev JOIN lex_cache USING (name,userid,modstamp) WHERE lex_cache.name = ~a) as foo"
 			 (fields-str lex reqd-fields)
 			 qname qname))))
 
+;; In psql-lex-database0.lsp
+(defmethod retrieve-raw-record-no-cache ((lex psql-lex-database) id &optional (reqd-fields '(*)))
+  (unless (connection lex)
+    (format t "~&(LexDB) WARNING:  no connection to psql-lex-database")
+    (return-from retrieve-raw-record-no-cache))
+  (retrieve-entry2 lex (2-str id) :reqd-fields reqd-fields))
+
+;; Also in psql-lex-database0.lsp
+(defmethod get-dot-lex-record ((lex psql-lex-database) id &optional (fields '(*)))
+  (let ((table (retrieve-raw-record-no-cache lex id fields)))
+    (dot (cols table) (car (recs table)))))
+
+;; And finally in psqllex.lsp, special handling for asterisk value
+(defmethod fields-str ((lex psql-lex-database) fields)
+  (if (and (consp fields) (eq (first fields) '*))
+    '*
+    (concat-str
+     (mapcar #'(lambda (x) (quote-ident lex x))
+	     fields)
+     :sep-c #\,)))
+
+
 ;; Avoid bogus complaint about PSQL server version - now outdated information
 (defmethod check-psql-server-version ((lex mu-psql-lex-database))
   t)
-
