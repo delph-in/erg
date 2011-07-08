@@ -229,7 +229,7 @@
     be_th_cop_was_neg_subj_2 be_th_cop_were_neg_2 be_th_cop_were_neg_subj_2
     can_aux_neg_2 dare_aux_neg_2 did1_neg_2 does1_neg_2 dont_2 dont_4
     might_aux_neg_2 must_aux_neg_2 need_aux_neg_2 ought_aux_neg_2 
-    should_aux_neg_2 gonna_v1 that_c_subj wherein
+    should_aux_neg_2 gonna_v1 gonna_v2 that_c_subj wherein
     be_it_cop_is_neg_1 be_it_cop_is_neg_2 aint_be_it_cop_is_neg_1 
     aint_be_it_cop_is_neg_2 be_it_cop_was_neg_1 be_it_cop_was_neg_2
     be_it_cop_was_neg_subj_1 be_it_cop_was_neg_subj_2
@@ -253,11 +253,12 @@
     january_the_det july_the_det june_the_det march_the_det may_the_det 
     november_the_det october_the_det september_the_det 
     km_abb_n1 km_abb_n2 lets_2 lets_3
-    whether_or_not_c_fin whether_or_not_c_inf
+    whether_or_not_c_fin whether_or_not_c_inf ya_pro
     thee thou thy thine thine_nq ye aught threescore fourscore
     am_temp_2 am_temp_3 am_temp_4 am_temp_5 pm_temp_2 pm_temp_3 
-    pm_temp_4 pm_temp_5 pm_temp_6 noon_min 
-    wanna_v1 wanna_v2 gotta_v1 cuz_subconj
+    pm_temp_4 pm_temp_5 pm_temp_6 noon_min cuz_subconj
+    wanna_v1 wanna_v2 gotta_v1 gonna_v2 gotta_bse_v1 gotta_bse_v2
+    oughta_v1 oughta_v2 oughta_v3
     his_her_poss his_her_poss_2 his_her_poss_3 backcountry_n1
     eight_day eighteen_day eleven_day fifteen_day five_day
     four_day fourteen_day nine_day nineteen_day one_day seven_day
@@ -278,6 +279,7 @@
     he_stutter_1_rbst he_stutter_2_rbst he_stutter_3_rbst
     she_stutter_1_rbst she_stutter_2_rbst she_stutter_3_rbst
     it_stutter_1_rbst it_stutter_2_rbst it_stutter_3_rbst
+    the_stutter_1
     telephone_abb_n1 telephone_abb_n2 telephone_abb_n3 telephone_abb_n4
     adj_abb_n1 adv_abb_n1 anat_abb_n1
     comparative_abb_n1 customer_abb_n1 customer_abb_n2
@@ -393,7 +395,8 @@
     one_digit_adj at_date_p a_very_few_a1 also_root when_np_rel non_adjp
     not_mrk round anyplace_n1 judgement_n1 the_most_deg the_most_deg_2
     weekend_n2 weekend_nc_n2 weekend_pl_def_2 weekend_sg_def_2
-    generic_trans_verb_pas
+    generic_trans_verb_pas math_xml_cp
+    kinda_n1 and_conj_stutter  
     )
   "temporary expedient to avoid generating dual forms")
 

@@ -1,4 +1,4 @@
-;;; -*- Mode: tdl; Coding: utf-8; -*-
+;; -*- Mode: tdl; Coding: utf-8; -*-
 ;;;
 ;;;  Copyright (c) 1994-2006
 ;;;    Dan Flickinger, Rob Malouf, Emily M. Bender
@@ -165,7 +165,9 @@ lex_punct_synsem := basic_lex_synsem.
 ; DPF 29-Nov-02 - Removed [INDEX non_expl] to allow "There was known to be a
 ; problem" where pred "was" requires complement to be SUBJ *olist*.
 non_canonical := synsem.
-expressed_non_canonical := non_canonical & expressed_synsem.
+expressed_non_canonical := non_canonical & expressed_synsem &
+  [ NONLOC [ REL 0-dlist,
+             QUE 0-dlist ] ].
 
 gap := expressed_non_canonical &
   [ LOCAL [ CAT #cat,
@@ -173,14 +175,12 @@ gap := expressed_non_canonical &
 			XARG #xarg ],
 	    CONJ #conj,
 	    AGR #agr ],
-    NONLOC [ REL 0-dlist,
-             QUE 0-dlist,
-             SLASH 1-dlist &
+    NONLOC.SLASH 1-dlist &
                  [ LIST < [ CAT #cat,
 			    CONT.HOOK [ INDEX #index,
 					XARG #xarg ],
 			    CONJ #conj,
-			    AGR #agr ] > ] ] ].
+			    AGR #agr ] > ] ].
 
 unexpressed_min := canonical_or_unexpressed.
 unexpressed := unexpressed_min & synsem_min2 &
@@ -1195,29 +1195,31 @@ non_prp := non_fin & non_inf.
 non_bse := vform.
 non_pas := non_fin.
 non_fin_non_bse := non_fin & non_bse.
+non_prespart := vform.
 ger := non_prp.
 pas_or_psp := non_fin_non_bse & non_inf.
 pas_or_prp := vform.
 pas := non_prp & pas_or_psp & pas_or_prp.
-psp_or_psp_irreg := pas_or_psp & non_pas.
+psp_or_psp_irreg := pas_or_psp & non_pas & non_prespart.
 psp := psp_or_psp_irreg.
 psp_irreg := psp_or_psp_irreg.
-bse_or_inf := non_fin.
+bse_or_inf := non_fin & non_prespart.
 ; fin_or_bse used to collapse morpholog. unmarked forms for bse and fin-non3sg.
 fin_or_bse_or_imp := non_inf.
 fin_or_bse := fin_or_bse_or_imp.
+bse_or_prp := non_fin.
 bse := fin_or_bse_or_imp.
 ; Base morphology verbs can be either base or imperative, but not if negated.
 ; See discussion of type neg_word.
-bse_only := bse & fin_or_bse & bse_or_inf.
+bse_only := bse & fin_or_bse & bse_or_inf & bse_or_prp.
 fin_or_inf_or_imp := vform.
 fin_or_imp := fin_or_inf_or_imp & fin_or_bse_or_imp.
 imp_vform := bse & fin_or_imp.
 fin_or_inf := non_bse & fin_or_inf_or_imp.
-fin := fin_or_inf & fin_or_bse & fin_or_imp & fin_or_non_fin.
+fin := fin_or_inf & fin_or_bse & fin_or_imp & fin_or_non_fin & non_prespart.
 inf_or_prp := non_pas & non_fin_non_bse.
 inf := inf_or_prp & bse_or_inf & fin_or_inf.
-prp := inf_or_prp & non_inf & pas_or_prp.
+prp := inf_or_prp & non_inf & pas_or_prp & bse_or_prp.
 
 inf_and := vform.
 inf_but := vform.
@@ -1241,10 +1243,12 @@ there-ind := expl-ind &
   [ PNG.GEN no_gend_there ].
 
 non_expl_or_conj-ind := index.
-non_expl_or_param := *sort*.
+non_expl_or_param := index.
 ind_or_event_or_conj := non_expl_or_conj-ind & event_or_index.
-non_expl-ind := ind_or_event_or_conj & non_event & non_expl_or_param &
+basic_non_expl-ind := ind_or_event_or_conj & non_event & non_expl_or_param &
   [ PNG.GEN real_gender ].
+non_expl-ind := basic_non_expl-ind &
+  [ SORT basic-entity-or-event ].
 ref-ind := non_expl-ind.
 deg-ind := non_expl-ind & event_or_deg-ind.
 full_non_expl := full_index & non_expl-ind.
@@ -1254,6 +1258,11 @@ full_deg-ind := deg-ind & full_non_expl.
 ; Added to block spurious ambiguity for conjoined proper names:
 nonconj_indiv := non_conj_sement & ind_or_event_or_conj.
 nonconj_ref-ind := full_ref-ind & nonconj_indiv.
+
+; For the do-be construction |the first thing he did was shave himself|
+do-index := basic_non_expl-ind &
+  [ SORT do-event,
+    IFORM vform ].
 
 conj-ind := ind_or_event_or_conj.
 conj_event_or_deg-ind := event_or_deg-ind & conj-ind.
@@ -1335,7 +1344,7 @@ nom-obj := mrs.
 
 quant_or_wh_relation := arg0_relation &
   [ PRED quant_or_wh_rel,
-    ARG0 ref-ind,
+    ARG0 non_expl,
     RSTR handle,
     BODY handle ].
 
@@ -1345,13 +1354,14 @@ param := non_expl_or_param.
 
 ; Nominal sorts
 nominal-sort := *sort*.
-entity-or-event := nominal-sort.
+basic-entity-or-event := nominal-sort.
+entity-or-event := basic-entity-or-event.
 non-time-sort := entity-or-event.
 basic_entity := non-time-sort.
 entity := basic_entity.
 nonloc := entity.
 human := nonloc.
-location := nominal-sort.
+location := basic-entity-or-event.
 time := location & entity-or-event.
 ; DPF 14-nov-05 - Removed 'entity' supertype, since this means we get bad
 ; coordination as in "*We arrived here and the chair."
@@ -1361,6 +1371,9 @@ nom-event := non-time-sort.
 ; 'entity' (tempting, to block "Abrams one") because we also want
 ; "Kim is ten" which we currently treat as identity-copula with NP "ten"
 ;number := basic_entity.
+
+;; For do-be construction
+do-event := nominal-sort.
 
 ; modable_rel distinguishes those relations whose nominal lexical entries can 
 ; undergo a syntactic rule to produce a modifier phrase, as in "we'll meet
@@ -1379,7 +1392,7 @@ instance_relation := arg0_relation &
   [ ARG0 individual_min ].
 
 nom_relation := instance_relation &
-  [ ARG0 non_expl-ind ].
+  [ ARG0 ref-ind ].
 
 ; DPF 25-Sep-01 - Added [SORT entity] contrasted with [SORT time] to enable
 ; blocking of e.g. "the book that kim arrived" but allow "the day that Kim
@@ -1393,15 +1406,16 @@ reg_nom_wcarg_relation := reg_nom_relation & const_value_relation.
 modable_nom_relation := nom_relation &
   [ ARG0.SORT entity ].
 
-basic_diadic_nom_relation := nom_relation & basic_arg01_relation.
+basic_diadic_nom_relation := instance_relation & basic_arg01_relation.
 
 diadic_nom_relation := basic_diadic_nom_relation &
-  [ ARG1 non_expl-ind ].
+  [ ARG1 basic_non_expl-ind ].
 
-reg_diadic_nom_relation := diadic_nom_relation &
+reg_diadic_nom_relation := diadic_nom_relation & nom_relation &
   [ ARG0.SORT entity ].
 
-diadic_nom_carg_relation := basic_diadic_nom_relation & const_arg01_relation.
+diadic_nom_carg_relation := basic_diadic_nom_relation & const_arg01_relation &
+			    nom_relation.
 
 triadic_nom_relation := diadic_nom_relation & basic_arg12_relation &
   [ ARG2 non_expl-ind ].
@@ -1409,7 +1423,7 @@ triadic_nom_relation := diadic_nom_relation & basic_arg12_relation &
 reg_triadic_nom_relation := reg_diadic_nom_relation & basic_arg12_relation &
   [ ARG2 non_expl-ind ].
 
-basic_hcomp_nom_relation := basic_diadic_nom_relation &
+basic_hcomp_nom_relation := basic_diadic_nom_relation & nom_relation &
   [ ARG1 handle ].
 
 hcomp_nom_relation := basic_hcomp_nom_relation &
@@ -1881,8 +1895,6 @@ integer := atom.
 pro_ss := expressed_non_canonical &
   [ LOCAL [ CAT.HEAD noun & [ CASE acc ],
             CONT.HOOK.INDEX #ind ],
-    NONLOC [ REL 0-dlist,
-             QUE 0-dlist ],
     --SIND #ind ].
 
 ; ERB (19-01-98) We need a subtype of pro and gap so that to_c_prop
@@ -1994,6 +2006,7 @@ nongappro := pro_ss &
 *argcons* := *arglist* & 1-list &
   [ FIRST arg-local,
     REST *arglist* ].
+
 *argnull* := *arglist* & *null*.
 
 *modlist* := 0-1-list.
@@ -2043,10 +2056,12 @@ nongappro := pro_ss &
 0-dlist := 0-1-dlist &
   [ LIST #list,
     LAST #list ].
+
 1-dlist := 0-1-dlist &
   [ LIST 1-list &
 	 [ REST #rest & *null* ],
     LAST #rest ].
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; pred names
@@ -2224,6 +2239,7 @@ _atop_p_rel := miscprep_rel.
 _away_p_rel := dir_or_state_nontemp_rel.
 _away_p_dir_rel := _away_p_rel & dir_rel.
 _away_p_state_rel := _athwart_p_rel & state_loc_rel.
+_awhile+ago_p_rel := miscprep_rel.
 _back_p_rel := miscprep_rel.
 _backward_p_rel := miscprep_rel.
 _backwards_p_rel := miscprep_rel.
@@ -2281,6 +2297,9 @@ _downstream_p_rel := miscprep_rel.
 _downstream+of_p_rel := dir_or_state_nontemp_rel.
 _downstream+of_p_dir_rel := _downstream+of_p_rel & dir_rel.
 _downstream+of_p_state_rel := _downstream+of_p_rel & state_loc_rel.
+_down+under_p_rel := dir_or_state_nontemp_rel.
+_down+under_p_dir_rel := _down+under_p_rel & dir_rel.
+_down+under_p_state_rel := _down+under_p_rel & state_loc_rel.
 _due+to_p_rel := miscprep_rel.
 _during_p_rel := temp_loc_rel.
 _e+g_p_rel := miscprep_rel.
@@ -2389,6 +2408,7 @@ _just+like_p_rel := miscprep_rel.
 _later+on_p_rel := miscprep_rel.
 _less+than_p_rel := miscprep_rel.
 _like_p_rel := miscprep_rel.
+_long+ago_p_rel := miscprep_rel.
 _long+past_p_rel := miscprep_rel.
 _maximum_p_rel := miscprep_rel.
 _meanwhile_p_rel := miscprep_rel.
@@ -2404,6 +2424,9 @@ _nearest_p_rel := state_loc_rel.
 _next+to_p_rel := dir_or_state_nontemp_rel.
 _next+to_p_dir_rel := _next+to_p_rel & dir_rel.
 _next+to_p_state_rel := _next+to_p_rel & state_loc_rel.
+_next+door_p_rel := dir_or_state_nontemp_rel.
+_next+door_dir_rel := _next+door_p_rel & dir_rel.
+_next+door_state_rel := _next+door_p_rel & state_loc_rel.
 _no+matter_p_rel := miscprep_rel.
 _notwithstanding_p_rel := miscprep_rel.
 of_p_rel := miscprep_rel & compound_or_prep_rel.
@@ -2550,6 +2573,7 @@ _versus_p_rel := miscprep_rel.
 _via_p_rel := miscprep_rel.
 _vis-a-vis_p_rel := miscprep_rel.
 _viz_p_rel := miscprep_rel.
+_whatever_p_rel := miscprep_rel.
 _what+with_p_rel := miscprep_rel.
 _whither_p_rel := dir_rel.
 _whence_p_rel := dir_rel.
@@ -2590,6 +2614,7 @@ _each_q_rel := explicit_noagr_nodef_q_rel.
 _either_q_rel := explicit_quant_agr_q_rel.
 _enough_q_rel := explicit_quant_agr_q_rel.
 _every_q_rel := every_q_rel.
+_each+and+every_q_rel := every_q_rel.
 ; Temporary hack for "Kim sings twice a week"
 _twice+a_q_rel := every_q_rel.
 _half_q_rel := explicit_quant_agr_q_rel.
@@ -2734,7 +2759,8 @@ explicit_noagr_nodef_q_rel := explicit_quant_noagr_q_rel & nodef_q_rel.
 explicit_nodef_q_rel := explicit_q_rel & nodef_q_rel.
 
 ; For '(exactly) three chairs'
-num_q_rel := explicit_nodef_q_rel & indef_or_num_q_rel.
+num_q_rel := explicit_nodef_q_rel & indef_or_num_q_rel &
+	     both_all_udef_q_rel.
 
 ; DPF 19-Oct-02 - This is to allow not only ordinary bare plurals, but also
 ; "afternoons" which must be the one that takes an optional PP-of and
@@ -2804,6 +2830,7 @@ which_q_rel := explicit_quant_agr_q_rel.
 _all_q_rel := explicit_quant_agr_q_rel & both_all_q_rel.
 _not+all_q_rel := explicit_quant_agr_q_rel & both_all_q_rel.
 idiom_q_i_rel := implicit_q_rel.
+_x_q_rel := basic_def_explicit_q_rel.
 
 dir_state_modable_rel := predsort.
 modable_rel := basic_nom_rel & dir_state_modable_rel.
@@ -3039,7 +3066,7 @@ bare_nom_rel := non_temp_nonpro_rel.
 ; Disallow adjective modifiers ('at eye level' but '*at high level')
 bare_n_nmod_rel := bare_nom_rel & nbar_or_nger_rel.
 ; Disallow noun-noun compounding ('at close range' but '*at cellphone range')
-bare_n_jmod_rel := bare_nom_rel.
+bare_n_jmod_rel := bare_nom_rel & gen_nom_nbar_rel.
 ; Disallow any modification ('on top' 'of course')
 bare_n_nomod_rel := bare_nom_rel.
 
@@ -3122,6 +3149,7 @@ nonaux_v_rel := mod_role_rel & nonaux_event_rel.
 no_role_rel := mod_role_rel. 
 it_subj_nonaux_rel := no_role_rel & nonaux_v_rel.
 weather_v_rel := it_subj_nonaux_rel.
+_do_v_be_rel := nonaux_event_rel & verb_aspect_rel.
 
 role_rel := nontemp_rel & nonaux_v_rel.
 
@@ -3401,6 +3429,7 @@ be_v_it_rel := aux_arg1_rel.
 ;; since we want to distinguish be_v_prd from other auxiliaries, e.g. for
 ;; constraining applicability of vmod rule.
 ;; be_v_prd-or-there_rel := be_v_prd_rel & be_v_there_rel.
+_be_v_do_rel := cop_id_rel.
 
 unk_n_rel := norm_nom_rel & generic_unk_rel.
 gen_currency_rel := reg_nom_rel.
@@ -3422,8 +3451,6 @@ compound_rel := unspec_rel & compound_or_prep_rel.
 argument_rel := unspec_rel.
 appos_rel := unspec_rel.
 compound_name_rel := compound_rel.
-; For 'the term "whippletree"'
-term_rel := compound_rel.
 
 parenthetical_rel := unspec_rel.
 ; For n-ed as in "wide-eyed"
@@ -3552,6 +3579,7 @@ generic_unk_rel := predsort.
 
 ; For QUE-word complements as in "what the hell"
 wh_the_hell_rel := predsort.
+_the+devil_x_rel := wh_the_hell_rel.
 _the+heck_x_rel := wh_the_hell_rel.
 _the+hell_x_rel := wh_the_hell_rel.
 _the+fuck_x_rel := wh_the_hell_rel.
@@ -3720,10 +3748,13 @@ basic_semicol_punct := clause_or_semicol & semi_or_no_punct &
 basic_clause_punct := clause_or_no_punct & clause_or_semicol & 
 		      rparen_or_clause_punct & punct_mark.
 clause_punct := comma_or_clause & 3dots_or_clause & basic_clause_punct.
-semicol_punct := basic_clause_punct & basic_semicol_punct.
+semicol_punct := basic_clause_punct & basic_semicol_punct &
+		 comma_or_rbc_or_clause_or_no_punct.
 clause_sh_punct := hyphen_sgl_or_clause & basic_clause_punct.
 clause_dh_punct := hyphen_dbl_or_clause & basic_clause_punct.
-s_dash_punct := basic_clause_punct & comma_or_rbc_or_clause_or_no_punct.
+s_dash_punct := basic_clause_punct & comma_or_rbc_or_clause_or_no_punct &
+                hyphen_sgl_or_rbc_or_no_punct & 
+		comma_or_pair_or_no_punct.
 colon_punct := comma_or_rbc_or_colon_or_pair_or_no_punct & basic_clause_punct &
                comma_or_clause_or_no_punct.
 pair_punct := pair_or_no_punct & comma_or_pair_punct.
