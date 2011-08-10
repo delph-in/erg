@@ -395,8 +395,16 @@
     one_digit_adj at_date_p a_very_few_a1 also_root when_np_rel non_adjp
     not_mrk round anyplace_n1 judgement_n1 the_most_deg the_most_deg_2
     weekend_n2 weekend_nc_n2 weekend_pl_def_2 weekend_sg_def_2
-    generic_trans_verb_pas math_xml_cp
-    kinda_n1 and_conj_stutter  
+    generic_trans_verb_pas math_xml_cp kinda_n1 about_cx 
+    and_conj_stutter and_conj_stutter2 and_conj_stutter3 or_conj_stutter 
+    or_conj_stutter3 but_conj_stutter3 she_stutter_2_rbst2 she_stutter_2_rbst3 
+    he_stutter_2_rbst3 i_stutter_4_rbst3 it_stutter_2_rbst3 she_stutter_2_rbst3
+    they_stutter_2_rbst3 we_stutter_2_rbst3 you_stutter_2_rbst3 lotta_a1 
+    a_lotta_a1 to_p_stutter to_c_prop_stutter to_c_prop_cx her_poss_stutter 
+    his_poss_stutter its_poss_stutter my_poss_stutter our_poss_stutter 
+    their_poss_stutter your_poss_stutter should+of_aux shoulda_aux could+of_aux
+    coulda_aux would+of_aux woulda_aux might+of_aux mighta_aux oughta_aux 
+    y_know_2_disc y_know_disc slash_root_post 
     )
   "temporary expedient to avoid generating dual forms")
 
@@ -448,6 +456,16 @@
     ;; For debugging, block punctuation rules
     ;;
     ; w_comma_plr w_period_plr w_qmark_plr
+    ;;
+    ;; Block rule that re-orders complements; generally not useful paraphrases
+    ;;
+    hd-cmp_2_c
+    ;;
+    ;; For now, exclude the gapping rules, since we don't yet know how to 
+    ;; generate with them anyway.
+    ;;
+    vp_cr-cc_c vp_cr-cmi_c vp_cr-cms_c vp_cr-cselm_c vp_cr-xcselm_c vp_cr-xcc_c
+    vp_cr-ccc_c cl_nv-sbc_c cl_nv-sbmi_c cl_nv-sbms_c
    ))
 
 (setf *semantics-index-path* '(SYNSEM LOCAL CONT HOOK INDEX))
@@ -570,4 +588,6 @@
 ;;;
 (setf *translate-grid* '(:en . (:en)))
 
-
+;; Disable sanitizing check for constructions, since the conjunction reduction
+;; rules don't constrain the C-CONT diff lists at definition time.
+(setf *c-cont-check-path* nil)
