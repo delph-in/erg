@@ -13,8 +13,8 @@
 (setf *ignored-sem-features* 
   (append 
    *ignored-sem-features* 
-   (list (vsym "IDIOMP") (vsym "LNK") (vsym "WLINK") (vsym "PARAMS")
-         (vsym "CFROM") (vsym "CTO") (vsym "--PSV"))))
+   (list (vsym "LNK") (vsym "WLINK") (vsym "PARAMS")
+         (vsym "CFROM") (vsym "CTO"))))
 
 (setf *ignored-extra-features* 
   (append
