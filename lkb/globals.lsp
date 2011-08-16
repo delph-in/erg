@@ -451,7 +451,6 @@
     ;; don't block the full rel-cl with commas.
     ;;
     ; hdn-aj_rc-pr_c 
-    hdn-aj_redrel-pr_c
     ;;
     ;; For debugging, block punctuation rules
     ;;
