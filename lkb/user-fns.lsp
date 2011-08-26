@@ -13,9 +13,7 @@
          (daughter1 (get-value-at-end-of rule-fs '(ARGS FIRST)))
          (daughter2 (get-value-at-end-of rule-fs '(ARGS REST FIRST)))
          (daughter3 (get-value-at-end-of rule-fs '(ARGS REST REST FIRST)))
-         (daughter4 (get-value-at-end-of rule-fs '(ARGS REST REST REST FIRST)))
-         (daughter5 (get-value-at-end-of rule-fs 
-					 '(ARGS REST REST REST REST FIRST))))
+         (daughter4 (get-value-at-end-of rule-fs '(ARGS REST REST REST FIRST))))
     (declare (ignore mother))
     (unless daughter1 
       (cerror "Ignore it" "Rule without daughter"))
@@ -29,11 +27,7 @@
 		(if daughter3 
 		    (if daughter2 
 			(list '(ARGS REST REST REST FIRST)))))
-	    (if daughter5
-		(if daughter4
-		    (if daughter3 
-			(if daughter2 
-			    (list '(ARGS REST REST REST REST FIRST)))))))))
+	    )))
 
 (defun spelling-change-rule-p (rule)
 ;;; a function which is used to prevent the parser 

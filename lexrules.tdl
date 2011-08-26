@@ -363,7 +363,6 @@ basic_sai := lex_rule &
                               SPR #spr,
 			      SPCMPS #spcmps,
                               KCMP #keycomp ] ],
-                  CONT.HOOK #hook,
                   AGR #agr ],
           NONLOC #nonloc,
 	  MODIFD #modif ] ],
@@ -377,13 +376,10 @@ basic_sai := lex_rule &
 				 SPCMPS #spcmps,
 				 SUBJ < anti_synsem >,
 				 KCMP #keycomp ] ],
-		     CONT [ HOOK #hook ],
-                   AGR #agr ],
+		     AGR #agr ],
 	     NONLOC #nonloc,
 	     MODIFD #modif ],
-    ARGS < #stem >,
-    C-CONT [ RELS <! !>,
-             HCONS <! !> ] ].
+    ARGS < #stem > ].
 
 ; DPF 28-mar-05 - Now propagate AUX from daughter, since we need cop-id to
 ; be unmarked for AUX, so it can be modified by PPs, as in "where is Kim the
@@ -395,8 +391,48 @@ basic_sai := lex_rule &
 ; modifier to.
 
 sai := basic_sai &
-  [ SYNSEM basic_sai_synsem,
-    DTR.SYNSEM.LOCAL.CAT.HEAD.INV + ].
+  [ SYNSEM basic_sai_synsem &
+	   [ LOCAL [ CAT [ HEAD.MOD < [ --MIN no_rel,
+					LOCAL intersective_mod &
+					      [ CAT.VAL.SPR *cons* ] ] >,
+			   POSTHD + ],
+		     CONT.HOOK #hook ] ],
+    DTR.SYNSEM.LOCAL [ CAT.HEAD.INV +,
+		       CONT.HOOK #hook ],
+    C-CONT [ RELS <! !>,
+             HCONS <! !> ] ].
+
+cond_sai := basic_sai &
+  [ SYNSEM basic_sai_synsem &
+	   [ LOCAL.CAT 
+	      [ HEAD.MOD < synsem &
+			   [ LOCAL scopal_mod &
+				   [ CAT [ HEAD verb &
+						[ MOD < anti_synsem_min > ],
+					   VAL [ SUBJ *anti_list*,
+						 COMPS < > ] ],
+				     CONT.HOOK.LTOP #modltop,
+				     CONJ cnil ],
+			     NONLOC non-local_none ] >,
+		MC na ],
+	     NONLOC non-local_none ],
+    DTR [ SYNSEM.LOCAL [ CAT [ HEAD [ INV +,
+				      TAM.MOOD basic_subjunctive ],
+			       VAL.COMPS *substlist* ],
+			 CONT.HOOK.LTOP #dltop ],
+	  ALTS.CSAI + ],
+    C-CONT [ HOOK.LTOP #lbl,
+	     RELS <! subord_relation &
+		   [ LBL #lbl,
+		     PRED "_if_x_then_rel",
+		     ARG0 [ E [ TENSE no_tense,
+				ASPECT no_aspect ] ],
+		     ARG1 #main,
+		     ARG2 #subord ] !>,
+	     HCONS <! qeq & [ HARG #main,
+			      LARG #modltop ],
+		      qeq & [ HARG #subord,
+			      LARG #dltop ] !> ] ].
 
 tag := lex_rule_basic &
   [ ORTH #orth,
@@ -544,9 +580,16 @@ adv_addition := basic_adv_addition.
 ;; we should block "kim is being with the ASPECT.PROGR - constraint.
 ;; DPF 11-mar-05 - Removed AUX + since now restricting PPs to modify only
 ;; [AUX -] VPs.
+;; DPF 2011-08-23 - For now, exclude elided verbs in inverted conditionals,
+;; even though they can be okay at least in S-initial position, in context:
+;; [We hadn't left the door open.] |Had we, the flies would have entered.|
+;; But it's hard to find good examples in S-final position:
+;; ... |? The files would have left, had we.|
+;; And there is spurious ambiguity for e.g. |Who did we know were programmers?|
 
 vp_ellipsis := lex_rule &
   [ ORTH #orth,
+    ALTS.CSAI -,
     DTR [ ORTH #orth,
           ALTS.VPELLIP +,
 	  SYNSEM aux_verb &
@@ -1137,7 +1180,8 @@ attr_adj_lr := lex_rule &
                                        COMPS *olist*,
 				       SPCMPS #spcmps ] ],
                            CTXT #ctxt ],
-		   NONLOC #non-local ] ],
+		   NONLOC #non-local,
+		   MODIFD #modif ] ],
     SYNSEM basic_attr_adj_synsem &
 	  [ LOCAL [ CAT [ HEAD adj &
                                [ MOD #mod,
@@ -1146,7 +1190,8 @@ attr_adj_lr := lex_rule &
 				SPR #spr,
 				SPCMPS #spcmps ] ],
 		    CTXT #ctxt ],
-	    NONLOC #non-local ],
+	    NONLOC #non-local,
+	    MODIFD #modif ],
     C-CONT [ RELS <! !>,
              HCONS <! !> ] ].
 
@@ -1222,12 +1267,14 @@ basic_attr_verb_part_lr := lex_rule &
                                                     ASPECT.PRF - ] ] ] ],
                            CTXT #ctxt ],
                    NONLOC #non-local,
+		   MODIFD #modif,
                    LKEYS.--COMPKEY independent_rel ] ],
     SYNSEM adj_synsem_lex_constr &
      [ LOCAL [ CAT [ HEAD.PRD -,
 		     POSTHD -,
 		     MC na ],
 	       CTXT #ctxt ],
+       MODIFD #modif,
        NONLOC #non-local ],
     C-CONT [ HOOK [ LTOP #ltop,
                     INDEX #event & [ SF prop ],
@@ -1260,10 +1307,10 @@ attr_verb_part_tr_lr := attr_verb_part_nbarmod_lr &
                                   LOCAL.CAT.HEAD n_or_p ] . *olist* >]].
 
 attr_verb_part_psv_lr := attr_verb_part_nbarmod_lr &
-  [ DTR [ SYNSEM.LOCAL [ CAT [ HEAD.VFORM pas,
-			       VAL.COMPS 
-				< unexpressed &
-				  [ --MIN selected_rel ] . *olist* > ] ],
+  [ DTR [ SYNSEM [ LOCAL.CAT [ HEAD.VFORM pas,
+				 VAL.COMPS 
+				     < unexpressed &
+				       [ --MIN selected_rel ] . *olist* > ] ],
 	  ALTS.ATTRJ + ],
     C-CONT.RELS <! !> ].
 
@@ -1367,6 +1414,12 @@ part_ppof_noagr_constr := basic_part_constr &
 ; NP-particle alternation (e.g. "look up the answer/look the answer up"
 ; Stamp canonical_synsem on NP of output to avoid spurious parse for extraction
 ; of the NP, as in "Which problem did Kim figure out?"
+;; DPF 2011-08-20 - Curious observation: If we don't include the (desirable)
+;; re-entrancy for --COMPKEY in this rule, we get an asymmetry between the 
+;; LKB and PET for the sentence |Throw away paper or other rice.| -- namely, 
+;; the LKB quicly produces three analyses, while PET fails to terminate.  
+;; Further, PET is happy as long as the rule vp_cr-cc_c is commented out.  
+;; FIX? - Maybe diagnose this someday.
 
 NP_particle_lr := lex_rule &
  [ ORTH #orth,
@@ -1397,7 +1450,8 @@ NP_particle_lr := lex_rule &
 				 AUX #aux,
 				 INV #inv,
 				 MOD #mod,
-				 LSYNSEM generic_particle_NP_verb,
+				 LSYNSEM generic_particle_NP_verb &
+				         [ LKEYS.--COMPKEY #ckey ],
 				 LPRED #pred ],
                           POSTHD #ph,
                           VAL [ SUBJ #subj,
@@ -1412,7 +1466,8 @@ NP_particle_lr := lex_rule &
                     CONT.HOOK #hook,
                     CTXT #ctxt ],
             NONLOC #nonlocal,
-            LKEYS #lkeys & [ KEYREL.PRED #pred ] ],
+            LKEYS #lkeys & [ KEYREL.PRED #pred,
+			     --COMPKEY #ckey ] ],
    C-CONT [ RELS <! !>,
             HCONS <! !> ] ].
 
@@ -1520,6 +1575,7 @@ basic_enough_addition := lex_rule_basic &
 		     CONT.HOOK #hook,
                      CTXT #ctxt ],
              NONLOC #nonloc,
+	     MODIFD #modif,
 	     LKEYS #lkeys ],
 	  KEY-ARG #keyarg ],
     SYNSEM [ LOCAL 
@@ -1540,10 +1596,11 @@ basic_enough_addition := lex_rule_basic &
                      SPCMPS < > ],
 	       MC #mc,
 	       HC-LEX + ],
-             CONT.HOOK #hook,
-	     CTXT #ctxt ],
-            NONLOC #nonloc & non-local_none,
-            LKEYS #lkeys ],
+	      CONT.HOOK #hook,
+	      CTXT #ctxt ],
+	     NONLOC #nonloc & non-local_none,
+	     MODIFD #modif,
+	     LKEYS #lkeys ],
     KEY-ARG #keyarg,
     C-CONT.RELS <! !>,
     ARGS < #stem > ].
