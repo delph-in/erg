@@ -105,6 +105,8 @@
 ;;;
 (setf *lexicon-tokens-path* '(TOKENS +LIST))
 (setf *lexicon-last-token-path* '(TOKENS +LAST))
+(setf *token-id-path* '(+ID))
+(setf *token-ignore* '(+STAG))
 
 ;;; Set to true for arboretum, enabling parsing with robust rules and lexicon
 ;;; (this assumes that :arboretum was pushed onto *features* before compiling
