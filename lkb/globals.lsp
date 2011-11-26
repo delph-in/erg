@@ -110,8 +110,8 @@
 ;;;
 ;;; _fix_me_
 ;;; since sometime in 2010, there was an unused +STAG feature in token feature
-;;; structures, in anticipation of supertagger integration.  following the
-;;; first international supertagging symposium (oslo, november 2011), we now
+;;; structures, in anticipation of supertagger integration.  following our
+;;; first international ubertagging symposium (oslo, november 2011), we now
 ;;; rather plan on generalizing +TNT (as +POS, maybe) to possibly hold more
 ;;; than one view on lexical category assignments.  until the near-final phase
 ;;; in token mapping, it is undesirable (tedious, in fact) to distinguish the
