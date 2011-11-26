@@ -106,6 +106,23 @@
 (setf *lexicon-tokens-path* '(TOKENS +LIST))
 (setf *lexicon-last-token-path* '(TOKENS +LAST))
 (setf *token-id-path* '(+ID))
+
+;;;
+;;; _fix_me_
+;;; since sometime in 2010, there was an unused +STAG feature in token feature
+;;; structures, in anticipation of supertagger integration.  following the
+;;; first international supertagging symposium (oslo, november 2011), we now
+;;; rather plan on generalizing +TNT (as +POS, maybe) to possibly hold more
+;;; than one view on lexical category assignments.  until the near-final phase
+;;; in token mapping, it is undesirable (tedious, in fact) to distinguish the
+;;; various types of category suggestions (be they sub-, PoS, or super-tags).
+;;; furthermore, this way we can even stick to the tried and tested YY input
+;;; format (unless the supertagger is directly interfaced to PET, which be the
+;;; preferred form of integration nowadays).  while there may be profiles with
+;;; old-style derivations around, make the [incr tsdb()] dag reader ignore the
+;;; feature +STAG globally.  sometime in 2012, we should probably purge this
+;;; setting.                                                  (26-nov-11; oe)
+;;; 
 (setf *token-ignore* '(+STAG))
 
 ;;; Set to true for arboretum, enabling parsing with robust rules and lexicon
