@@ -57,7 +57,9 @@ default_carg_tmr := one_one_tmt &
 ;; straight quote are treated separately because they can attach both to the
 ;; left and to the right; to prevent fragmented token lattices, this means we
 ;; also need to preserve the original token to which a straight quote attaches
-;; in the chart.
+;; in the chart.  initial straight quotes, however, need extra care, to avoid
+;; creating ambiguous start or end nodes in the lattice; essentially, they are
+;; left to a specialized version of the general prefix punctuation rule.
 ;;
 ;; _fix_me_
 ;; there is a remaining issue in the treatment of straight quotes, related to
@@ -66,10 +68,24 @@ default_carg_tmr := one_one_tmt &
 ;; straight quotes both before /and/ after regular `affix' punctuation, say in
 ;; a case like [( "] |Kim , " )|.                               (14-feb-12; oe)
 ;;
-prefix_straight_quote_tmr := prefix_straight_quote_tmt &
-[ +CONTEXT < [ +FORM ^(["'])$ ],
-             [ +FORM ^(.*[^[({“"‘'].*)$ ] >,
-  +OUTPUT < [ +FORM "${C1:+FORM:1}${C2:+FORM:1}" ] > ].
+
+prefix_straight_quote_non_initial_tmr := token_mapping_rule &
+[ +CONTEXT < [ +FORM ^(["'])$, +CLASS.+INITIAL -,
+               +ID [ LIST #front, LAST #middle ], +FROM #from ],
+             [ +FORM ^(.*[^[({“"‘'].*)$,
+               +CLASS #class, +TRAIT #trait, +PRED #pred, +CARG #carg,
+               +ID [ LIST #middle, LAST #back ], +TO #to,
+               +TNT #tnt ] >,
+  +OUTPUT < [ +FORM "${C1:+FORM:1}${C2:+FORM:1}",
+              +CLASS #class, +TRAIT #trait, +PRED #pred, +CARG #carg,
+              +ID [ LIST #front, LAST #back ], +FROM #from, +TO #to,
+              +TNT #tnt  ] >,
+  +POSITION "C1<C2, O1@C1, O1@C2" ].
+
+prefix_straight_quote_initial_tmr := prefix_punctuation_tmt &
+[ +CONTEXT < [ +FORM ^(["'])$, +CLASS.+INITIAL + ] >,
+  +INPUT < [ +FORM ^(.*[^[({“"‘'].*)$ ] >,
+  +OUTPUT < [ +FORM "${C1:+FORM:1}${I1:+FORM:1}" ] > ].
 
 prefix_punctuation_tmr := prefix_punctuation_tmt &
 [ +CONTEXT < [ +FORM ^([[({“‘])$ ] >,
@@ -108,11 +124,6 @@ ambiguous_apostrophe_tmr := token_mapping_rule &
               +FROM #from2, +TO #to2 ] >,
   +POSITION "C1<I1, O1@C1, O1@I1, O2@I1" ].
 
-suffix_straight_quote_tmr := suffix_straight_quote_tmt &
-[ +CONTEXT < [ +FORM ^(.*[^sS])$ ],
-             [ +FORM ^(["'])$ ] >,
-  +OUTPUT < [ +FORM "${C1:+FORM:1}${C2:+FORM:1}" ] > ].
-
 suffix_apostrophe_tmr := suffix_punctuation_tmt &
 [ +INPUT < [ +FORM ^(.*[^sS])$ ] >,
   +CONTEXT < [ +FORM "’" ] >,
@@ -126,6 +137,20 @@ suffix_punctuation_tmr := suffix_punctuation_tmt &
 [ +INPUT < [ +FORM ^(.*[^])}”",;.!?].*)$ ] >,
   +CONTEXT < [ +FORM ^([])}”,;.!?]’?)$ ] >,
   +OUTPUT < [ +FORM "${I1:+FORM:1}${C1:+FORM:1}" ] > ].
+
+suffix_straight_quote_tmr := token_mapping_rule &
+[ +CONTEXT < [ +FORM ^(.*[^sS])$,
+               +CLASS #class, +TRAIT #trait, +PRED #pred, +CARG #carg,
+               +ID [ LIST #front, LAST #middle ], +FROM #from,
+               +TNT #tnt ],
+             [ +FORM ^(["'])$,
+               +ID [ LIST #middle, LAST #back ], +TO #to ],
+             [ ] >,
+  +OUTPUT < [ +FORM "${C1:+FORM:1}${C2:+FORM:1}",
+              +CLASS #class, +TRAIT #trait, +PRED #pred, +CARG #carg,
+              +ID [ LIST #front, LAST #back ], +FROM #from, +TO #to,
+              +TNT #tnt ] >,
+  +POSITION "C1<C2, C2<C3, O1@C1, O1@C2" ].
 
 ditch_apostrophe_tmr := token_mapping_rule &
 [ +INPUT < [ +FORM ^[[({“"‘']*[’'][])}”",;.!?]*$, +CLASS anti_apostrophe ] >,
