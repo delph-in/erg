@@ -22,6 +22,7 @@
 (read-repp (lkb-pathname (parent-directory "rpp") "lgt.rpp"))
 (read-repp (lkb-pathname (parent-directory "rpp") "robustness.rpp"))
 (read-repp (lkb-pathname (parent-directory "rpp") "quotes.rpp"))
+(read-repp (lkb-pathname (parent-directory "rpp") "cdc.rpp"))
 (read-repp (lkb-pathname (parent-directory "rpp") "lkb.rpp"))
 (read-repp (lkb-pathname (parent-directory "rpp") "tokenizer.rpp"))
 (setf *repp-calls* '(:xml :lgt :ascii :quotes))
