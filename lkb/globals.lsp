@@ -65,13 +65,14 @@
    "The feature giving the mother in a grammar rule")
 
 (defparameter *start-symbol* 
-  #-(or :speech :educ :arboretum)
+  #-(or :speech :educ :essay :arboretum)
   '(root_strict root_frag)
+  ;'(root_strict)
   #+:speech
   '(root_informal root_frag root_inffrag)
   ;'(root_informal root_spoken root_spoken_frag)
   ;'(root_informal root_frag root_inffrag root_robust)
-  #+:educ
+  #+(or :educ :essay)
   '(root_decl root_question root_robust_s root_inffrag root_lex 
     root_robust_frag)
   ;'(root_formal)
@@ -344,3 +345,8 @@
 ;; Disable sanitizing check for constructions, since the conjunction reduction
 ;; rules don't constrain the C-CONT diff lists at definition time.
 (setf *c-cont-check-path* nil)
+
+;; Set default MRS XML output file name, since this appears to be necessary
+;; in order for the "Save as XML" button on MRS windows to work.  FIX?
+
+(setf *mrs-xml-output-file* "~/tmp/mrs.xml")
