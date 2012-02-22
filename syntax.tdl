@@ -442,6 +442,8 @@ decl_phrase := basic_non_rel_clause & phrasal &
 ; happens.
 ; DPF 23-mar-10 - Restrict dtr to non_conj_event to avoid spurious ambiguity
 ; for "arise and leave."
+;; DPF 2012-02-20 - Restrict SLASH to *modlist*, to prevent spurious analysis
+;; of e.g. |politicians believe| with object fronting.
 
 imp_phrase := basic_non_rel_clause & head_valence_phrase & head_only &
   [ SYNSEM [ LOCAL [ CAT [ HEAD verb &
@@ -455,6 +457,7 @@ imp_phrase := basic_non_rel_clause & head_valence_phrase & head_only &
                                  COMPS < > ],
                            MC bool ],
                      CONT.HOOK.INDEX.SF basic-comm ],
+	     NONLOC.SLASH.LIST *modlist*,
              LEX #lex ],
     HD-DTR.SYNSEM [ LOCAL [ CAT [ HEAD verb,
                                   MC na,
@@ -1947,13 +1950,14 @@ extracted_comp_phrase := extracted_arg_phrase & head_compositional &
 				 COMPS #comps ],
 			   MC #mc,
                            HC-LEX - ] ],
+	     NONLOC.SLASH.LIST < #local & arg-local >,
 	     LEX #hclex ],
     HD-DTR [ SYNSEM 
 	       [ LOCAL [ CAT [ HEAD v_or_g_or_a_or_p,
 			       VAL [ SUBJ #subj,
 				     SPR #spr,
 				     COMPS < gap &
-					     [ LOCAL arg-local &
+					     [ LOCAL #local &
                                                [ CAT [ HEAD mobile &
                                                           [ MINORS.MIN #min ],
                                                        VAL.SUBJ *anti_list*],
@@ -2398,7 +2402,47 @@ adj_head_phrase := basic_head_mod_phrase_simple & head_final &
 ; where the PP contains a coordinated NP, hence its SLASH value is a subtype
 ; of *arglist*, yet we don't want the SLASH value of the whole VP to be of
 ; type *arglist* since the VP's SLASH must have an extracted adjunct.
+;; DPF 2012-02-20 Re: 2011-05-01 - Alas, but this reordering introduced the
+;; problem of appending non-empty SLASH lists in both a head and its modifier,
+;; as in |be used to admire| with an extracted adjunct in the VP |be used| and
+;; an extracted complement in |to admire|.  The append wrongly succeeds, with
+;; distinct non-empty values in each of LIST and LAST, even though the type
+;; of SLASH on the mother is 0-1-dlist, because the LIST is still waiting to
+;; append the value of the not-yet-found SUBJ's SLASH.  This edge will not
+;; be part of any full tree, but causes trouble just being in the chart.
+;; So go back to appending order with adjunct's slash first, then head's,
+;; leaving the as-yet-unfound SUBJ's SLASH at the end of the list, where the
+;; open end of the list needs to be.
 
+head_adj_phrase := basic_head_mod_phrase_simple & head_initial_infl & phrasal &
+  [ SYNSEM [ LOCAL [ CAT.VAL.COMPS #comps,
+                     CONJ cnil ],
+	     NONLOC [ SLASH *diff-list* &
+			       [ LIST #first,
+				 LAST #last ],
+                      QUE *diff-list* &
+                            [ LIST #qfirst,
+                              LAST #qlast ] ],
+             MODIFD rmod & [ LPERIPH #periph ] ],
+    HD-DTR.SYNSEM [ LOCAL [ CAT.VAL.COMPS #comps,
+                            CONT.HOOK.INDEX.--TPC #tpc ],
+                    NONLOC [ SLASH *diff-list* &
+                                   [ LIST #middle,
+                                     LAST #last ],
+                             QUE *diff-list* &
+                                   [ LIST #qmiddle,
+                                     LAST #qlast ] ],
+                    MODIFD notmod_or_rmod & [ LPERIPH #periph ],
+                    PUNCT.RPUNCT comma_or_rbc_or_pair_or_no_punct ],
+    NH-DTR.SYNSEM [ LOCAL [ CAT [ POSTHD +,
+                                  VAL.COMPS *olist* ],
+                            CONT.HOOK.INDEX.--TPC #tpc ],
+                    NONLOC [ SLASH *diff-list* &
+                                   [ LIST #first,
+                                     LAST #middle ],
+                             QUE *diff-list* &
+                                   [ LIST #qfirst,
+                                     LAST #qmiddle ] ] ] ].
 #|
 head_adj_phrase := basic_head_mod_phrase_simple & head_initial_infl & phrasal &
   [ SYNSEM [ LOCAL [ CAT.VAL.COMPS #comps,
@@ -2413,8 +2457,8 @@ head_adj_phrase := basic_head_mod_phrase_simple & head_initial_infl & phrasal &
     HD-DTR.SYNSEM [ LOCAL [ CAT.VAL.COMPS #comps,
                             CONT.HOOK.INDEX.--TPC #tpc ],
                     NONLOC [ SLASH *diff-list* &
-                                   [ LIST #middle,
-                                     LAST #last ],
+                                   [ LIST #first,
+                                     LAST #middle ],
                              QUE *diff-list* &
                                    [ LIST #qmiddle,
                                      LAST #qlast ] ],
@@ -2424,42 +2468,12 @@ head_adj_phrase := basic_head_mod_phrase_simple & head_initial_infl & phrasal &
                                   VAL.COMPS *olist* ],
                             CONT.HOOK.INDEX.--TPC #tpc ],
                     NONLOC [ SLASH *diff-list* &
-                                   [ LIST #first,
-                                     LAST #middle ],
+                                   [ LIST #middle,
+                                     LAST #last ],
                              QUE *diff-list* &
                                    [ LIST #qfirst,
                                      LAST #qmiddle ] ] ] ].
 |#
-
-head_adj_phrase := basic_head_mod_phrase_simple & head_initial_infl & phrasal &
-  [ SYNSEM [ LOCAL [ CAT.VAL.COMPS #comps,
-                     CONJ cnil ],
-	     NONLOC [ SLASH *diff-list* &
-			       [ LIST #first,
-				 LAST #last ],
-                      QUE *diff-list* &
-                            [ LIST #qfirst,
-                              LAST #qlast ] ],
-             MODIFD rmod & [ LPERIPH #periph ] ],
-    HD-DTR.SYNSEM [ LOCAL [ CAT.VAL.COMPS #comps,
-                            CONT.HOOK.INDEX.--TPC #tpc ],
-                    NONLOC [ SLASH *diff-list* &
-                                   [ LIST #first,
-                                     LAST #middle ],
-                             QUE *diff-list* &
-                                   [ LIST #qmiddle,
-                                     LAST #qlast ] ],
-                    MODIFD notmod_or_rmod & [ LPERIPH #periph ],
-                    PUNCT.RPUNCT comma_or_rbc_or_pair_or_no_punct ],
-    NH-DTR.SYNSEM [ LOCAL [ CAT [ POSTHD +,
-                                  VAL.COMPS *olist* ],
-                            CONT.HOOK.INDEX.--TPC #tpc ],
-                    NONLOC [ SLASH *diff-list* &
-                                   [ LIST #middle,
-                                     LAST #last ],
-                             QUE *diff-list* &
-                                   [ LIST #qfirst,
-                                     LAST #qmiddle ] ] ] ].
 
 ; DPF (07-17-98) Split head_adj_phrase and adj_head_phrase into two each,
 ; one for intersective modifiers and one for scopal modifiers, in order to
@@ -2470,15 +2484,19 @@ head_adj_phrase := basic_head_mod_phrase_simple & head_initial_infl & phrasal &
 ; subtype, since this prevented 'most probably arrived' due to the optional 
 ; of-PP complement from 'most'.  But need *olist* to force e.g. 'as' to pick
 ; up complement first: "as reported, ..."
+;; DPF 12-02-20 - Let's return to blocking extraction from scopal modifiers,
+;; since allowing it produces great numbers of unwanted and unused edges in the
+;; chart.  Maybe we'll recall when we wanted such extraction.
 
 scopal_mod_phrase := head_mod_phrase_simple & nonhead_compositional &
 		     head_nexus_rel_phrase &
   [ HD-DTR.SYNSEM.LOCAL.CONT.HOOK [ XARG #xarg,
 				    --SLTOP #sltop ],
-    NH-DTR.SYNSEM.LOCAL [ CAT [ HEAD.MOD < [ LOCAL scopal_mod &
-					       [ CONT.HOOK.XARG #xarg ] ] >,
-				VAL.COMPS *olist* ],
-			  CONT.HOOK #hook & [ XARG #xarg ] ],
+    NH-DTR.SYNSEM [ LOCAL [ CAT [ HEAD.MOD < [ LOCAL scopal_mod &
+						 [ CONT.HOOK.XARG #xarg ] ] >,
+				  VAL.COMPS *olist* ],
+			    CONT.HOOK #hook & [ XARG #xarg ] ],
+		    NONLOC.SLASH 0-dlist ],
     C-CONT.HOOK #hook & [ --SLTOP #sltop ] ].
 
 isect_mod_phrase := head_mod_phrase_simple & head_compositional &
@@ -4332,10 +4350,12 @@ np_city_state_phr := norm_np_name_cmpnd_phr &
 ; bare-np rule to make NP for compound, but INFLECTD blocks this for bare-nps.
 
 basic_noun_n_cmpnd_phr := n_n_cmpnd_phr &
-  [ SYNSEM.MODIFD.LPERIPH #lperiph,
+  [ SYNSEM.MODIFD [ LPERIPH #lperiph,
+		    RPERIPH #rperiph ],
     HD-DTR.SYNSEM abstr_lex_synsem & 
                     [ LOCAL.CAT.HEAD noun_or_nomger_or_nadj & 
 				     [ MINORS.MIN nbar_or_nger_rel ],
+		      MODIFD.RPERIPH #rperiph,
                       LEX + ],
     NH-DTR 
        [ INFLECTD -,
@@ -6177,10 +6197,30 @@ min_coord_phr := basic_binary_phrase & non_headed_phrase &
     LCONJ-DTR sign & [ SYNSEM.NONLOC #nonloc ], 
     RCONJ-DTR sign & [ SYNSEM.NONLOC #nonloc ] ].
 
+#|
 basic_coord_phr := min_coord_phr &
   [ INFLECTD #infl,
     SYNSEM [ NONLOC.SLASH.LIST *arglist*,
              PUNCT.PNCTPR #ppair ],
+    LCONJ-DTR sign & #left &
+           [ INFLECTD #infl,
+             SYNSEM [ LOCAL [ CAT.HEAD.MINORS.MIN independent_rel,
+                              CONT.HOOK [ LTOP #ltop,
+					  INDEX individual ] ],
+		      LEX #lex ] ],
+    RCONJ-DTR #right &
+           [ INFLECTD #infl,
+             SYNSEM [ LOCAL [ CONT.HOOK.INDEX individual,
+			      CONJ.CLEX #lex ],
+                      LEX bool,
+                      PUNCT.PNCTPR #ppair ] ],
+    C-CONT.HOOK.--SLTOP #ltop,
+    ARGS < #left, #right > ].
+|#
+
+basic_coord_phr := min_coord_phr &
+  [ INFLECTD #infl,
+    SYNSEM [ PUNCT.PNCTPR #ppair ],
     LCONJ-DTR sign & #left &
            [ INFLECTD #infl,
              SYNSEM [ LOCAL [ CAT.HEAD.MINORS.MIN independent_rel,
