@@ -4183,37 +4183,6 @@ basic_np_name_cmpnd_phr := basic_n_n_cmpnd_phr &
 		       CFROM #from2, CTO #to2 ] !>,
 	     HCONS <! qeq & [ HARG #rhand,
                               LARG #nhltop ] !> ] ].
-#|
-;; Use for GENIA treebanking, for now
-basic_np_name_cmpnd_phr := basic_n_n_cmpnd_phr &
-  [ SYNSEM lex_phr_synsem & [ LOCAL.CAT.HEAD.MOD < > ],
-    HD-DTR.SYNSEM 
-           [ LOCAL [ CAT.HEAD noun,
-                     CONT.HOOK.INDEX #ind ],
-             NONLOC non-local_none,
-	     PUNCT.LPUNCT dq_or_no_punct,
-             MODIFD notmod_or_rmod ],
-    NH-DTR [ INFLECTD +,
-             SYNSEM [ LOCAL [ CAT [ HEAD basic_noun &
-                                         [ MINORS.MIN reg_or_temp_nom_rel ],
-                                    VAL.SPR < [ LOCAL.CAT.HEAD det,
-                                                NONLOC non-local_none ] > ],
-                              CONT.HOOK [ LTOP #nhltop,
-                                          INDEX #nhind ] ],
-                      MODIFD [ LPERIPH + ],
-                      LEX + ],
-	     ORTH [ FROM #from2, TO #to2 ] ],
-    ORTH [ FROM #from, TO #to ],
-    C-CONT [ RELS <! prep_notense_relation & 
-		     [ ARG1 #ind,
-		       ARG2 #nhind,
-		       CFROM #from, CTO #to ], 
-                     [ ARG0 #nhind,
-                       RSTR #rhand,
-		       CFROM #from2, CTO #to2 ] !>,
-	     HCONS <! qeq & [ HARG #rhand,
-                              LARG #nhltop ] !> ] ].
-|#
 
 norm_np_name_cmpnd_phr := basic_np_name_cmpnd_phr &
   [ INFLECTD #infl,
@@ -4225,15 +4194,18 @@ norm_np_name_cmpnd_phr := basic_np_name_cmpnd_phr &
 
 np_name_cmpnd_phr := norm_np_name_cmpnd_phr &
   [ HD-DTR.SYNSEM [ MODIFD.LPERIPH +,
-		    LOCAL.CAT [ HEAD.MINORS.MIN named_np_or_num_rel,
-				VAL.SPR < [ OPT - ] > ],
+		    LOCAL [ CAT [ HEAD.MINORS.MIN named_np_or_num_rel,
+				  VAL.SPR < [ OPT - ] > ],
+			    CONT.HOOK.LTOP #hdltop ],
 		    LEX + ],
     NH-DTR.SYNSEM [ LOCAL [ CAT.HEAD.MINORS [ MIN named_rel,
 					      NORM norm_rel ],
 			    AGR.PNG.PN 3s ],
 		    PUNCT [ LPUNCT dq_or_sq_or_no_punct,
 		            RPUNCT quote_or_hyphen_or_clause_or_no_punct ] ],
-    C-CONT.RELS <! [ PRED compound_name_rel ], [ PRED proper_q_rel ] !> ].
+    C-CONT.RELS <! [ PRED compound_name_rel,
+		     LBL #hdltop ], 
+		   [ PRED proper_q_rel ] !> ].
 
 ; DPF 24-apr-09 - Added NORM no_rel to nh-dtr, to block eg. 'single crystal'
 ; DPF 24-may-09 - But this also blocks ordinary titles like |Dr.| or |Mr.|,
@@ -4252,6 +4224,7 @@ np_title_cmpnd_phr := norm_np_name_cmpnd_phr &
   [ HD-DTR.SYNSEM [ LOCAL [ CAT [ HEAD.MINORS [ MIN abstr_named_np_rel,
 						ALTMIN proper_q_rel ],
 				  VAL.SPR *olist* ],
+			    CONT.HOOK.XARG #lbl,
 			    AGR.PNG.PN #pn ],
 		    MODIFD.LPERIPH + ],
     NH-DTR.SYNSEM [ LOCAL [ CAT [ HEAD.MINORS [ MIN gen_nom_nbar_rel,
@@ -4260,7 +4233,9 @@ np_title_cmpnd_phr := norm_np_name_cmpnd_phr &
 			    AGR.PNG.PN #pn ],
 		    PUNCT [ LPUNCT dq_or_sq_or_no_punct,
 		            RPUNCT quote_or_hyphen_or_no_punct ] ],
-    C-CONT.RELS <! [ PRED compound_name_rel ], [ PRED udef_q_rel ] !> ].
+    C-CONT.RELS <! [ PRED compound_name_rel,
+		     LBL #lbl ], 
+		   [ PRED udef_q_rel ] !> ].
 
 ; DPF 04-nov-07 - This rule is distinct from the above so we can still avoid
 ; spurious parse for "Browne five chairs".  
@@ -4291,14 +4266,17 @@ np_num_cmpnd_phr := basic_np_name_cmpnd_phr &
 
 np_city_state_phr := norm_np_name_cmpnd_phr &
   [ HD-DTR.SYNSEM [ MODIFD notmod & [ LPERIPH + ],
-		    LOCAL.CAT [ HEAD.MINORS.MIN named_np_or_num_rel,
-				VAL.SPR < [ OPT - ] > ] ],
+		    LOCAL [ CAT [ HEAD.MINORS.MIN named_np_or_num_rel,
+				  VAL.SPR < [ OPT - ] > ],
+			    CONT.HOOK.LTOP #hdltop ] ],
     NH-DTR.SYNSEM [ LOCAL [ CAT.HEAD.MINORS [ MIN named_city_rel,
 					      NORM norm_rel ],
 			    AGR.PNG.PN 3s ],
                     PUNCT [ LPUNCT no_punct,
 			    RPUNCT comma_punct ] ],
-    C-CONT.RELS <! [ PRED compound_name_rel ], [ PRED proper_q_rel ] !> ].
+    C-CONT.RELS <! [ PRED compound_name_rel,
+		     LBL #hdltop ], 
+		   [ PRED proper_q_rel ] !> ].
 
 ; DPF 24-Sept-01 - Made LPERIPH of mother be same as LPERIPH of non-hd, to 
 ; block e.g. "*The table important consultant chair arrives".
@@ -5193,14 +5171,10 @@ basic_measure_np_phrase := phrase &
                                                          QUE 0-dlist ] ] >,
                                         COMPS < > ] ],
                             CONJ cnil,
-                            CONT [ HOOK [ LTOP #nhand,
-					  INDEX #nindex ] ] ],
-                    NONLOC.SLASH 0-dlist,
+                            CONT.HOOK.INDEX #nindex ],
+		    NONLOC.SLASH 0-dlist,
                     MODIFD.LPERIPH bool ] ],
-    C-CONT [ HOOK [ LTOP #nhand,
-		    INDEX #nindex ],
-             RELS <! !>,
-             HCONS <! !> ] ].
+    C-CONT.HOOK.INDEX #nindex ].
 
 ; For "days ago", "miles high"
 ; DPF 15-Nov-03 - Made bare-MNPs HEAD adv to prevent "*days arrive(s)" etc.
@@ -5210,6 +5184,9 @@ basic_measure_np_phrase := phrase &
 ; instead make HEAD noun, but CASE obliq.
 ; DPF 10-aug-09 - Re 21-dec-05: But this prevents "miles remained" and
 ; "we use gallons".  So remove CASE obliq.
+;; DPF 12-03-01 - Somehow we have not been supplying a udef quantifier to
+;; bind the INDEX.  Fixed, but have to think about degadv usage as in 
+;; |he arrived days later|.  FIX
 
 bare_measure_np_phrase := norm_unary_phrase & basic_measure_np_phrase &
   [ SYNSEM [ LOCAL [ CAT [ HEAD.MINORS.ALTMIN udef_q_rel,
@@ -5220,10 +5197,21 @@ bare_measure_np_phrase := norm_unary_phrase & basic_measure_np_phrase &
     DTR1 #dtr1 & [ INFLECTD +,
 		   SYNSEM [ LOCAL [ CAT.HEAD.MINORS [ MIN abstr_meas_nom_rel,
 						      NORM quantity_rel ],
+				    CONT.HOOK.LTOP #nhand,
                                     AGR #agr & [ PNG.PN 3p ] ],
                             MODIFD notmod,
                             LEX + ] ],
-    ARGS < #dtr1 > ].
+    ARGS < #dtr1 >,
+    ORTH [ FROM #from, TO #to ],
+    C-CONT [ HOOK.INDEX #index,
+	     RELS <! [ PRED udef_q_rel,
+		       ARG0 #index,
+                       RSTR #rhand,
+		       CFROM #from, CTO #to ] !>,
+             HCONS <! qeq &
+                      [ HARG #rhand,
+                        LARG #nhand ] !> ] ].
+
 
 ; DPF 12-Apr-03 - Added CARDINAL + to DTR2 to block e.g. 'first day' as meas-NP
 ; DPF 27-jul-04 - Removed DTR2..SPR *olist* to get 'the million dollar view'
@@ -5270,7 +5258,10 @@ binary_measure_np_phrase := binary_punct_phrase & basic_measure_np_phrase &
 			  CONT.HOOK [ LTOP #nhand,
 				      INDEX #index ],
 			  AGR #agr ],
-		  PHON.ONSET #onset ] ].
+		  PHON.ONSET #onset ],
+    C-CONT [ HOOK.LTOP #nhand,
+	     RELS <! !>,
+             HCONS <! !> ] ].
 
 ; DPF 16-May-01 - Cannot have [DTR1..COMPS < >] (as desired to avoid spurious
 ; parse for "he is ten pounds heavier" where "pound" takes optional pp-of),
@@ -7668,7 +7659,8 @@ basic_predp_coord_phr := basic_coord_phr &
                                           [ PRD + ],
 				       VAL [ SPCMPS < > ],
 				       POSTHD #ph ],
-                                 CONT.HOOK.XARG #xarg ],
+                                 CONT.HOOK [ LTOP #ldtop,
+					     XARG #xarg ] ],
                          NONLOC.SLASH #slash ] ],
     RCONJ-DTR [ INFLECTD +,
                 SYNSEM [ LOCAL [ CAT [ HEAD v_or_a_or_p &
@@ -7677,7 +7669,8 @@ basic_predp_coord_phr := basic_coord_phr &
 				       VAL [ SPCMPS < > ],
                                        POSTHD #ph ],
                                  CONT.HOOK.XARG #xarg,
-                                 CONJ complex-conj ],
+                                 CONJ complex-conj &
+				      [ CREL.L-HNDL #ldtop ] ],
                          NONLOC.SLASH #slash ] ],
     C-CONT.HCONS <! !> ].
 
@@ -7707,13 +7700,13 @@ verbal_predp_coord_phr := basic_predp_coord_phr &
   [ SYNSEM.LOCAL.CAT [ HEAD verb & [ VFORM non_fin & #vform,
 				     MOD < anti_synsem > ],
 		       VAL.SPR *anti_cons* ],
-    LCONJ-DTR.SYNSEM.LOCAL.CAT [ HEAD verbal & [ VFORM #vform ],
-				 VAL [ SUBJ < synsem &
+    LCONJ-DTR.SYNSEM.LOCAL [ CAT [ HEAD verbal & [ VFORM #vform ],
+				   VAL [ SUBJ < synsem &
 					      [ LOCAL [ CAT #cat,
 							AGR #agr ],
 						NONLOC #nonloc,
 						--SIND #sind ] >,
-				       SPR *anti_cons* ] ],
+					 SPR *anti_cons* ] ] ],
     RCONJ-DTR.SYNSEM.LOCAL [ CAT.VAL [ SUBJ < synsem &
 					    [ LOCAL [ CAT #cat,
 						      AGR #agr ],
