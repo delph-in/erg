@@ -44,9 +44,9 @@
 (setf lkb::*c-cont-check-path* 
   `(,(vsym "C-CONT")))
 
-(setf *psoa-top-h-path* nil
-  ;`(,(vsym "HOOK") ,(vsym "LTOP"))
-  )
+(setf *psoa-top-h-path* `(,(vsym "HOOK") ,(vsym "LTOP")))
+
+(setf *top-hcons* "qeq")
 
 (defparameter *psoa-index-path* 
   `(,(vsym "HOOK") ,(vsym "INDEX"))
