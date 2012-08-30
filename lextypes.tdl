@@ -3844,9 +3844,12 @@ ssr_particle_v_lexent := nonc-hm &
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ; When changing, remember to also modify verb_participle_affix in lexrules.tdl
+;; DPF 2012-08-29 - Mysteriously, this type imposes REL 0-dlist, but that can't
+;; be right since we want e.g. |the cat whose long tail twitched|.  What were
+;; we thinking?  Let's see if anything goes awry when we remove this constraint.
+
 isect_synsem := abstr_lex_synsem &
-  [ LOCAL [ CAT.HEAD.MOD < [ LOCAL intersective_mod,
-                             NONLOC.REL 0-dlist ] >,
+  [ LOCAL [ CAT.HEAD.MOD < [ LOCAL intersective_mod ] >,
 	    CONT.HOOK.LTOP #hand ],
     LKEYS.KEYREL.LBL #hand ].
 
@@ -4747,8 +4750,14 @@ common_noun_nbarcomp_synsem := basic_noun_nomcomp_synsem & basic_two_arg &
 	    ALT2KEYREL #alt2keyrel ] ].
 
 ; DPF 08-apr-08 - Added NORM norm_rel to prevent these from heading appositive
-;
-common_noun_numcomp_synsem := noun_nocomp_synsem &
+;; DPF 2012-08-29 - Changed this type (for |$|) to have an anti_synsem 
+;; complement, to avoid seeing this dependent lexical entry as a stand-alone
+;; phrase, to avoid massive spurious ambiguity.  Concede that one does see
+;; |We need $ to live| in informal writing, but we'll undergenerate for now,
+;; in the interest of efficiency.  FIX someday?
+;;
+common_noun_numcomp_synsem := basic_count_noun_synsem & 
+			      nonpro_nomod_synsem &
   [ LOCAL.CAT.HEAD [ MINORS [ MIN mnp_symb_rel,
 			      NORM norm_rel ],
                      PRD + ] ].
@@ -6323,7 +6332,10 @@ n_numcomp_lexent := nonc-hm & basic_noun_word &
 ; <nex>
 ; <todo>
 ; </type>
-n_-_c-cur_le := n_numcomp_lexent.
+n_-_c-cur_le := n_numcomp_lexent &
+  [ SYNSEM.LOCAL.CAT.VAL.COMPS < anti_synsem_min > ].
+
+#|
 ; <type val="n_-_c-cur-gen_le">
 ; <description>Icn, currency, generics          
 ; <ex>The price was US$100.
@@ -6331,8 +6343,10 @@ n_-_c-cur_le := n_numcomp_lexent.
 ; <todo>
 ; </type>
 n_-_c-cur-gen_le := n_numcomp_lexent &
-  [ SYNSEM.LKEYS.KEYREL named_nom_relation &
-                        [ PRED gen_currency_rel ] ].
+  [ SYNSEM [ LOCAL.CAT.VAL.COMPS < >,
+	     LKEYS.KEYREL named_nom_relation &
+				 [ PRED gen_currency_rel ] ] ].
+|#
 
 ; <type val="n_-_m_le">
 ; <description>Intransitive mass noun (imn)     
@@ -7128,7 +7142,8 @@ n_group_ppof_lexent := noun_word &
   [ SYNSEM unsp_ppcomp_two_arg_synsem &
 	   [ LOCAL [ CAT [ HEAD noun &
                                 [ MINORS.MIN nom_rel & #min ],
-                           VAL.COMPS < [ LOCAL.CAT.HEAD.MINORS.ALTMIN #min,
+                           VAL.COMPS < synsem &
+				       [ LOCAL.CAT.HEAD.MINORS.ALTMIN #min,
                                          --SIND #ind,
                                          OPT - ] > ],
                      CONT [ RELS <! diadic_nom_relation !>,
@@ -9227,42 +9242,22 @@ n_-_pr-rel-acc_le := n_rel_pro_lexent &
 ;; DPF 2012-03-14 - Should remind ourselves of where the [INFLECTD na] move
 ;; helps, since it means the rule for reduced-relatives has to allow the
 ;; head-dtr to be na_or_+, to get |the cat that on Tuesday was sick is happy|
-
-n_rel_pro_nonwh_lexent := basic_n_rel_pro_lexent &
-  [ INFLECTD na,
-    SYNSEM [ LOCAL [ CAT.HEAD.PRD -,
-                     CONT.HOOK.INDEX.SORT nominal-sort ] ] ].
-
+;; DPF 2012-08-29 - Added LPERIPH + to avoid |true that| with aj-hdn_adjn_c rule
+;; now that we have removed the spurious REL 0-dlist from isect_synsem.
+;;
 ; <type val="n_-_pr-rel-nwh_le">
-; <description>Relative pro, non-WH             
+; <description>Relative pro, non-WH, only `that'
 ; <ex>Things that fell broke.
 ; <nex>
 ; <todo>
 ; </type>
-n_-_pr-rel-nwh_le := n_rel_pro_nonwh_lexent &
-  [ SYNSEM.LOCAL.CAT.HEAD [ MINORS.MIN pron_nonlocal_rel,
-			    MOD < > ] ].
-
-; DPF 2-apr-05 - Removed AGR.DIV - since this blocks "on the days that
-; we perform"
-; <type val="n_-_pr-rel-ad_le">
-; <description>Relative pro, fills NP-adv gap   
-; <ex>Places that B went did.
-; <nex>
-; <todo>
-; </type>
-#|
-n_-_pr-rel-ad_le := n_rel_pro_nonwh_lexent &
-  [ SYNSEM [ LOCAL.CAT basic_nbar_cat & 
-                       [ HEAD noun_or_nomger &
-			      [ MINORS [ MIN modable_nom_rel,
-					 NORM modable_rel ],
-				MOD < anti_synsem_min >,
-				CASE obliq ],
-                         VAL.SPR < unexpressed &
-                                   [ --MIN no_rel ] > ],
-             MODIFD.LPERIPH + ] ].
-|#
+n_-_pr-rel-nwh_le := basic_n_rel_pro_lexent &
+  [ INFLECTD na,
+    SYNSEM [ LOCAL [ CAT.HEAD [ MINORS.MIN pron_nonlocal_rel,
+				PRD -,
+				MOD < > ],
+		     CONT.HOOK.INDEX.SORT nominal-sort ],
+	     MODIFD.LPERIPH + ] ].
 
 ; DPF 28-Aug-99 - SPR..MIN no_rel prevents these from undergoing hdn_bnp_c rule
 ; DPF 09-Jan-00 - In fact, can now eliminate bogus SPR, since picking up
@@ -12864,6 +12859,10 @@ pp_-_i-po_lexent := noncqrs-hm-nab &
 			   [ ARG2 #ind ] !>,
 		     HCONS <! !> ] ] ] ].
 
+;; DPF 2012-08-29 - Changed SPR..ALTMIN from indef_or_num_q_rel to 
+;; implicit_q_rel to require only measure NPs, avoiding spurious ambiguity
+;; for |a year ago|
+;;
 ; For 'ago', constrain SPR to be only temporal NPs.
 ; <type val="pp_-_i-po-tm_le">
 ; <description>PP, postposition, temporal       
@@ -12873,8 +12872,9 @@ pp_-_i-po_lexent := noncqrs-hm-nab &
 ; </type>
 pp_-_i-po-tm_le := pp_-_i-po_lexent &
   [ SYNSEM.LOCAL.CAT.VAL.SPR < [ --SIND.SORT time,
-				 LOCAL.CAT.HEAD.MINORS.ALTMIN 
-					     indef_or_num_q_rel ] > ].
+				 LOCAL.CAT.HEAD.MINORS
+				     [ ALTMIN implicit_q_rel,
+				       NORM quantity_rel ] ] > ].
 
 ; For e.g. 'Kim's objections notwithstanding, we won't stay.'
 ; <type val="pp_-_i-po_le">
@@ -17499,6 +17499,56 @@ c_xp_and-btwn-mz_le := conj_complex_lexent &
 						   VAL.SPR *olist* ],
 		   CONT.RELS <! [ PRED _and_c_btwn_rel ] !> ] ].
 
+; <type val="c_xp_from-mrk_le">
+; <description>Conj, 'from' paired with 'to', numbers only
+; <ex>B saw from 10 to 20 cats.
+; <nex>
+; <todo>
+; </type>
+c_xp_from-mrk_le := conj_atomic_lexent &
+  [ SYNSEM.LOCAL [ CONJ from-conj,
+		   CAT.VAL.COMPS.FIRST.LOCAL.CAT.HEAD intadj ] ].
+
+; <type val="c_xp_from-mz-mrk_le">
+; <description>Conj, 'from' paired with 'to', measure NPs only
+; <ex>B has from ten dollars to twenty dollars.
+; <nex>
+; <todo>
+; </type>
+c_xp_from-mz-mrk_le := conj_atomic_lexent &
+  [ SYNSEM.LOCAL [ CONJ from-conj,
+		   CAT.VAL.COMPS.FIRST.LOCAL.CAT [ HEAD noun &
+						     [ MINORS.MIN 
+						         abstr_meas_nom_rel ],
+						   VAL.SPR *olist* ] ] ].
+
+; <type val="c_xp_to-from_le">
+; <description>Conj, only 'to' with `from'
+; <ex>From 10 to 20 cats arrived.
+; <nex>
+; <todo>
+; </type>
+c_xp_to-from_le := conj_complex_lexent &
+  [ SYNSEM.LOCAL [ CONJ lex-conj & [ CHEAD from-conj,
+                                     CPNG.PN 3p ],
+		   CAT.VAL.COMPS.FIRST.LOCAL.CAT.HEAD intadj,
+		   CONT.RELS <! [ PRED _to_c_from_rel ] !> ] ].
+
+; <type val="c_xp_to-from-mz_le">
+; <description>Conj, only 'to' with `from'
+; <ex>From ten miles to twenty miles passed.
+; <nex>
+; <todo>
+; </type>
+c_xp_to-from-mz_le := conj_complex_lexent &
+  [ SYNSEM.LOCAL [ CONJ lex-conj & [ CHEAD from-conj,
+                                     CPNG.PN 3p ],
+		   CAT.VAL.COMPS.FIRST.LOCAL.CAT [ HEAD noun &
+					             [ MINORS.MIN 
+						          abstr_meas_nom_rel ],
+						   VAL.SPR *olist* ],
+		   CONT.RELS <! [ PRED _to_c_from_rel ] !> ] ].
+
 ; <type val="c_xp_either-mrk_le">
 ; <description>Conj, 'either' paired with 'or'  
 ; <ex>B saw either C or D.
@@ -19553,6 +19603,7 @@ d_-_month_le := abstr_det_word &
 
 common_noun_nomod_comp_synsem := basic_count_noun_synsem & 
                                  nonpro_nomod_synsem & two_arg.
+
 ; DPF 22-May-01 Added LPERIPH + constraint to block these from beings heads of
 ; n-n compounds.
 ; DPF 24-mar-06 For now, require SPR to be unexpressed, to avoid generating
@@ -19562,6 +19613,7 @@ common_noun_nomod_comp_synsem := basic_count_noun_synsem &
 ; DPF 28-jun-07 - Added REL 0-dlist.
 ; DPF 2010-09-17 - Removed the recently added ALTMIN meas_nom_rel, since it
 ; blocks "the 2010 yearbook".  Not sure what it was intended to do...
+;;
 n_-_pn-yoc_lexent := basic_word &
   [ SYNSEM temp_noun_comp_two_arg_synsem &
    [ LOCAL [ CAT [ HEAD [ MOD < >,
@@ -19592,7 +19644,7 @@ n_-_pn-yoc_lexent := basic_word &
               SLASH 0-dlist,
               REL 0-dlist ],
      PUNCT [ LPUNCT no_punct,
-	     RPUNCT comma_or_no_punct ],
+	     RPUNCT no_punct ],
      LKEYS [ KEYREL [ PRED yofc_rel,
                       LBL #nhand ],
              ALTKEYREL.PRED quant_or_wh_rel ],
@@ -21230,7 +21282,8 @@ aj_np_i-crd-nsp_lexent := card_only_word & unspecified_num_with_complements &
   [ SYNSEM [ LOCAL.CAT [ HEAD intadj2,
                          VAL [ KCMP #kcmp,
 			       COMPS < #kcmp & 
-                                     [ LOCAL [ CAT.HEAD intadj,
+                                     [ LOCAL [ CAT.HEAD intadj &
+						    [ MINORS.ALTMIN norm_rel ],
                                                CONJ cnil ] ] > ] ],
 	     LKEYS.KEYREL.PRED card_rel ] ].
 
@@ -21474,6 +21527,8 @@ basic_one_num_synsem := anycard_norm_num_synsem & zero_arg &
 one_num_synsem := basic_one_num_synsem &
   [ LKEYS.KEYREL.CARG "1" ].
 
+;; DPF 2012-08-29 - Added missing OPT - on complement, presumably intended.
+;;
 one_num_fract_synsem := one_num_synsem & 
   [ LOCAL [ CAT [ HEAD.PRD -,
                   VAL.COMPS < canonical_synsem &
@@ -21482,6 +21537,7 @@ one_num_fract_synsem := one_num_synsem &
                                               VAL.COMPS < > ],
                                         CONT.HOOK [ LTOP #fhand,
                                                     XARG #ind ] ],
+				OPT -,
                                 PUNCT.LPUNCT no_punct ] > ],
             CONT [ HOOK.LTOP #hand,
                    RELS <! [ LBL #chand ],
@@ -21637,8 +21693,7 @@ aj_-_i-num_lexent := word &
                                   MOD < anti_synsem_min & 
                                         [ --MIN abstr_meas_nom_rel,
                                           LOCAL [ CAT.HEAD.MINORS.NORM norm_rel,
-						  AGR.PNG.PN 3s ] ] >,
-				  MINORS.ALTMIN no_rel ],
+						  AGR.PNG.PN 3s ] ] > ],
                            VAL.COMPS < > ],
                      CONT [ HOOK.LTOP #ltop,
                             RELS <! [ LBL #ltop ] !> ] ] ] ].
@@ -21650,8 +21705,18 @@ aj_-_i-num_lexent := word &
 ; <todo>
 ; </type>
 aj_-_i-num_le := aj_-_i-num_lexent &
-  [ INFLECTD + ].
+  [ INFLECTD +,
+    SYNSEM.LOCAL.CAT.HEAD.MINORS.ALTMIN no_rel ].
     
+; <type val="aj_-_i-num_le">
+; <description>Adj, only 'plus', `minus'        
+; <ex>Cats weigh five-plus kilos.
+; <nex>
+; <todo>
+; </type>
+aj_-_i-num-plus_le := aj_-_i-num_lexent &
+  [ INFLECTD + ].
+
 ; <type val="aj_-_i-num-nifl_le">
 ; <description>Adj, non-inflected, only 'a couple of'        
 ; <ex>Cows weigh a couple of hundred kilos.
@@ -21659,7 +21724,8 @@ aj_-_i-num_le := aj_-_i-num_lexent &
 ; <todo>
 ; </type>
 aj_-_i-num-nifl_le := aj_-_i-num_lexent &
-  [ INFLECTD - ].
+  [ INFLECTD -,
+    SYNSEM.LOCAL.CAT.HEAD.MINORS.ALTMIN no_rel ].
 
 ; 'a/an' of 'a meter and a half of snow'
 ; DPF 10-dec-03 - The 'and a half' synsem cannot be represented as a COMP
@@ -21695,6 +21761,12 @@ aj_np_i-frct-a_le := adj_one_fract_lexent &
 aj_np_i-frct-an_le := adj_one_fract_lexent &
   [ SYNSEM.LOCAL.CAT.HEAD.MOD < [ PHON.ONSET voc_or_unk ] > ].
 
+;; DPF 2012-08-29 - This type is wrongly conceived: this lexical entry is
+;; the prenominal modifier which also selects for the conj-marked fraction
+;; NP following the noun.  Curretnly we treat the |a third| in |two and a third|
+;; as non-decomposed, so more work will be needed to get the variant with
+;; |two and another third|.  FIX later.
+#|
 ; <type val="aj_np_i-frct-ath_le">
 ; <description>Fraction with 'another'          
 ; <ex>Two and another third are.
@@ -21702,6 +21774,7 @@ aj_np_i-frct-an_le := adj_one_fract_lexent &
 ; <todo>
 ; </type>
 aj_np_i-frct-ath_le := adj_one_fract_lexent.
+|#
 
 ; 'a half'
 fraction_num_synsem := anycard_norm_num_synsem & abstr_lex_synsem &
