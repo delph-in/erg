@@ -1286,6 +1286,7 @@ subconj_prdp_pas_phr := subconj_prdp_final_phr &
 subconj_prdp_adj_phr := subconj_prdp_final_phr &
   [ SYNSEM.LOCAL.CAT.HEAD.MOD < [ PUNCT.RPUNCT comma_or_no_punct ] >,
     ARGS < [ SYNSEM [ LOCAL.CAT.HEAD adj & [ MINORS.NORM norm_rel ],
+		      OPT +,
                       PUNCT.LPUNCT no_punct ] ] > ].
 
 subconj_prdp_ellip_phr := subconj_prdp_phr &
@@ -1874,6 +1875,7 @@ basic_head_opt_comp_phrase := head_valence_phrase & norm_unary_phrase &
                            POSTHD #ph,
                            HS-LEX #hslex ],
                      CONJ cnil ],
+	     OPT #opt,
              MODIFD #mod ],
     HD-DTR #head & 
            [ INFLECTD #infl,
@@ -1884,6 +1886,7 @@ basic_head_opt_comp_phrase := head_valence_phrase & norm_unary_phrase &
                                     MC #mc,
                                     POSTHD #ph,
                                     HS-LEX #hslex ] ],
+		      OPT #opt,
                       MODIFD #mod,
                       PUNCT.LPUNCT pair_or_no_punct ] ],
     C-CONT [ RELS <! !>,
@@ -5154,12 +5157,22 @@ basic_npadv_mod_phrase := basic_unary_phrase & phrasal &
 	     HCONS <! !> ],
     INFLECTD + ].
 
-;; DPF 2012-14-16 - Added MODIFD lmod to mother, to prevent these from being
+;; DPF 2012-04-16 - Added MODIFD lmod to mother, to prevent these from being
 ;; post-modified, to avoid redundant analysis for |25% of the cats in Paris|
+;; DPF 2012-09-12 - Tried adding MOD..NORM no_rel to block unwanted ambiguity 
+;; of analysis of e.g. |a year earlier| where |a year| is itself already an
+;; np_adv_mnp.  But this runs afoul of the constraint on the complement of the
+;; predicative copula which requires NORM norm_rel of its complement, so we
+;; would not get |when was Kim hired?|, where |when| demands that its MOD
+;; (namely |hired| be [NORM no_rel], while |was| demands that |hired| be
+;; [NORM norm_rel|.  So instead use the same MODIFD lmod feature on the
+;; mother of the npadv_meas rule that we use here to block similar unwanted
+;; ambiguity for |here earlier|.
 ;;
 npadv_mod_phrase := basic_npadv_mod_phrase &
   [ SYNSEM [ LOCAL.CAT [ HEAD [ MINORS.MIN loc_nonsp_rel,
-			      MOD < [ LOCAL.CAT.VAL.SPR < synsem_min, ... >]>],
+				MOD < [ LOCAL.CAT 
+					  [ VAL.SPR < synsem_min, ... > ] ] >],
 			 VAL.SPR < anti_synsem_min > ],
 	     MODIFD lmod ],
     ARGS < [ SYNSEM [ LOCAL.CAT.HEAD.MINORS.MIN modable_rel,
@@ -5188,14 +5201,15 @@ npadv_yofc_phrase := basic_npadv_mod_phrase &
 ; is ten feet"
 ;
 npadv_measnp_phrase := basic_npadv_mod_phrase &
-  [ SYNSEM.LOCAL.CAT [ HEAD [ MINORS [ MIN miscprep_rel,
-				       NORM norm_rel ],
-			      PRD -,
-			      MOD < [ LOCAL.CAT 
+  [ SYNSEM [ LOCAL.CAT [ HEAD [ MINORS [ MIN miscprep_rel,
+					 NORM norm_rel ],
+				PRD -,
+				MOD < [ LOCAL.CAT 
 					  [ HEAD v_or_a,
 					    VAL.SPR < synsem_min, ... > ] ] >],
-		       VAL.SPR < synsem &
-				 [ --MIN just_only_degree_rel ] > ],
+			 VAL.SPR < synsem &
+				   [ --MIN just_only_degree_rel ] > ],
+	     MODIFD lmod ],
     ARGS < [ SYNSEM [ LOCAL.CAT [ HEAD [ MINORS.MIN num_or_meas_rel,
 					 CASE no_case ],
 				  VAL.SPR < synsem &
@@ -5322,6 +5336,12 @@ bare_measure_np_phrase := norm_unary_phrase & basic_measure_np_phrase &
 ;; DPF 2012-04-09 - Re 24-may-10, note that we keep putting this *olist* back.
 ;; If remove it, then need to change bare-np rule to require its dtr's SPR
 ;; list to have REST be *olist*.
+;; DPF 2012-09-12 - Re 20-aug-04 and 19-nov-04: It is clear that we want to
+;; allow rightward modification, as in |ten miles on snow is fun|, so we
+;; can't stamp MODIFD lmod on mother; and also clear that we can't stamp
+;; MODIFD notmod on mother, since we want |ten miles east| to be able to be
+;; np_adv.  But we also want to block spurious adj_adjn for |big ten feet|
+;; so let's try MODIFD.LPERIPH + on mother.
 ;
 binary_measure_np_phrase := binary_punct_phrase & basic_measure_np_phrase &
   [ SYNSEM [ LOCAL [ CAT.VAL [ SPR < synsem & 
@@ -5331,7 +5351,8 @@ binary_measure_np_phrase := binary_punct_phrase & basic_measure_np_phrase &
 						       SPR *olist* ] ],
 				     OPT - ] . #spr2 >,
 			       COMPS #comps ],
-		     AGR.PNG.PN 3s ] ],
+		     AGR.PNG.PN 3s ],
+	     MODIFD.LPERIPH + ],
     DTR2 [ INFLECTD +,
            SYNSEM [ LOCAL [ CAT [ HEAD intadj_or_comp & 
                                    [ CARDINAL +,
@@ -5380,6 +5401,8 @@ measure_np_phrase := binary_measure_np_phrase &
 ; non-branching rule.  Especially given the difficulty of pp-of nouns noted 
 ; just above. But would have to allow "sixty" and "dollar" to combine in
 ; general, then block most of the time - sigh.  Leave for now.
+;; DPF 2012-09-12 - To trim down ambiguity, let's try excluding conjoined
+;; numerals here, as in dubious |$20 or 30|
 
 measure_np_symbol_phrase := binary_measure_np_phrase & 
   [ SYNSEM.PUNCT.PNCTPR #ppair,
@@ -5387,7 +5410,8 @@ measure_np_symbol_phrase := binary_measure_np_phrase &
 						      NORM norm_rel ],
 					VAL.COMPS *anti_cons* ],
                             PUNCT.RPUNCT no_punct ] ],
-    DTR2 #dtr2 & [ SYNSEM.PUNCT.PNCTPR #ppair ],
+    DTR2 #dtr2 & [ SYNSEM [ PUNCT.PNCTPR #ppair,
+			    LOCAL.CONT.HOOK.INDEX non_conj_event ] ],
     ARGS < #dtr1, #dtr2 > ].
 
 ; DPF 18-jul-06 - Added ARGS..MODIFD notmod_or_lmod to still block
@@ -5395,7 +5419,10 @@ measure_np_symbol_phrase := binary_measure_np_phrase &
 ; "directly down under Berlin".
 ;; DPF 2012-04-08 - Propagate POSTHD from SPEC, to block e.g.
 ;; |the three-foot taller than Kim tree|
-
+;; DPF 2012-09-12 - Let's try blocking these as spr's of nominal phrases,
+;; (changing HEAD n_or_p_or_a to a_or_p), to avoid extra ambiguity of e.g. 
+;; |Kim arose a year earlier| where |earlier| is the noun.
+;;
 meas_np_degadv_phrase := norm_unary_phrase &
   [ INFLECTD #bool,
     SYNSEM phr_degree_spec_synsem &
@@ -5403,7 +5430,7 @@ meas_np_degadv_phrase := norm_unary_phrase &
                                 [ MINORS [ MIN much_or_very_deg_rel,
                                            ALTMIN #min ] ],
                            VAL [ SPEC < synsem &
-                                       [ LOCAL [ CAT [ HEAD n_or_p_or_a &
+                                       [ LOCAL [ CAT [ HEAD a_or_p &
                                                             [ PRD #bool ],
 						       POSTHD #ph ],
                                                  CONT.HOOK.LTOP #sphand ] ] >,
@@ -5452,7 +5479,8 @@ meas_np_degadv_attr_phrase := meas_np_degadv_phrase &
 ; If used with predicative adj, the integer must have picked up its specifier:
 ; |*the building is hundred meters tall|
 meas_np_degadv_pred_phrase := meas_np_degadv_phrase &
-  [ SYNSEM.LOCAL.CAT.VAL.SPEC < [ LOCAL.CAT.HEAD.PRD + ] >,
+  [ SYNSEM.LOCAL.CAT.VAL.SPEC < [ LOCAL.CAT.HEAD adj & 
+						 [ PRD + ] ] >,
     ARGS < [ SYNSEM.LOCAL.CAT.VAL.SPR.REST *anti_list* ] > ].
 
 ; DPF 5-Apr-01 - For "two hundred is enough"
@@ -7663,7 +7691,9 @@ p_coord_mid_ig_phr := prep_coord_mid_ig_phr & x_onecomp_coord_phr.
 ; DPF 31-jul-06 - Re 23-aug-04: While waiting for a better solution, at least
 ; make the SPR < anti_synsem_min > so we can extract adjuncts from coordinated
 ; AP, as in "Today Kim is happy and cheerful."
-
+;; DPF 2012-09-12 - Constrain the SPRs on the dtrs to be *olist*, to block
+;; |*million or ten cats|
+;;
 adj_coord_phr := basic_coord_phr &
   [ SYNSEM [ LOCAL [ CAT [ HEAD #head & adj_or_intadj,
                            VAL [ SPR < anti_synsem_min >,
@@ -7674,14 +7704,16 @@ adj_coord_phr := basic_coord_phr &
              NONLOC [ SLASH 0-dlist,
                       QUE 0-dlist ] ],
     LCONJ-DTR.SYNSEM [ LOCAL [ CAT [ HEAD #head,
-				     VAL [ COMPS < > ],
+				     VAL [ COMPS < >,
+					   SPR *olist* ],
                                      POSTHD #ph ],
                                CONT.HOOK [ LTOP #ltop,
 					   XARG #xarg ] ],
                        NONLOC.SLASH 0-dlist ],
     RCONJ-DTR.SYNSEM [ LOCAL [ CAT [ HEAD adj_or_intadj,
-				     VAL [ COMPS < > ],
-                                     POSTHD #ph ],
+				     VAL [ COMPS < >,
+					   SPR *olist* ],
+				     POSTHD #ph ],
                                CONT.HOOK.XARG #xarg,
 			       CONJ complex-conj &
 				   [ CREL.L-HNDL #ltop ] ],
