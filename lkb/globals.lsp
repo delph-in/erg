@@ -152,7 +152,7 @@
 (defparameter *chart-packing-p* t)
 
 (defparameter *packing-restrictor*
-  ;'(ORTH RELS HCONS RNAME RPUNCT)
+  ;'(ORTH RELS HCONS RNAME RPUNCT LSYNSEM)
   '(ORTH RELS HCONS RNAME)
   "restrictor used when parsing with ambiguity packing")
 
