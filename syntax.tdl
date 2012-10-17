@@ -2049,7 +2049,8 @@ extracted_subj_phrase := extracted_arg_phrase & clause &
     HD-DTR.SYNSEM 
              [ LOCAL.CAT [ HEAD verbal & [ VFORM fin_or_inf,
 					   PRD - ],
-                           VAL [ SUBJ < [ LOCAL #local &
+                           VAL [ SUBJ < gap &
+			                [ LOCAL #local &
                                                 [ CAT.HEAD.MINORS.MIN #min,
                                                   CONT.HOOK [ LTOP #sltop,
 							      INDEX #ind ] ],
@@ -2859,12 +2860,14 @@ n_adj_relcl_phrase := n_adj_int_phrase & isect_mod_phrase &
 		      NONLOC.REL [ LIST #first, LAST #middle ] ] ] ].
 
 ; The paired variant, where both daughters match in right punctuation
+;; DPF 2012-10-10 - Removed HD-DTR..RPAREN - since this blocks e.g.
+;; |the mayor (Kim) who resigned|.  We'll remind ourselves of why it was here.
+;;
 n_adj_relcl_prpnct := n_adj_relcl_phrase &
   [ SYNSEM.PUNCT.PAIRED #paired,
     HD-DTR.SYNSEM.PUNCT [ PNCTPR #pnctpr,
                           PAIRED #paired,
-                          RPUNCT comma_or_pair_punct,
-			  RCLSTR.RPAREN - ],
+                          RPUNCT comma_or_pair_punct ],
     NH-DTR.SYNSEM.PUNCT [ PAIRED #pnctpr,
                           PNCTPR #paired ] ].
 
@@ -3235,6 +3238,7 @@ extracted_adj_int_phrase := basic_extracted_adj_phrase &
                                                        INDEX #hind ],
                                                  CONJ #conj,
                                                  CTXT #ctxt ],
+					       NONLOC.SLASH 0-dlist,	 
 					       --SIND #hind ] >,
                                        TAM [ TENSE no_tense,
                                              ASPECT no_aspect ],
@@ -4916,6 +4920,8 @@ appos_phr_nopair := appos_np_phr &
 
 ;; DPF 18-jul-2010 - Added HD-DTR..ALTMIN non_pronoun_q_rel to block
 ;; relative pronouns as heads, as in |who Browne ...|
+;; DPF 2012-10-10 - Also allow indefinite on NH-DTR, to admit 
+;; |a friend, Kim, arrived|
 
 appos_phr_prpnct := appos_np_phr &
   [ HD-DTR.SYNSEM [ PUNCT [ PNCTPR #pnctpr,
@@ -4951,7 +4957,7 @@ appos_phr_num_prpnct := appos_phr_prpnct &
 		    PUNCT.RPUNCT comma_punct ] ].
 
 appos_phr_prop_prpnct := appos_phr_prpnct &
-  [ HD-DTR.SYNSEM.LOCAL.CAT.HEAD.MINORS.ALTMIN def_or_meas_noproper_rel,
+  [ HD-DTR.SYNSEM.LOCAL.CAT.HEAD.MINORS.ALTMIN indef_or_def_or_meas_rel,
     NH-DTR.SYNSEM.LOCAL.CAT.HEAD.MINORS.ALTMIN num_or_proper_q_rel ].
 
 ; DPF 18-jun-07 - This is a patch to enable us to get comma-marked appositives
@@ -5239,7 +5245,10 @@ npadv_yofc_phrase := basic_npadv_mod_phrase &
 ; e.g. |Kim was low three liters|
 ; DPF 21-oct-09 - Added PRD - to prevent spurious ambiguity for "the distance
 ; is ten feet"
-;
+;; DPF 2012-10-14 - Tried adding MODIFD hasmod to dtr to block spurious 
+;; |we arose years|, but this is wrong since ordinary binary meas-NPs are
+;; also |MODIFD notmod|.
+;;
 npadv_measnp_phrase := basic_npadv_mod_phrase &
   [ SYNSEM [ LOCAL.CAT [ HEAD [ MINORS [ MIN miscprep_rel,
 					 NORM norm_rel ],
@@ -5339,6 +5348,14 @@ basic_measure_np_phrase := phrase &
 ;; SPR be [OPT -].  Also changed SPR from anti_synsem_min to unexpressed_rel, 
 ;; since we had lost |miles high| with |miles| undergoing the meas_np_degadv 
 ;; rule, where that dtr is [ SPR < synsem > ].  Sigh.
+;; DPF 2012-10-14 - Tried constraining mother to MODIFD notmod (preserved from 
+;; dtr) to avoid these undergoing npadv rule for spurious analysis of 
+;; |Kim arose years|.  But this doesn't help, since for independent reasons
+;; we also make binary meas-NPs be MODIFD notmod, and we need the npadv_meas
+;; rule to take those as dtrs, of course. Besides, already adopted a hack
+;; via CASE on |dollars| for this purpuse, so generalize to other measure-nouns
+;; that we don't want as bare npadv.  Also added no_case to dtr, to block
+;; these non-bare measure-nouns as input to this rule.
 ;;
 bare_measure_np_phrase := norm_unary_phrase & basic_measure_np_phrase &
   [ SYNSEM [ LOCAL [ CAT [ HEAD [ MINORS.ALTMIN udef_q_rel,
@@ -5349,8 +5366,9 @@ bare_measure_np_phrase := norm_unary_phrase & basic_measure_np_phrase &
 	     LEX + ],
     DTR1 #dtr1 & [ INFLECTD +,
 		   SYNSEM basic_lex_synsem &
-			  [ LOCAL [ CAT [ HEAD.MINORS [ MIN abstr_meas_nom_rel,
-							NORM quantity_rel ],
+			 [ LOCAL [ CAT [ HEAD [ MINORS [ MIN abstr_meas_nom_rel,
+							 NORM quantity_rel ],
+						CASE no_case ],
 					  VAL.COMPS < > ],
 				    CONT.HOOK [ LTOP #ltop,
 						INDEX #index ],
@@ -5366,8 +5384,8 @@ bare_measure_np_phrase := norm_unary_phrase & basic_measure_np_phrase &
 ; DPF 12-Apr-03 - Added CARDINAL + to DTR2 to block e.g. 'first day' as meas-NP
 ; DPF 27-jul-04 - Removed DTR2..SPR *olist* to get 'the million dollar view'
 ; DPF 20-aug-04 - Removed MODIFD notmod, since this prevents "ten miles east"
-; from being an np_adv_c, since the sp-hd_n_c rule takes its MODIFD value from the
-; non-hd dtr.  Don't know what this constraint was ruling out - we'll see.
+; from being an np_adv_c, since the sp-hd_n_c rule takes its MODIFD value from 
+; the non-hd dtr.  Don't know what this constraint was ruling out - we'll see.
 ; DPF 19-nov-04 - Considered making mother be MODIFD lmod, in order to avoid 
 ; seemingly spurious ; attachment of posthead modifiers to measure-NP, as in 
 ; "ten dollars that Kim hired".  (The current analysis of "ten miles east" has 
@@ -5724,8 +5742,8 @@ free_rel_phrase := head_initial_infl & head_compositional &
 			   POSTHD + ],
                      CONJ cnil ],
 	     NONLOC [ SLASH 0-dlist,
-			 QUE 0-dlist,
-			 REL 0-dlist ],
+		      QUE 0-dlist,
+		      REL 0-dlist ],
              LEX -,
              PUNCT.PNCTPR #ppair ],
     HD-DTR.SYNSEM [ LOCAL [ CAT [ HEAD.MINORS.MIN independent_rel,
@@ -5734,8 +5752,7 @@ free_rel_phrase := head_initial_infl & head_compositional &
                                         SUBJ *olist* ] ],
                             CONT.HOOK.XARG #hand ],
                     NONLOC [ QUE 1-dlist & <! ref-ind !>,
-                             SLASH 1-dlist &
-                                 <! #loc !> ],
+                             SLASH 1-dlist & <! #loc !> ],
                     PUNCT.RPUNCT no_punct ],
     NH-DTR.SYNSEM [ LOCAL [ CAT [ HEAD verb & [ VFORM fin,
 						INV -,
@@ -8934,9 +8951,10 @@ npindef_s_rule := np_s_phrase &
 		       PUNCT.RPUNCT comma_punct ] ],
 	  [ SYNSEM.LOCAL.CAT.HEAD verb ] > ].
 
-;; DPF 2011-08-14 - Added extraposed relatives which attach to VP, and which
-;; introduce an underspecified relation to be interpreted as anaphoric link
-;; to some NP in the clause.
+;; DPF 2011-08-14 - Added extraposed (restrictive) relatives which attach to 
+;; VP, and which introduce an underspecified relation to be interpreted as 
+;; anaphoric link to some NP in the clause.  Exclude proper names as subjects
+;; here, to avoid |*Kim arrived, who arose|
 ;;
 vp-final-relcl_phrase := head_initial_infl &
  [ SYNSEM phr_synsem &
@@ -9914,7 +9932,8 @@ conj_no_verb_phrase := phrase &
 		      MC #mc ],
 		CONT.HOOK [ LTOP #ltop,
 			    INDEX #lind & non_conj_event & [ E #tam ],
-			    XARG #xarg ] ],
+			    XARG #xarg ],
+		CONJ cnil ],
 		      PUNCT.RPUNCT comma_or_no_punct,
 		      NONLOC non-local_none ] ],
 	   [ SYNSEM [ LOCAL [ CAT [ HEAD.VFORM #vform,
