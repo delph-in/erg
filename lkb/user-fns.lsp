@@ -511,7 +511,7 @@
           (format
            stream 
            "~(~a~)_alr :=~%~
-            %(~:[prefix~;suffix~] (* ~ad~(~a~)d~a))~%~
+            %(~:[prefix~;suffix~] (* ~a¦~(~a~)¦~a))~%~
             dependency_annotation_lr.~%"
            abstraction initialp (code-char 8970) abstraction (code-char 8971)))
     (when (stringp file) (close stream))))
