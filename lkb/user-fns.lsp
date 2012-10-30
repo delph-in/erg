@@ -486,13 +486,15 @@
                                 (tdfs-indef tdfs) '(RNAME))))
                       (and dag (dag-type dag)))
         when (rest (rule-rhs rule)) do
-          (pushnew abstraction abstractions :test #'string=)
+          (pushnew
+           (list id abstraction) abstractions
+           :test #'string= :key #'second)
           (push (list id abstraction rname) leafs))
-    (setf abstractions (sort abstractions #'string<))
+    (setf abstractions (sort abstractions #'string< :key #'second))
     (setf leafs (nreverse leafs))
     (loop
         for abstraction in abstractions
-        do (format stream "~(~a~) := rname.~%" abstraction))
+        do (format stream "~(~a~) := rname.~%" (second abstraction)))
     (terpri stream)
     (loop
         for (id abstraction leaf) in leafs
@@ -500,4 +502,16 @@
           (format
            stream ";; ~(~a~)~%~(~a~) := ~(~a~).~%"
            id leaf abstraction))
+    (terpri stream)
+    (loop
+        for (id abstraction) in abstractions
+        for rule = (or (gethash id *rules*) (gethash id *lexical-rules*))
+        for initialp = (zerop (rule-head rule))
+        do
+          (format
+           stream 
+           "~(~a~)_alr :=~%~
+            %(~:[prefix~;suffix~] (* ~ad~(~a~)d~a))~%~
+            dependency_annotation_lr.~%"
+           abstraction initialp (code-char 8970) abstraction (code-char 8971)))
     (when (stringp file) (close stream))))
