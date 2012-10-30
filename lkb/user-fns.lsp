@@ -467,3 +467,37 @@
   nil)
 
 
+(defun generate-rule-hierarchy (&key file (stream t))
+  (when (stringp file)
+    (setf stream (open file :direction :output :if-exists :supersede)))
+  (let* ((ids
+          (nconc
+           (loop for id being each hash-key in *rules* collect id)
+           (loop for id being each hash-key in *lexical-rules* collect id)))
+         (ids (sort ids #'string<))
+         abstractions leafs)
+    (loop
+        for id in ids
+        for break = (position #\_ (string id))
+        for abstraction = (subseq (string id) 0 break)
+        for rule = (or (gethash id *rules*) (gethash id *lexical-rules*))
+        for tdfs = (rule-full-fs rule)
+        for rname = (let ((dag (existing-dag-at-end-of
+                                (tdfs-indef tdfs) '(RNAME))))
+                      (and dag (dag-type dag)))
+        when (rest (rule-rhs rule)) do
+          (pushnew abstraction abstractions :test #'string=)
+          (push (list id abstraction rname) leafs))
+    (setf abstractions (sort abstractions #'string<))
+    (setf leafs (nreverse leafs))
+    (loop
+        for abstraction in abstractions
+        do (format stream "~(~a~) := rname.~%" abstraction))
+    (terpri stream)
+    (loop
+        for (id abstraction leaf) in leafs
+        do
+          (format
+           stream ";; ~(~a~)~%~(~a~) := ~(~a~).~%"
+           id leaf abstraction))
+    (when (stringp file) (close stream))))
