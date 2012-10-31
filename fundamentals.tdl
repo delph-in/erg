@@ -39,13 +39,16 @@ sign := sign_min &
     DIALECT dialect,
     IDIOM bool ].
 
+;; DPF 2012-10-30 - Changed value of RNAME to ctype rather than string, to
+;; support better interaction with tokenization
+
 phrase_or_lexrule := sign &
   [ SYNSEM canonical_synsem &
 	   [ LOCAL.CONT.HOOK #hook ],
     ORTH.FROM #from,
     C-CONT mrs_min & [ HOOK #hook ],
     ARGS.FIRST.ORTH.FROM #from,
-    RNAME string ].
+    RNAME basic_ctype ].
 
 word_or_lexrule_min := sign_min.
 
@@ -65,11 +68,15 @@ word_or_infl_rule := word_or_infl_or_punct_rule.
 
 basic_word := word_or_infl_rule & word_or_punct_rule &
   [ SYNSEM [ PHON.ONSET.--TL #tl,
+	     LOCAL.CAT.HEAD [ --CTYPE #ctype,
+			      --HID #hid ],
 	     LKEYS.KEYREL [ CFROM #from,
 			    CTO #to ] ],
-    ORTH [ CLASS #class, FROM #from, TO #to, FORM #form ],
-    TOKENS [ +LIST #tl & < [ +CLASS #class, +FROM #from, +FORM #form ], ... >,
-             +LAST.+TO #to ] ].
+    ORTH [ CLASS #class, FROM #from, TO #to, FORM #form, LB #lb, RB #rb ],
+    TOKENS [ +LIST #tl & < [ +CLASS #class, +FROM #from, +FORM #form, 
+			     +TRAIT [ +LB #lb, 
+				      +HD [ +CTYPE #ctype, +HID #hid ]]], ... >,
+	     +LAST [ +TO #to, +TRAIT.+RB #rb ] ] ].
 
 word := basic_word &
   [ SYNSEM.PUNCT.PNCTPR ppair ].
@@ -77,7 +84,9 @@ word := basic_word &
 orthog := *cons* &
 [ FORM string,
   FROM string,
-  TO string ].
+  TO string,
+  LB bracket_list,
+  RB bracket_list ].
 
 orthography := orthog &
 [ CLASS token_class ].
@@ -319,6 +328,13 @@ voc := voc_or_unk & con_or_voc.
 unk_onset := con_or_unk & voc_or_unk &
 [ --TL generic_token_list ].
 
+phon_num := phon &
+  [ DIGIT bool ].
+
+basic_ctype := *sort*.
+ctype := basic_ctype.
+anti_ctype := basic_ctype.
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
 ;;
 ;;  Head and valence
@@ -350,13 +366,19 @@ head_min := *avm*.
 ; TAM likewise can be pushed down to non-noun subtype.
 ; AUX has to be here as long as we want PPs to avoid attaching to aux-headed
 ; phrases, since they can also modify nouns.
-
+;; Added --CTYPE whose value identifies the rule(name) in which the maximal
+;; projection of this head is the local non-head (the dependant).  The
+;; feature --HID is the ID of the lexical head of that local phrase, 
+;; initially just its ORTH.FROM value, but maybe eventually its token ID.
+;;
 head := head_min &
   [ MOD *list*,
     PRD bool,
     MINORS minors_basic,
     AUX luk,
-    CASE case ].
+    CASE case,
+    --CTYPE ctype,
+    --HID string ].
 
 valence_min := *avm*.
 
@@ -538,7 +560,7 @@ basic_noun := noun_or_nomger & n_or_adv & noun_or_gerund & noun_or_ttl &
 	      v_or_g_or_a_or_n.
 
 noun := basic_noun.
-noun_adjable := basic_noun & noun_adj.
+noun_adjable := basic_noun & noun_adj & mobile.
 
 ; DPF 10-Apr-02 - Added n_or_p since want to allow gerunds to undergo hdn_optcmp_c
 ; rule, to get e.g."way of saying that Kim arrives"
@@ -1082,9 +1104,10 @@ basic-conj := conj_min &
 
 conj := basic-conj.
 cnil_or_phrconj := basic-conj.
-cnil_or_lexconj := basic-conj.
+cnil_or_lexconj := basic-conj & cnil_or_lex_or_atomconj.
 cnil_or_numconj := conj_min.
-cnil_or_atomconj := conj_min.
+cnil_or_lex_or_atomconj := conj_min.
+cnil_or_atomconj := cnil_or_lex_or_atomconj.
 both_or_cnil := cnil_or_atomconj.
 either_or_cnil := cnil_or_atomconj.
 neither_or_cnil := cnil_or_atomconj.
@@ -2034,6 +2057,13 @@ nongappro := pro_ss &
 *obliqueocons* := *obliquecons* & *ocons*.
 *obliquenull* := *obliquelist* & *onull*.
 
+*indeplist* := *obliquelist*.
+*indepcons* := *indeplist* & *obliquecons* &
+  [ FIRST.LOCAL.CAT.HEAD.MINORS.MIN independent_rel,
+    REST  *indeplist* ].
+*indepocons* := *obliqueocons* & *indepcons*.
+*indepnull* := *indeplist* & *obliquenull*.
+
 ; Values of SLASH.LIST
 *locallist* := 0-1-list.
 *localcons* := *locallist* & 1-list &
@@ -2041,17 +2071,17 @@ nongappro := pro_ss &
     REST *locallist* ].
 *localnull* := *locallist* & *null*.
 
-*arglist* := 0-1-list.
+*arglist* := *locallist*.
 *argcons* := *arglist* & *localcons* &
   [ FIRST arg-local,
     REST *arglist* ].
 
 *argnull* := *arglist* & *localnull*.
 
-*modlist* := 0-1-list.
+*modlist* := *locallist*.
 *modcons* := *modlist* & *localcons* &
   [ REST *modlist* ].
-*modnull* := *modlist* & *localnull*.
+*modnull* := *modlist* & *cpnull*.
 
 ;; *paramlist* is used in the treatment of free relatives, to distinguish
 ;; the usual value of QUE from its use in free relatives, where QUE is instead
@@ -2078,9 +2108,10 @@ nongappro := pro_ss &
 *nogaplist* := *list*.
 *nogapcons* := *nogaplist* & 1-list &
   [ FIRST synsem_min & [ NONLOC.SLASH 0-dlist ] ].
+*nogapnull* := *nogaplist* & *null*.
 *nogapantilist* := *nogaplist* & *anti_list*.
 *nogapanticons* := *nogaplist* & *anti_cons*.
-*nogapnull* := *nogaplist* & *null*.
+*nogapantinull* := *nogaplist* & *anti_null*.
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Subtypes of *diff-list*
@@ -3614,6 +3645,7 @@ _but_c_rel := conj_rel.
 _but+also_c_rel := conj_rel.
 _but+not_c_rel := conj_rel.
 _but+then_c_rel := conj_rel.
+_else_c_rel := conj_rel.
 _formerly_c_rel := conj_rel.
 _if+not_c_rel := conj_rel.
 _instead+of_c_rel := conj_rel.
@@ -3996,3 +4028,4 @@ root_frag_synsem := canonical_synsem &
     PUNCT.RPUNCT comma_or_clause_or_pair_or_no_punct & [ PSF #pred ] ].
 
 frag_phr_synsem := root_frag_synsem & phr_synsem.
+

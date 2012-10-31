@@ -192,6 +192,9 @@ plur_noun := noun_local &
     CONT.HOOK.INDEX [ PNG png & [ PN 3p ],
                       DIV + ] ].
 
+;; As a hack to prevent inflected nouns in certain constructions, add this:
+noninfl_noun_local := noun_local.
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;  Adjectival inflections
 ;;
@@ -772,7 +775,7 @@ basic_passive_verb_lr := lex_rule_basic & word_or_infl_rule &
 
 norm_passive_verb_lr := basic_passive_verb_lr &
   [ DTR.SYNSEM.LOCAL.CAT.VAL.SUBJ < [ --SIND #subjind, 
-                                      NONLOC #snonloc ] >,
+				      NONLOC #snonloc ] >,
     SYNSEM passive_synsem &
            [ LOCAL.CAT.VAL.COMPS < [ LOCAL.CONT.HOOK.INDEX #subjind,
 				     NONLOC #snonloc ], ... > ] ].
@@ -803,19 +806,17 @@ prep_passive_verb_lr := basic_passive_verb_lr &
 		 LKEYS.KEYREL #keyrel ] ].
 
 ; "this chapter has been added to" (dtr has opt NP complement)
-prep_passive_trans_verb_lr := basic_passive_verb_lr &
+; or verb+NP+particle
+basic_prep_passive_trans_verb_lr := basic_passive_verb_lr &
   [ DTR.SYNSEM 
      [ LOCAL.CAT.VAL [ SUBJ < [ --SIND #sind, 
 				NONLOC #snonloc ] >,
-		       COMPS [ FIRST [ LOCAL.CAT.HEAD noun,
-				       OPT + ],
+		       COMPS [ FIRST.LOCAL.CAT.HEAD noun,
 			       REST [ FIRST [ --MIN #min & 
 						    selected_rel,
-					      LOCAL [ CAT [ HEAD prep,
-							    VAL.COMPS < > ],
+					      LOCAL [ CAT.HEAD prep,
 						      CONT #objcont ],
-					      NONLOC #ononloc,
-					      --SIND #objind ],
+					      NONLOC #ononloc ],
 				      REST #comps ] ] ],
        LKEYS.KEYREL #keyrel ],
     SYNSEM prep_passive_synsem &
@@ -829,6 +830,20 @@ prep_passive_trans_verb_lr := basic_passive_verb_lr &
 					   REST #comps ] ] ] ],
 		  CONT.HOOK.XARG #objind ],
 	  LKEYS.KEYREL #keyrel ] ].
+
+;; For |the collection was added to|
+prep_passive_trans_verb_lr := basic_prep_passive_trans_verb_lr &
+ [ DTR.SYNSEM.LOCAL.CAT.VAL.COMPS [ FIRST.OPT +,
+				    REST.FIRST [ LOCAL.CAT.VAL.COMPS < >,
+						 --SIND #objind ] ],
+   SYNSEM.LOCAL.CONT.HOOK.XARG #objind ].
+
+;; For |the answer could be looked up|
+prep_passive_ptcl_verb_lr := basic_prep_passive_trans_verb_lr &
+ [ DTR.SYNSEM.LOCAL.CAT.VAL.COMPS [ FIRST [ OPT -,
+					    LOCAL.CONT.HOOK.INDEX #objind ],
+				    REST.FIRST.LOCAL.CAT.VAL.COMPS *cons* ],
+   SYNSEM.LOCAL.CONT.HOOK.XARG #objind ].
 
 ;; This has the same problem as the passive lexical rule.  Since we derive the
 ;; gerund from the present particple, we somehow have to filter out the
@@ -1276,7 +1291,7 @@ attr_adj_lr := lex_rule &
 ;; blocks desired application to lexical passives like "untrafficked", which
 ;; do have decomposed semantics.  So remove it.
 
-basic_attr_verb_part_lr := lex_rule &
+basic_attr_verb_part_lr := lex_rule_basic &
   [ ORTH #orth,
     DTR [ ORTH #orth,
 	  SYNSEM [ LOCAL [ CAT [ HEAD verb &
@@ -1291,8 +1306,7 @@ basic_attr_verb_part_lr := lex_rule &
                                                     ASPECT.PRF - ] ] ] ],
                            CTXT #ctxt ],
                    NONLOC #non-local,
-		   MODIFD #modif,
-                   LKEYS.--COMPKEY independent_rel ] ],
+		   MODIFD #modif ] ],
     SYNSEM adj_synsem_lex_constr &
      [ LOCAL [ CAT [ HEAD.PRD -,
 		     POSTHD -,
@@ -1311,11 +1325,13 @@ basic_attr_verb_part_lr := lex_rule &
 ; 'chased one' as an NP with num-noun 'one'
 ;
 
-attr_verb_part_nbarmod_lr := basic_attr_verb_part_lr &
+attr_verb_part_nbarmod_lr := basic_attr_verb_part_lr & lex_rule &
   [ SYNSEM.LOCAL.CAT.HEAD.MOD < [ --MIN gen_nom_nbar_rel ] > ].
 
 attr_verb_part_lr := attr_verb_part_nbarmod_lr &
-  [ DTR.SYNSEM.LOCAL.CAT.VAL.COMPS < > ].
+  [ SYNSEM.LOCAL.CAT.VAL.COMPS < >,
+    DTR.SYNSEM [ LOCAL.CAT.VAL.COMPS < >,
+		 LKEYS.--COMPKEY independent_rel ] ].
 
 ; transitive -ing verbs
 ; DPF 25-aug-07 - Block causative -ing forms to avoid spurious ambiguity for
@@ -1323,28 +1339,53 @@ attr_verb_part_lr := attr_verb_part_nbarmod_lr &
 
 attr_verb_part_tr_lr := attr_verb_part_nbarmod_lr &
   [ ALTS.VADJ +,
-    DTR.SYNSEM.LOCAL.CAT [ HEAD [ VFORM prp,
-				  MINORS.ALTMIN role_rel ],
-                           VAL.COMPS 
+    SYNSEM.LOCAL.CAT.VAL.COMPS < >,
+    DTR.SYNSEM [ LOCAL.CAT [ HEAD [ VFORM prp,
+				    MINORS.ALTMIN role_rel ],
+			     VAL.COMPS 
                               < unexpressed &
                                 [ --MIN independent_rel,
-                                  LOCAL.CAT.HEAD n_or_p ] . *olist* >]].
+                                  LOCAL.CAT.HEAD n_or_p ] . *olist* > ],
+		 LKEYS.--COMPKEY independent_rel ] ].
 
 attr_verb_part_psv_lr := attr_verb_part_nbarmod_lr &
-  [ DTR [ SYNSEM [ LOCAL.CAT [ HEAD.VFORM pas,
+  [ SYNSEM.LOCAL.CAT.VAL.COMPS < >,
+    DTR [ SYNSEM [ LOCAL.CAT [ HEAD.VFORM pas,
 				 VAL.COMPS 
 				     < unexpressed &
-				       [ --MIN selected_rel ] . *olist* > ] ],
+				       [ --MIN selected_rel ] . *olist* > ],
+		   LKEYS.--COMPKEY independent_rel ],
 	  ALTS.ATTRJ + ],
     C-CONT.RELS <! !> ].
+
+attr_verb_part_ptcl_psv_lr := basic_attr_verb_part_lr &
+  [ SYNSEM.LOCAL.CAT [ HEAD.MOD < [ --MIN gen_nom_nbar_rel ] >,
+		       VAL.COMPS < #comp >,
+		       MC #mc ],
+    DTR word_or_lexrule & #stem &
+	[ INFLECTD +,
+	  SYNSEM.LOCAL.CAT [ HEAD.VFORM pas,
+			     VAL.COMPS [ FIRST #comp & [ OPT -,
+							 --MIN selected_rel ],
+					 REST *cons* ],
+			     MC #mc ],
+          KEY-ARG #keyarg,
+	  ALTS.ATTRJ + ],
+    C-CONT.RELS <! !>,
+    KEY-ARG #keyarg,
+    ARGS < #stem >,
+    INFLECTD + ].
+
 
 ; For "the bewitching Abrams"
 ; DPF 30-sept-06 - The DTR..VFORM prp constraint prevents e.g. "the newly
 ; built Paris", so remove and see what happens to added ambiguity.
 
-attr_verb_part_namemod_lr := basic_attr_verb_part_lr &
-  [ SYNSEM.LOCAL.CAT.HEAD.MOD < [ --MIN named_rel,
-                                  LOCAL.CAT.VAL.SPR < expressed_synsem > ] > ].
+attr_verb_part_namemod_lr := basic_attr_verb_part_lr & lex_rule &
+  [ SYNSEM.LOCAL.CAT [ HEAD.MOD < [ --MIN named_rel,
+                                    LOCAL.CAT.VAL.SPR < expressed_synsem > ] >,
+		       VAL.COMPS < > ],
+    DTR.SYNSEM.LKEYS.--COMPKEY independent_rel ].
 
 attr_verb_part_intr_namemod_lr := attr_verb_part_namemod_lr &
   [ DTR.SYNSEM.LOCAL.CAT.VAL.COMPS < > ].
@@ -1778,6 +1819,8 @@ bipart_lr := lex_rule_supermost &
 ; In lexrules.tdl
 ; ; DPF 18-apr-08 - Also restrict subj to NORM norm_rel to exclude CP-WH NPs
 ; as in "remembered who arrived"
+;; DPF 2012-10-20 -  Added SF prop to mother to prevent an inverted main-verb
+;; S from being mistaken for a WH-phrase in the CP->NP rule.
 ;
 inverted_quote_lr := lex_rule_basic &
  [ ORTH #orth,
@@ -1794,7 +1837,7 @@ inverted_quote_lr := lex_rule_basic &
 				COMPS #comps,
                                 KCMP #keycomp ],
                           HC-LEX #hclex ],
-                    CONT.HOOK #hook,
+                    CONT.HOOK #hook & [ INDEX.SF prop ],
                     AGR #agr,
                     CTXT #ctxt ],
             LKEYS #lkeys,
@@ -1921,7 +1964,7 @@ punctuation_period_rule := punctuation_rule &
                           [ PSF punct-prop-comm ] ],
     ARGS < [ SYNSEM.PUNCT [ LPUNCT #lpunct & no_punct,
                             RPUNCT pair_or_no_punct ] ] >,
-    RNAME "LPP" ].  
+    RNAME lpp ].  
 
 punctuation_qmark_rule := punctuation_rule &
   [ SYNSEM.PUNCT [ LPUNCT #lpunct,
@@ -1930,7 +1973,7 @@ punctuation_qmark_rule := punctuation_rule &
                           [ PSF punct-ques ] ],
     ARGS < [ SYNSEM.PUNCT [ LPUNCT #lpunct & no_punct,
                             RPUNCT pair_or_no_punct ] ] >,
-    RNAME "LPQ" ].
+    RNAME lpq ].
 
 punctuation_semicol_rule := punctuation_rule &
   [ SYNSEM.PUNCT [ LPUNCT #lpunct,
@@ -1939,7 +1982,7 @@ punctuation_semicol_rule := punctuation_rule &
                           [ PSF punct-prop-comm ] ],
     ARGS < [ SYNSEM.PUNCT [ LPUNCT #lpunct & no_punct,
                             RPUNCT pair_or_no_punct ] ] >,
-    RNAME "LPSC" ].
+    RNAME lpsc ].
 
 punctuation_colon_rule := punctuation_rule &
   [ SYNSEM.PUNCT [ LPUNCT #lpunct,
@@ -1947,7 +1990,7 @@ punctuation_colon_rule := punctuation_rule &
                    RPUNCT colon_punct ],
     ARGS < [ SYNSEM.PUNCT [ LPUNCT #lpunct & no_punct,
                             RPUNCT pair_or_no_punct ] ] >,
-    RNAME "LPCL" ].
+    RNAME lpcl ].
 
 basic_punctuation_comma_rule := basic_punctuation_rule &
   [ INFLECTD #infl,
@@ -1964,7 +2007,7 @@ punctuation_comma_rule := basic_punctuation_comma_rule &
   [ SYNSEM.PUNCT [ PNCTPR no_ppair,
                    PAIRED no_ppair,
                    RPUNCT comma_punct ],
-    RNAME "LPCM" ].
+    RNAME lpcm ].
 
 punctuation_rparen_rule := basic_punctuation_rule &
   [ INFLECTD #infl,
@@ -1979,7 +2022,7 @@ punctuation_rparen_rule := basic_punctuation_rule &
 			    RCLSTR.RFP #rfp ],
              GENRE #genre ] >,
     GENRE #genre,
-    RNAME "LPRP" ].
+    RNAME lprp ].
 
 punctuation_lparen_rule := basic_punctuation_rule &
   [ INFLECTD #infl,
@@ -1993,7 +2036,7 @@ punctuation_lparen_rule := basic_punctuation_rule &
                             RCLSTR #rclstr ],
              GENRE #genre ] >,
     GENRE #genre,
-    RNAME "LPLP" ].
+    RNAME lplp ].
 
 ; DPF 03-jun-10 - Changed LPUNCT from dq_or_no_punct to no_punct to avoid
 ; spurious ambiguity for |"cat"|
@@ -2013,7 +2056,7 @@ punctuation_dqright_rule := basic_punctuation_rule &
 			    PNCTPR #pnctpr ],
              GENRE #genre ] >,
     GENRE #genre,
-    RNAME "LPDR" ].
+    RNAME lpdr ].
 
 punctuation_dqleft_rule := basic_punctuation_rule &
   [ INFLECTD #infl,
@@ -2030,7 +2073,7 @@ punctuation_dqleft_rule := basic_punctuation_rule &
 			    PNCTPR #pnctpr ],
              GENRE #genre ] >,
     GENRE #genre,
-    RNAME "LPDL" ].
+    RNAME lpdl ].
 
 punctuation_sqright_rule := basic_punctuation_rule &
   [ INFLECTD #infl,
@@ -2044,7 +2087,7 @@ punctuation_sqright_rule := basic_punctuation_rule &
                             RCLSTR #rclstr ],
              GENRE #genre ] >,
     GENRE #genre,
-    RNAME "LPSR" ].
+    RNAME lpsr ].
 
 punctuation_sqleft_rule := basic_punctuation_rule &
   [ INFLECTD #infl,
@@ -2057,7 +2100,7 @@ punctuation_sqleft_rule := basic_punctuation_rule &
              ALTS.SQPNCT +,
              GENRE #genre ] >,
     GENRE #genre,
-    RNAME "LPSL" ].
+    RNAME lpsl ].
 
 punctuation_hyphen_rule := basic_punctuation_rule &
   [ INFLECTD #infl,
@@ -2071,7 +2114,7 @@ punctuation_hyphen_rule := basic_punctuation_rule &
                             RCLSTR #rclstr ],
              GENRE #genre ] >,
     GENRE #genre,
-    RNAME "LPHR" ].
+    RNAME lphr ].
 
 punctuation_bang_rule := punctuation_rule &
   [ SYNSEM.PUNCT [ LPUNCT #lpunct,
@@ -2080,19 +2123,19 @@ punctuation_bang_rule := punctuation_rule &
                           [ PSF punct-prop-comm ] ],
     ARGS < [ SYNSEM.PUNCT [ LPUNCT #lpunct & no_punct,
                             RPUNCT clause_or_no_punct ] ] >,
-    RNAME "LPX" ].
+    RNAME lpx ].
 
 punctuation_asterisk_rule := punctuation_rule &
   [ SYNSEM.PUNCT #punct,
     ARGS < [ SYNSEM.PUNCT #punct ] >,
-    RNAME "LPAX" ].
+    RNAME lpax ].
 
 punctuation_comma_informal_rule := basic_punctuation_comma_rule &
   [ INFLECTD +,
     SYNSEM.PUNCT [ PNCTPR ppair,
                    RPUNCT rbcomma_punct ],
     GENRE nonformal,
-    RNAME "LPCR" ].
+    RNAME lpcr ].
 
 punctuation_period_robust_rule := punctuation_rule &
   [ SYNSEM.PUNCT [ LPUNCT #lpunct,
@@ -2100,7 +2143,7 @@ punctuation_period_robust_rule := punctuation_rule &
                    RPUNCT clause_punct ],
     ARGS < [ SYNSEM.PUNCT [ LPUNCT #lpunct & no_punct,
                             RPUNCT pair_or_no_punct ] ] >,
-    RNAME "LPPR" ].  
+    RNAME lppr ].  
 
 ; DPF 14-feb-08 - Note that we can't make ARGS..RPUNCT be 
 ; clause_or_pair_or_no_punct since this makes the rule circular for
@@ -2116,7 +2159,7 @@ punctuation_clmark_qmark_rule := punctuation_rule &
                           [ PSF punct-ques ] ],
     ARGS < [ SYNSEM.PUNCT [ LPUNCT #lpunct & no_punct,
                             RPUNCT clause_punct ] ] >,
-    RNAME "LPQ" ].
+    RNAME lpcq ].
 
 punctuation_italleft_rule := basic_punctuation_rule &
   [ INFLECTD na,
@@ -2130,7 +2173,7 @@ punctuation_italleft_rule := basic_punctuation_rule &
 			      RCLSTR #rclstr ] ],
              GENRE #genre ] >,
     GENRE #genre,
-    RNAME "LPIL" ].
+    RNAME lpil ].
 
 punctuation_italright_rule := basic_punctuation_rule &
   [ INFLECTD na,
@@ -2144,7 +2187,7 @@ punctuation_italright_rule := basic_punctuation_rule &
 			      RCLSTR.RPAREN #rparen ] ],
              GENRE #genre ] >,
     GENRE #genre,
-    RNAME "LPIR" ].
+    RNAME lpir ].
 
 ;; DPF 29-mar-10 - Don't remember why dtr was constrained to word_or_infl_rule,
 ;; but it blocks e.g. |``(For| so remove it and see what happens. 
@@ -2167,7 +2210,7 @@ punct_drop_italleft_rule := basic_punctuation_rule &
 			      RCLSTR #rclstr ] ],
              GENRE #genre ] >,
     GENRE #genre,
-    RNAME "LPDL" ].
+    RNAME lpdl ].
 
 punct_drop_italright_rule := basic_punctuation_rule &
   [ INFLECTD #infl,
@@ -2182,7 +2225,7 @@ punct_drop_italright_rule := basic_punctuation_rule &
 			      RCLSTR.RPAREN #rparen ] ],
              GENRE #genre ] >,
     GENRE #genre,
-    RNAME "LPDR" ].
+    RNAME lpdr ].
 
 ; DPF 09-aug-09 - Restrict these prefixing rules to native entries, since
 ; there is little benefit in decomposition of unknown words, and it's hard
@@ -2223,3 +2266,18 @@ verb_prefix_rule := lex_rule_supermost &
 		       ARG1 #vindex,
 		       CFROM #from, CTO #to ] !>,
              HCONS <! !> ] ].
+
+dependency_annotation_lr := lex_rule_supermost & word_or_punct_rule &
+  [ ND-AFF +,
+    KEY-ARG #keyarg,   
+    INFLECTD #infl,
+    SYNSEM #synsem,
+    ARGS < #dtr &
+           [ KEY-ARG #keyarg,
+	     INFLECTD #infl,
+	     SYNSEM #synsem,
+             GENRE #genre ] >,
+    C-CONT [ RELS <! !>,
+	     HCONS <! !> ],
+    GENRE #genre,
+    DTR #dtr ].
