@@ -1,7 +1,7 @@
 ;;; -*- Mode: tdl; Coding: utf-8; -*-
 
 ;;;
-;;; Copyright (c) 2009 -- 2010 Stephan Oepen (oe@ifi.uio.no); 
+;;; Copyright (c) 2009 -- 2012 Stephan Oepen (oe@ifi.uio.no); 
 ;;; see `LICENSE' for conditions.
 ;;;
 
@@ -80,16 +80,49 @@ numeric_hyphen_tmr := one_three_tmt &
 ;; member the POS of the whole ("JJ").  Would be more robust to allow both 
 ;; "NN" and "JJ", but not clear that it's worth the extra ambiguity.
 ;;
-alphabetic_hyphen_tmr := one_two_tmt &
-[ +INPUT < [ +FORM ^(.+)[–-]([[:alnum:]]+-?)$, +CLASS non_ne,
-             +TRAIT [ +LB #lb, +RB #rb ],
+;; _fix_me_
+;; as we add brackets around token sequences split at hyphens, we need to make
+;; sure there is only one pair of outermost brackets, as token mapping has no
+;; way of predicting the internal syntactic structure of, e.g. |two-year-old|.
+;; for now, bifurcate the splitting rule, into a recursive case (that applies
+;; when there are additional hyphens, and does not insert brackets) and a base
+;; case for the outermost structure.  maybe this is the best solution we can
+;; find, but i will want to reconsider the question.            (2-nov-12; oe)
+;;
+alphabetic_hyphen_initialize_tmr := one_two_tmt &
+[ +INPUT < [ +FORM ^(.+)[–-]([[:alnum:]]+)$, +CLASS non_ne,
+             +TRAIT [ +UW #uw, +LB #lb, +RB #rb ],
              +PRED #pred, +CARG #carg, +TNT #tnt & [ +MAIN #main ] ] >,
   +OUTPUT < [ +FORM "${I1:+FORM:1}-",
-              +TRAIT [ +LB [ FIRST ctype, REST #lb ], +RB #rb ],
+              +TRAIT [ +UW #uw, +LB #lb, +RB #rb ],
               +PRED #pred, +CARG #carg, 
 	      +TNT [ +MAIN #main, +TAGS < "NN" >, +PRBS < "1.0" > ] ],
             [ +FORM "${I1:+FORM:2}",
-              +TRAIT [ +LB #lb, +RB [ FIRST ctype, REST #rb ] ],
+              +TRAIT [ +UW #uw, +LB #lb, +RB [ FIRST ctype, REST #rb ] ],
+              +PRED #pred, +CARG #carg, +TNT #tnt ] > ].
+
+alphabetic_hyphen_recurse_tmr := one_two_tmt &
+[ +INPUT < [ +FORM ^(.+[–-].+)[–-]([[:alnum:]]+-?)$, +CLASS non_ne,
+             +TRAIT [ +UW #uw, +LB #lb, +RB #rb ],
+             +PRED #pred, +CARG #carg, +TNT #tnt & [ +MAIN #main ] ] >,
+  +OUTPUT < [ +FORM "${I1:+FORM:1}-",
+              +TRAIT [ +UW #uw, +LB #lb, +RB #rb ],
+              +PRED #pred, +CARG #carg, 
+	      +TNT [ +MAIN #main, +TAGS < "NN" >, +PRBS < "1.0" > ] ],
+            [ +FORM "${I1:+FORM:2}",
+              +TRAIT [ +UW #uw, +LB #lb, +RB #rb ],
+              +PRED #pred, +CARG #carg, +TNT #tnt ] > ].
+
+alphabetic_hyphen_terminate_tmr := one_two_tmt &
+[ +INPUT < [ +FORM ^(.+)[–-]([[:alnum:]]+-?)$, +CLASS non_ne,
+             +TRAIT [ +UW #uw, +LB #lb, +RB #rb ],
+             +PRED #pred, +CARG #carg, +TNT #tnt & [ +MAIN #main ] ] >,
+  +OUTPUT < [ +FORM "${I1:+FORM:1}-",
+              +TRAIT [ +UW #uw, +LB [ FIRST ctype, REST #lb ], +RB #rb ],
+              +PRED #pred, +CARG #carg, 
+	      +TNT [ +MAIN #main, +TAGS < "NN" >, +PRBS < "1.0" > ] ],
+            [ +FORM "${I1:+FORM:2}",
+              +TRAIT [ +UW #uw, +LB #lb, +RB #rb ],
               +PRED #pred, +CARG #carg, +TNT #tnt ] > ].
 
 ;;
