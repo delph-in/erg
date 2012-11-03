@@ -475,7 +475,7 @@
            (loop for id being each hash-key in *rules* collect id)
            (loop for id being each hash-key in *lexical-rules* collect id)))
          (abstractions (make-hash-table :test #'equal))
-         unary all)
+         unary lexical all)
     (loop
         for id in ids
         for rule = (or (gethash id *rules*) (gethash id *lexical-rules*))
@@ -488,7 +488,9 @@
         when (rest (rule-rhs rule)) do
           (push (list id rname) (gethash abstraction abstractions))
         else do
-          (push (list id rname) unary))
+          (if (lexical-rule-p rule)
+            (push (list id rname) lexical)
+            (push (list id rname) unary)))
     (let ((keys (loop for key being each hash-key in abstractions collect key)))
       (setf keys (sort keys #'string<))
       (loop
@@ -507,6 +509,10 @@
     (loop
         for (id rname) in unary do
           (format stream "~(~a~) := unary_ctype. ;; ~(~a~)~%" rname id))
+    (terpri stream)
+    (loop
+        for (id rname) in lexical do
+          (format stream "~(~a~) := ctype. ;; ~(~a~)~%" rname id))
     (terpri stream)
     (loop
         for id in all do
