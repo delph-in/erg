@@ -475,7 +475,7 @@
            (loop for id being each hash-key in *rules* collect id)
            (loop for id being each hash-key in *lexical-rules* collect id)))
          (abstractions (make-hash-table :test #'equal))
-         unary)
+         unary all)
     (loop
         for id in ids
         for rule = (or (gethash id *rules*) (gethash id *lexical-rules*))
@@ -495,14 +495,24 @@
           for key in keys
           for matches = (gethash key abstractions)
           do 
+            (pushnew key all :test #'equal)
             (format stream "~(~a~) := ctype.~%" key)
             (loop
                 for (id rname) in matches do
+                  (pushnew rname all :test #'equal)
                   (format
                    stream "~(~a~) := ~(~a~). ;; ~(~a~)~%"
                    rname key id))
             (terpri stream)))
     (loop
         for (id rname) in unary do
-          (format stream "~(~a~) := unary_ctype. ;; ~(~a~)~%" rname id)))
+          (format stream "~(~a~) := unary_ctype. ;; ~(~a~)~%" rname id))
+    (terpri stream)
+    (loop
+        for id in all do
+          (format
+           stream
+           "~(~a~)_mapper := type_mapper &~%~
+            [ -STRING- \"~a\", -TYPE- ~(~a~) ].~%"
+           id id id)))
   (when (stringp file) (close stream)))
