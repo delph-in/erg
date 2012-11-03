@@ -320,10 +320,10 @@
     (format 
      nil 
      "~a[~a]"
-     (cond (rname (dag-type rname))
-           ((not (edge-children edge)) 
+     (cond ((not (edge-children edge)) 
             (let ((le (get-lex-entry-from-id (first (edge-lex-ids edge)))))
               (dag-type (tdfs-indef (lex-entry-full-fs le)))))
+	   (rname (dag-type rname))
            (t (tree-node-text-string 
                (find-category-abb (edge-dag edge)))))
      (edge-id edge))))
