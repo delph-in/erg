@@ -467,51 +467,42 @@
   nil)
 
 
-(defun generate-rule-hierarchy (&key file (stream t))
+(defun generate-ctypes (&key file (stream t))
   (when (stringp file)
     (setf stream (open file :direction :output :if-exists :supersede)))
   (let* ((ids
           (nconc
            (loop for id being each hash-key in *rules* collect id)
            (loop for id being each hash-key in *lexical-rules* collect id)))
-         (ids (sort ids #'string<))
-         abstractions leafs)
+         (abstractions (make-hash-table :test #'equal))
+         unary)
     (loop
         for id in ids
+        for rule = (or (gethash id *rules*) (gethash id *lexical-rules*))
         for break = (position #\_ (string id))
         for abstraction = (subseq (string id) 0 break)
-        for rule = (or (gethash id *rules*) (gethash id *lexical-rules*))
         for tdfs = (rule-full-fs rule)
         for rname = (let ((dag (existing-dag-at-end-of
                                 (tdfs-indef tdfs) '(RNAME))))
                       (and dag (dag-type dag)))
         when (rest (rule-rhs rule)) do
-          (pushnew
-           (list id abstraction) abstractions
-           :test #'string= :key #'second)
-          (push (list id abstraction rname) leafs))
-    (setf abstractions (sort abstractions #'string< :key #'second))
-    (setf leafs (nreverse leafs))
+          (push (list id rname) (gethash abstraction abstractions))
+        else do
+          (push (list id rname) unary))
+    (let ((keys (loop for key being each hash-key in abstractions collect key)))
+      (setf keys (sort keys #'string<))
+      (loop
+          for key in keys
+          for matches = (gethash key abstractions)
+          do 
+            (format stream "~(~a~) := ctype.~%" key)
+            (loop
+                for (id rname) in matches do
+                  (format
+                   stream "~(~a~) := ~(~a~). ;; ~(~a~)~%"
+                   rname key id))
+            (terpri stream)))
     (loop
-        for abstraction in abstractions
-        do (format stream "~(~a~) := rname.~%" (second abstraction)))
-    (terpri stream)
-    (loop
-        for (id abstraction leaf) in leafs
-        do
-          (format
-           stream ";; ~(~a~)~%~(~a~) := ~(~a~).~%"
-           id leaf abstraction))
-    (terpri stream)
-    (loop
-        for (id abstraction) in abstractions
-        for rule = (or (gethash id *rules*) (gethash id *lexical-rules*))
-        for initialp = (zerop (rule-head rule))
-        do
-          (format
-           stream 
-           "~(~a~)_alr :=~%~
-            %(~:[prefix~;suffix~] (* ~a¦~(~a~)¦~a))~%~
-            dependency_annotation_lr.~%"
-           abstraction initialp (code-char 8970) abstraction (code-char 8971)))
-    (when (stringp file) (close stream))))
+        for (id rname) in unary do
+          (format stream "~(~a~) := unary_ctype. ;; ~(~a~)~%" rname id)))
+  (when (stringp file) (close stream)))
