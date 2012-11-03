@@ -320,12 +320,13 @@
     (format 
      nil 
      "~a[~a]"
-     (cond ((not (edge-children edge)) 
-            (let ((le (get-lex-entry-from-id (first (edge-lex-ids edge)))))
-              (dag-type (tdfs-indef (lex-entry-full-fs le)))))
-	   (rname (dag-type rname))
-           (t (tree-node-text-string 
-               (find-category-abb (edge-dag edge)))))
+     (cond 
+      ((not (edge-children edge)) 
+       (let ((le (get-lex-entry-from-id (first (edge-lex-ids edge)))))
+         (dag-type (tdfs-indef (lex-entry-full-fs le)))))
+      (rname (dag-type rname))
+      (t (tree-node-text-string 
+          (find-category-abb (edge-dag edge)))))
      (edge-id edge))))
 
 ;;;
@@ -498,7 +499,9 @@
           for matches = (gethash key abstractions)
           do 
             (pushnew key all :test #'equal)
-            (format stream "~(~a~) := ctype.~%" key)
+            (format 
+             stream "~(~a~) := ctype & [ -CTYPE- \"~:@(~a~)\" ].~%" 
+             key key)
             (loop
                 for (id rname) in matches do
                   (pushnew rname all :test #'equal)
@@ -514,6 +517,7 @@
         for (id rname) in lexical do
           (format stream "~(~a~) := ctype. ;; ~(~a~)~%" rname id))
     (terpri stream)
+    #+:null
     (loop
         for id in all do
           (format
