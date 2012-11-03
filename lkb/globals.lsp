@@ -222,6 +222,9 @@
   (load-erg-settings-file 
     (merge-pathnames "lkb/nogen-rules.set" *grammar-directory*)))
 
+(setf *parse-ignore-rules*
+  '(xp_brck-pr_c))
+
 (setf *semantics-index-path* '(SYNSEM LOCAL CONT HOOK INDEX))
 
 ;;;
