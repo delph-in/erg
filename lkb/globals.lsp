@@ -66,8 +66,8 @@
 
 (defparameter *start-symbol* 
   #-(or :speech :educ :essay :arboretum)
-  '(root_strict root_frag)
-  ;'(root_strict)
+  ;;'(root_strict root_frag)
+  '(root_strict)
   #+:speech
   '(root_informal root_frag root_inffrag)
   ;'(root_informal root_spoken root_spoken_frag)
