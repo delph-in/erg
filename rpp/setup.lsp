@@ -20,6 +20,7 @@
 (read-repp (lkb-pathname (parent-directory "rpp") "html.rpp"))
 (read-repp (lkb-pathname (parent-directory "rpp") "wiki.rpp"))
 (read-repp (lkb-pathname (parent-directory "rpp") "lgt.rpp"))
+(read-repp (lkb-pathname (parent-directory "rpp") "gml.rpp"))
 (read-repp (lkb-pathname (parent-directory "rpp") "robustness.rpp"))
 (read-repp (lkb-pathname (parent-directory "rpp") "quotes.rpp"))
 (read-repp (lkb-pathname (parent-directory "rpp") "ptb.rpp"))
