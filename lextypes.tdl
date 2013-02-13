@@ -403,8 +403,12 @@ s_cat_unspec := cat &
     VAL [ SUBJ *olist*,
 	  COMPS < > ] ].
 
+;; DPF 2013-02-11 - Constrain MC to bool, in order to exclude relative
+;; clauses, as in ecoc:2065708
+;;
 basic_s_cat_v_c := s_cat_unspec &
-  [ VAL.SPR *olist* ].
+  [ VAL.SPR *olist*,
+    MC bool ].
 
 s_cat_v_c := basic_s_cat_v_c &
   [ HEAD.INV -,
@@ -2455,8 +2459,9 @@ do_be_verb_min := synsem_min.
 do_be_verb := basic_do_be_verb & arg1_subj_lt & do_be_verb_min &
   [ LOCAL [ CAT [ HEAD.MINORS.ALTMIN role_rel,
 		  VAL.COMPS < > ],
-	    CONT [ HOOK.XARG #xarg,
-		   RELS <! #keyrel !> ] ],
+	    CONT [ HOOK [ LTOP #lbl,
+			  XARG #xarg ],
+		   RELS <! #keyrel & [ LBL #lbl ] !> ] ],
     NONLOC.SLASH 1-dlist & <! [ CAT [ HEAD basic_noun & [ MOD < > ],
 				      VAL.SPR *olist* ],
 				CONJ cnil,
@@ -6113,8 +6118,8 @@ n_pp_c-t-of-nb_le := basic_n_temp_ppcomp_lexent &
               [ CAT [ HEAD.MINORS.MIN non_day_time_rel,
 		      VAL.COMPS < [ OPT -,
 				    --MIN _of_p_nbar_rel,
-				    LOCAL.CONT.HOOK [ LTOP #nhand,
-						      INDEX #nind ] ]> ],
+				    LOCAL.CONT.HOOK [ INDEX #nind,
+						      XARG #nhand ] ]> ],
                 CONT [ RELS <! relation, 
 			       #altkeyrel & [ PRED udef_q_rel,
 					      ARG0 #nind,
@@ -9945,7 +9950,7 @@ adj_synsem_constr := basic_adj_synsem_constr &
   [ LOCAL.CONT [ HOOK.LTOP #hand,
 		 RELS.LIST.FIRST.LBL #hand ] ].
 
-adj_synsem_lex_constr := adj_synsem_constr & norm_adj_lex_synsem.
+adj_synsem_lex_constr := basic_adj_synsem_constr & norm_adj_lex_synsem.
 
 adj_synsem_lex_rule := basic_adj_synsem_constr & abstr_lex_synsem &
   [ LOCAL.CAT.VAL.COMPS < > ].
@@ -13667,7 +13672,9 @@ n-or-p_x_to_y_lexent := basic_n-or-p_x_to_y_lexent &
 					       LARG #nhand ], ... > ],
 	     LKEYS.ALTKEYREL.PRED never_unify_rel ] ].
 
-n_x_to_y_lexent := n-or-p_x_to_y_lexent &
+;; DPF 2013-02-12 - Anchored CFROM and CTO to those of the first rel.
+;;
+n_x_to_y_lexent := basic_n-or-p_x_to_y_lexent &
   [ INFLECTD na_or_+,
     SYNSEM 
       [ LOCAL [ CAT [ HEAD noun &
@@ -13682,8 +13689,8 @@ n_x_to_y_lexent := n-or-p_x_to_y_lexent &
                     [ HOOK.INDEX #index,
 		      RELS.LIST < #keyrel & [ LBL #nhand,
 					      PRED interval_rel,
-					      ARG0 #index ],
-				  relation,
+					      ARG0 #index,
+					      CFROM #from, CTO #to ],
                                   prep_relation &
                                   [ LBL #nhand,
                                     PRED interval_p_start_rel,
@@ -13691,8 +13698,7 @@ n_x_to_y_lexent := n-or-p_x_to_y_lexent &
                                              ASPECT no_aspect ],
                                     ARG1 #index & ref-ind,
                                     ARG2 #arg1,
-				    CFROM #from,
-				    CTO #to ],
+				    CFROM #from, CTO #to ],
                                   prep_relation &
                                   [ LBL #nhand,
                                     PRED interval_p_end_rel,
@@ -13700,8 +13706,7 @@ n_x_to_y_lexent := n-or-p_x_to_y_lexent &
                                              ASPECT no_aspect ],
                                     ARG1 #index,
                                     ARG2 #arg2,
-				    CFROM #from,
-				    CTO #to ], ... > ] ],
+				    CFROM #from, CTO #to ], ... > ] ],
 	LKEYS.KEYREL #keyrel ] ].
 
 ;; DPF 2010-sept-13 - Removed identity of --MIN on SPR and COMPS, since we
@@ -13731,8 +13736,18 @@ n_np_x-to-y-sg_le := n_x_to_y_lexent &
 			  LOCAL [ AGR.PNG.PN 3s,
 				  CAT.VAL.SPR *olist* ],
 			  MODIFD notmod_or_lmod ] > ] ],
-	CONT [ RELS <! relation, relation, relation, relation !>,
-               HCONS <! qeq !> ] ],
+	CONT [ RELS <! [ LBL #nhand,
+			 ARG0 #index,
+			 CFROM #from,
+			 CTO #to ],
+		       relation, relation,
+		       [ PRED udef_q_rel,
+			 ARG0 #index,
+			 RSTR #rhand,
+			 CFROM #from,
+			 CTO #to ] !>,
+               HCONS <! qeq & [ HARG #rhand,
+				LARG #nhand ] !> ] ],
       LKEYS [ --COMPKEY #cmin,
               --+COMPKEY #cmin,
               --+OCOMPKEY #sprmin ] ] ].
@@ -13753,24 +13768,75 @@ n_np_x-to-y-pl_le := n_x_to_y_lexent &
 			      LOCAL [ CAT.VAL.SPR *olist*,
 				      AGR.PNG.PN 3p ],
 			      MODIFD notmod_or_lmod ] > ] ],
-	CONT [ RELS <! relation, relation, relation, relation !>,
-	       HCONS <! qeq !> ] ],
+	CONT [ RELS <! [ LBL #nhand,
+			 ARG0 #index,
+			 CFROM #from,
+			 CTO #to ],
+		       relation, relation,
+		       [ PRED udef_q_rel,
+			 ARG0 #index,
+			 RSTR #rhand,
+			 CFROM #from,
+			 CTO #to ] !>,
+               HCONS <! qeq & [ HARG #rhand,
+				LARG #nhand ] !> ] ],
       LKEYS [ --+COMPKEY card_rel,
 	      --+OCOMPKEY card_rel ] ] ].
+
+; <type val="n_nb_x-to-y_le">
+; <description>Diadic n 'to' (XtoY) - nbar comp and spr
+; <ex>The text to speech engine worked.
+; <nex>
+; <todo>
+; </type>
+n_nb_x-to-y_le := n_x_to_y_lexent &
+  [ SYNSEM 
+    [ LOCAL 
+      [ CAT 
+	[ HEAD.MINORS.MIN interval_rel,
+	  VAL [ SPR.FIRST
+                      [ --MIN norm_nom_rel,
+		      	LOCAL noninfl_noun_local &
+			      [ CAT.VAL.SPR.FIRST synsem & [ OPT - ],
+				CONT.HOOK [ LTOP #spltop,
+					    INDEX #spind ] ] ],
+		COMPS < [ --MIN norm_nom_rel,
+		      	  LOCAL [ CAT.VAL.SPR.FIRST synsem & [ OPT - ],
+				  CONT.HOOK [ LTOP #cltop,
+					      INDEX #cind ] ] ] > ] ],
+	CONT [ HOOK [ LTOP #lbl,
+		      INDEX #index ],
+	       RELS <! [ LBL #lbl,
+			 ARG0 #index,
+			 CFROM #from, CTO #to ],
+		       relation, relation,
+	               [ PRED udef_q_rel,
+			 ARG0 #spind,
+			 RSTR #sphand,
+			 CFROM #from, CTO #to ],
+		       [ PRED udef_q_rel,
+			 ARG0 #cind,
+			 RSTR #chand,
+			 CFROM #from, CTO #to ] !>,
+               HCONS <! qeq & [ HARG #sphand,
+				LARG #spltop ],
+		        qeq & [ HARG #chand,
+				LARG #cltop ] !> ] ] ] ].
 
 ;; DPF 2011-11-19 - There is remaining spurious ambiguity here, since we can't
 ;; demand that the SPR be [INFLECTD +], and since e.g. |October ten| must be 
 ;; able to be [INFLECTD -] (for |the October ten meeting|), we get two.
 ;; FIX someday
+;; DPF 2013-02-12 - Renamed to n_nb_x-to-y-dom_le since this one is only for
+;; dofm specifier and comp.
 ;;
-; 'the 25th to 26th (of July)'
-; <type val="n_nb_x-to-y_le">
+; <type val="n_nb_x-to-y-dom_le">
 ; <description>Diad n 'to'  (XtoY) - nbar cmp   
 ; <ex>We met May 23 to 25.
 ; <nex>
 ; <todo>
 ; </type>
-n_nb_x-to-y_le := n_x_to_y_lexent &
+n_nb_x-to-y-dom_le := n_x_to_y_lexent &
   [ SYNSEM
     [ LOCAL 
       [ CAT [ HEAD.MINORS.MIN interval_modable_rel,
@@ -13780,15 +13846,23 @@ n_nb_x-to-y_le := n_x_to_y_lexent &
                               LOCAL [ CAT.VAL.SPR.FIRST synsem,
                                       CONT.HOOK [ LTOP #cltop,
                                                   INDEX #cind ] ] ] > ] ],
-        CONT [ RELS <! relation & [ CFROM #cfrom, CTO #cto ],
-		       relation, relation, relation,
-                     [ PRED udef_q_rel,
-                       ARG0 #cind,
-                       RSTR #crstr,
-		       CFROM #cfrom, CTO #cto ] !>,
-               HCONS <! qeq,
-                      qeq & [ HARG #crstr,
-                              LARG #cltop ] !> ] ],
+        CONT [ RELS <! [ LBL #nhand,
+			 ARG0 #index,
+			 CFROM #cfrom, CTO #cto ],
+		       relation, relation,
+		       [ PRED udef_q_rel,
+			 ARG0 #cind,
+			 RSTR #crstr,
+			 CFROM #cfrom, CTO #cto ],
+		       [ PRED udef_q_rel,
+			 ARG0 #index,
+			 RSTR #rhand,
+			 CFROM #cfrom,
+			 CTO #cto ] !>,
+               HCONS <! qeq & [ HARG #rhand,
+				LARG #nhand ],
+		        qeq & [ HARG #crstr,
+				LARG #cltop ] !> ] ],
       LKEYS [ --COMPKEY #cmin,
               --+COMPKEY #cmin,
               --+OCOMPKEY #sprmin ] ] ].
@@ -14934,7 +15008,7 @@ p_ap_i_le := basic_prep_word &
                                            < unexpressed &
                                              [ LOCAL.CAT.HEAD prep ],
                                              unexpressed &
-                                             [ LOCAL.CONT.HOOK.LTOP #mltop] >],
+                                             [ LOCAL.CONT.HOOK.LTOP #mhand] >],
                                 CONT.HOOK [ LTOP #ltop,
                                             INDEX #index,
                                             XARG it-ind ],
@@ -14948,11 +15022,10 @@ p_ap_i_le := basic_prep_word &
                      [ PRED prep_rel],
 		     #altkeyrel &
                      arg1_relation &
-                     [ LBL #ehand,
+                     [ LBL #mhand,
                        ARG0.SF prop,
                        PRED ellipsis_rel ] !>,
-               HCONS <! qeq & [ HARG #mltop,
-                                LARG #ehand ] !> ],
+               HCONS <! !> ],
         CONJ cnil ],
       NONLOC [ SLASH 0-dlist,
                REL 0-dlist,
@@ -19041,11 +19114,9 @@ s_compl_phrase_lexent := noncqr-h-nab &
 				VFORM fin ],
 			 VAL [ COMPS < > ],
 			 POSTHD bool ],
-		   CONT [ HOOK [ LTOP #khand,
-                                 INDEX #event ],
+		   CONT [ HOOK [ INDEX #event ],
 			  RELS.LIST < arg1_relation &
-                                      [ LBL #khand,
-                                        PRED ellipsis_rel,
+                                      [ PRED ellipsis_rel,
                                         ARG0 #event ], ... > ],
                    ARG-S < > ],
 	     NONLOC.SLASH 0-dlist,
@@ -19062,8 +19133,9 @@ x_-_so-cp_le := s_compl_phrase_lexent &
   [ SYNSEM [ LOCAL [ CAT [ HEAD.MINORS.MIN v_event_rel,
 			   VAL [ SUBJ *olist* & < anti_synsem_min >,
 				 SPR *anti_list* ] ],
-                     CONT [ HOOK.INDEX.SF prop,
-                            RELS <! relation & #keyrel !>,
+                     CONT [ HOOK [ LTOP #khand,                              
+				   INDEX.SF prop ],
+                            RELS <! relation & #keyrel & [ LBL #khand ] !>,
                             HCONS <! !> ] ],
              LKEYS.KEYREL #keyrel & [ PRED v_event_rel ] ] ].
 
@@ -19078,12 +19150,14 @@ x_-_not-cp_le := s_compl_phrase_lexent &
   [ SYNSEM [ LOCAL [ CAT [ HEAD.MINORS.MIN v_event_rel,
 			   VAL [ SUBJ *olist* & < anti_synsem_min >,
 				 SPR *anti_list* ] ],
-                     CONT [ HOOK.INDEX.SF prop,
+                     CONT [ HOOK [ LTOP #nlbl,
+				   INDEX.SF prop ],
                             RELS <! relation & #keyrel &
 				    [ LBL #chand,
 				      PRED v_event_rel,
 				      CFROM #cfrom, CTO #cto ],
-				    [ PRED neg_rel,
+				    [ LBL #nlbl,
+				      PRED neg_rel,
 				      ARG1 #arg,
 				      CFROM #cfrom, CTO #cto ] !>,
                             HCONS <! qeq &
@@ -19109,7 +19183,8 @@ x_-_wh-cp_le := s_compl_phrase_lexent &
 				       NONLOC [ QUE 0-dlist,
 						REL 0-dlist ],
 				       --MIN #min ] > ] ],
-		     CONT [ HOOK.INDEX.SF ques,
+		     CONT [ HOOK [ LTOP #hand,
+				   INDEX.SF ques ],
                             RELS <! relation & 
                                  [ LBL #hand,
                                    ARG0 #event,
@@ -19149,9 +19224,11 @@ x_-_who-cp_le := s_compl_phrase_lexent &
 			   VAL [ SUBJ < >,
 				 SPR < unexpressed & 
 				       [ --MIN deg_rel ] > ] ],
-		     CONT [ HOOK.INDEX.SF ques,
+		     CONT [ HOOK [ LTOP #ltop,
+				   INDEX.SF ques ],
                             RELS <! relation & 
-                                 [ CFROM #from, CTO #to  ],
+                                 [ LBL #ltop,
+				   CFROM #from, CTO #to  ],
                                  [ PRED which_q_rel,
                                    ARG0 #objind,
                                    RSTR #rhand,
@@ -19418,9 +19495,8 @@ comp_how_about_or_why_vp_lexent := how_about_word &
                                                          INDEX.SF prop ] ],
                                      OPT - ] > ],
                    CONT [ HOOK.INDEX #ind & event,
-                          RELS <! relation, 
-                                 [ ARG0 #ind,
-                                   ARG1 #cltop ] !> ] ] ].
+                          RELS <! relation & [ ARG1 #cltop ], 
+                                 [ ARG0 #ind ] !> ] ] ].
 
 ; DPF 17-Apr-01 - Changed COMPS.FIRST..SUBJ from canonical_synsem to synsem
 ; since the former blocked "Why be late"
@@ -22821,6 +22897,7 @@ colon_copula_synsem := norm_two_arg_subst & colon_copula_synsem_min &
 				  LOCAL [ CAT nomp_cat_min & 
 					      [ HEAD.MOD < >,
 						VAL.SPEC *cons* ],
+					  CONT.HOOK.LTOP #ltop,
 					  CONJ cnil ],
 				  --SIND #id2ind & non_expl-ind,
 				  NONLOC non-local_none,
