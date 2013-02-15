@@ -132,21 +132,21 @@ basic_one_arg := canonical_synsem &
 one_arg := basic_one_arg &
   [ LOCAL.CONT.HCONS <! !> ].
 
-unspec_two_arg := basic_lex_synsem &
-  [ LOCAL.ARG-S < [ NONLOC [ SLASH [ LIST #smiddle,
-                                     LAST #slast ],
-                             REL [ LIST #rmiddle,
-                                   LAST #rlast ],
-                             QUE [ LIST #qmiddle,
-                                   LAST #qlast ] ] ],
-		  [ LOCAL.CONT.HOOK.--SLTOP #sltop,
-		    NONLOC [ SLASH [ LIST #sfirst,
-                                     LAST #smiddle ],
-                             REL [ LIST #rfirst,
-                                   LAST #rmiddle ],
-                             QUE [ LIST #qfirst,
-                                   LAST #qmiddle ] ] ] >,
-    LOCAL.CONT.HOOK.--SLTOP #sltop,
+basic_two_arg := lex_synsem &
+  [ LOCAL [ ARG-S < [ NONLOC [ SLASH [ LIST #smiddle,
+				       LAST #slast ],
+			       REL [ LIST #rmiddle,
+				     LAST #rlast ],
+			       QUE [ LIST #qmiddle,
+				     LAST #qlast ] ] ],
+		    [ LOCAL.CONT.HOOK.--SLTOP #sltop,
+		      NONLOC [ SLASH [ LIST #sfirst,
+				       LAST #smiddle ],
+			       REL [ LIST #rfirst,
+				     LAST #rmiddle ],
+			       QUE [ LIST #qfirst,
+				     LAST #qmiddle ] ] ] >,
+	    CONT.HOOK.--SLTOP #sltop ],
     NONLOC [ SLASH [ LIST #sfirst,
                      LAST #slast ],
              REL [ LIST #rfirst,
@@ -154,10 +154,10 @@ unspec_two_arg := basic_lex_synsem &
              QUE [ LIST #qfirst,
                    LAST #qlast ] ] ].
 
-basic_two_arg := unspec_two_arg & lex_synsem.
-
 two_arg := basic_two_arg &
-  [ LOCAL.CONT.HCONS <! !> ].
+  [ LOCAL [ CONT [ HOOK.--SLTOP #sltop,
+		   HCONS <! !> ],
+	    ARG-S < [], [ LOCAL.CONT.HOOK.--SLTOP #sltop ] > ] ].
 
 ; 'Kim is worth admiring.'
 ;
@@ -197,14 +197,17 @@ generic_three_arg := lex_synsem &
              QUE [ LIST #qfirst,
                    LAST #qlast ] ] ].
 
+;; DPF 2013-02-13 - Don't unify --SLTOP of second complement, since it is
+;; often a scopal argument.  Push down to the few relevant (nonscope-comp) 
+;; subtypes
+;;
 basic_three_arg := generic_three_arg &
   [ LOCAL.ARG-S < [ NONLOC.SLASH [ LIST #smiddle2,
                                    LAST #slast ] ],
                   [ LOCAL.CONT.HOOK.--SLTOP #sltop,
 		    NONLOC.SLASH [ LIST #sfirst,
                                    LAST #smiddle1 ] ],
-                  [ LOCAL.CONT.HOOK.--SLTOP #sltop,
-		    NONLOC.SLASH [ LIST #smiddle1,
+                  [ NONLOC.SLASH [ LIST #smiddle1,
                                    LAST #smiddle2 ] ] >,
     LOCAL.CONT.HOOK.--SLTOP #sltop,
     NONLOC.SLASH [ LIST #sfirst,
@@ -1446,9 +1449,8 @@ three_arg_subst := unsat_three_arg_subst & three_arg &
 
 three_arg_trans_subst := three_arg_subst & trans_subst.
 
-;; DPF 2013-02-05 - Don't unify the --SLTOP of the second argument, which is
-;; always scopal
-;;basic_three_arg_trans_subst := basic_three_arg_subst & trans_subst.
+;; DPF 2013-02-05 - Don't unify the --SLTOP of the second complement, which is
+;; usually scopal.
 ;;
 basic_three_arg_trans_subst := unsat_three_arg_subst & generic_three_arg &
 			       trans_subst &
@@ -1462,8 +1464,6 @@ basic_three_arg_trans_subst := unsat_three_arg_subst & generic_three_arg &
     LOCAL.CONT.HOOK.--SLTOP #sltop,
     NONLOC.SLASH [ LIST #sfirst,
                    LAST #slast ] ].
-
-
 
 three_arg_nontrans_subst := three_arg_subst & non_trans_subst.
 basic_three_arg_nontrans_subst := basic_three_arg_subst & non_trans_subst.
@@ -1545,14 +1545,16 @@ prd_non_trans_subst := basic_prd_subst & non_trans_subst &
 ; so we still get ditrans reading for "Abrams gave Browne himself"
 
 basic_ditrans_subst := basic_three_arg_subst & 
-  [ LOCAL.CAT.VAL.COMPS < synsem & 
+  [ LOCAL [ CAT.VAL.COMPS < synsem & 
                           [ LOCAL.CONJ cnil,
                             --SIND basic_non_event,
                             NONLOC.REL 0-dlist ], 
 			  synsem & 
-                          [ LOCAL.CONJ cnil,
+                          [ LOCAL [ CONJ cnil,
+				    CONT.HOOK.--SLTOP #sltop ],
                             --MIN nonpro_or_refl_or_num_rel,
-                            --SIND basic_non_event ] > ].
+                            --SIND basic_non_event ] >,
+	    CONT.HOOK.--SLTOP #sltop ] ].
   
 ;; DPF 18-feb-10 - We want to catch "She taught student the lesson", so
 ;; remove --BARE - from first daughter, and see what happens.
@@ -1605,7 +1607,8 @@ basic_cp_trans_subst := basic_three_arg_trans_subst & cp_addin_tam_pn &
   [ LOCAL.CAT.VAL [ KCMP #comp,
 		    COMPS < synsem & [ LOCAL [ CAT nomp_cat_acc_min,
 					       CONJ cnil ],
-                                       --SIND basic_non_event ],
+                                       --SIND basic_non_event,
+				       OPT - ],
 			    #comp & synsem &
 			    [ LOCAL [ CAT s_cat_unspec,
 				      CONJ cnil ],
@@ -1865,8 +1868,10 @@ seq_prdp_pp_subst := basic_three_arg_subst &
 		      synsem &
 		      [ LOCAL [ CAT basic_pp_cat &
 				    [ HEAD.MOD < > ],
+				CONT.HOOK.--SLTOP #sltop,
 				CONJ cnil ] ] > ],
-	    CONT.HOOK.XARG #xarg ] ].
+	    CONT.HOOK [ XARG #xarg,
+			--SLTOP #sltop ] ] ].
 
 expl_pp_cp_subst :=  basic_three_arg_subst & cp_addin_tam_pn &
   [ LOCAL.CAT.VAL [ COMPS < synsem &
@@ -2192,9 +2197,11 @@ particle_pp_subst := particle_plus_subst &
   [ LOCAL [ CAT.VAL.COMPS < *top*, 
                             synsem &
                             [ LOCAL [ CAT basic_pp_cat,
+				      CONT.HOOK.--SLTOP #sltop,
                                       CONJ cnil ],
                               NONLOC.REL 0-dlist ] >,
-            CONT.HCONS <! !> ] ].
+            CONT [ HOOK.--SLTOP #sltop,
+		   HCONS <! !> ] ] ].
 
 ; 'find out that S'
 particle_cp_subst := particle_plus_subst & cp_addin_tam_pn &
@@ -2573,8 +2580,10 @@ empty_prep_intrans_arg3_verb := twoarg_verb_synsem & prep_intrans_subst &
 empty_prep_nospr_verb := verb_synsem & prep_intrans_subst & basic_two_arg & 
                          empty_prep_intrans_lt &
   [ LOCAL [ CAT.VAL.COMPS < [ LOCAL.CONT.HOOK [ LTOP #nhand,
-                                                INDEX #nind ] ] >,
-            CONT [ RELS <! relation & #keyrel,
+                                                INDEX #nind,
+						--SLTOP #sltop ] ] >,
+            CONT [ HOOK.--SLTOP #sltop,
+		   RELS <! relation & #keyrel,
 			   #altkeyrel & [ PRED udef_q_rel,
 					  ARG0 #nind,
 					  RSTR #rhand ] !>,
@@ -2641,10 +2650,12 @@ prep_trans_dir_noprop_verb := verb_synsem & prep_trans_subst & trans_lt &
   [ LOCAL [ CAT.VAL.COMPS < synsem,
 			    [ LOCAL [ CAT.HEAD.MINORS.MIN dir_rel,
 				      CONT.HOOK [ LTOP #ltop,
-						  XARG #event ] ],
+						  XARG #event,
+						  --SLTOP #sltop ] ],
 			      OPT - ] >,
 	    CONT [ HOOK [ LTOP #ltop,
-			  INDEX #event ],
+			  INDEX #event,
+			  --SLTOP #sltop ],
 		   RELS <! #keyrel !>,
 		   HCONS <! !> ] ],
     LKEYS.KEYREL #keyrel ].
@@ -2655,8 +2666,11 @@ empty_prep_trans_verb_min := synsem_min.
 empty_prep_trans_verb := verb_synsem & basic_prep_trans_subst & 
 			 empty_prep_trans_verb_min &
                          empty_prep_trans_lt &
-  [ LOCAL [ CAT.VAL.COMPS < synsem, [ LOCAL.CAT basic_pp_cat ] >,
-            CONT.HCONS <! !> ] ].
+  [ LOCAL [ CAT.VAL.COMPS < synsem, 
+			    [ LOCAL [ CAT basic_pp_cat,
+				      CONT.HOOK.--SLTOP #sltop ] ] >,
+            CONT [ HOOK.--SLTOP #sltop,
+		   HCONS <! !> ] ] ].
 
 ;; interest him in X
 ;;
@@ -4059,12 +4073,14 @@ prd_aux_verb_ssr := aux_verb_ssr & prd_aux_verb_ssr_min &
 				   CONT.HOOK [ LTOP #ltop,
 					       INDEX #index &
 						     [ E.TENSE tense ],
-					       XARG #ind ] ],
+					       XARG #ind,
+					       --SLTOP #sltop ] ],
 			   --SIND #index,
 			   NONLOC.REL 0-dlist,
 			   OPT - ] > ] ],
 	    CONT.HOOK [ INDEX #index,
-			XARG #ind ],
+			XARG #ind,
+			--SLTOP #sltop ],
 	    ARG-S < [ NONLOC [ SLASH [ LIST #smiddle,
 				       LAST #slast ],
 			       REL #rel,
@@ -16241,7 +16257,8 @@ n_freerel_pro_adv_lexent := free_rel_pro_word &
 				       NORM prep_mod_rel ],
 		     CONT [ HOOK.INDEX.PNG.PN 3s,
 			    RELS <! relation, 
-                                   #keyrel & [ ARG0 #ind ],
+                                   #keyrel & [ LBL #lochand,
+					       ARG0 #ind ],
                                    #alt2key &
                                    [ LBL #lochand,
                                      PRED prep_mod_rel,
@@ -16432,7 +16449,8 @@ basic_n_poss_clitic_lexent := nonc-m-nab &
 							CASE non_obliq ],
                                                  VAL [ SUBJ < >,
 						       SPCMPS < > ] ],
-                                           CONT.HOOK.INDEX index,
+                                           CONT.HOOK [ LTOP #plbl,
+						       INDEX index ],
                                            CONJ cnil ],
                                    NONLOC [ SLASH #slash,
                                             REL #rel,
@@ -16445,6 +16463,7 @@ basic_n_poss_clitic_lexent := nonc-m-nab &
 			   XARG #pindex ] ],
        LKEYS.ALTKEYREL prep_relation &
              [ PRED poss_rel,
+	       LBL #plbl,
                ARG0.E [ TENSE no_tense,
                         ASPECT no_aspect ],
                ARG1 #index & full_ref-ind,
@@ -16943,6 +16962,7 @@ subconj_disc_adv_synsem := norm_onearg_subconj_synsem &
 ; DPF 01-Jun-07 - Removed identity of MOOD on main and subord clauses, due to
 ; "If it were true, you can be sure we would know" where the irrealis is in
 ; the complement clause - too hard to pass through, so let's overgenerate.
+;; DPF 2013-02-13 - Constrain to non-local empty on both complements.
 ;
 ; 'For Kim to win, Abrams must lose'
 
@@ -16959,7 +16979,7 @@ subconj_twoarg_synsem := subconj_lex_synsem & basic_two_arg &
                               < synsem &
                                 [ LOCAL [ CAT np_cat_acc_min,
                                           CONJ cnil ],
-                                  NONLOC.SLASH 0-dlist,
+                                  NONLOC non-local_none,
                                   --SIND #ind,
                                   OPT -,
                                   PUNCT.LPUNCT no_punct ],
@@ -16970,7 +16990,7 @@ subconj_twoarg_synsem := subconj_lex_synsem & basic_two_arg &
                                     CONT.HOOK [ LTOP #chand,
                                                 INDEX.SF prop,
                                                 XARG #ind ] ],
-                                  NONLOC.SLASH 0-dlist,
+                                  NONLOC non-local_none,
                                   OPT -,
                                   PUNCT [ LPUNCT no_punct,
                                           RPUNCT.PSF #iforce ] ] > ],
@@ -18640,6 +18660,7 @@ cm_np-vp_for_le := basic_two_place_compl_word &
 				 COMPS 
 				  < canonical_synsem &
 				    [ LOCAL [ CAT nomp_cat_min,
+					      CONT.HOOK.LTOP #vltop,
 					      AGR #agr,
 					      CONJ cnil ],
 				      --SIND #ind & index,
@@ -18658,7 +18679,8 @@ cm_np-vp_for_le := basic_two_place_compl_word &
 								   nomp_cat_min,
 								   AGR #agr ],
 							   NONLOC #nloc ] > ],
-					CONT.HOOK.XARG #ind ] ] >,
+					CONT.HOOK [ LTOP #vltop,
+						    XARG #ind ] ] ] >,
 				 KCMP #kcmp ],
 			   MC - ],
 		     CONT [ HOOK.INDEX.SF prop,
@@ -18766,14 +18788,16 @@ to_compl_word := complementizer_word &
                                          [ LTOP #chand,
                                            INDEX #ind & [ E.TENSE no_tense,
 							  SF prop-or-ques ],
-					   XARG #xarg ] ],
+					   XARG #xarg,
+					   --SLTOP #sltop ] ],
 				  --MIN #cmin,
 				  --SIND #ind,
 				  OPT - ] > ],
 		     MC na_or_- ],
 	       CONT [ HOOK [ LTOP #chand,
 			     INDEX #ind,
-                             XARG #xarg ],
+                             XARG #xarg,
+			     --SLTOP #sltop ],
 		      RELS <! !>,
 		      HCONS <! !> ],
 	       ARG-S #comps ],
