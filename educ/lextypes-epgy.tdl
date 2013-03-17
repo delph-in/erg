@@ -104,7 +104,9 @@ be_id := be_verb &
 
 ; From auxverbs - Restrict number on COMPS for singular identity copula.
 ; Also prevent bare-sg NP subjects
-
+;; DPF 13-03-14 - But blocking bare subjs prevents robust analysis of e.g.
+;; |cat is a furry animal|  So remove, and let's see what happens.
+#|
 be_id_pos := be_id &
   [ SYNSEM [ LOCAL [ CAT [ HEAD.TAM.ASPECT.PROGR -,
     	     	           VAL.SUBJ.FIRST.LOCAL.CAT.HEAD.--BARE - ],
@@ -112,9 +114,21 @@ be_id_pos := be_id &
 			    RELS <! #keyrel !>,
 			    HCONS <! !> ] ],
              LKEYS.KEYREL #keyrel & [ LBL #ltop ] ] ].
+|#
+be_id_pos := be_id &
+  [ SYNSEM [ LOCAL [ CAT [ HEAD.TAM.ASPECT.PROGR - ],
+		     CONT [ HOOK.LTOP #ltop,
+			    RELS <! #keyrel !>,
+			    HCONS <! !> ] ],
+             LKEYS.KEYREL #keyrel & [ LBL #ltop ] ] ].
 
+;; Undo this 3s constraint since we want e.g. |the population is 4 million|
+#|
 v_np_is_le := be_is_lex_entry & be_id_pos &
   [ SYNSEM.LOCAL.CAT.VAL.COMPS < [ LOCAL.AGR.PNG.PN 3s ] > ].
+|#
+v_np_is_le := be_is_lex_entry & be_id_pos.
+
 
 ; Add COMPS..--BARE - here to avoid spurious analysis for e.g.
 ; |the team's goalie kept running|
@@ -139,7 +153,7 @@ loc_inv_be_word := loc_inv_verb_word &
 				  PRD -,
 				  TAM.MOOD indicative,
 				  LSYNSEM loc_inv_be_synsem_min ],
-			   VAL [ SUBJ < [ LOCAL [ CAT.HEAD prep_or_modnp,
+			   VAL [ SUBJ < [ LOCAL [ CAT.HEAD v_or_p,
 			                        CONT.HOOK [ LTOP #ltop,
                                                           INDEX #ind &
                                                              [ E.TENSE tense ],
@@ -309,6 +323,9 @@ v_np-prd_oeq-ntr-x_le := main_verb_mliszt &
                      --+OCOMPKEY #ocmin ] ] ].
 
 ; Restrict dtrs to --MAL3SG - to avoid robust intranstives as conjuncts.
+;; DPF 13-03-14 - But this blocks flagging of subj-verb agrmt errors as in 
+;; |he arise and arrives|.  So remove, and evaluate.
+#|
 basic_v_coord_phr := basic_verbal_coord_phr &
   [ SYNSEM.LOCAL [ CAT [ HEAD [ VFORM #vform,
                                 MINORS #mins,
@@ -349,6 +366,7 @@ basic_v_coord_phr := basic_verbal_coord_phr &
                              CONT.HOOK [ XARG #xarg,
                                          INDEX.SF #iforce ] ],
     C-CONT.HCONS <! !> ].
+|#
 
 ;; Allow robust pre-modifiers like 'today'
 
@@ -806,12 +824,13 @@ mal_bare_np_sg_phrase := generic_bare_np_phrase &
 			   PNG.PN 3s ],
                      CAT.HEAD.MINORS.ALTMIN implicit_q_rel ],
              MODIFD #modif ],
-    ARGS < [ SYNSEM [ LOCAL [ AGR [ DIV -,
-                                    PNG.PN 3s ],
-                              CAT [ VAL.SPR < [ LOCAL.CAT.HEAD.MINORS.MIN udef_q_rel ] >,
-                                    HEAD [ MINORS.MIN non_temp_nbar_rel,
-					   --BARE + ] ] ],
-                      MODIFD #modif & [ LPERIPH na_or_- ] ],
+    ARGS < [ SYNSEM 
+	     [ LOCAL [ AGR [ DIV -,
+			     PNG.PN 3s ],
+		       CAT [ VAL.SPR < [ LOCAL.CAT.HEAD.MINORS.MIN udef_q_rel]>,
+			     HEAD [ MINORS.MIN non_temp_or_nonday_nbar_rel,
+				    --BARE + ] ] ],
+	       MODIFD #modif & [ LPERIPH na_or_- ] ],
 	     INFLECTD + ] >,
     C-CONT.RELS <! [ PRED mal_bare_div_q_rel ] !>,
     GENRE robust ].
@@ -869,10 +888,33 @@ mal_num_det_rule_2 := num_det_phrase & rule &
     GENRE robust ].
 
 aj_-_i-one_le_rbst := aj_-_i-one_lexent &
-  [ SYNSEM [ LOCAL.CAT.HEAD [ MINORS.NORM no_rel,
-			      MOD < [ LOCAL.CAT.VAL.SPR < unexpressed > ] > ],
+  [ SYNSEM [ LOCAL.CAT.HEAD [ MINORS [ ALTMIN no_rel,
+				       NORM no_rel ],
+			      MOD < [ LOCAL.CAT.VAL.SPR < unexpressed >,
+				      LEX - ] > ],
 	     MODIFD.LPERIPH + ],
     GENRE robust ].
+
+;; DPF 13-03-14 - Drop the requirement for MOD's SPR to be explicit, so we can
+;; robustly parse |we admire best performer|.  This means we won't catch
+;; erroneous |we admire best performers|.  FIX someday?
+;;
+#|
+aj_-_i-sup_le := compar_superl_adj_word &
+  [ SYNSEM adj_unsp_ind_onearg_synsem &
+    [ LOCAL [ CAT [ HEAD superl_adj & [ MINORS.ALTMIN superl_rel,
+                                         MOD < [ LOCAL.CAT.HEAD.MINORS.ALTMIN
+                                                   explicit_q_rel ] > ],
+                    VAL.SPR.FIRST.--MIN ord_or_very_rel ],
+              CONT.RELS <! relation, relation !> ],
+      LKEYS.ALTKEYREL.PRED superl_rel ] ].
+|#
+aj_-_i-sup_le := compar_superl_adj_word &
+  [ SYNSEM adj_unsp_ind_onearg_synsem &
+    [ LOCAL [ CAT [ HEAD superl_adj & [ MINORS.ALTMIN superl_rel ],
+                    VAL.SPR.FIRST.--MIN ord_or_very_rel ],
+              CONT.RELS <! relation, relation !> ],
+      LKEYS.ALTKEYREL.PRED superl_rel ] ].
 
 ;; Block inversion with `be' taking CP complement
 be_nv := be_verb &
@@ -894,10 +936,16 @@ n_-_c-ns_le := basic_intr_lex_entry &
 genitive := non_obliq.
 
 ;; Block robust plural rule from applying to e.g. "north"
+#|
+;; CoNLL
 n_-_c-dir_le := n_-_mc-ntoj_lexent &
   [ SYNSEM unsp_count_noun_nocomp_synsem &
            [ LOCAL.CAT.HEAD.--BARE -,
 	     MODIFD.LPERIPH + ] ].
+|#
+n_-_c-dir_le := n_-_mc-ntoj_lexent &
+  [ SYNSEM unsp_count_noun_nocomp_synsem &
+           [ LOCAL.CAT.HEAD.--BARE - ] ].
 
 ;; Add idiomatic noun type to ensure idiomatic cooccurrences such as 
 ;; |give a speech| while PET still does not enforce idioms
@@ -930,6 +978,52 @@ bare_np_prd_phrase := reg_bare_np_phrase &
     ARGS < [ SYNSEM.LOCAL [ CAT [ HEAD noun & [ CASE nom ],
 				  VAL.SPR.FIRST unexpressed_reg ] ] ] > ].
 |#
+
+;; For robust plural of mass nouns
+lex_rule_plural_mass := lex_rule_basic & word_or_infl_rule &
+  [ INFLECTD +,
+    KEY-ARG #keyarg,   
+    SYNSEM mass_or_count_synsem &
+	   [ LOCAL [ CAT #cat & [ HEAD noun_or_ttl & [ --BARE - ],
+				  VAL.SPR < synsem &
+					    [ LOCAL.AGR [ PNG.PN 3p,
+							  DIV + ] ] > ],
+		     CONT #cont,
+		     CONJ #conj,
+		     CTXT #ctxt,
+		     ARG-S #arg-s ],
+	     NONLOC #nonloc,
+	     OPT #opt,
+	     --MIN #min,
+	     --SIND #sind,
+	     LEX #lex,
+	     MODIFD #modifd,
+	     PHON #phon,
+	     PUNCT #punct,
+	     LKEYS #lkeys ],
+    ARGS < #dtr >,
+    DTR #dtr & [ INFLECTD -,
+                 KEY-ARG #keyarg,   
+                 SYNSEM basic_mass_noun_synsem &
+			[ LOCAL [ CAT #cat,
+				  CONT #cont,
+				  CONJ #conj,
+				  CTXT #ctxt,
+				  AGR [ PNG.PN 3s,
+					DIV + ],
+				  ARG-S #arg-s ],
+			  NONLOC #nonloc,
+			  OPT #opt,
+			  --MIN #min,
+			  --SIND #sind,
+			  LEX #lex,
+			  MODIFD #modifd,
+			  PHON #phon,
+			  PUNCT #punct,
+			  LKEYS #lkeys ] ],
+    C-CONT.RELS <! !>,
+    GENRE robust ].
+
 
 ;; Temporary, from lexrules.tdl
 
@@ -992,6 +1086,7 @@ NP_particle_lr := lex_rule &
 ;; Missing apostrophe for contraction of "it is"
 be_is_mal_lex_entry := nonc-h &
   [ INFLECTD +,
+    ALTS.VPELLIP -,
     SYNSEM.LOCAL [ CAT [ VAL [ SUBJ < anti_synsem_min >,
 			       COMPS < synsem & [ OPT - ], ... >,
 			       SPCMPS < > ],
@@ -1105,3 +1200,150 @@ v_np_pp_le_rbst := main_verb &
 				     PUNCT.RPUNCT clause_or_no_punct ] > ] ],
     GENRE robust ].
 
+;; Constrain to singular unknown names, to avoid spurious for e.g. |Pistorius|
+n_-_pn-gen_le := basic_n_proper_lexent & generic_ne_lex_entry &
+  [ INFLECTD -,
+    SYNSEM [ LOCAL [ CAT.HEAD.MINORS.MIN named_np_rel,
+		     AGR.PNG.PN 3s ],
+	     MODIFD.LPERIPH +,
+	     LKEYS.KEYREL [ PRED named_rel ] ] ].
+
+;; The following change will be in standard lexrules.tdl file soon
+
+verb_prefix_rule := lex_rule_supermost &
+  [ INFLECTD +,
+    DTR word_or_lexrule & #stem &
+	[ INFLECTD +,
+	  SYNSEM [ LOCAL [ CAT #cat & [ HEAD verb & 
+					     [ AUX - ],
+					VAL.SUBJ.FIRST synsem ],
+			   CONT [ HOOK #hook &
+				       [ LTOP #lbl,
+					 INDEX #vindex ] ],
+			   CONJ cnil,
+			   CTXT #ctxt ],
+                   PUNCT #punct & [ LPUNCT no_punct,
+                                    RPUNCT no_punct ],
+		   NONLOC #nonloc,
+		   LKEYS.KEYREL [ CFROM #from, CTO #to ],
+		   PHON.ONSET con_or_voc ],
+          KEY-ARG #keyarg,
+          GENRE #genre ],
+    SYNSEM derived_verb_synsem &
+	 [ LOCAL 
+	   [ CAT #cat,
+	     CONT.HOOK #hook,
+	     CONJ cnil,
+	     CTXT #ctxt ],
+	   PUNCT #punct,
+	   NONLOC #nonloc,
+	   LKEYS.KEYREL [ CFROM #from, CTO #to ] ],
+    GENRE #genre,
+    KEY-ARG #keyarg,
+    ARGS < #stem >,
+    C-CONT [ RELS <! [ LBL #lbl,
+		       ARG1 #vindex,
+		       CFROM #from, CTO #to ] !>,
+             HCONS <! !> ] ].
+
+;; The following will soon be in standard lextypes.tdl
+;; DPF 13-03-13 - Re 06-sept-07: Yes, too sweeping.  We want to correct e.g.
+;; |we admire certain individual|.  So remove here, and let's try entry by
+;; entry for the problematic ones.
+;;
+n_-_c-nocnh_le := basic_intr_lex_entry &
+  [ SYNSEM [ MODIFD notmod,
+             LOCAL [ CAT.HEAD [ MINORS [ MIN norm_nom_rel,
+                                         NORM norm_rel ] ],
+                     CONT.RELS <! reg_nom_relation !> ] ] ].
+
+;; The following will soon be in standard lextypes.tdl
+n_group_ppof_lexent := noun_word &
+  [ SYNSEM unsp_ppcomp_two_arg_synsem &
+	   [ LOCAL [ CAT [ HEAD noun &
+                                [ MINORS.MIN nom_rel & #min ],
+                           VAL.COMPS < synsem &
+				       [ LOCAL.CAT.HEAD.MINORS.ALTMIN #min,
+                                         --SIND #ind,
+                                         OPT - ] > ],
+                     CONT [ RELS <! diadic_nom_relation !>,
+                            HCONS <! !> ],
+		     AGR.PNG.PN 3p ],
+	     MODIFD notmod,
+             LKEYS [ KEYREL.ARG1 #ind,
+                     --COMPKEY _of_p_sel_rel ] ] ].
+
+;; The following change will soon be in standard lextypes.tdl
+basic_n_poss_clitic_lexent := nonc-m-nab &
+  [ ALTS.SQPNCT -,
+    SYNSEM lex_synsem &
+     [ LOCAL [ ARG-S < #spr >,
+	       CAT [ HEAD det &
+			  [ POSS +,
+                            MOD < >,
+                            MINORS.ALTMIN poss_rel ],
+                     VAL [ SUBJ < >,
+                           SPR < #spr & synsem &
+                                 [ --MIN nonpro_rel,
+                                   LOCAL [ CAT nomp_cat_min &
+                                               [ HEAD [ PRD +,
+							CASE non_obliq ],
+                                                 VAL [ SUBJ < >,
+						       SPCMPS < > ] ],
+                                           CONT.HOOK [ LTOP #plbl,
+						       INDEX index ],
+                                           CONJ cnil ],
+                                   NONLOC [ SLASH #slash,
+                                            REL #rel,
+                                            QUE #que ],
+                                   --SIND #pindex & individual_min,
+                                   OPT - ] >,
+                           COMPS < >,
+			   SPCMPS < > ] ],
+               CONT.HOOK [ INDEX #index,
+			   XARG #pindex ] ],
+       LKEYS.ALTKEYREL prep_relation &
+             [ PRED poss_rel,
+	       LBL #plbl,
+               ARG0.E [ TENSE no_tense,
+                        ASPECT no_aspect ],
+               ARG1 #index & full_ref-ind,
+               ARG2 #pindex ],
+       NONLOC [ SLASH #slash,
+                REL #rel,
+                QUE #que ] ] ].
+
+;; The following will soon in be standard lextypes.tdl
+c_xp_or_lexent := conj_complex_lexent &
+  [ SYNSEM.LOCAL [ AGR.PNG.PN #pn,
+		   CAT.VAL.COMPS < [ LOCAL.AGR.PNG.PN #pn ] >,
+		   CONJ lex-conj & [ CHEAD either_or_cnil ],
+		   CONT.RELS <! [ PRED _or_c_rel ] !> ] ].
+
+;; The following will soon be in standard lextypes.tdl
+c_xp_and-or_le := conj_complex_lexent &
+  [ SYNSEM.LOCAL [ CONJ lex-conj & [ CHEAD cnil ],
+		   AGR.PNG.PN #pn,
+		   CAT.VAL.COMPS < [ LOCAL.AGR.PNG.PN #pn ] >,
+		   CONT.RELS <! [ PRED _and_c_rel ] !> ] ].
+
+;; The following will soon be in standard fundamentals.tdl
+prep_or_modnp := p_or_adv & v_or_p.
+
+;; The following will soon be in standard fundamentals.tdl
+basic_prep := a_or_p & n_or_p & prep_or_modnp & verbal_or_p &
+        adverbee.
+
+;; The following will soon be in standard fundamentals.tdl
+modnp := n_or_p & nominal & prep_or_modnp & mobile & a_or_adv &
+         adverbee_or_modnp & det_or_adv.
+
+;; The following will soon be in standard fundamentals.tdl
+;; Used for robust-sg-NP rule.
+non_temp_or_nonday_nbar_rel := nom_rel.
+non_temp_nbar_rel := non_temp_nonpro_rel & nom_nbar_rel & 
+		     non_temp_or_nonday_nbar_rel.
+
+;; The following will soon be in standard fundamentals.tdl
+non_day_diadic_nonprop_rel := non_day_diadic_modable_rel & 
+			      non_temp_or_nonday_nbar_rel.
