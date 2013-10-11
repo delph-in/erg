@@ -1737,7 +1737,7 @@ inf_intrans_from_subst := basic_inf_or_prp_intrans_subst &
 
 inf_intrans_particle_subst := basic_three_arg_subst &
   [ LOCAL [ CAT.VAL [ KCMP #comp,
-                      COMPS < synsem &
+                      COMPS < abstr_lex_synsem &
                               [ --MIN selected_rel,
                                 LOCAL [ CAT.HEAD a_or_p,
 					CONT.HOOK.LTOP #hand ],
@@ -5699,17 +5699,22 @@ n_-_c-meas-frct_le := n_-_c-meas-nb_lexent &
 
 ;; DPF 2013-09-24 - Make spr obligatory, to avoid spurious analysis of 
 ;; |1.5/cm| with plural NP |cm|
+;; DPF 2013-09-26 - Also added MODIFD rmod to prevent these from being
+;; heads of noun compounds.
 ;;
 ; <type val="n_-_c-meas-abb_le">
-; <description>Icn, measure noun                
+; <description>Icn, measure noun: block as head of N-N compound
 ; <ex>Ten meters is enough.
 ; <nex>
 ; <todo>
 ; </type>
-n_-_c-meas-abb_le := basic_intr_lex_entry &
-  [ SYNSEM [ LOCAL.CAT [ HEAD.MINORS [ MIN meas_nom_rel,
+n_-_c-meas-abb_le := basic_intr_noun_word &
+  [ SYNSEM noun_nocomp_synsem &
+	   [ LOCAL.CAT [ HEAD.MINORS [ MIN meas_nom_rel,
 				       NORM quantity_rel ],
-			 VAL.SPR.FIRST expressed_synsem ],
+			 VAL.SPR < expressed_synsem &
+				   [ --MIN quant_or_wh_rel ] > ],
+	     MODIFD rmod,
 	     LKEYS.KEYREL reg_nom_relation ],
     GENRE written ].
 
@@ -7683,6 +7688,15 @@ n_-_pn-fem_le := n_proper_lexent &
 ; </type>
 n_-_pn-msc_le := n_proper_lexent &
   [ SYNSEM.LOCAL.AGR.PNG.GEN masc ].
+
+; <type val="n_-_pn-neut_le">
+; <description>Pn - neuter 
+; <ex>IBM arrived.
+; <nex>
+; <todo>
+; </type>
+n_-_pn-neut_le := n_proper_lexent &
+  [ SYNSEM.LOCAL.AGR.PNG.GEN neut ].
 
 ; For "i", which we don't want as plural "is"
 ; <type val="n_-_pn-sg_le">
@@ -9808,7 +9822,12 @@ adj_synsem_constr := basic_adj_synsem_constr &
 			  INDEX #index ],
 		   RELS.LIST.FIRST.LBL #hand ] ] ].
 
-adj_synsem_lex_constr := basic_adj_synsem_constr & norm_adj_lex_synsem.
+adj_synsem_lex_constr := basic_adj_synsem_constr & basic_adj_synsem &
+			 basic_lex_synsem &
+  [ LOCAL [ CAT [ HEAD basic_adj,
+                  VAL.SPR.FIRST.LOCAL.CONT.HOOK.XARG #arg0 ],
+            CONT.HOOK.INDEX #arg0 ],
+    LKEYS.KEYREL.ARG0 #arg0 & non_conj_event ].
 
 adj_synsem_lex_rule := basic_adj_synsem_constr & abstr_lex_synsem &
   [ LOCAL.CAT.VAL.COMPS < > ].
@@ -11202,22 +11221,26 @@ aj_pp_i-cmp-dif_le := basic_adj_comp_lexent &
 
 ; For 'same as' - Note "*Kim is same", "*A same car arrived"
 ; <type val="aj_pp_i-cmp-sme_le">
-; <description>Adj, only 'same'                 
+; <description>Adj, only 'same', MOD has obligatory expressed specifier
 ; <ex>B has the same cat as C.
 ; <nex>
 ; <todo>
 ; </type>
 aj_pp_i-cmp-sme_le := basic_adj_comp_lexent &
   [ SYNSEM 
-    [ LOCAL [ CAT [ HEAD superl_adj &
-                         [ PRD -,
-                           MOD < [ LOCAL.CAT.VAL.SPR 
-                                       < [ --MIN def_or_demon_q_rel ] > ] > ],
-                    VAL.SPR.FIRST.--MIN much_deg_rel ],
-              CONT.RELS <! relation, relation !> ],
-      MODIFD.LPERIPH bool,
-      LKEYS [ ALTKEYREL.PRED comp_equal_rel,
-              --COMPKEY _as_p_comp_rel ] ] ].
+   [ LOCAL 
+    [ CAT 
+     [ HEAD superl_adj &
+	    [ PRD -,
+	      MOD < [ LOCAL.CAT [ HEAD.MINORS.NORM norm_rel,
+				  VAL.SPR < expressed_synsem &
+					    [ --MIN def_or_demon_q_rel ]> ]] >],
+       VAL.SPR.FIRST.--MIN much_deg_rel,
+       POSTHD - ],
+      CONT.RELS <! relation, relation !> ],
+     MODIFD.LPERIPH bool,
+     LKEYS [ ALTKEYREL.PRED comp_equal_rel,
+	     --COMPKEY _as_p_comp_rel ] ] ].
 
 ; <type val="aj_pp_i-cmp-wthr_le">
 ; <description>Adj, comparative weather         
@@ -13286,9 +13309,12 @@ p_nbar_comp_nospr_lexent := p_nbar_comp_lexent &
 ; like in "a little".
 ; DPF 20-jun-08 - Changed MOD..MIN nonpro_rel to gen_nom_nbar_rel to exclude
 ; proper names, to avoid e.g. "Browne an office and interviewed programmers"
-;; DPF 2013-09-24 - Re DPF 3-Jul-02: But this prevents the desired analysis
+;; DPF 2013-09-24 - Re 3-Jul-02: But this prevents the desired analysis
 ;; of |50 / day| with partitive |50| which is [LEX -].  So instead make the
 ;; MOD be itself MODIFD notmod.
+;; DPF 2013-09-26 - Re 30-Aug-01: Generalized to notmod_or_rmod, since we
+;; want measure-noun abbreviations to be rmod, so they won't appear as
+;; heads of noun compounds.  Also, we want to allow |per pound of flour|.
 ;;
 ; 'a (per)'
 p_nbar_comp_nmod_lexent := p_nbar_comp_nospr_lexent &
@@ -13306,7 +13332,7 @@ p_nbar_comp_nmod_lexent := p_nbar_comp_nospr_lexent &
 			  [ LOCAL [ CAT.HEAD.MINORS.NORM quantity_or_no_rel,
                                     AGR.PNG.PN 3s,
                                     CONT.HOOK.LTOP #nhand ],
-                            MODIFD notmod ] > ],
+                            MODIFD notmod_or_rmod  ] > ],
         CONT [ HOOK.INDEX non_conj_event,
 	       RELS <! #keyrel, #altkeyrel !>,
                HCONS <! qeq & [ HARG #rhand,
@@ -13976,7 +14002,9 @@ p_np_x-to-y-num_le := n-or-p_x_to_y_lexent &
 ; DPF 2010-09-14 - Identified MIN on SPR and COMPS, to avoid spurious analysis
 ; of |close to fifty cats|
 ;; DPF 2012-04-07 - Added MOD < synsem > to prevent adjunct extraction here
-
+;; DPF 2013-09-30 - Constrained both SPR and COMP to be LEX + in order to
+;; avoid e.g. spurious |impossible to apply to other|
+;;
 ; <type val="aj_pp_i-x-to-y_le">
 ; <description>Adj, only interval 'to'          
 ; <ex>B has small to big cats.
@@ -14012,6 +14040,7 @@ aj_pp_i-x-to-y_le := noncqrs-m-nab &
 			    CONT.HOOK [ LTOP #fghand,
                                         XARG #fromarg ],
                             CONJ cnil ],
+		    LEX +,
                     NONLOC.SLASH 0-dlist ] >,
             COMPS < [ OPT -,
                       LOCAL [ CAT [ HEAD adj_or_intadj &
@@ -14025,6 +14054,7 @@ aj_pp_i-x-to-y_le := noncqrs-m-nab &
                               CONT.HOOK [ LTOP #tghand,
                                           XARG #toarg ],
                               CONJ cnil ],
+		      LEX +,
                       NONLOC.SLASH 0-dlist,
                       PUNCT.LPUNCT no_punct ] > ] ],
         CONT [ HOOK [ LTOP #hand,
@@ -14278,7 +14308,7 @@ av_-_i-avmod_le := basic_adverb_word &
 ; 'why hasn't kim arrived yet'.  So use MOD..MSG no_msg instead.
 
 scopal_vp_adverb_synsem := scopal_adverb_synsem &
-  [ LOCAL.CAT.HEAD [ MOD < [ LOCAL [ CAT [ HEAD v_or_g_or_a,
+  [ LOCAL.CAT.HEAD [ MOD < [ LOCAL [ CAT [ HEAD v_or_a,
                                            VAL.SPR.FIRST synsem_min ] ] ] >,
                      MINORS.MIN adv_rel ],
     LKEYS.KEYREL adv_relation ].
@@ -14302,7 +14332,7 @@ scopal_vp_adverb_synsem := scopal_adverb_synsem &
 
 scopal_vp_aux_adverb_synsem := scopal_spec_adverb_synsem &
   [ LOCAL.CAT.HEAD lexadv &
-                   [ MOD < [ LOCAL.CAT [ HEAD v_or_g_or_a,
+                   [ MOD < [ LOCAL.CAT [ HEAD v_or_a,
                                          VAL [ SUBJ *synlist*,
                                                COMPS < > ],
                                          MC na ] ] >,
@@ -20367,13 +20397,14 @@ n_-_pn-mealtm_le := noncqrs-hm-nab & basic_noun_word &
 ; DPF 16-Apr-03 - Finally added type for odd entries "October the" as in
 ; 'October the fifth'.  Duplicates much of what is in date_det_lr type, but
 ; not easy to see how to abstract (cf. HCONS for example).
-
+;; DPF 2013-09-25 - Constrained SPEC to dofm_ord_rel, to block |*April the two|
+;;
 det_month_synsem := norm_det_synsem &
   [ LOCAL [ CAT [ HEAD [ POSS -,
                          MINORS [ MIN def_explicit_q_rel,
                                   ALTMIN mofy_rel ] ],
                   VAL [ COMPS < >,
-                        SPEC < [ --MIN dofm_rel,
+                        SPEC < [ --MIN dofm_ord_rel,
                                  --SIND #ind ] > ] ],
             CONT [ RELS <! #keyrel &
 			   [ CFROM #from,
