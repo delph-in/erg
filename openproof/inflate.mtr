@@ -1,166 +1,116 @@
 ;;; -*- Mode: tdl; Coding: utf-8; -*-
 
+;; DPF 2013-10-28
+;; Rules for inflating minimal MRSs into full MRSs for input to generator.
+;; Initially developed to generate from FOL expressions, which are converted
+;; to MRS format via Aaron Kalb's script in erg/openproof/scripts.
+;; Aaron's script, for example, converts "smaller(b,a)" to the following
+;;     [ LTOP: h1
+;;       INDEX: e3
+;;       RELS: < [ named_rel LBL: h8 ARG0: x6 CARG: "B" ]
+;;               [ named_rel LBL: h9 ARG0: x7 CARG: "A" ]
+;;               [ "smaller" LBL: h2 ARG0: e3 ARG1: x6 ARG2: x7 ] > ]
+;; Then these rules apply to produce a full MRS acceptable to the generator.
+
 ;; Add quantifier for each proper name.
 ;;
 add_properq_mtr := add_quant_mtr &
 [ CONTEXT.RELS <! [ PRED named_rel ] !>,
   OUTPUT.RELS <! [ PRED proper_q_rel, ARG0.PNG.PN 3s ] !> ].
 
-
-;; "cube(x)"
+;; Predicate nouns
 ;;
-cube_op_gpr := openproof_mtr &
-[ INPUT.RELS <! [ PRED "cube", LBL #h2, ARG0 #e3, ARG1 ref-ind & #x4 ] !>, 
-  OUTPUT [ HOOK.INDEX #e3,
-	   RELS <! [ LBL #h2, PRED _be_v_id_rel, ARG0 #e3, ARG1 #x4, ARG2 #x5 ],
-		   [ LBL #h1, PRED "_cube_n_1_rel", ARG0 ref-ind & #x5 ] !> ] ].
+cube_op_gpr := pred_noun_gpr &
+[ INPUT.RELS <! [ PRED "cube" ] !>, 
+  OUTPUT.RELS <! [ ], [ PRED "_cube_n_1_rel" ] !> ].
 
-;; "tet(x)"
+tetrahedron_op_gpr := pred_noun_gpr &
+[ INPUT.RELS <! [ PRED "tet" ] !>, 
+  OUTPUT.RELS <! [ ], [ PRED "_tetrahedron_n_1_rel" ] !> ].
+
+dodecahedron_op_gpr := pred_noun_gpr &
+[ INPUT.RELS <! [ PRED "dodec" ] !>, 
+  OUTPUT.RELS <! [ ], [ PRED "_dodecahedron_n_1_rel" ] !> ].
+
+
+;; Adjectives
 ;;
-tetrahedron_op_gpr := openproof_mtr &
-[ INPUT.RELS <! [ PRED "tet", LBL #h2, ARG0 #e3, ARG1 ref-ind & #x4 ] !>, 
-  OUTPUT [ HOOK.INDEX #e3,
-	   RELS <! [ LBL #h2, PRED _be_v_id_rel, ARG0 #e3, ARG1 #x4, ARG2 #x5 ],
-		   [ LBL #h1, PRED "_tetrahedron_n_1_rel", ARG0 ref-ind & #x5 ] !> ] ].
+smaller_op_gpr := compar_adj_op_gpr &
+[ INPUT.RELS <! [ PRED "smaller" ] !>, 
+  OUTPUT.RELS <! [ PRED "_small_a_1_rel" ], [ ] !> ].
 
-;; "smaller(x,y)"
+larger_op_gpr := compar_adj_op_gpr &
+[ INPUT.RELS <! [ PRED "larger" ] !>, 
+  OUTPUT.RELS <! [ PRED "_large_a_1_rel" ], [ ] !> ].
+
+
+;; Three-arg prepositions
 ;;
-smaller_op_gpr := openproof_mtr &
-[ INPUT.RELS <! [ PRED "smaller", LBL #h1, ARG0 #e3, ARG1 ref-ind & #x4, 
-		  ARG2 ref-ind & #x5 ] !>, 
-  OUTPUT [ HOOK.INDEX #e3,
-	   RELS <! [ PRED "_small_a_1_rel", LBL #h1, ARG0 #e3, ARG1 #x4 ],
-		   [ PRED comp_rel, LBL #h1, 
-		     ARG0 event & [ E [ TENSE untensed, ASPECT no_aspect ] ],
-		     ARG1 #e3, ARG2 #x5 ] !> ],
-  FLAGS.EQUAL < #h1 > ].
+between_op_gpr := prep_threearg_op_gpr &
+[ INPUT.RELS <! [ PRED "between" ] !>, 
+  OUTPUT.RELS <! [ ], [ PRED _between_p_rel ] !> ].
 
-;; "larger(x,y)"
+
+;; Prepositions
 ;;
-larger_op_gpr := openproof_mtr &
-[ INPUT.RELS <! [ PRED "larger", LBL #h1, ARG0 #e3, ARG1 ref-ind & #x4, 
-		  ARG2 ref-ind & #x5 ] !>, 
-  OUTPUT [ HOOK.INDEX #e3,
-	   RELS <! [ PRED "_large_a_1_rel", LBL #h1, ARG0 #e3, ARG1 #x4 ],
-		   [ PRED comp_rel, LBL #h1, 
-		     ARG0 event & [ E [ TENSE untensed, ASPECT no_aspect ] ],
-		     ARG1 #e3, ARG2 #x5 ] !> ] ].
+backof_op_gpr := prep_op_gpr &
+[ INPUT.RELS <! [ PRED "backof" ] !>, 
+  OUTPUT.RELS <! [ PRED _in+back+of_p_rel ] !> ].
 
-;; "between(x,y,z)"
+frontof_op_gpr := prep_op_gpr &
+[ INPUT.RELS <! [ PRED "frontof" ] !>, 
+  OUTPUT.RELS <! [ PRED _in+front+of_p_rel ] !> ].
+
+
+;; Adjectives
 ;;
-between_op_gpr := openproof_mtr &
-[ INPUT.RELS <! [ PRED "between", LBL #h1, ARG0 #e3, ARG1 ref-ind & #x4, 
-		  ARG2 ref-ind & #x5, ARG3 ref-ind & #x6  ] !>, 
-  OUTPUT [ HOOK.INDEX #e3,
-	   RELS <! [ PRED _and_c_rel, LBL handle, ARG0 ref-ind & #x7, 
-		     L-INDEX #x5, R-INDEX #x6 ],
-		   [ PRED _between_p_rel, LBL #h1, ARG0 #e3, 
-		     ARG1 #x4, ARG2 #x7 ] !> ] ].
+large_op_gpr := adj_op_gpr &
+[ INPUT.RELS <! [ PRED "large" ] !>, 
+  OUTPUT.RELS <! [ PRED "_large_a_1_rel" ] !> ].
 
-;;  FLAGS.EQUAL < #e3, #x4, #x5, #x6, #x7 > ].
+small_op_gpr := adj_op_gpr &
+[ INPUT.RELS <! [ PRED "small" ] !>, 
+  OUTPUT.RELS <! [ PRED "_small_a_1_rel" ] !> ].
 
-;; "backof(x,y)"
+medium_op_gpr := adj_op_gpr &
+[ INPUT.RELS <! [ PRED "medium" ] !>, 
+  OUTPUT.RELS <! [ PRED "_medium_a_1_rel" ] !> ].
+
+
+;; Noun+of
 ;;
-backof_op_gpr := openproof_mtr &
-[ INPUT.RELS <! [ PRED "backof", LBL #h1, ARG0 #e3, ARG1 ref-ind & #x4, 
-		  ARG2 ref-ind & #x5 ] !>, 
-  OUTPUT [ HOOK.INDEX #e3,
-	   RELS <! [ PRED _in+back+of_p_rel, LBL #h1, ARG0 #e3, ARG1 #x4, 
-		     ARG2 #x5 ] !> ],
-  FLAGS.EQUAL < #x4, #x5 > ].
+rightof_op_gpr := loc_of_op_gpr &
+[ INPUT.RELS <! [ PRED "rightof" ] !>, 
+  OUTPUT.RELS <! [ PRED "_right_n_1_rel" ], [ ], [ ], [ ] !> ].
 
-;; "frontof(x,y)"
+leftof_op_gpr := loc_of_op_gpr &
+[ INPUT.RELS <! [ PRED "leftof" ] !>, 
+  OUTPUT.RELS <! [ PRED "_left_n_1_rel" ], [ ], [ ], [ ] !> ].
+
+
+;; loc + same + Noun
 ;;
-frontof_op_gpr := openproof_mtr &
-[ INPUT.RELS <! [ PRED "frontof", LBL #h1, ARG0 #e3, ARG1 ref-ind & #x4, 
-		  ARG2 ref-ind & #x5 ] !>, 
-  OUTPUT [ HOOK.INDEX #e3,
-	   RELS <! [ PRED _in+front+of_p_rel, LBL #h1, ARG0 #e3, ARG1 #x4, 
-		     ARG2 #x5 ] !> ],
-  FLAGS.EQUAL < #x4, #x5 > ].
+samerow_op_gpr := same_loc_op_gpr &
+[ INPUT.RELS <! [ PRED "samerow" ] !>, 
+  OUTPUT.RELS <! [ ], [ PRED "_row_n_of_rel" ], [ ], [ ] !> ].
 
-;; "large(x)"
+samecol_op_gpr := same_loc_op_gpr &
+[ INPUT.RELS <! [ PRED "samecol" ] !>, 
+  OUTPUT.RELS <! [ ], [ PRED "_column_n_of_rel" ], [ ], [ ] !> ].
+
+
+;; same + Noun
 ;;
-large_op_gpr := openproof_mtr &
-[ INPUT.RELS <! [ PRED "large", LBL #h2, ARG0 #e3, ARG1 ref-ind & #x4 ] !>, 
-  OUTPUT [ HOOK.INDEX #e3,
-	   RELS <! [ PRED "_large_a_1_rel", LBL #h2, ARG0 #e3, ARG1 #x4 ] !> ],
-  FLAGS.EQUAL < #x4 > ].
+samesize_op_gpr := same_noun_op_gpr &
+[ INPUT.RELS <! [ PRED "samesize" ] !>, 
+  OUTPUT.RELS <! [ ], [ PRED "_size_n_1_rel" ], [ ], [ ] !> ].
 
-;; "small(x)"
-;;
-small_op_gpr := openproof_mtr &
-[ INPUT.RELS <! [ PRED "small", LBL #h2, ARG0 #e3, ARG1 ref-ind & #x4 ] !>, 
-  OUTPUT [ HOOK.INDEX #e3,
-	   RELS <! [ PRED "_small_a_1_rel", LBL #h2, ARG0 #e3, ARG1 #x4 ] !> ],
-  FLAGS.EQUAL < #x4 > ].
+sameshape_op_gpr := same_noun_op_gpr &
+[ INPUT.RELS <! [ PRED "sameshape" ] !>, 
+  OUTPUT.RELS <! [ ], [ PRED "_shape_n_1_rel" ], [ ], [ ] !> ].
 
 
-;; "rightof(x,y)"
-;;
-rightof_op_gpr := openproof_addquant_mtr &
-[ INPUT.RELS <! [ PRED "rightof", LBL #h1, ARG0 #e3, ARG1 ref-ind & #x4, 
-		  ARG2 ref-ind & #x5 ] !>, 
-  OUTPUT [ HOOK.INDEX #e3,
-	   RELS <! [ PRED "_right_n_1_rel", LBL #h2 & handle, ARG0 #x6 ],
-		   [ PRED _the_q_rel, LBL handle, ARG0 #x6 & ref-ind ],
-		   [ PRED _to_p_rel, LBL #h1, ARG0 #e3, ARG1 #x4, ARG2 #x6 ],
-		   [ PRED _of_p_rel, LBL #h2, ARG0 event, 
-		     ARG1 #x6, ARG2 ref-ind & #x5 ] !> ],
-  FLAGS.EQUAL < #x4, #x5 > ].
-
-;; "leftof(x,y)"
-;;
-leftof_op_gpr := openproof_addquant_mtr &
-[ INPUT.RELS <! [ PRED "leftof", LBL #h1, ARG0 #e3, ARG1 ref-ind & #x4, 
-		  ARG2 ref-ind & #x5 ] !>, 
-  OUTPUT [ HOOK.INDEX #e3,
-	   RELS <! [ PRED "_left_n_1_rel", LBL #h2 & handle, ARG0 #x6 ],
-		   [ PRED _the_q_rel, LBL handle, ARG0 #x6 & ref-ind ],
-		   [ PRED _to_p_rel, LBL #h1, ARG0 #e3, ARG1 #x4, ARG2 #x6 ],
-		   [ PRED _of_p_rel, LBL #h2, ARG0 event, 
-		     ARG1 #x6, ARG2 ref-ind & #x5 ] !> ],
-  FLAGS.EQUAL < #x4, #x5 > ].
-
-;; "samerow(x,y)"
-;;
-samerow_op_gpr := openproof_mtr &
-[ INPUT.RELS <! [ PRED "samerow", LBL #h1, ARG0 #e3, ARG1 ref-ind & #x4, 
-		  ARG2 ref-ind & #x5 ] !>, 
-  OUTPUT [ HOOK.INDEX #e3,
-	   RELS <! [ PRED _in_p_rel, LBL #h1, ARG0 #e3, ARG1 #x4, ARG2 #x6 ],
-		   [ PRED "_row_n_of_rel", LBL #h2, ARG0 ref-ind & #x6 ],
-	           [ PRED "_same_a_as_rel", LBL #h2, ARG0 event & #e7, 
-		     ARG1 #x6 ],
-	           [ PRED comp_equal_rel, LBL #h2, ARG1 #e7, ARG2 #x5 ] !> ] ].
-
-;; "samecol(x,y)"
-;;
-samecol_op_gpr := openproof_mtr &
-[ INPUT.RELS <! [ PRED "samecol", LBL #h1, ARG0 #e3, ARG1 ref-ind & #x4, 
-		  ARG2 ref-ind & #x5 ] !>, 
-  OUTPUT [ HOOK.INDEX #e3,
-	   RELS <! [ PRED _in_p_rel, LBL #h1, ARG0 #e3, ARG1 #x4, ARG2 #x6 ],
-		   [ PRED "_column_n_of_rel", LBL #h2, 
-		     ARG0 ref-ind & #x6 & [ PNG.PN 3s ] ],
-	           [ PRED "_same_a_as_rel", LBL #h2, ARG0 event & #e7, 
-		     ARG1 #x6 ],
-	           [ PRED comp_equal_rel, LBL #h2, ARG1 #e7, ARG2 #x5 ] !> ] ].
-
-;; "samesize(x,y)"
-;;
-samesize_op_gpr := openproof_mtr &
-[ INPUT.RELS <! [ PRED "samesize", LBL #h1, ARG0 #e3, ARG1 ref-ind & #x4, 
-		  ARG2 ref-ind & #x5 ] !>, 
-  OUTPUT [ HOOK.INDEX #e3,
-	   RELS <! [ PRED _be_v_id_rel, LBL #h1, ARG0 #e3 & [ E.ASPECT.PROGR -],
-		     ARG1 #x4, ARG2 #x6 ],
-		   [ PRED "_size_n_1_rel", LBL #h2, ARG0 ref-ind & #x6 ],
-		   [ PRED "_same_a_as_rel", LBL #h2, 
-		     ARG0 event & #e7 & [ E.TENSE untensed ], ARG1 #x6 ],
-		   [ PRED comp_equal_rel, LBL #h2, ARG1 #e7, ARG2 #x5 ] !> ] ].
-
-;; Add the indefinite quantifier for "cube", "tetrahedron"
+;; Add the indefinite quantifier for predicative nouns
 ;;
 add_indefq_cube_mtr := add_quant_mtr &
 [ CONTEXT.RELS <! [ PRED "_cube_n_1_rel" ] !>,
@@ -168,6 +118,10 @@ add_indefq_cube_mtr := add_quant_mtr &
 
 add_indefq_tet_mtr := add_quant_mtr &
 [ CONTEXT.RELS <! [ PRED "_tetrahedron_n_1_rel" ] !>,
+  OUTPUT.RELS <! [ PRED _a_q_rel ] !> ].
+
+add_indefq_dodec_mtr := add_quant_mtr &
+[ CONTEXT.RELS <! [ PRED "_dodecahedron_n_1_rel" ] !>,
   OUTPUT.RELS <! [ PRED _a_q_rel ] !> ].
 
 ;; Add the udef quantifier for coordinated NPs
@@ -186,6 +140,16 @@ add_defq_mtr := add_quant_mtr &
 ;;
 neg_op_mtr := negation_op_mtr.
 
+;; Conjunctions
+
+and_op_mtr := conj_op_mtr &
+[ INPUT.RELS <! [ PRED "and" ] !>,
+  OUTPUT.RELS <! [ PRED _and_c_rel ] !> ].
+
+or_op_mtr := conj_op_mtr &
+[ INPUT.RELS <! [ PRED "or" ] !>,
+  OUTPUT.RELS <! [ PRED _or_c_rel ] !> ].
+
 ;; Replace and+not with but
 ;;
 and_not_to_but_op_mtr := and_neg_to_but_op_mtr.
@@ -202,6 +166,12 @@ not_or_to_nor_op_mtr := neg_or_to_nor_op_mtr.
 ;;
 if_then_mtr := if_then_cond_mtr.
 
+;if_then_alt_mtr := if_then_cond_alt_mtr &
+;[ INPUT.RELS <! [ PRED _if_c_rel ] !> ].
+
 ;; if-and-only-if
 ;;
 iff_mtr := if_and_only_if_mtr.
+
+;iff_alt_mtr := if_and_only_if_alt_mtr &
+;[ INPUT.RELS <! [ PRED _if_and_only_if_c_rel ] !> ].
