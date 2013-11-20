@@ -222,6 +222,12 @@
   (load-erg-settings-file 
     (merge-pathnames "lkb/nogen-rules.set" *grammar-directory*)))
 
+#+:openproof
+(setf *gen-ignore-rules* 
+  (load-erg-settings-file 
+    (merge-pathnames "openproof/nogen-rules.set" *grammar-directory*)))
+
+
 (setf *parse-ignore-rules*
   '(xp_brck-pr_c))
 

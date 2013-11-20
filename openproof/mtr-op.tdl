@@ -71,11 +71,9 @@ openproof_addquant_mtr := openproof_mtr &
 loc_of_op_gpr := openproof_addquant_mtr &
 [ INPUT.RELS <! [ LBL #h1, ARG0 #e3, ARG1 ref-ind & #x4, 
 		  ARG2 ref-ind & #x5 ] !>, 
-  OUTPUT.RELS <! [ LBL #h2 & handle, ARG0 #x6 ],
+  OUTPUT.RELS <! [ LBL handle, ARG0 #x6, ARG1 #x5 ],
 	         [ PRED _the_q_rel, LBL handle, ARG0 #x6 & ref-ind ],
-		 [ PRED _to_p_rel, LBL #h1, ARG0 #e3, ARG1 #x4, ARG2 #x6 ],
-		 [ PRED _of_p_rel, LBL #h2, ARG0 event, 
-		   ARG1 #x6, ARG2 ref-ind & #x5 ] !>,
+		 [ PRED _to_p_rel, LBL #h1, ARG0 #e3, ARG1 #x4, ARG2 #x6 ] !>,
   FLAGS.EQUAL < #x4, #x5 > ].
 
 ;; "backof"
@@ -546,6 +544,8 @@ coord_pred_comp_op_gpr := basic_coord_pred_op_gpr &
 	         [ PRED #pred, LBL #h3, ARG1 #x1,
 		   ARG0 #e1 & [ E [ TENSE present, ASPECT.PRF - ] ] ] !> ].
 
+;; Pronominal subjects
+;;
 basic_pro_subj_gpr := monotonic_omtr &
 [ CONTEXT.RELS.LIST < [ ARG0 event & [ E.TENSE present ], ARG1 #x1 ],
 		      [ ARG0 event & [ E.TENSE present ], ARG1 #x2 ],
@@ -555,16 +555,36 @@ basic_pro_subj_gpr := monotonic_omtr &
 	  RELS.LIST < [ LBL #h10, ARG0 #x2 & ref-ind ],
 		    [ PRED #qpred, ARG0 #x2, RSTR #h20 ], ... > ],
   OUTPUT [ HOOK.INDEX #index,
-	   RELS <! [ PRED pron_rel, LBL #h10, ARG0 #x2 ],
-		   [ PRED pronoun_q_rel, LBL handle, ARG0 #x2, RSTR #h20 ] !>,
-	   HCONS <! !> ],
+	   RELS.LIST < [ PRED pron_rel, LBL #h10, ARG0 #x2 ],
+	      [ PRED pronoun_q_rel, LBL handle, ARG0 #x2, RSTR #h20 ], ... > ],
   FLAGS.SUBSUME < #x2, ... > ].
 
+;; B is a cube, and it is large
+;;
 pro_subj_gpr := basic_pro_subj_gpr &
 [ CONTEXT.RELS.LIST < [ ], [ ],
 		      [ PRED named_rel, CARG #carg ], ... >,
   INPUT.RELS <! [ PRED named_rel, ARG0.PNG.GEN neut, CARG #carg ], [ ] !>,
   FLAGS.SUBSUME < semarg > ].
+
+;; B is larger than C, and it is a cube.
+;;
+coord_s_pro_subj_unambig_gpr := pro_subj_gpr &
+[ OUTPUT [ RELS <! [ ], [ ] !>,
+	   HCONS <! !> ] ].
+
+;; B is larger than C, and it (i.e., B) is a cube.
+;;
+coord_s_pro_subj_ambig_gpr := pro_subj_gpr &
+[ CONTEXT.RELS <! [ ], [ ], [ ], [ ], [ ], [ PRED named_rel ] !>,
+  INPUT.RELS <! [ CARG #carg ], [ ] !>,
+  OUTPUT [ RELS <! [ LBL #h3, ARG0 #x1 ], [ ], 
+		   [ PRED _i+e_p_rel, LBL #h3, ARG0 event,
+		     ARG1 #x1, ARG2 #x2 ],
+		   [ PRED named_rel, LBL #h5, ARG0 #x2 & ref-ind, CARG #carg ],
+		   [ PRED proper_q_rel, ARG0 #x2, RSTR #h4, BODY handle ] !>,
+	   HCONS <! qeq & [ HARG #h4, LARG #h5 ] !> ] ].
+
 
 subord_s_pro_subj_gpr := pro_subj_gpr &
 [ CONTEXT [ RELS.LIST < [ ], [ ], [ ], [ ], [ ARG2 #h3 ], ... >,
@@ -573,26 +593,80 @@ subord_s_pro_subj_gpr := pro_subj_gpr &
 
 ;; If B is a cube then it is large
 ;;
-cond_s_pro_subj_gpr := subord_s_pro_subj_gpr &
-[ CONTEXT [ RELS <! [ LBL #h2 & handle ], [ LBL #h4 & handle ], [ ], [ ],
+basic_cond_s_pro_subj_gpr := subord_s_pro_subj_gpr &
+[ CONTEXT [ RELS.LIST < [ LBL handle ], [ LBL handle ], [ ], [ ],
 		    [ PRED "_if_x_then_rel", ARG1 #h3 ],
-		    [ PRED "_then_a_1_rel", LBL #h1, ARG1 #h5 ] !>,
-	    HCONS <! qeq & [ HARG #h5, LARG #h4 ], [ LARG #h2 ],
-		     qeq & [ HARG #h3, LARG #h1 ] !> ] ].
+		    [ PRED "_then_a_1_rel", LBL #h1, ARG1 #h5 ], ... >,
+	    HCONS <! qeq & [ HARG #h5 ], qeq,
+		     qeq & [ HARG #h3, LARG #h1 ] !> ],
+  OUTPUT.RELS.LIST < [ ], [ ], ... > ].
+
+cond_s_pro_subj_gpr := basic_cond_s_pro_subj_gpr &
+[ CONTEXT [ RELS <! [ LBL #h2 ], [ LBL #h4 ], [ ], [ ], [ ], [ ] !>,
+	    HCONS <! qeq & [ LARG #h4 ], qeq & [ LARG #h2 ], [ ] !> ],
+  OUTPUT [ RELS <! [ ], [ ] !>,
+	   HCONS <! !> ] ].
+
+cond_s_pro_subj_rev_gpr := basic_cond_s_pro_subj_gpr &
+[ CONTEXT [ RELS <! [ LBL #h2 ], [ LBL #h4 ], [ ], [ ], [ ], [ ] !>,
+	    HCONS <! qeq & [ LARG #h2 ], qeq & [ LARG #h4 ], [ ] !> ],
+  OUTPUT [ RELS <! [ ], [ ] !>,
+	   HCONS <! !> ] ].
+
+cond_s_pro_subj_ambig_gpr := basic_cond_s_pro_subj_gpr &
+[ CONTEXT [ RELS <! [ LBL #h2 ], [ LBL #h4 ], [ ], [ ], [ ], [ ],
+		    [ PRED named_rel ] !>,
+	    HCONS <! qeq & [ LARG #h2 ], qeq & [ LARG #h4 ], [ ] !> ],
+  INPUT.RELS <! [ CARG #carg ], [ ] !>,
+  OUTPUT [ RELS <! [ LBL #h3, ARG0 #x1 ], [ ], 
+		   [ PRED _i+e_p_rel, LBL #h3, ARG0 event,
+		     ARG1 #x1, ARG2 #x2 ],
+		   [ PRED named_rel, LBL #h5, ARG0 #x2 & ref-ind, CARG #carg ],
+		   [ PRED proper_q_rel, ARG0 #x2, RSTR #h14, BODY handle ] !>,
+	   HCONS <! qeq & [ HARG #h14, LARG #h5 ] !> ] ].
+
+basic_unless_s_pro_subj_gpr := subord_s_pro_subj_gpr &
+[ CONTEXT [ RELS.LIST < [ LBL handle ], [ LBL handle ], [ ], [ ],
+		    [ PRED "_unless_x_rel" ], ... >,
+	    HCONS <! qeq, qeq !> ],
+  OUTPUT.RELS.LIST < [ ], [ ], ... > ].
+
+unless_s_pro_subj_gpr := basic_unless_s_pro_subj_gpr &
+[ CONTEXT [ RELS <! [ LBL #h2 ], [ LBL #h4 ], [ ], [ ], [ ] !>,
+	    HCONS <! qeq & [ LARG #h2 ], qeq & [ LARG #h4 ] !> ],
+  OUTPUT [ RELS <! [ ], [ ] !>,
+	   HCONS <! !> ] ].
+
+unless_s_pro_subj_ambig_gpr := basic_unless_s_pro_subj_gpr &
+[ CONTEXT [ RELS <! [ LBL #h2 ], [ LBL #h4 ], [ ], [ ], [ ],
+		    [ PRED named_rel ] !>,
+	    HCONS <! qeq & [ LARG #h2 ], qeq & [ LARG #h4 ] !> ],
+  INPUT.RELS <! [ CARG #carg ], [ ] !>,
+  OUTPUT [ RELS <! [ LBL #h3, ARG0 #x1 ], [ ], 
+		   [ PRED _i+e_p_rel, LBL #h3, ARG0 event,
+		     ARG1 #x1, ARG2 #x2 ],
+		   [ PRED named_rel, LBL #h5, ARG0 #x2 & ref-ind, CARG #carg ],
+		   [ PRED proper_q_rel, ARG0 #x2, RSTR #h14, BODY handle ] !>,
+	   HCONS <! qeq & [ HARG #h14, LARG #h5 ] !> ] ].
 
 ;; B is a cube only if it is large
 ;;
 onlyif_s_pro_subj_gpr := subord_s_pro_subj_gpr &
 [ CONTEXT [ RELS <! [ LBL #h2 ], [ LBL #h4 ], [ ], [ ],
 		    [ ARG1 #h3 ] !>,
-	    HCONS <! [ HARG #h3, LARG #h2 ], [ LARG #h4 ] !> ] ].
+	    HCONS <! [ HARG #h3, LARG #h2 ], [ LARG #h4 ] !> ],
+  OUTPUT [ RELS <! [ ], [ ] !>,
+	   HCONS <! !> ] ].
+
 
 ;; B is a cube if and only if it is large
 ;;
 bicond_s_pro_subj_gpr := subord_s_pro_subj_gpr &
 [ CONTEXT [ RELS <! [ LBL #h2 ], [ LBL #h4 ], [ ], [ ],
 		  [ PRED "_if+and+only+if_x_1_rel" ] !>,
-	    HCONS <! [ LARG #h2 ], [ LARG #h4 ] !> ] ].
+	    HCONS <! [ LARG #h2 ], [ LARG #h4 ] !> ],
+  OUTPUT [ RELS <! [ ], [ ] !>,
+	   HCONS <! !> ] ].
 
 ;; Coord subj with pronoun
 ;;
@@ -607,7 +681,8 @@ pro_coord_subj_gpr := basic_pro_subj_gpr &
 		  [ PRED proper_q_rel, ARG0 #x3, RSTR #h20 ],
 		  [ PRED proper_q_rel, ARG0 #x4, RSTR #h21 ] !>,
 	  HCONS <! qeq & [ HARG #h20 ], qeq & [ HARG #h21 ] !> ],
-  OUTPUT.RELS.LIST < [ ARG0.PNG.PN 3p ], ... > ].
+  OUTPUT [ RELS <! [ ARG0.PNG.PN 3p ], [ ] !>,
+	   HCONS <! !> ] ].
 
 subord_s_pro_coord_subj_gpr := pro_coord_subj_gpr &
 [ CONTEXT [ RELS.LIST < [ ], [ ], [ ], [ ], [ ], [ ],
@@ -641,23 +716,6 @@ bicond_s_pro_coord_subj_gpr := subord_s_pro_coord_subj_gpr &
 
 ;; B is in front of or smaller than C
 ;;
-#|
-shared_dobj_op_gpr := monotonic_omtr &
-[ CONTEXT.RELS <! [ LBL #h1, ARG0 event, ARG2 #x1 ],
-		  [ PRED named_rel, ARG0 #x1 & ref-ind, CARG #carg ],
-		  [ PRED conj_rel, L-HNDL #h1, R-HNDL #h2 ] !>,
-  INPUT [ HOOK.INDEX #index,
-	  RELS <! [ PRED named_rel, ARG0 #x2 & ref-ind, CARG #carg ],
-		  [ PRED proper_q_rel, ARG0 #x2, RSTR #h20 ],
-		  [ PRED #pred, LBL #h2, ARG0 event & #e2, ARG1 #i3,
-		    ARG2 #x2 ] !>,
-	  HCONS <! qeq & [ HARG #h20 ] !> ],
-  OUTPUT [ HOOK.INDEX #index,
-	   RELS <! [ PRED #pred, LBL #h2, ARG0 #e2, ARG1 #i3, ARG2 #x1 ] !>,
-	   HCONS <! !> ],
-  FLAGS.EQUAL < #e2, #x1, #x2 > ].
-|#
-
 basic_shared_dobj_op_gpr := monotonic_omtr &
 [ CONTEXT.RELS.LIST < [ LBL #h1, ARG0 event, ARG2 #x1 ],
 		  [ PRED named_rel, ARG0 #x1 & ref-ind, CARG #carg ],
@@ -763,31 +821,30 @@ shared_vp_same_n_op_gpr := monotonic_omtr &
 ;; "B is to the right of C and D"
 ;;
 shared_vp_dir_op_gpr := monotonic_omtr &
-[ CONTEXT.RELS <! [ PRED named_rel, ARG0 #x1 & ref-ind, CARG #carg ],
-		  [ PRED "~._n_" & #npred, LBL #h1, ARG0 #x10 & ref-ind ] !>,
+[ CONTEXT.RELS <! [ PRED named_rel, ARG0 #x1 & ref-ind, CARG #carg ] !>,
   INPUT [ HOOK.INDEX #index,
 	  RELS <! [ PRED conj_rel & #cpred, LBL #h10, ARG0 #e11, 
 		    L-HNDL #h12, R-HNDL #h13 ],
 		[ PRED prep_rel & #ppred, LBL #h5, ARG1 #x1, ARG2 #x10 ],
-		[ PRED #ppred2, LBL #h1, ARG0 #e4, ARG1 #x10, ARG2 #x11 ],
 		[ PRED prep_rel & #ppred, LBL #h3, ARG1 #x2, ARG2 #x21 ],
+		[ PRED "~._n_" & #npred, LBL #h1, ARG0 #x10, ARG1 #x11 ],
 	        [ PRED proper_q_rel, ARG0 #x2, RSTR #h20 ],
 	        [ PRED named_rel, ARG0 #x2 & ref-ind, CARG #carg ],
 		[ PRED quant_rel, ARG0 #x21, RSTR #h26 ],
-		[ PRED #npred, LBL #h25, ARG0 #x21 ],
-	        [ PRED #ppred2, LBL #h25, ARG1 #x21, ARG2 #x12 ] !>,
+		[ PRED #npred, ARG0 #x21, ARG1 #x12 ] !>,
 	  HCONS <! qeq & [ HARG #h20 ], qeq & [ HARG #h26 ], 
 		   qeq & [ HARG #h12, LARG #h5 ], 
 		   qeq & [ HARG #h13, LARG #h3 ] !> ],
   OUTPUT [ HOOK.INDEX #index,
-	   RELS <! [ PRED #ppred, LBL #h10, ARG1 #x1, ARG2 #x10,
+	   RELS <! [ PRED #ppred, LBL #h10, ARG1 #x1, ARG2 #x10 & ref-ind,
 		     ARG0 #e11 & [ E [ TENSE present, ASPECT.PRF - ] ] ],
-		   [ PRED #ppred2, LBL #h1, ARG0 #e4, ARG1 #x10, ARG2 #x16 ],
+		   [ PRED #npred, LBL #h1, ARG0 #x10, ARG1 #x16 ],
 		   [ PRED #cpred, LBL #h15 & handle, ARG0 #x16 & ref-ind, 
-		     L-INDEX #x11 & ref-ind, R-INDEX #x12 ],
+		     L-INDEX #x11 & ref-ind, R-INDEX #x12 & ref-ind ],
 	           [ PRED udef_q_rel, LBL handle, ARG0 #x16,
 		      RSTR #h21, BODY handle ] !>,
 	   HCONS <! qeq & [ HARG #h21, LARG #h15 ] !> ] ].
+
 
 ;; A is between B and C or D and F
 ;;
@@ -959,45 +1016,52 @@ not_the_case_op_gpr := monotonic_omtr &
 ;;
 shared_ppof_op_gpr := monotonic_omtr &
 [ CONTEXT.RELS <! [ PRED _to_p_rel, ARG1 #x1, ARG2 #x2 ],
-		  [ LBL #h1, ARG0 #x2 ],
-		  [ LBL #h1, PRED _of_p_rel, ARG1 #x2, ARG2 #x3 ],
+		  [ ARG0 #x2, ARG1 #x3 ],
 		  [ PRED named_rel, ARG0 #x3, CARG #carg ],
 		  [ PRED _to_p_rel, ARG1 #x1, ARG2 #x5 ],
-		  [ PRED "~._n_", LBL #h6, ARG0 #x5 ] !>,
+		  [ PRED conj_rel ] !>,
   INPUT [ HOOK.INDEX #index,
-	  RELS <! [ LBL #h6, PRED _of_p_rel, ARG1 #x5, ARG2 #x7 ],
+	  RELS <! [ PRED "~._n_" & #pred, LBL #h6, ARG0 #x5, ARG1 #x7 ],
 		  [ PRED named_rel, ARG0 #x7, CARG #carg ],
 	          [ PRED quant_rel, ARG0 #x7, RSTR #h8 ] !>,
 	  HCONS <! qeq & [ HARG #h8 ] !> ],
   OUTPUT [ HOOK.INDEX #index,
-	   RELS <! !>,
+	   RELS <! [ PRED "~._n_" & #pred, LBL #h6, ARG0 #x5, ARG1 semarg ] !>,
 	   HCONS <! !> ] ].
+
+shared_ppof_left_op_gpr := shared_ppof_op_gpr &
+[ CONTEXT.RELS <! [ ARG0 #e2 ], [ ], [ ], [ ARG0 #e1 ], 
+		  [ L-INDEX #e2, R-INDEX #e1 ] !> ].
+
+shared_ppof_right_op_gpr := shared_ppof_op_gpr &
+[ CONTEXT.RELS <! [ ARG0 #e2 ], [ ], [ ], [ ARG0 #e1 ], 
+		  [ L-INDEX #e1, R-INDEX #e2 ] !> ].
 
 ;; "to the right or left of"
 ;;
 shared_to_the_op_gpr := monotonic_omtr &
-[ CONTEXT.RELS <! [ PRED "~._n_", LBL handle, ARG0 #x2 ],
-		  [ PRED "~._n_", LBL #h6, ARG0 #x5 ] !>,
+[ CONTEXT.RELS <! [ PRED "~._n_", ARG0 #x5, ARG1 ref-ind ] !>,
   INPUT [ HOOK.INDEX #index,
 	  RELS <! [ PRED conj_rel & #cpred2, LBL #h10, ARG0 #e11, 
 		    L-INDEX #e12 & event, R-INDEX #e13 & event,
 		    L-HNDL #h20, R-HNDL #h21 ],
-		  [ PRED _to_p_rel, ARG0 #e12, ARG1 #x1, ARG2 #x2 ],
-		  [ PRED _to_p_rel, ARG0 #e13, ARG1 #x1, ARG2 #x5 ],
+		  [ PRED _to_p_rel, LBL #h20, ARG0 #e12, ARG1 #x1, ARG2 #x2 ],
+		  [ PRED _to_p_rel, LBL #h21, ARG0 #e13, ARG1 #x1, ARG2 #x5 ],
 		  [ PRED _the_q_rel, LBL #h7, ARG0 #x2, RSTR #h8, BODY #h9 ],
-		  [ PRED _of_p_rel, LBL #h6, ARG0 #e8, ARG1 #x5, ARG2 #x3 ],
-		  [ PRED quant_rel, LBL #h17, ARG0 #x5, RSTR #h18, BODY #h19]!>,
-	  HCONS <! qeq & [ HARG #h20 ], qeq & [ HARG #h21 ] !> ],
+		  [ PRED _the_q_rel, LBL #h17, ARG0 #x5, RSTR #h18, 
+		    BODY #h19 ],
+		  [ PRED "~._n_" & #npred, LBL #h12, ARG0 #x2 ] !>,
+	  HCONS <! !> ],
   OUTPUT [ HOOK.INDEX #index,
 	   RELS <! [ PRED conj_rel & #cpred2, LBL #h14, ARG0 #x15 & ref-ind, 
 		    L-INDEX #x2, R-INDEX #x5 ],
 		   [ PRED _to_p_rel, LBL #h10, ARG1 #x1, ARG2 #x15, ARG0 #e11 & 
 		     [ E [ ASPECT [ PRF - ], TENSE present ], SF prop ] ],
-		   [ PRED _of_p_rel, LBL #h14, ARG0 #e8, ARG1 #x15, ARG2 #x3 ],
 		   [ PRED _the_q_rel, LBL #h7, ARG0 #x15, RSTR #h16, BODY #h9],
 		   [ PRED udef_q_rel, LBL #h17, ARG0 #x5, RSTR #h18, BODY #h19],
 		   [ PRED udef_q_rel, LBL handle, ARG0 #x2, RSTR #h8, 
-		     BODY handle ] !>,
+		     BODY handle ],
+		  [ PRED "~._n_" & #npred, LBL #h12, ARG0 #x2 ] !>,
 	   HCONS <! qeq & [ HARG #h16, LARG #h14 ] !> ] ].
 
 ;; Coord and-S with semicolon + moreover
@@ -1294,14 +1358,15 @@ rebracket_coord_gpr := monotonic_omtr &
 
 ;; Drop `then' for non-coord consequent
 drop_cond_then_mtr := monotonic_omtr &
-[ CONTEXT.RELS <! [ PRED "_if_x_then_rel", ARG1 #h1 ],
-	          [ LBL #h2, ARG0.E.TENSE present, ARG1 #x6 ] !>,
+[ CONTEXT.RELS <! [ LBL #h2, ARG0.E.TENSE present, ARG1 #x6 ] !>,
   INPUT [ HOOK.INDEX #index,
-	  RELS <! [ PRED "_then_a_1_rel", LBL #h3, ARG1 #h4 ] !>,
+	  RELS <! [ PRED "_if_x_then_rel", LBL #h10, ARG0 #e11,
+		    ARG1 #h1, ARG2 #h12 ],
+	          [ PRED "_then_a_1_rel", LBL #h3, ARG1 #h4 ] !>,
 	  HCONS <! qeq & [ HARG #h1, LARG #h3 ],
 		   qeq & [ HARG #h4, LARG #h2 ] !> ],
   OUTPUT [ HOOK.INDEX #index,
-	   RELS <! !>,
+	   RELS <! [ LBL #h10, ARG0 #e11, ARG1 #h1, ARG2 #h12 ] !>,
   	   HCONS <! qeq & [ HARG #h1, LARG #h2 ] !> ],
   FLAGS.SUBSUME < #x6 > ].
 
