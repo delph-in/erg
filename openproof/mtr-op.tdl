@@ -164,6 +164,19 @@ negation_op_mtr := openproof_mtr &
  	   HCONS <! qeq & [ HARG #h4, LARG #h1 ] !> ],
   FLAGS.EQUAL < #e1, #e2 > ].
 
+;; Replace "not" with "not the case that" since cannot generate negation of 
+;; conjoined clauses using "not"
+;;
+negated_clause_op_mtr := openproof_mtr &
+[ CONTEXT.RELS <! [ PRED neg_rel, ARG1 #h2 ],
+                  [ PRED conj_rel, LBL #h3  ] !>,
+  INPUT.HCONS <! qeq & [ HARG #h2, LARG #h3 ] !>,
+  OUTPUT [ RELS <! [ PRED "_the+case_a_1_rel", LBL #h4 & handle, 
+		     ARG0 event & [ E.TENSE untensed ],
+		     ARG1 #h5 & handle ] !>,
+ 	   HCONS <! qeq & [ HARG #h2, LARG #h4 ],
+	            qeq & [ HARG #h5, LARG #h3 ] !> ] ].
+
 ;; if-then
 ;;
 if_then_cond_mtr := openproof_mtr &
@@ -476,13 +489,12 @@ basic_coord_vp_op_gpr := monotonic_omtr &
 
 coord_vp_onearg_op_gpr := basic_coord_vp_op_gpr &
 [ CONTEXT.RELS <! [ ], [ PRED named_rel, CARG #carg ] !>,
-  FILTER.RELS <! [ PRED "_the+case_a_1_rel" ] !>,
+  FILTER.RELS <! [ PRED "~.the+case_a" ] !>,
   INPUT.RELS <! [], [ PRED named_rel, CARG #carg ], [], [ ARG2 handle ] !>,
   FLAGS.SUBSUME < semarg, semarg, semarg > ].
 
 coord_vp_twoarg_op_gpr := basic_coord_vp_op_gpr &
 [ CONTEXT.RELS <! [ ], [ PRED named_rel, CARG #carg ] !>,
-  FILTER.RELS <! [ PRED "_the+case_a_1_rel" ] !>,
   INPUT.RELS <! [], [ PRED named_rel, CARG #carg ], [], 
 	        [ ARG2 #x3 & ref-ind ] !>,
   OUTPUT.RELS <! [], [ ARG2 #x3 ] !>,
@@ -504,45 +516,6 @@ coord_vp_prosubj_twoarg_op_gpr := basic_coord_vp_op_gpr &
   OUTPUT.RELS <! [], [ ARG2 #x3 ] !>,
   FLAGS.SUBSUME < semarg, semarg, semarg, #x3 > ].
 
-
-;; A is larger than B and C
-;; ? A is in front of B and C
-;;
-basic_coord_pred_op_gpr := monotonic_omtr &
-[ CONTEXT.RELS <! [ PRED named_rel, ARG0 ref-ind, CARG #carg ] !>,
-  INPUT [ HOOK.INDEX #index,
-	  RELS.LIST <
-                  [ PRED #vpred, LBL #h1 & handle, ARG2 #x2 & ref-ind ],
-		  [ PRED #vpred, LBL #h4 & handle, ARG2 #x3 & ref-ind ],
-		  [ PRED conj_rel & #cpred, L-HNDL #h10, R-HNDL #h11 ],
-		  [ PRED named_rel, ARG0 #x4 & ref-ind, CARG #carg ],
-		  [ PRED proper_q_rel, ARG0 #x4, RSTR #h20 ], ... >,
-	  HCONS <! qeq & [ HARG #h10, LARG #h1 ], 
-		   qeq & [ HARG #h11, LARG #h4 ],
-		   qeq & [ HARG #h20 ] !> ],
-  OUTPUT [ HOOK.INDEX #index,
-	   RELS.LIST <
-		   [ PRED #vpred, ARG2 #x6 ],
-		   [ PRED conj_rel & #cpred, LBL handle & #h5, ARG0 #x6, 
-		     L-INDEX #x2, R-INDEX #x3 ],
-		   [ PRED udef_q_rel, LBL handle, ARG0 #x6 & ref-ind,
-		      RSTR #h21, BODY handle ], ... >,
- 	   HCONS <! qeq & [ HARG #h21, LARG #h5 ] !> ],
-  FLAGS.EQUAL < #x6, #x2, #x3 > ].
-
-;; A is larger than B and C
-;;
-coord_pred_comp_op_gpr := basic_coord_pred_op_gpr &
-[ CONTEXT.RELS <! [ ARG0 #x1 & ref-ind ] !>,
-  INPUT.RELS <! [ PRED comp_rel, LBL #h1 & handle, ARG0 #e2 & event ], 
-	        [ PRED comp_rel, LBL #h2 & handle ], 
-	        [ LBL #h3 & handle, ARG0 #e1 & event ], 
-	        [ ARG0 #x2 & ref-ind ], [ ],
-	        [ PRED "~._a_" & #pred, LBL #h1, ARG1 #x1 ],
-	        [ PRED "~._a_", LBL #h2, ARG1 #x2 ] !>,
-  OUTPUT.RELS <! [ LBL #h3, ARG0 #e2, ARG1 #e1 ], [ ], [ ],
-	         [ PRED #pred, LBL #h3, ARG1 #x1,
-		   ARG0 #e1 & [ E [ TENSE present, ASPECT.PRF - ] ] ] !> ].
 
 ;; Pronominal subjects
 ;;
@@ -839,52 +812,43 @@ shared_dobj_twoonepred_op_gpr := basic_shared_dobj_op_gpr &
 ;; B is smaller than D or C
 ;;
 shared_vp_comp_op_gpr := monotonic_omtr &
-[ CONTEXT.RELS <! [ PRED named_rel, ARG0 #x1 & ref-ind, CARG #carg ] !>,
+[ CONTEXT.RELS <! [ PRED named_rel, ARG0 #x1 & ref-ind ] !>,
   INPUT [ HOOK.INDEX #index,
 	  RELS <! [ PRED conj_rel & #cpred, LBL #h10, ARG0 #e11, 
-		    L-HNDL #h12, R-HNDL #h13 ],
-	        [ PRED named_rel, ARG0 #x2 & ref-ind, CARG #carg ],
-	        [ PRED proper_q_rel, ARG0 #x2, RSTR #h20 ],
+		    L-HNDL #h1, R-HNDL #h2 ],
 	        [ PRED "~._a_" & #apred, LBL #h1, ARG0 #e1, ARG1 #x1 ],
 	        [ PRED #pred, LBL #h1, ARG0 #e8, ARG1 #e1, ARG2 #x3 & ref-ind ],
-		[ PRED #apred, LBL #h2, ARG0 #e3, ARG1 #x2 ],
-	        [ PRED #pred, LBL #h2, ARG0 event, ARG1 #e3,
-		  ARG2 #x4 & ref-ind ] !>,
-	  HCONS <! qeq & [ HARG #h20 ], qeq & [ HARG #h12, LARG #h1 ], 
-		   qeq & [ HARG #h13, LARG #h2 ] !> ],
+		[ PRED #apred, LBL #h2, ARG0 #e3, ARG1 #x1 ],
+	        [ PRED #pred, LBL #h2, ARG0 event, ARG1 #e3, ARG2 #x4 ] !>,
+	  HCONS <! !> ],
   OUTPUT [ HOOK.INDEX #index,
 	   RELS <! [ PRED #apred, LBL #h10, ARG1 #x1,
 		     ARG0 #e11 & [ E [ TENSE present, ASPECT.PRF - ] ] ],
 		   [ PRED #pred, LBL #h10, ARG0 #e8, ARG1 #e11, ARG2 #x16 ],
 		   [ PRED #cpred, LBL #h15 & handle, ARG0 #x16 & ref-ind, 
-		     L-INDEX #x3, R-INDEX #x4 ],
+		     L-INDEX #x3, R-INDEX #x4 & ref-ind ],
 	           [ PRED udef_q_rel, LBL handle, ARG0 #x16 & ref-ind,
 		      RSTR #h21, BODY handle ] !>,
 	   HCONS <! qeq & [ HARG #h21, LARG #h15 ] !> ] ].
 
 ;; "B is in the same column as D or C"
-;; (no, this is not scalable, but an experiment to see what changes are needed)
 ;;
 shared_vp_same_n_op_gpr := monotonic_omtr &
-[ CONTEXT.RELS <! [ PRED named_rel, ARG0 #x1 & ref-ind, CARG #carg ],
+[ CONTEXT.RELS <! [ PRED named_rel, ARG0 #x1 & ref-ind ],
 		  [ PRED "~._n_" & #npred, LBL #h1, ARG0 #x10 ],
 		  [ PRED "~._a_" & #apred, LBL #h1, ARG0 #e2, ARG1 #x10 ] !>,
   INPUT [ HOOK.INDEX #index,
 	  RELS <! [ PRED conj_rel & #cpred, LBL #h10, ARG0 #e11, 
-		    L-HNDL #h12, R-HNDL #h13 ],
+		    L-HNDL #h5, R-HNDL #h3 ],
 		[ PRED prep_rel & #ppred, LBL #h5, ARG1 #x1, ARG2 #x10 ],
 		[ PRED #pred, LBL #h1, ARG0 #e4, ARG1 #e2, ARG2 #x11 ],
-		[ PRED prep_rel & #ppred, LBL #h3, ARG1 #x2, ARG2 #x21 ],
-	        [ PRED proper_q_rel, ARG0 #x2, RSTR #h20 ],
-	        [ PRED named_rel, ARG0 #x2 & ref-ind, CARG #carg ],
+		[ PRED prep_rel & #ppred, LBL #h3, ARG1 #x1, ARG2 #x21 ],
 		[ PRED quant_rel, ARG0 #x21, RSTR #h26 ],
 		[ PRED #npred, LBL #h25, ARG0 #x21 ],
 		[ PRED #apred, LBL #h25, ARG0 #e22 & [ E.TENSE untensed ], 
 		  ARG1 #x21 ],
 	        [ PRED #pred, LBL #h25, ARG1 #e22, ARG2 #x12 ] !>,
-	  HCONS <! qeq & [ HARG #h20 ], qeq & [ HARG #h26 ], 
-		   qeq & [ HARG #h12, LARG #h5 ], 
-		   qeq & [ HARG #h13, LARG #h3 ] !> ],
+	  HCONS <! qeq & [ HARG #h26 ] !> ],
   OUTPUT [ HOOK.INDEX #index,
 	   RELS <! [ PRED #ppred, LBL #h10, ARG1 #x1, ARG2 #x10,
 		     ARG0 #e11 & [ E [ TENSE present, ASPECT.PRF - ] ] ],
@@ -895,23 +859,20 @@ shared_vp_same_n_op_gpr := monotonic_omtr &
 		      RSTR #h21, BODY handle ] !>,
 	   HCONS <! qeq & [ HARG #h21, LARG #h15 ] !> ] ].
 
+
 ;; "B is to the right of C and D"
 ;;
 shared_vp_dir_op_gpr := monotonic_omtr &
-[ CONTEXT.RELS <! [ PRED named_rel, ARG0 #x1 & ref-ind, CARG #carg ] !>,
+[ CONTEXT.RELS <! [ PRED named_rel, ARG0 #x1 & ref-ind ] !>,
   INPUT [ HOOK.INDEX #index,
 	  RELS <! [ PRED conj_rel & #cpred, LBL #h10, ARG0 #e11, 
 		    L-HNDL #h12, R-HNDL #h13 ],
-		[ PRED prep_rel & #ppred, LBL #h5, ARG1 #x1, ARG2 #x10 ],
-		[ PRED prep_rel & #ppred, LBL #h3, ARG1 #x2, ARG2 #x21 ],
+		[ PRED prep_rel & #ppred, LBL #h12, ARG1 #x1, ARG2 #x10 ],
+		[ PRED prep_rel & #ppred, LBL #h13, ARG1 #x1, ARG2 #x21 ],
 		[ PRED "~._n_" & #npred, LBL #h1, ARG0 #x10, ARG1 #x11 ],
-	        [ PRED proper_q_rel, ARG0 #x2, RSTR #h20 ],
-	        [ PRED named_rel, ARG0 #x2 & ref-ind, CARG #carg ],
 		[ PRED quant_rel, ARG0 #x21, RSTR #h26 ],
 		[ PRED #npred, ARG0 #x21, ARG1 #x12 ] !>,
-	  HCONS <! qeq & [ HARG #h20 ], qeq & [ HARG #h26 ], 
-		   qeq & [ HARG #h12, LARG #h5 ], 
-		   qeq & [ HARG #h13, LARG #h3 ] !> ],
+	  HCONS <! qeq & [ HARG #h26 ] !> ],
   OUTPUT [ HOOK.INDEX #index,
 	   RELS <! [ PRED #ppred, LBL #h10, ARG1 #x1, ARG2 #x10 & ref-ind,
 		     ARG0 #e11 & [ E [ TENSE present, ASPECT.PRF - ] ] ],
@@ -922,21 +883,61 @@ shared_vp_dir_op_gpr := monotonic_omtr &
 		      RSTR #h21, BODY handle ] !>,
 	   HCONS <! qeq & [ HARG #h21, LARG #h15 ] !> ] ].
 
+;; B is in front of C or D
+;;
+shared_vp_loc_op_gpr := monotonic_omtr &
+[ CONTEXT.RELS <! [ PRED named_rel, ARG0 #x1 & ref-ind ],
+                  [ PRED named_rel, ARG0 #x10 ] !>,
+  INPUT [ HOOK.INDEX #index,
+	  RELS <! [ PRED conj_rel & #cpred, LBL #h10, ARG0 #e11, 
+		    L-HNDL #h5, R-HNDL #h3 ],
+		[ PRED prep_rel & #ppred, LBL #h5, ARG1 #x1, ARG2 #x10 ],
+		[ PRED #ppred, LBL #h3, ARG1 #x1, ARG2 #x21 ] !>,
+	  HCONS <! !> ],
+  OUTPUT [ HOOK.INDEX #index,
+	   RELS <! [ PRED #ppred, LBL #h10, ARG1 #x1, ARG2 #x16 & ref-ind,
+		     ARG0 #e11 & [ E [ TENSE present, ASPECT.PRF - ] ] ],
+		   [ PRED #cpred, LBL #h15 & handle, ARG0 #x16 & ref-ind, 
+		     L-INDEX #x10 & ref-ind, R-INDEX #x21 & ref-ind ],
+	           [ PRED udef_q_rel, LBL handle, ARG0 #x16,
+		      RSTR #h21, BODY handle ] !>,
+	   HCONS <! qeq & [ HARG #h21, LARG #h15 ] !> ] ].
+
+;; B is not in front of C or D
+;; FIX: need to do this neg variant for the other pred types too
+;;
+shared_vp_loc_neg_op_gpr := monotonic_omtr &
+[ CONTEXT [ RELS <! [ PRED named_rel, ARG0 #x1 & ref-ind ],
+                    [ PRED named_rel, ARG0 #x10 ] !>,
+            HCONS <! qeq & [ HARG #h23, LARG #h3 ] !> ],
+  INPUT [ HOOK.INDEX #index,
+	  RELS <! [ PRED _and_c_rel, LBL #h10, ARG0 #e11, 
+		    L-HNDL #h20, R-HNDL #h22 ],
+		  [ PRED neg_rel, LBL #h20, ARG0 #e20, ARG1 #h23 ],
+	  	  [ PRED neg_rel, LBL #h22, ARG1 #h25 ],
+		[ PRED prep_rel & #ppred, LBL #h5, ARG1 #x1, ARG2 #x10 ],
+		[ PRED #ppred, LBL #h3, ARG1 #x1, ARG2 #x21 ] !>,
+	  HCONS <! qeq & [ HARG #h25, LARG #h5 ] !> ],
+  OUTPUT [ HOOK.INDEX #index,
+	   RELS <! [ PRED #ppred, LBL #h3, ARG1 #x1, ARG2 #x16 & ref-ind,
+		     ARG0 #e11 & [ E [ TENSE present, ASPECT.PRF - ] ] ],
+		   [ PRED _or_c_rel, LBL #h15 & handle, ARG0 #x16 & ref-ind, 
+		     L-INDEX #x10 & ref-ind, R-INDEX #x21 & ref-ind ],
+	           [ PRED udef_q_rel, LBL handle, ARG0 #x16,
+		      RSTR #h21, BODY handle ],
+	  	  [ PRED neg_rel, LBL #h10, ARG0 #e20, ARG1 #h23 ] !>,
+	   HCONS <! qeq & [ HARG #h21, LARG #h15 ] !> ] ].
 
 ;; A is between B and C or D and F
 ;;
 shared_vp_threearg_op_gpr := monotonic_omtr &
-[ CONTEXT.RELS <! [ PRED named_rel, ARG0 #x1 & ref-ind, CARG #carg ] !>,
+[ CONTEXT.RELS <! [ PRED named_rel, ARG0 #x1 & ref-ind ] !>,
   INPUT [ HOOK.INDEX #index,
 	  RELS <! [ PRED conj_rel & #cpred, LBL #h10, ARG0 #e11, 
-		    L-HNDL #h12, R-HNDL #h13 ],
-	      [ PRED _between_p_rel, LBL #h5, ARG1 #x1, ARG2 #x10 ],
-	      [ PRED _between_p_rel, LBL #h3, ARG1 #x2, ARG2 #x21 ],
-	      [ PRED named_rel, ARG0 #x2 & ref-ind, CARG #carg ],
-	      [ PRED quant_rel, ARG0 #x2, RSTR #h30 ] !>,
-	  HCONS <! qeq & [ HARG #h12, LARG #h5 ], 
-		   qeq & [ HARG #h13, LARG #h3 ],
-		   qeq & [ HARG #h30 ] !> ],
+		    L-HNDL #h5, R-HNDL #h3 ],
+		  [ PRED _between_p_rel, LBL #h5, ARG1 #x1, ARG2 #x10 ],
+	          [ PRED _between_p_rel, LBL #h3, ARG1 #x1, ARG2 #x21 ] !>,
+	  HCONS <! !> ],
   OUTPUT [ HOOK.INDEX #index,
 	   RELS <! [ PRED _between_p_rel, LBL #h10, ARG0 #e11, 
 		     ARG1 #x1, ARG2 #x16 ],
@@ -946,6 +947,7 @@ shared_vp_threearg_op_gpr := monotonic_omtr &
 		      RSTR #h21, BODY handle ] !>,
 	   HCONS <! qeq & [ HARG #h21, LARG #h15 ] !> ],
   FLAGS.EQUAL < #x1 > ].
+
 
 ;; B is a cube or a tetrahedron
 ;;
@@ -1073,6 +1075,23 @@ neg_or_to_nor_op_mtr := monotonic_omtr &
 		     R-INDEX #e4, L-HNDL #h3, R-HNDL #h4 ]!>,
 	   HCONS <! !> ] ].
 
+;; "not the case" + "or" => "nor"
+;; (necessary because we introduce not_the_case during inflation for conj-S neg
+;;
+neg_the_case_or_to_nor_op_mtr := monotonic_omtr &
+[ INPUT [ HOOK.INDEX #index,
+	  RELS <! [ PRED neg_rel, LBL #h1, ARG1 #h2 ],
+	          [ PRED "_the+case_a_1_rel", LBL #h10, ARG1 #h11 ],
+		  [ PRED _or_c_rel, LBL #h7, ARG0 #e8, L-INDEX #e6 & event, 
+		    R-INDEX #e4 & event, L-HNDL #h3 & handle, 
+		    R-HNDL #h4 & handle ] !>,
+  	  HCONS <! qeq & [ HARG #h2, LARG #h10 ],
+	           qeq & [ HARG #h11, LARG #h7 ] !> ],
+  OUTPUT [ HOOK.INDEX #index,
+	   RELS <! [ PRED _nor_c_rel, LBL #h1, ARG0 #e8, L-INDEX #e6, 
+		     R-INDEX #e4, L-HNDL #h3, R-HNDL #h4 ]!>,
+	   HCONS <! !> ] ].
+
 ;; "it is not the case that ..."
 ;; 
 not_the_case_op_gpr := monotonic_omtr &
@@ -1084,7 +1103,7 @@ not_the_case_op_gpr := monotonic_omtr &
   INPUT [ HOOK.INDEX #index,
 	  HCONS <! qeq & [ HARG #h2, LARG #h3 ] !> ],
   OUTPUT [ HOOK.INDEX #index,
-	   RELS <! [ PRED "_the+case_a_1_rel", LBL #h4 & handle, 
+	   RELS <! [ PRED "_the+case_a_2_rel", LBL #h4 & handle, 
 		     ARG0 event & [ E.TENSE untensed ],
 		     ARG1 #h5 & handle ] !>,
 	   HCONS <! qeq & [ HARG #h2, LARG #h4 ],
@@ -1239,10 +1258,38 @@ predn_and_adj_gpr := basic_adj_and_predn_gpr &
 [ INPUT.RELS <! [ ARG0 #e2 & event ], [ ARG0 #e1 & event ], 
 	        [ L-INDEX #e1, R-INDEX #e2 ], [ ], [ ] !> ].
 
+;; Drop "the case" in "not the case that" if the argument is no longer a
+;; conjunction of clauses, either because it's a non-conj, or because it
+;; is VP conjunction
+;;
+not_the_case_to_neg_noconj_gpr := monotonic_omtr &
+[ CONTEXT.RELS <! [ PRED neg_rel, ARG1 #h1 ]  !>,
+  FILTER.RELS <! [ PRED conj_rel, LBL #h4 ] !>,
+  INPUT [ HOOK.INDEX #index,
+	  RELS <! [ PRED "_the+case_a_1_rel" , LBL #h2, ARG1 #h3 ] !>,
+	  HCONS <! qeq & [ HARG #h1, LARG #h2 ],
+	           qeq & [ HARG #h3, LARG #h4 ] !> ],
+  OUTPUT [ HOOK.INDEX #index,
+	   RELS <! !>,
+	   HCONS <! qeq & [ HARG #h1, LARG #h4 ] !> ] ].
 
+not_the_case_to_neg_vpconj_gpr := monotonic_omtr &
+[ CONTEXT.RELS <! [ PRED neg_rel, ARG1 #h1 ],
+                  [ PRED conj_rel, LBL #h4, L-INDEX event, L-HNDL #h10 ]  !>,
+  FILTER.RELS <! qeq & [ HARG #h10 ] !>,
+  INPUT [ HOOK.INDEX #index,
+	  RELS <! [ PRED "_the+case_a_1_rel" , LBL #h2, ARG1 #h3 ] !>,
+	  HCONS <! qeq & [ HARG #h1, LARG #h2 ],
+	           qeq & [ HARG #h3, LARG #h4 ] !> ],
+  OUTPUT [ HOOK.INDEX #index,
+	   RELS <! !>,
+	   HCONS <! qeq & [ HARG #h1, LARG #h4 ] !> ] ].
+
+;; VP ellipsis
+;; 
 basic_vp_ellipsis_gpr := monotonic_omtr &
 [ CONTEXT.RELS.LIST < [ PRED #pred, ARG0 event ], ...>,
-  FILTER.RELS <! [ PRED comp_rel, LBL #h1 ] !>,
+  FILTER.RELS <! [ PRED comp_rel ] !>,
   INPUT [ HOOK.INDEX #index,
 	  RELS.LIST < [ PRED #pred, LBL #h1 & handle, ARG0 #e2 & event, 
 			ARG1 #x3 & ref-ind ], ... > ],
@@ -1524,7 +1571,7 @@ either_neither_mtr := monotonic_omtr &
 	          [ LBL #h2, ARG0 event & #e1, ARG1 #x2 & ref-ind ],
 		  [ PRED named_rel, CARG #carg1 ],
 		  [ PRED named_rel, CARG #carg2 ] !>,
-  FILTER.RELS <! [ PRED "_the+case_a_1_rel" ] !>,
+  FILTER.RELS <! [ PRED "~.the+case_a" ] !>,
   INPUT [ HOOK.INDEX #index,
 	  RELS <! [ PRED conj_rel, ARG0 #x2, L-INDEX #x3, R-INDEX #x4 ],
 		  [ PRED udef_q_rel, ARG0 #x2, RSTR #h13 ],
