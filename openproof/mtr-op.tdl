@@ -209,6 +209,17 @@ if_and_only_if_mtr := openproof_mtr &
 
 ;;;; OpenProof paraphrase rule types
 
+;; To enable blocking of rules that add a modifier such as "also", we add
+;; a MARKS attribute on individuals, to be used internally in the paraphraser
+
+individual :+
+  [ MARKS marks ].
+
+marks := *avm* &
+  [ ALSO-MARK bool,
+    BOTH-MARK bool,
+    EITHER-MARK bool ].
+
 ;; Coord subj: When given two clauses where the subjects differ but the
 ;; VPs are identical, discard the second identical verbal conjunct and create a 
 ;; conjoined subject NP whose conj's PRED is the same as the sentence conj PRED.
@@ -529,8 +540,8 @@ basic_pro_subj_gpr := monotonic_omtr &
 	  RELS.LIST < [ LBL #h10, ARG0 #x2 & ref-ind ],
 		    [ PRED #qpred, ARG0 #x2, RSTR #h20 ], ... > ],
   OUTPUT [ HOOK.INDEX #index,
-	   RELS.LIST < [ PRED pron_rel, LBL #h10, ARG0 #x2 ],
-	      [ PRED pronoun_q_rel, LBL handle, ARG0 #x2, RSTR #h20 ], ... > ],
+	   RELS.LIST < [ LBL #h10, ARG0 #x2 ],
+		       [ LBL handle, ARG0 #x2, RSTR #h20 ], ... > ],
   FLAGS.SUBSUME < #x2, ... > ].
 
 ;; B is a cube, and it is large
@@ -539,6 +550,7 @@ pro_subj_gpr := basic_pro_subj_gpr &
 [ CONTEXT.RELS.LIST < [ ], [ ],
 		      [ PRED named_rel, CARG #carg ], ... >,
   INPUT.RELS <! [ PRED named_rel, ARG0.PNG.GEN neut, CARG #carg ], [ ] !>,
+  OUTPUT.RELS.LIST < [ PRED pron_rel ], [ PRED pronoun_q_rel ], ... >,
   FLAGS.SUBSUME < semarg > ].
 
 ;; B is larger than C, and it is a cube.
@@ -737,17 +749,34 @@ pro_coord_subj_gpr := basic_pro_subj_gpr &
 		  [ PRED proper_q_rel, ARG0 #x3, RSTR #h20 ],
 		  [ PRED proper_q_rel, ARG0 #x4, RSTR #h21 ] !>,
 	  HCONS <! qeq & [ HARG #h20 ], qeq & [ HARG #h21 ] !> ],
-  OUTPUT [ RELS <! [ ARG0 [ PNG.PN 3p,
-			    SORT #sort ] ], [ ] !>,
-	   HCONS <! !> ] ].
+  OUTPUT [ RELS.LIST < [ ARG0.SORT #sort ], [ ], ... > ] ].
+
+pro_coord_subj_disj_gpr := basic_pro_subj_gpr &
+[ INPUT.RELS.LIST < [ PRED _or_c_rel ], ... >,
+  OUTPUT [ RELS <! [ PRED part_of_rel, LBL #h3, ARG0 #x2, ARG1 #x4 ], 
+		   [ PRED udef_q_rel ],
+		   [ PRED card_rel, LBL #h3, ARG0 event & [ E.TENSE untensed ],
+		     ARG1 #x2, CARG "1" ],
+		   [ PRED pron_rel, LBL #h5, ARG0 #x4 & ref-ind & [PNG.PN 3p ]],
+		   [ PRED pronoun_q_rel, LBL handle, ARG0 #x4, RSTR #h6,
+		     BODY handle ] !>,
+	   HCONS <! qeq & [ HARG #h6, LARG #h5 ] !> ] ].
 
 conjnct_pro_coord_subj_gpr := pro_coord_subj_gpr &
 [ CONTEXT.RELS <! [ ARG0 #e1 ], [ ARG0 #e2, ARG1 #x3 ], [ ],
 		  [ ], [ ], [ ], 
-		  [ PRED conj_rel, ARG0.SORT #sort, 
+		  [ PRED conj_rel, ARG0.SORT #sort,
 		    L-INDEX #e1, R-INDEX #e2 ] !>,
-  OUTPUT.RELS.LIST < [ ARG0 #x3 & [ SORT #sort ] ], ... >,
+  OUTPUT.RELS.LIST < [ ARG0 #x3 & [ PNG.PN 3p, SORT #sort ] ], ... >,
   FLAGS.SUBSUME < semarg > ].
+
+conjnct_pro_coord_subj_and_gpr := conjnct_pro_coord_subj_gpr &
+[ INPUT.RELS.LIST < [ PRED _and_c_rel ], ... >,
+  OUTPUT [ RELS <! [ PRED pron_rel ], [ PRED pronoun_q_rel ] !>,
+	   HCONS <! !> ] ].
+
+conjnct_pro_coord_subj_or_gpr := conjnct_pro_coord_subj_gpr &
+				 pro_coord_subj_disj_gpr.
 
 subord_s_pro_coord_subj_gpr := pro_coord_subj_gpr &
 [ CONTEXT [ RELS.LIST < [ ], [ ], [ ], [ ], [ ], [ ],
@@ -764,6 +793,14 @@ cond_s_pro_coord_subj_gpr := subord_s_pro_coord_subj_gpr &
 	    HCONS <! qeq & [ HARG #h5, LARG #h4 ], [ LARG #h2 ],
 		     qeq & [ HARG #h3, LARG #h1 ] !> ] ].
 
+cond_s_pro_coord_subj_and_gpr := cond_s_pro_coord_subj_gpr &
+[ INPUT.RELS.LIST < [ PRED _and_c_rel ], ... >,
+  OUTPUT [ RELS <! [ PRED pron_rel ], [ PRED pronoun_q_rel ] !>,
+	   HCONS <! !> ] ].
+
+cond_s_pro_coord_subj_or_gpr := cond_s_pro_coord_subj_gpr &
+				pro_coord_subj_disj_gpr.
+
 ;; IF B and C are cubes then they are large or small
 cond_s_pro_coord_subj_coord_conseq_gpr := subord_s_pro_coord_subj_gpr &
 [ CONTEXT [ RELS <! [ LBL #h2 & handle ], [ LBL #h4 & handle ], [ ], [ ],
@@ -773,12 +810,28 @@ cond_s_pro_coord_subj_coord_conseq_gpr := subord_s_pro_coord_subj_gpr &
 	    HCONS <! qeq & [ HARG #h5, LARG #h6 ], [ LARG #h2 ],
 		     qeq & [ HARG #h3, LARG #h1 ] !> ] ].
 
+cond_s_pro_coord_subj_crd_cq_and_gpr := cond_s_pro_coord_subj_coord_conseq_gpr &
+[ INPUT.RELS.LIST < [ PRED _and_c_rel ], ... >,
+  OUTPUT [ RELS <! [ PRED pron_rel ], [ PRED pronoun_q_rel ] !>,
+	   HCONS <! !> ] ].
+
+cond_s_pro_coord_subj_crd_cq_or_gpr := cond_s_pro_coord_subj_coord_conseq_gpr &
+				       pro_coord_subj_disj_gpr.
+
 ;; B and C are cubes only if they are large
 ;;
 onlyif_s_pro_coord_subj_gpr := subord_s_pro_coord_subj_gpr &
 [ CONTEXT [ RELS <! [ LBL #h2 ], [ LBL #h4 ], [ ], [ ], [ ], [ ],
 		    [ PRED "_only+if_x_rel", ARG1 #h3 ] !>,
 	    HCONS <! [ HARG #h3, LARG #h2 ], [ LARG #h4 ] !> ] ].
+
+onlyif_s_pro_coord_subj_and_gpr := onlyif_s_pro_coord_subj_gpr &
+[ INPUT.RELS.LIST < [ PRED _and_c_rel ], ... >,
+  OUTPUT [ RELS <! [ PRED pron_rel ], [ PRED pronoun_q_rel ] !>,
+	   HCONS <! !> ] ].
+
+onlyif_s_pro_coord_subj_or_gpr := onlyif_s_pro_coord_subj_gpr &
+				  pro_coord_subj_disj_gpr.
 
 ;; B and C are cubes if and only if they are large
 ;;
@@ -787,6 +840,13 @@ bicond_s_pro_coord_subj_gpr := subord_s_pro_coord_subj_gpr &
 		  [ PRED "_if+and+only+if_x_1_rel" ] !>,
 	    HCONS <! [ LARG #h2 ], [ LARG #h4 ] !> ] ].
 
+bicond_s_pro_coord_subj_and_gpr := bicond_s_pro_coord_subj_gpr &
+[ INPUT.RELS.LIST < [ PRED _and_c_rel ], ... >,
+  OUTPUT [ RELS <! [ PRED pron_rel ], [ PRED pronoun_q_rel ] !>,
+	   HCONS <! !> ] ].
+
+bicond_s_pro_coord_subj_or_gpr := bicond_s_pro_coord_subj_gpr &
+				  pro_coord_subj_disj_gpr.
 
 ;; B is in front of or smaller than C
 ;;
@@ -1641,9 +1701,9 @@ drop_cond_then_mtr := monotonic_omtr &
   	   HCONS <! qeq & [ HARG #h1, LARG #h2 ] !> ],
   FLAGS.SUBSUME < #x6 > ].
 
-;; "at least one of" for "A or B or C"
+;; "(at least) one of A, B, and C" for "A or B or C"
 ;;
-basic_at_least_one_mtr := monotonic_omtr &
+one_of_set_mtr := monotonic_omtr &
 [ CONTEXT.RELS <! [ PRED implicit_conj_rel, ARG0 #x2 & ref-ind, R-INDEX #x1] !>,
   FILTER.RELS <! [ PRED part_of_rel ] !>,
   INPUT [ HOOK.INDEX #index,
@@ -1653,9 +1713,7 @@ basic_at_least_one_mtr := monotonic_omtr &
   OUTPUT [ HOOK.INDEX #index,
 	   RELS <! [ PRED #pred, LBL #h3, ARG0 #e4, 
 		     ARG1 #x10 & ref-ind, ARG2 #i2 ],
-		   [ PRED "_at+least_x_deg_rel", LBL #h11, 
-		     ARG0.E.TENSE untensed, ARG1 semarg ],
-		   [ PRED udef_q_rel, LBL #h11, ARG0 #x10, 
+		   [ PRED udef_q_rel, LBL handle, ARG0 #x10, 
 		     RSTR handle & #h12, BODY handle ],
 		   [ PRED part_of_rel, LBL #h13, ARG0 #x10 & [ PNG.PN 3p ], 
 		     ARG1 #x2 ],
@@ -1665,17 +1723,16 @@ basic_at_least_one_mtr := monotonic_omtr &
 		     L-INDEX #x15, R-INDEX #x16 ] !>,
 	   HCONS <! qeq & [ HARG #h12, LARG #h13 ] !> ] ].
 
-at_least_one_twoarg_mtr := basic_at_least_one_mtr &
+one_of_set_twoarg_mtr := one_of_set_mtr &
 [ INPUT.RELS <! [ ARG2 #x1 & ref-ind ], [ ] !>,
   OUTPUT.RELS.LIST < [ ARG2 #x1 ], ... >,
   FLAGS.SUBSUME < #x1 > ].
 
-at_least_one_onearg_mtr := basic_at_least_one_mtr &
+one_of_set_onearg_mtr := one_of_set_mtr &
 [ INPUT.RELS <! [ ARG2 handle ], [ ] !>,
   FLAGS.SUBSUME < > ].
 
 ;; "either B or C isn't" => "neither is"
-;  FILTER.RELS <! [ PRED "~.the+case_a" ] !>,
 
 basic_either_neither_mtr := monotonic_omtr &
 [ CONTEXT.RELS <! [ PRED conj_rel, R-INDEX #e1 ],
@@ -1745,42 +1802,40 @@ none_part_of_op_mtr := monotonic_omtr &
 
 
 ;; Add "both" adverb: "B and C are both cubes"
-;; Note that we don't want to add `both' when the predicate is negated:
-;; "!B and C aren't both cubes.
-;; Note: It would be nice to block this by having the FILTER exclude neg_rel,
-;; but the filter is already at work preventing recursion of this rule,
-;; so for now we instead constrain the adverb `both' to not modify negated
-;; VPs.  This is expensive for the generator, since some input MRSs are
-;; doomed.  FIX?
+;; Note: blocking "*B and C aren't both cubes" for -(cube(a)&cube(b))
 ;;
 both_adverb_op_mtr := monotonic_omtr &
 [ CONTEXT.RELS <! [ PRED _and_c_rel, ARG0 #x1, L-INDEX ref-ind ],
-		  [ LBL #h2, ARG0 #e3 & event & [ E.TENSE present ], 
+		  [ LBL #h2, 
+		    ARG0 #e3 & event & [ E.TENSE present, MARKS.BOTH-MARK - ], 
 		    ARG1 #x1 & ref-ind ] !>,
-  FILTER.RELS <! [ PRED "_both_a_1_rel" ] !>,
+  FILTER [ RELS <! [ PRED neg_rel, ARG1 #h10 ] !>,
+	   HCONS <! qeq & [ HARG #h10, LARG #h2 ] !> ],
   INPUT [ HOOK.INDEX #index,
           RELS <! !> ],
   OUTPUT [ HOOK.INDEX #index,
            RELS <! [ PRED "_both_a_1_rel", LBL #h2, 
-   		     ARG0 event & [ E.TENSE untensed ], ARG1 #e3 ] !> ] ].
+   		     ARG0 event & [ E.TENSE untensed ], ARG1 #e3 ] !> ],
+  FLAGS.SUBSUME < #x1, #e3 > ].
 
 ;; "B is a cube iff it is also large
 ;; Note that we need to avoid "also" with disjunctive S-coord:
 ;; "*B is a cube or it's also large"
 ;;
 also_adverb_op_mtr := monotonic_omtr &
-[ CONTEXT [ RELS <! [ PRED pron_rel, ARG0 #x1 & ref-ind ],
-  		    [ LBL #h2, ARG0 #e3 & event & [ E.TENSE present ], 
-		      PRED "~._[pa]_", ARG1 #x1 & ref-ind ],
+[ CONTEXT [ RELS <! [ ARG0 #x1 & ref-ind ],
+  		    [ LBL #h2, ARG0 #e3 & event & 
+		                    [ E.TENSE present, MARKS.ALSO-MARK - ], 
+		      ARG1 #x1 & ref-ind ],
 		    [ PRED "~._x_", ARG2 #h3 ] !>,
 	    HCONS <! qeq & [ HARG #h3, LARG #h2 ] !> ],
-  FILTER.RELS <! [ PRED "_also_a_1_rel" ] !>,
   INPUT [ HOOK.INDEX #index,
           RELS <! !> ],
   OUTPUT [ HOOK.INDEX #index,
            RELS <! [ PRED "_also_a_1_rel", LBL #h2, 
    		     ARG0 event & [ E.TENSE untensed ], ARG1 #e3 ] !> ],
   FLAGS.SUBSUME < #x1 > ].
+
 
 ;; "if P neg, then Q neg either"
 ;;
@@ -1789,12 +1844,12 @@ either_adverb_op_mtr := monotonic_omtr &
 		    [ PRED "_then_a_1_rel", LBL #h3, ARG1 #h4 ],
 		    [ PRED neg_rel, LBL #h5, ARG1 #h6 ],
   		    [ PRED neg_rel, LBL #h7 ],
-		    [ LBL #h9, ARG0 #e10 & event & [ E.TENSE present ] ] !>,
+		    [ LBL #h9, ARG0 #e10 & event & 
+		               [ E.TENSE present, MARKS.EITHER-MARK - ] ] !>,
 	    HCONS <! qeq & [ HARG #h1, LARG #h3 ],
 		     qeq & [ HARG #h4, LARG #h5 ],
 		     qeq & [ HARG #h2, LARG #h7 ],
 		     qeq & [ HARG #h6, LARG #h9 ] !> ],
-  FILTER.RELS <! [ PRED "_either_a_also_rel", LBL #h5 ] !>,
   INPUT [ HOOK.INDEX #index,
           RELS <! !> ],
   OUTPUT [ HOOK.INDEX #index,
@@ -1843,3 +1898,73 @@ partitive_pron_both_op_mtr := partitive_pron_op_mtr & optional_mtr &
   OUTPUT.RELS <! [ LBL #h1, ARG0 #x2 ], [ PRED _both_q_rel ], [ ], [ ],
 	         [ PRED card_rel, LBL #h1, ARG0 event & [ E.TENSE untensed ],
 		   ARG1 #x2, CARG "2" ] !> ].
+
+at_least_one_of_mtr := monotonic_omtr &
+[ CONTEXT.RELS <! [ PRED udef_q_rel, LBL #h11, ARG0 #x10 ],
+		  [ PRED part_of_rel, ARG0 #x10 ],
+		  [ PRED card_rel, ARG1 #x10, CARG "1" ] !>,
+  FILTER.RELS <! [ PRED "_at+least_x_deg_rel", LBL #h11 ] !>,
+  INPUT [ HOOK.INDEX #index,
+	  RELS <! !>,
+	  HCONS <! !> ],
+  OUTPUT [ HOOK.INDEX #index,
+	   RELS <! [ PRED "_at+least_x_deg_rel", LBL #h11, 
+		     ARG0.E.TENSE untensed, ARG1 semarg ] !>,
+	   HCONS <! !> ] ].
+
+;; Add "also" with matching predicates
+;; (similar in approach to VP ellipsis tests)
+;; If B is a cube, C is also a cube.
+;;
+also_adverb_common_pred_gpr := monotonic_omtr &
+[ CONTEXT.RELS.LIST < [ PRED #pred, ARG0 event ], 
+		      [ PRED #pred, LBL #h1 & handle, 
+			ARG0 #e2 & event & [ MARKS.ALSO-MARK - ], 
+			ARG1 ref-ind ], ...>,
+  INPUT [ HOOK.INDEX #index,
+	  RELS <! !>,
+	  HCONS <! !> ],
+  OUTPUT [ HOOK.INDEX #index,
+           RELS <! [ PRED "_also_a_1_rel", LBL #h1, 
+   		     ARG0 event & [ E.TENSE untensed ], 
+		     ARG1 #e2 ] !> ] ].
+
+;; If B is large, then C is also large
+;;
+also_adverb_cond_gpr := also_adverb_common_pred_gpr &
+[ CONTEXT [ RELS.LIST < [ LBL #h1 ], [ LBL #h4 ],
+		    [ PRED "_if_x_then_rel", ARG1 #h2, ARG2 #h3 ],
+		    [ PRED "_then_a_1_rel", LBL #h5, ARG1 #h6 ], ... >,
+	    HCONS <! qeq & [ HARG #h2, LARG #h5 ], 
+		     qeq & [ HARG #h6, LARG #h4 ],
+		     qeq & [ HARG #h3, LARG #h1 ] !> ] ].
+
+also_adverb_cond_onearg_gpr := also_adverb_cond_gpr &
+[ FILTER.RELS <! [ PRED comp_rel ] !>,
+  CONTEXT.RELS <! [ ], [ ARG2 handle ], [ ], [ ] !> ].
+
+also_adverb_twoarg_gpr := also_adverb_common_pred_gpr &
+[ CONTEXT.RELS.LIST < [ ], [ ], [ ], [ ],
+		      [ ARG0 #x10 & ref-ind ], 
+		      [ PRED quant_rel, ARG0 #x10 ], ... >,
+  FLAGS.SUBSUME < #x10, ... > ].
+
+;; If B is larger than C, then D is also larger than C"
+;;
+also_adverb_cond_twoarg_comp_gpr := also_adverb_cond_gpr & 
+				    also_adverb_twoarg_gpr &
+[ CONTEXT.RELS <! [ LBL #h1 ], [ LBL #h2 ], [ ], [ ],
+                  [ PRED #pred, ARG0 #x1, CARG #carg ], [ ],
+		  [ PRED comp_rel, LBL #h1, ARG2 #x1 ],
+		  [ PRED #pred, ARG0 #x3, CARG #carg ], 
+		  [ PRED comp_rel, LBL #h2, ARG2 #x3 ] !>,
+  FLAGS.SUBSUME < semarg, #x3 > ].
+
+;; If B is a cube, then C is also a cube
+;;
+also_adverb_cond_twoarg_gpr := also_adverb_cond_gpr & 
+			       also_adverb_twoarg_gpr &
+[ CONTEXT.RELS <! [ ARG2 #x1 ], [ ARG2 #x2 ], [ ], [ ],
+                  [ PRED #pred, ARG0 #x1, CARG #carg ], [ ],
+		  [ PRED #pred, ARG0 #x2 & ref-ind, CARG #carg ] !>,
+  FLAGS.SUBSUME < semarg, #x2 > ].
