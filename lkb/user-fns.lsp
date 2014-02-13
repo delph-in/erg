@@ -467,6 +467,39 @@
   (declare (ignore unifs orths sense-id))
   nil)
 
+;;
+;; a helper function to use in conjunction with read-heads(), when debugging
+;; percolation of DT information and correspondence to the head table.
+;;
+(defparameter *dt-path* '(synsem local cat --dt))
+
+(defun dt-test (rule)
+  (let* ((id (rule-id rule))
+         (dag (tdfs-indef (rule-full-fs rule)))
+         (daughters (rest (rule-order rule)))
+         (head (existing-dag-at-end-of dag *head-path*))
+         (dt (existing-dag-at-end-of dag *dt-path*))
+         (daughter (existing-dag-at-end-of dag *head-daughter-path*))
+         flags)
+    (loop
+        for i from 0
+        for path in daughters
+        for foo = (existing-dag-at-end-of dag path)
+        for bar = (and foo (existing-dag-at-end-of foo *head-path*))
+        for baz = (and bar (existing-dag-at-end-of foo *dt-path*))
+        when (eq foo daughter) do (push (cons :daughter i) flags)
+        when (eq head bar) do (push (cons :head i) flags)
+        when (eq dt baz) do (push (cons :dt i) flags))
+    (let ((dt (rest (assoc :dt flags))))
+      (if (null dt)
+        (format t "dt-test(): `~(~a~)' has no --DT specification.~%" id)
+        (let ((head (rest (assoc :head flags)))
+              (daughter (rest (assoc :daughter flags))))
+          (unless (or (null daughter) (= dt daughter))
+            (format t "dt-test(): `~(~a~)' has --DT not on DT-DTR~%" id))
+          (unless (or (null head) (= dt head))
+            (format t "dt-test(): `~(~a~)' has --DT not on HEAD.~%" id))))
+      dt)))
 
 (defun generate-ctypes (&key file (stream t))
   (when (stringp file)
