@@ -195,27 +195,25 @@ loc_inv_be_word := basic_loc_inv_be_word &
 
 ; From syntax.tdl
 
-; Restrict nonhead to MIN pre_title_rel.
-np_title_cmpnd_phr := norm_np_name_cmpnd_phr &
-  [ HD-DTR.SYNSEM [ LOCAL [ CAT [ HEAD.MINORS.MIN named_rel,
-				  VAL.SPR *olist* ],
-			    AGR.PNG.PN #pn ],
-		    MODIFD.LPERIPH + ],
-    NH-DTR.SYNSEM [ LOCAL [ CAT [ HEAD.MINORS [ MIN pre_title_rel,
-						NORM norm_rel ],
-				  VAL.SPR < unexpressed > ],
-			    AGR.PNG.PN #pn ],
-		    PUNCT [ LPUNCT dq_or_sq_or_no_punct,
-			    RPUNCT dq_or_sq_or_no_punct ] ],
-    C-CONT.RELS <! [ PRED compound_name_rel ], [ PRED udef_q_rel ] !> ].
+;; Restrict nonhead to MIN pre_title_rel.
+;;
+np_title_cmpnd_phr := basic_np_title_cmpnd_phr &
+  [ HD-DTR.SYNSEM.LOCAL [ CAT.VAL.SPR < [ OPT - ] >,
+			  CONT.HOOK.LTOP #lbl ],
+    NH-DTR.SYNSEM.LOCAL.CAT.HEAD.MINORS.MIN pre_title_rel,
+    C-CONT.RELS.LIST.FIRST.LBL #lbl ].
+
 
 ; Exclude reflesives as non-heads: |*They themselves|
+;; DPF 2014-01-21 - But now we want to allow these, in Grade 7.
+#|
 basic_appos_np_phr := norm_appos_phr &
   [ HD-DTR.SYNSEM.MODIFD.RPERIPH bool,
     NH-DTR.SYNSEM.LOCAL.CAT [ HEAD.MINORS.MIN nonpro_rel,
 			      VAL.SPR *olist* ],
     C-CONT [ RELS <! relation !>,
              HCONS <! !> ] ].
+|#
 
 
 ;; Block "a Sunday" but allow "next Tuesday"
@@ -447,7 +445,7 @@ np_city_state_phr := norm_np_name_cmpnd_phr &
 			    AGR.PNG.PN 3s ],
                     PUNCT [ LPUNCT no_punct,
 			    RPUNCT comma_or_no_punct ] ],
-    C-CONT.RELS <! [ PRED compound_name_rel ], [ PRED proper_q_rel ] !> ].
+    C-CONT.RELS <! [ PRED compound_rel ], [ PRED proper_q_rel ] !> ].
 
 d_-_the-mal_le := d_-_the_lexent &
   [ GENRE robust ].
@@ -568,23 +566,23 @@ v_np-xp_were-n_le_rbst := be_was_neg_contr_lex_entry & be_th_cop_neg &
 mal_vc_prd_is_le := vc_prd_are_lexent &
   [ ALTS.VPELLIP -,
     SYNSEM.LOCAL.CAT.VAL.SUBJ.FIRST expressed_synsem & 
-                                    [ LOCAL.CAT.HEAD.--BARE + ],
+                                    [ LOCAL.AGR.PNG.PN 3p ],
     GENRE robust ].
 
 mal_vc_prd_are_le := vc_prd_is_lexent &
   [ ALTS.VPELLIP -,
-    SYNSEM.LOCAL.CAT.VAL.SUBJ.FIRST.LOCAL.CAT.HEAD.--BARE +,
+    SYNSEM.LOCAL.CAT.VAL.SUBJ.FIRST.LOCAL.AGR.PNG.PN 3s,
     GENRE robust ].
 
 mal_vc_prd_was_le := vc_prd_were_lexent &
   [ ALTS.VPELLIP -,
-    SYNSEM.LOCAL.CAT.VAL.SUBJ.FIRST.LOCAL.CAT.HEAD.--BARE +,
+    SYNSEM.LOCAL.CAT.VAL.SUBJ.FIRST.LOCAL.AGR.PNG.PN 3p,
     GENRE robust ].
 
 mal_vc_prd_were_le := vc_prd_was_lexent &
   [ ALTS.VPELLIP -,
     SYNSEM.LOCAL.CAT [ HEAD.--MAL3SG +,
-                       VAL.SUBJ.FIRST.LOCAL.CAT.HEAD.--BARE + ],
+                       VAL.SUBJ.FIRST.LOCAL.AGR.PNG.PN 3s ],
     GENRE robust ].
 
 ; Treat robust "be" and "been" as VFORM prp, so they trigger the robust
@@ -945,8 +943,9 @@ mal_num_det_rule_2 := num_det_phrase & rule &
 aj_-_i-one_le_rbst := aj_-_i-one_lexent &
   [ SYNSEM [ LOCAL [ CAT [ HEAD [ MINORS [ ALTMIN no_rel,
 					   NORM no_rel ],
-				  MOD < [ LOCAL.CAT [ VAL.SPR < unexpressed >,
-				                      HEAD.--BARE + ],
+				  MOD < [ LOCAL [ CAT [ VAL.SPR < unexpressed >,
+							HEAD.--BARE + ],
+						  CONT.HOOK.INDEX.DIV - ],
 					  LEX - ] > ],
 			   VAL.COMPS *synnull* ],
 		     CONT.HOOK.XARG.SORT non-time-sort ],
@@ -1048,6 +1047,8 @@ bare_np_prd_phrase := reg_bare_np_phrase &
 				  VAL.SPR.FIRST unexpressed_reg ] ] ] > ].
 |#
 
+alts :+ [ PLMASS bool ].
+
 ;; For robust plural of mass nouns
 ;;
 lex_rule_plural_mass := lex_rule_basic & word_or_infl_rule &
@@ -1074,6 +1075,7 @@ lex_rule_plural_mass := lex_rule_basic & word_or_infl_rule &
     ARGS < #dtr >,
     DTR #dtr & [ INFLECTD -,
                  KEY-ARG #keyarg,   
+		 ALTS.PLMASS +,
                  SYNSEM basic_mass_noun_synsem &
 			[ LOCAL [ CAT #cat,
 				  CONT #cont,
@@ -1562,3 +1564,21 @@ bare_npq_phrase := norm_unary_phrase &
              RELS <! !>,
              HCONS <! !>,
 	     ICONS <! !> ] ].
+
+;; Since we're trying to do without robust commas, adjust the adj-N types
+
+adj_n_int_phrase := adj_head_int_phrase &
+  [ HD-DTR [ SYNSEM [ LOCAL.CAT [ HEAD basic_nom_or_ttl,
+				  VAL [ SPR.FIRST 
+					   [ LOCAL.CAT.HEAD.MINORS.MIN #min,
+					     --MIN #min & quant_rel ],
+					COMPS < > ] ],
+		      PHON.ONSET #onset ],
+	     INFLECTD #infl ],
+    NH-DTR [ SYNSEM [ LOCAL [ CAT [ HEAD.MOD < [ PHON.ONSET #onset ] >,
+				    VAL.SUBJ *synlist* ],
+			      CONT.HOOK.INDEX event & [ E.TENSE no_tense ] ],
+                      LEX +,
+		      PUNCT.RPUNCT comma_or_rbc_or_hyphen_or_pair_or_no_punct ],
+             INFLECTD + ],
+    INFLECTD #infl ].
