@@ -222,7 +222,7 @@
   (load-erg-settings-file 
     (merge-pathnames "lkb/nogen-rules.set" *grammar-directory*)))
 
-(setf *parser-ignore-rules* 
+(setf *parse-ignore-rules* 
   (load-erg-settings-file 
     (merge-pathnames "lkb/noparse-rules.set" *grammar-directory*)))
 
@@ -231,9 +231,6 @@
   (load-erg-settings-file 
     (merge-pathnames "openproof/nogen-rules.set" *grammar-directory*)))
 
-
-(setf *parse-ignore-rules*
-  '(xp_brck-pr_c hdn_bnp-rbst_c))
 
 (setf *semantics-index-path* '(SYNSEM LOCAL CONT HOOK INDEX))
 
