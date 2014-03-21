@@ -353,3 +353,14 @@
 ;; in order for the "Save as XML" button on MRS windows to work.  FIX?
 
 (setf *mrs-xml-output-file* "~/tmp/mrs.xml")
+
+;;
+;; make sure that [incr tsdb()] also tests the root condition (if recorded in
+;; derivations) when reconstructing its feature structure.  this test includes
+;; invocation of the idiom filter, where appropriate, and thus may help filter
+;; out derivations that are actually invalid (because they use fragments of an
+;; idiom in a non-idiomatic contenxt), which can be among the results computed
+;; by PET (as long as it lacks an implementation of the idion filter).
+;;
+#+:logon
+(setf tsdb::*derivations-reconstruct-sponsor-p* t)
