@@ -118,7 +118,7 @@ unary_phrase := norm_unary_phrase &
   [ INFLECTD +,
     ARGS < [ INFLECTD + ] > ].
 
-basic_binary_phrase := phrase &
+basic_binary_phrase := phrase & non_unary-rule &
   [ SYNSEM [ LOCAL.CONT [ RELS *diff-list* &
 			      [ LIST #first,
 				LAST #last ],
@@ -195,7 +195,7 @@ binary_rule_left_to_right := rule &
 binary_rule_right_to_left := rule &
   [ ARGS < [ KEY-ARG bool ], [ KEY-ARG + ] > ].
 
-basic_ternary_phrase := phrase &
+basic_ternary_phrase := phrase & non_unary-rule &
   [ SYNSEM.LOCAL.CONT [ RELS *diff-list* &
 			      [ LIST #first,
 				LAST #last ],
@@ -274,7 +274,7 @@ ternary_phrase := basic_ternary_phrase &
 ternary_rule_left_to_right := rule &
   [ ARGS < [ KEY-ARG + ] , [ KEY-ARG bool ] , [ KEY-ARG bool ] > ].
 
-basic_quad_phrase := phrase &
+basic_quad_phrase := phrase & non_unary-rule &
   [ SYNSEM.LOCAL.CONT [ RELS *diff-list* &
 			      [ LIST #first,
 				LAST #last ],
@@ -4503,6 +4503,8 @@ np_title_cmpnd_pl_phr := basic_np_title_cmpnd_phr &
 ;; spurious analysis for |text to speech| where `to' wants a noun specifier.
 ;; DPF 2013-06-13 - Added [LPERIPH na_or_-] to hd-dtr, to block spurious
 ;; "NP to NP" interval phrase as right member, as in |October twenty to thirty|.
+;; DPF 2014-04-03 - But this prevents "chapter 1", and anyway, we're not getting
+;; that spurious reading at present, so removed constraint.
 ;;
 np_num_cmpnd_phr := basic_np_name_cmpnd_phr &
   [ SYNSEM [ PUNCT.PNCTPR #ppair,
@@ -4513,7 +4515,6 @@ np_num_cmpnd_phr := basic_np_name_cmpnd_phr &
 					COMPS < > ] ],
 			    CONT.HOOK.LTOP #hdhand,
 			    AGR.PNG.PN #pn ],
-		    MODIFD.LPERIPH na_or_-,
 		    PUNCT.PNCTPR #ppair ],
     NH-DTR [ SYNSEM [ LOCAL [ AGR.PNG.PN #pn,
 			      CAT [ HEAD.MINORS [ MIN reg_or_temp_nom_rel,
@@ -9035,8 +9036,7 @@ basic_run_on_coord_rule := basic_run_on_rule & basic_coord_phr &
                                       VAL.SUBJ #subj,
                                       MC + ],
                                 CONT.HOOK [ LTOP #ltop,
-					    INDEX [ E indic_tam,
-						    SF prop-or-comm ] ] ] ] ],
+					    INDEX.E indic_tam ] ] ] ],
    RCONJ-DTR #rconj &
              [ SYNSEM [ LOCAL [ CAT [ HEAD verb_or_conj_or_frag &
                                            [ MINORS [ MIN norm_rel,
@@ -9058,7 +9058,7 @@ basic_run_on_coord_rule := basic_run_on_rule & basic_coord_phr &
 run_on_coord_rule := basic_run_on_coord_rule &
  [ SYNSEM [ MODIFD.LPERIPH +,
 	    LOCAL.CONT.HOOK.INDEX.E #e ],
-   LCONJ-DTR.SYNSEM [ LOCAL [ CONT.HOOK.INDEX.E #e ],
+   LCONJ-DTR.SYNSEM [ LOCAL.CONT.HOOK.INDEX.E #e,
 		      PUNCT.RPUNCT clause_or_semicol ],
    RCONJ-DTR.SYNSEM.LOCAL.CAT.HEAD verb_or_conj_or_frag ].
 
@@ -10130,348 +10130,6 @@ right_node_raise_nbar_phrase := right_node_raise_phrase &
 right_node_raise_vp_rule := right_node_raise_vp_phrase & rule.
 right_node_raise_nonvp_rule := right_node_raise_nonvp_phrase & rule.
 right_node_raise_nbar_rule := right_node_raise_nbar_phrase & rule.
-#|
-;; 2011-08-05 - Added gapping constructions both for S+S gapping and 
-;; VP=VP conjunction reduction, where in both cases the verb is missing from
-;; the second conjunct.  The approach is to have two subtypes of a general
-;; gapping phrase (two-dtr or four-dtr) where the first daughter is the full 
-;; S or VP, the second daughter is a conjunction lexical item, and then 
-;; (1) if the remaining two or more elements of the construction are 
-;; complements, the relevant rule has only two dtrs, where the mother of the
-;; phrase adopts the COMPS list from the first dtr (via its LSYNSEM) and picks
-;; them up one at a time via the normal hd-cmp rule; or
-;; (2) at least one of the remaining two elements is a modifier, in which case
-;; we use the four-dtr subtype, since we could not otherwise ensure that the
-;; modifier(s) would appear.
-;;           [Analysis was developed in collaboration with Montserrat Marimon]
-;; DPF 2012-02-18 - We want to avoid picking up complements to the right if 
-;; the left daughter has not actually picked up the corresponding complement,
-;; to avoid analysis of e.g. |the slide shows and kim the cat|.
-;; 
-;; DPF 2013-09-08 - After two years of experimentation with this analysis of
-;; gapping, decided to abandon it.  Implementation has been overly brittle
-;; and error-prone, and the efficiency costs are high, not only because of the
-;; extra rules and edges, but also because the presence of LSYNSEM prevents
-;; some VP edges from packing, such as extracted-adjunct phrases, where the
-;; MOD..HEAD.LSYNSEM and ..LPRED values differ uninterestingly.  Also, the
-;; analysis was linguistically unsatisfying, since it could only handle an
-;; overly specified sequence of elements, with no built-in iteration
-;; capability.  Finally, the frequency of these gapping constructions in
-;; the 80,000 Redwoods treebank was very low, with fewer than 200 items, or
-;; less than one sentence in 400.  So, back to the drawing board ...
-;;
-conj_no_verb_phrase := phrase &
-  [ SYNSEM [ LOCAL [ CAT [ HEAD verb &
-				[ VFORM #vform,
-				  AUX #aux,
-				  INV #inv,
-				  MOD #mod,
-				  TAM.MOOD #mood,
-				  MINORS #mins,
-				  --ADDIN #addin,
-				  LSYNSEM anti_synsem_min ],
-			   VAL [ SUBJ #subj,
-				 SPR #spr,
-				 SPEC < > ],
-			   MC #mc ],
-		     CONT.HOOK [ INDEX conj_event & [ E #tam ],
-				 XARG #xarg ],
-		     CONJ cnil ],
-	     NONLOC non-local_none ],
-    ARGS < [ SYNSEM [ LOCAL 
-	      [ CAT [ HEAD verb &
-			   [ VFORM #vform,
-			     AUX #aux,
-			     INV #inv,
-			     MOD #mod,
-			     TAM #tam & [ MOOD #mood ],
-			     MINORS #mins,
-			     --ADDIN #addin,
-			     LSYNSEM synsem &
-				     [ LOCAL [ CONT [ HOOK.INDEX #index &
-								 [ E #tam ],
-						      HCONS #hcons,
-						      ICONS #icons ] ],
-				       NONLOC non-local_none,
-				       LKEYS.KEYREL [ PRED #pred,
-						      ARG0 #index,
-						      CFROM #from, 
-						      CTO #to ] ],
-			     LPRED #pred ],
-		      VAL [ SUBJ #subj,
-			    SPR #spr,
-			    COMPS < >,
-			    SPEC < > ],
-		      MC #mc ],
-		CONT.HOOK [ LTOP #ltop,
-			    INDEX #lind & non_conj_event & [ E #tam ],
-			    XARG #xarg ],
-		CONJ cnil ],
-		      PUNCT.RPUNCT comma_or_no_punct,
-		      NONLOC non-local_none ] ],
-	   [ SYNSEM [ LOCAL [ CAT [ HEAD.VFORM #vform,
-				    VAL.COMPS < synsem > ],
-			      CONJ lex-conj & [ CHEAD cnil,
-						CREL [ L-HNDL #ltop,
-						       L-INDEX #lind ] ],
-			      CONT.HOOK #hook ],
-		      LEX na,
-		      LKEYS.KEYREL.R-INDEX #index,
-		      PUNCT.RPUNCT no_punct,
-		      NONLOC non-local_none ],
-	     ORTH [ FROM #from, TO #to ] ], ... >,
-    C-CONT [ HOOK #hook,
-	     HCONS #hcons,
-	     ICONS #icons ] ].
-
-;; VP+conj+XP+XP... where first XP is a complement, the second either a 
-;; complement or a modifier, and possibly with a third complement, for
-;; `bet, trade, etc.'
-;;
-conj_reduct_phrase := conj_no_verb_phrase &
-  [ ARGS.FIRST.SYNSEM.LOCAL 
-	   [ CAT [ HEAD [ LSYNSEM.LOCAL [ CAT.VAL.SUBJ < [ LOCAL.CAT #cat,
-							   --SIND #sind,
-							   NONLOC #nonloc ] >,
-					  CONT.HOOK.XARG #xarg ],
-			  TAM #tam,
-			  --ADDIN [ ADDTAM #tam,
-				    ADDPN #pn ] ],
-		   VAL [ SUBJ < synsem &
-				[ LOCAL.CAT #cat &
-					[ HEAD basic_noun &
-					    [ MINORS.NORM norm_or_no_rel ] ],
-				  NONLOC #nonloc,
-				  --SIND #sind ] >,
-			 SPR < anti_synsem_min > ],
-		   MC na ],
-	     AGR.PNG.PN #pn ],
-    C-CONT.HOOK.XARG #xarg ].
-
-;; At least two complements, which willl be picked up by successive applications
-;; of the normal hd-cmp rule after this rule applies.
-;;
-basic_conj_red_c_c_rule := conj_reduct_phrase & binary_rule_left_to_right &
-		     binary_phrase &
-  [ SYNSEM.LOCAL.CAT.VAL.COMPS #comps &
-			       < synsem &
-				 [ LOCAL [ CAT [ HEAD n_p_v_adv_adj_comp,
-						 VAL [ SPR *olist*,
-						       COMPS < > ],
-						 MC na_or_- ],
-					   CONT.HOOK.INDEX basic_non_expl,
-					   CONJ cnil ],
-				   PUNCT.RPUNCT no_punct,
-				   NONLOC non-local_none ], 
-				 synsem & [ OPT - ], 
-				 ... >,
-    ARGS < [ SYNSEM.LOCAL.CAT.HEAD.LSYNSEM [ LOCAL [ CAT.VAL.COMPS #comps,
-						     CONT.RELS #rels ],
-					     LKEYS.KEYREL.LBL #rltop ] ],
-	   [ SYNSEM.LKEYS.KEYREL.R-HNDL #rltop ] >,
-    C-CONT.RELS #rels ].
-
-;; First complement is expressed: |Kim handed A the book and C the box|
-;;
-conj_red_c_c_rule := basic_conj_red_c_c_rule &
-  [ SYNSEM.LOCAL.CAT.VAL.COMPS.FIRST expressed_synsem ].
-
-;; First synsem is unexpressed, so third must be expressed
-;; |Kim bet A a dollar that we'd win and two dollars that they'd be second|
-;;
-conj_red_x_c_c_rule := basic_conj_red_c_c_rule &
-  [ SYNSEM.LOCAL.CAT.VAL.COMPS < unexpressed, synsem, expressed_synsem > ].
-
-;; Final phrase is a modifier
-;;
-basic_conj_red_x_m_rule := conj_reduct_phrase & quad_rule_left_to_right &
-			   quad_phrase &
-  [ SYNSEM.LOCAL.CAT.VAL.COMPS < >,
-    ARGS < [ SYNSEM [ LOCAL.CAT #vpcat,
-		      MODIFD rmod & [ RPERIPH na_or_- ] ] ],
-	   [ SYNSEM.LKEYS.KEYREL.R-HNDL #rltop ], 
-	   [ ], 
-	   [ SYNSEM phr_synsem &
-		    [ LOCAL [ CAT.HEAD.MOD < synsem &
-					     [ LOCAL.CAT #vpcat ] >,
-			      CONT.HOOK.LTOP #rltop ],
-		      NONLOC non-local_none ] ] > ].
-
-;; No additional construction semantics
-;;
-conj_red_x_m_rule := basic_conj_red_x_m_rule &
-  [ ARGS.FIRST.SYNSEM.LOCAL.CAT.HEAD.LSYNSEM.LOCAL.CONT.RELS #rels,
-    C-CONT.RELS #rels ].
-
-;; Intersective modifier
-;;
-basic_conj_red_x_m-int_rule := basic_conj_red_x_m_rule &
-  [ ARGS < [ SYNSEM.LOCAL.CAT.HEAD.LSYNSEM.LKEYS.KEYREL [ LBL #ltop,
-							  ARG0 #index ] ],
-	   [ ], [ ],
-	   [ SYNSEM.LOCAL [ CAT.HEAD.MOD < [ LOCAL intersective_mod &
-						   [ CONT.HOOK 
-							 [ LTOP #ltop,
-							   INDEX #index ] ] ] >,
-			    CONT.HOOK [ LTOP #ltop,
-					XARG #index ] ] ] > ].
-
-conj_red_x_m-int_rule := basic_conj_red_x_m-int_rule & conj_red_x_m_rule.
-
-;; Scopal modifier
-basic_conj_red_x_m-scop_rule := conj_red_x_m_rule &
-  [ ARGS < [ SYNSEM.LOCAL.CAT.HEAD.LSYNSEM.LKEYS.KEYREL [ LBL #ltop,
-							  ARG0 #index ] ],
-	   [ ], [ ],
-	   [ SYNSEM.LOCAL.CAT.HEAD.MOD < [ LOCAL scopal_mod &
-					   [ CONT.HOOK [ LTOP #ltop,
-						         INDEX #index ]]]>] > ].
-
-;; Identity of complement followed by intersective modifier
-;;
-conj_red_c_m-int_rule := conj_red_x_m-int_rule &
-  [ ARGS < [ SYNSEM.LOCAL.CAT.HEAD.LSYNSEM.LOCAL.CAT.VAL.COMPS < #comp1 > ],
-	   [ ],
-	   [ SYNSEM #comp1 ], 
-	   [ ] > ].
-
-;; Identity of complement followed by scopal modifier
-;;
-conj_red_c_m-scop_rule := basic_conj_red_x_m-scop_rule &
-  [ ARGS < [ SYNSEM.LOCAL.CAT.HEAD.LSYNSEM.LOCAL.CAT.VAL.COMPS < #comp1 > ],
-	   [ ],
-	   [ SYNSEM #comp1 ], 
-	   [ ] > ].
-
-;; VP-and-NP-PP
-;; Non-identity of complement where complement in first VP is marked with 
-;; empty prep, while that prep is missing from the phrase after the conjunction.
-;; |Kim relied on Abrams today and Pat yesterday.|
-;; Intersective-mod only, so far
-;; 
-conj_red_csel_m-int_rule := conj_red_x_m-int_rule &
-  [ ARGS < [ SYNSEM.LOCAL.CAT.HEAD.LSYNSEM.LOCAL.CAT.VAL.COMPS 
-					   < [ LOCAL [ CAT.HEAD prep &
-							   [ MINORS.MIN
-							        independent_rel ],
-						       CONT.HOOK.INDEX #ind ],
-					       --SIND #ind ] > ],
-	   [ ],
-	   [ SYNSEM.LOCAL [ CAT nomp_cat_acc,
-			    CONT.HOOK.INDEX #ind ] ],
-	   [ ] > ].
-
-;; VP-and-NP-PP where NP is the object of implicit contentful prep, as in 
-;; |Kim flew to Paris on Monday and Rome on Tuesday|
-;;
-conj_red_mn_m-int_rule := basic_conj_red_x_m-int_rule &
-  [ ARGS < [ SYNSEM.LOCAL.CAT.HEAD.LSYNSEM [ LOCAL [ CAT.VAL.COMPS *olist*,
-						     CONT.RELS [ LIST #rlist,
-								 LAST #rlast ]],
-					     LKEYS.KEYREL [ LBL #ltop,
-							    ARG0 #index ] ] ],
-	   [ ],
-	   [ SYNSEM.LOCAL [ CAT nomp_cat_acc,
-			    CONT.HOOK.INDEX #nind ] ],
-	   [ ] >,
-    C-CONT [ RELS [ LIST < [ LBL #ltop,
-			     PRED unspec_mod_rel,
-			     ARG1 #index,
-			     ARG2 #nind ] . #rlist >,
-		    LAST #rlast ] ] ].
-
-;; VP-and-NP-PP
-;; Optional complement unexpressed, then mismatched compl followed by modif
-;; Intersective-mod only, so far
-;;
-conj_red_x_csel_m-int_rule := conj_red_x_m-int_rule &
-  [ ARGS < [ SYNSEM.LOCAL.CAT.HEAD.LSYNSEM.LOCAL.CAT.VAL.COMPS < unexpressed,
-  					   [ LOCAL [ CAT.HEAD prep &
-							   [ MINORS.MIN
-							       selected_rel ],
-						     CONT.HOOK.INDEX #ind ],
-					     --SIND #ind ] > ],
-	   [ ],
-	   [ SYNSEM.LOCAL [ CAT nomp_cat_acc,
-			    CONT.HOOK.INDEX #ind ] ],
-	   [ ] > ].
-
-;; For sentence-level gapping: S + SnoV
-;; DPF 2012-02-18 - Let's try constraining this to [VFORM fin], and include
-;; the --ADDIN constraints, to avoid admitting e.g. |the slide show and Kim|.
-;;
-basic_conj_nov_subj_rule := conj_no_verb_phrase & quad_rule_left_to_right &
-			    quad_phrase &
-  [ SYNSEM.LOCAL.CAT.VAL.COMPS < >,
-    ARGS < [ SYNSEM [ LOCAL [ CAT [ HEAD [ LSYNSEM.LOCAL 
-						   [ CAT.VAL.SUBJ < #subj >,
-						     CONT.RELS #rels ],
-					   VFORM fin,
-					   TAM #tam,
-					   --ADDIN [ ADDTAM #tam,
-						     ADDPN #pn ] ],
-				    VAL [ SUBJ *anti_list*,
-					  SPR < >,
-					  COMPS < > ],
-				    MC bool ],
-			      CONT.HOOK.INDEX [ SF prop-or-ques,
-						--TPC - ],
-			      AGR.PNG.PN #pn ] ] ],
-	   [ ], 
-	   [ SYNSEM #subj & [ LOCAL.CAT nomp_cat_nom ] ],
-	   [ SYNSEM [ LOCAL.CAT.HEAD.MOD *olist*,
-		      NONLOC non-local_none ] ] >,
-    C-CONT.RELS #rels ].
-
-;; S+and+NP+Comp
-;;
-conj_nov_sb_c_rule := basic_conj_nov_subj_rule &
-  [ ARGS < [ SYNSEM [ LOCAL.CAT.HEAD.LSYNSEM [ LOCAL.CAT.VAL.COMPS < #comp1 >,
-					       LKEYS.KEYREL.LBL #rltop ],
-		      MODIFD notmod ] ],
-	   [ SYNSEM.LKEYS.KEYREL.R-HNDL #rltop ], 
-	   [ ], 
-	   [ SYNSEM #comp1 & [ LOCAL.CONT.HOOK.LTOP #rltop,
-			       NONLOC.SLASH.LAST < > ] ] > ].
-
-;; S+and+NP+Mod (intersective)
-;;
-conj_nov_sb_m-int_rule := basic_conj_nov_subj_rule &
-  [ ARGS < [ SYNSEM [ LOCAL.CAT.HEAD.LSYNSEM [ LOCAL.CAT.VAL.COMPS *olist*,
-					       LKEYS.KEYREL [ LBL #ltop,
-							      ARG0 #index ] ],
-		      MODIFD rmod ] ],
-	   [ SYNSEM.LKEYS.KEYREL.R-HNDL #ltop ], 
-	   [ ], 
-	   [ SYNSEM phr_synsem &
-		    [ LOCAL [ CAT.HEAD.MOD < synsem &
-					     [ LOCAL intersective_mod &
-					      [ CAT vp_cat,
-						CONT.HOOK
-						    [ LTOP #ltop,
-						      INDEX #index ] ] ] >,
-			      CONT.HOOK [ LTOP #ltop,
-					  XARG #index ] ],
-		      LEX - ] ] > ].
-
-;; S+and+NP+Mod (scopal)
-;;
-conj_nov_sb_m-scop_rule := basic_conj_nov_subj_rule &
-  [ ARGS < [ SYNSEM [ LOCAL.CAT.HEAD.LSYNSEM [ LOCAL.CAT.VAL.COMPS *olist*,
-					       LKEYS.KEYREL [ LBL #ltop,
-							      ARG0 #ind ] ],
-		      MODIFD rmod ] ],
-	   [ SYNSEM.LKEYS.KEYREL.R-HNDL #rltop ], 
-	   [ ], 
-	   [ SYNSEM phr_synsem &
-		    [ LOCAL [ CAT.HEAD.MOD < synsem &
-					     [ LOCAL scopal_mod &
-					       [ CAT vp_cat,
-						 CONT.HOOK [ LTOP #ltop,
-							     INDEX #ind ] ] ] >,
-			      CONT.HOOK.LTOP #rltop ],
-		      LEX - ] ] > ].
-|#
 
 ;; Experimental - Sing.Eng Prd-AdjP as head of S
 #|
@@ -10506,35 +10164,7 @@ predadj_vp_rule := rule & predadj_vp_phrase.
 ;; Rule to discharge a pair of brackets introduced in chart-mapping, where
 ;; all binary rules refuse to cross the brackets.  This rule is blocked by
 ;; a temporary expedient in the LKB.
-
-#|
-paired_bracket_rule := rule & phrase_or_lexrule & word_or_bracketed_phrase &
-  [ SYNSEM #synsem,
-    INFLECTD #infl,
-    IDIOM #idiom,
-    DIALECT #dialect,
-    GENRE #genre,
-    ORTH [ TO #to,
-	   LB #lb,
-	   RB #rb ],
-    ARGS < [ SYNSEM #synsem &
-		    [ LOCAL.CONT.HOOK #hook ],
-	     ORTH [ TO #to,
-		    LB [ FIRST #ctype,
-			 REST #lb ],
-		    RB [ FIRST #ctype,
-			 REST #rb ] ],
-	     IDIOM #idiom,
-	     DIALECT #dialect,
-	     GENRE #genre,
-	     INFLECTD #infl,
-	     RNAME #ctype & ctype ] >,
-    C-CONT [ HOOK #hook,
-	     RELS <! !>,
-	     HCONS <! !>,
-	     ICONS <! !> ] ].
-|#
-
+;;
 paired_bracket_rule := rule & phrase_or_lexrule & word_or_bracketed_phrase &
   [ SYNSEM #synsem,
     INFLECTD #infl,
@@ -10544,7 +10174,8 @@ paired_bracket_rule := rule & phrase_or_lexrule & word_or_bracketed_phrase &
     ORTH [ TO #to,
 	   LD [ LIST #ld, LAST #llast & *null* ],
 	   RD [ LIST #rd, LAST #rlast & *null* ] ],
-    ARGS < [ SYNSEM #synsem &
+    ARGS < non_unary-rule &
+	   [ SYNSEM #synsem &
 		    [ LOCAL.CONT.HOOK #hook ],
 	     ORTH [ TO #to,
 		    LD [ LIST.REST #ld,
