@@ -130,15 +130,6 @@ be_id := be_verb &
 ; Also prevent bare-sg NP subjects
 ;; DPF 13-03-14 - But blocking bare subjs prevents robust analysis of e.g.
 ;; |cat is a furry animal|  So remove, and let's see what happens.
-#|
-be_id_pos := be_id &
-  [ SYNSEM [ LOCAL [ CAT [ HEAD.TAM.ASPECT.PROGR -,
-    	     	           VAL.SUBJ.FIRST.LOCAL.CAT.HEAD.--BARE - ],
-		     CONT [ HOOK.LTOP #ltop,
-			    RELS <! #keyrel !>,
-			    HCONS <! !> ] ],
-             LKEYS.KEYREL #keyrel & [ LBL #ltop ] ] ].
-|#
 be_id_pos := be_id &
   [ SYNSEM [ LOCAL [ CAT [ HEAD.TAM.ASPECT.PROGR - ],
 		     CONT [ HOOK.LTOP #ltop,
@@ -240,9 +231,10 @@ be_nv := be_verb &
     GENRE robust ].
 |#
 
-; Add feature for blocking mal-3sg
-
-vc_add :+ [ --MAL3SG bool ].
+; Add feature for blocking mal-3sg and mal-n3sg
+;
+vc_add :+ [ --MAL3SG bool,
+            --MALN3SG bool ].
 
 ; Change CASE from obliq to non_obliq to block "to home"
 n_-_ad-pl-nomod_le := norm_np_adv_lexent &
@@ -347,7 +339,7 @@ v_np-prd_oeq-ntr-x_le := main_verb_mliszt &
 
 ; Restrict dtrs to --MAL3SG - to avoid robust intranstives as conjuncts.
 ;; DPF 13-03-14 - But this blocks flagging of subj-verb agrmt errors as in 
-;; |he arise and arrives|.  So remove, and evaluate.
+;; |he arise and arrives|.  So remove, and hope for better parse ranking.
 #|
 basic_v_coord_phr := basic_verbal_coord_phr &
   [ SYNSEM.LOCAL [ CAT [ HEAD [ VFORM #vform,
@@ -419,6 +411,13 @@ av_-_i-vp-po-nmb_le := int_vp_adverb_word &
                                       MODIFD.RPERIPH na_or_- ] > ],
                        POSTHD + ] ].
 
+;; Allow robust comparative specifier with comparative adverb: |more faster|
+;;
+av_-_i-vp-cmp_le_rbst := basic_adverb_word &
+  [ SYNSEM intersect_vp_adverb_synsem &
+           [ LOCAL.CAT.VAL.SPR.FIRST [ --MIN more_deg_rel,
+	                               OPT - ] ],
+    GENRE robust ].
 
 ;; Make COMPS..HEAD be reg_adv to allow |he did well|
 ;;
@@ -549,7 +548,8 @@ mal_vc_there_was_le := vc_there_were_lexent &
 mal_vc_there_were_le := vc_there_was_lexent &
   [ GENRE robust,
     ALTS.VPELLIP -,
-    SYNSEM mal_vc_there_synsem ].
+    SYNSEM mal_vc_there_synsem &
+	  [ LOCAL.CAT.HEAD.--MAL3SG + ] ].
 
 v_np-xp_is-n_le_rbst := be_are_neg_contr_lex_entry & be_th_cop_neg &
   [ GENRE robust ].
@@ -574,7 +574,8 @@ mal_vc_prd_is_le := vc_prd_are_lexent &
 
 mal_vc_prd_are_le := vc_prd_is_lexent &
   [ ALTS.VPELLIP -,
-    SYNSEM.LOCAL.CAT.VAL.SUBJ.FIRST.LOCAL.AGR.PNG.PN 3s,
+    SYNSEM.LOCAL.CAT.VAL.SUBJ.FIRST.LOCAL [ AGR.PNG.PN sg,
+					    CONT.HOOK.INdEX.SORT non-time-sort],
     GENRE robust ].
 
 mal_vc_prd_was_le := vc_prd_were_lexent &
@@ -585,7 +586,7 @@ mal_vc_prd_was_le := vc_prd_were_lexent &
 mal_vc_prd_were_le := vc_prd_was_lexent &
   [ ALTS.VPELLIP -,
     SYNSEM.LOCAL.CAT [ HEAD.--MAL3SG +,
-                       VAL.SUBJ.FIRST.LOCAL.AGR.PNG.PN 3s ],
+                       VAL.SUBJ.FIRST.LOCAL.AGR.PNG.PN sg ],
     GENRE robust ].
 
 ; Treat robust "be" and "been" as VFORM prp, so they trigger the robust
@@ -593,12 +594,12 @@ mal_vc_prd_were_le := vc_prd_was_lexent &
 ; (identical to non-3sg) and ordinary past participles (identical to 
 ; past tense).
 mal_vc_prd_be_le := vc_prd_be_lexent &
-  [ SYNSEM.LOCAL.CAT.HEAD.VFORM prp,
+  [ SYNSEM.LOCAL.CAT.HEAD.VFORM fin,
     ALTS.VPELLIP -,
     GENRE robust ].
 
 mal_vc_np_be_le := vc_np_be_lexent &
-  [ SYNSEM.LOCAL.CAT.HEAD.VFORM prp,
+  [ SYNSEM.LOCAL.CAT.HEAD.VFORM fin,
     ALTS.VPELLIP -,
     GENRE robust ].
 
@@ -999,6 +1000,10 @@ aj_-_i-sup_le := compar_superl_adj_word &
               CONT.RELS <! relation, relation !> ],
       LKEYS.ALTKEYREL.PRED superl_rel ] ].
 
+;; Allow robust |dentists office|
+aj_-_i-cmpd_le_rbst := aj_-_i-cmpd_lexent &
+  [ GENRE robust ].
+
 ;; Block inversion with `be' taking CP complement
 be_nv := be_verb &
   [ SYNSEM nv_cop_verb &
@@ -1039,6 +1044,11 @@ n_-_c-dir_le := n_-_mc-ntoj_lexent &
 ;; |give a speech| while PET still does not enforce idioms
 idiom_nom_rel := reg_nom_rel.
 idiom_modable_nom_rel := idiom_nom_rel & modable_nom_rel.
+;; These two used with mal-entry for ditransitives to block mal-parse for
+;; |gave a speech| where "speech" entry is [--MIN alt_idiom_nom_rel] indicating
+;; that it has an alternative idiomatic (light-verb-friendly) entry.
+non_idiom_nom_rel := norm_nom_rel.
+alt_idiom_nom_rel := norm_nom_rel.
 
 n_-_c-idm_le := basic_intr_lex_entry &
   [ SYNSEM [ LOCAL.CAT.HEAD.MINORS.MIN idiom_nom_rel,
@@ -1059,11 +1069,36 @@ noun_n_cmpnd_phr_doubled := basic_noun_n_cmpnd_phr &
 		  [ MODIFD notmod & [ LPERIPH bool ],
 		    PUNCT.LPUNCT dq_or_no_punct,
 		    LKEYS.KEYREL.PRED #pred ],
-    NH-DTR.SYNSEM lex_synsem &
-		  [ LKEYS.KEYREL.PRED #pred ],
+    NH-DTR [ SYNSEM lex_synsem &
+	  	    [ LKEYS.KEYREL.PRED #pred ],
+	     INFLECTD na_or_- ],
     GENRE robust ].
 
 noun_n_cmpnd_rule_rbst := binary_rule_right_to_left & noun_n_cmpnd_phr_doubled.
+
+;; In order to distinguish transparent irregular plurals like |trout|, to
+;; block them in the robust N-N-compound-plural rule, we add types 
+;; cat_infl_suff and cat_infl_nosuff 
+
+cat_infl_suff := cat.
+cat_infl_nosuff := cat.
+
+n_-_c-pl_le :+ [ SYNSEM.LOCAL.CAT cat_infl_nosuff ].
+n_-_c-pl-def_le :+ [ SYNSEM.LOCAL.CAT cat_infl_nosuff ].
+
+;; For |the gardens dog|
+;;
+noun_n_cmpnd_pl_mal := binary_rule_right_to_left & basic_noun_n_cmpnd_phr &
+  [ SYNSEM.MODIFD.LPERIPH na,
+    HD-DTR.SYNSEM [ MODIFD notmod & [ RPERIPH na ],
+		    LOCAL.CAT.HEAD.--BARE +,
+		    PUNCT.LPUNCT dq_or_no_punct ],
+    NH-DTR [ INFLECTD +,
+             SYNSEM lex_synsem &
+	            [ LOCAL [ CAT cat_infl_suff &
+				  [ HEAD.--BARE - ],
+			      AGR.PNG.PN 3p ] ] ],
+    GENRE robust ].
 
 ;; Don't want |can arise| as NP-VP
 #|
@@ -1325,6 +1360,11 @@ n_-_pn-gen_le := basic_n_proper_lexent & generic_ne_lex_entry &
 	     MODIFD.LPERIPH +,
 	     LKEYS.KEYREL [ PRED named_rel ] ] ].
 
+;; Constrain to not capitalized, to avoid spurious entry for e.g. |Mom|
+;;
+n_-_mc-unk_le := n_-_mc-unk_lexent & norm_unknown_word &
+  [ TOKENS.+LAST.+CLASS.+CASE non_capitalized ].
+
 ;; Hack to accommodate |would rather VP than X|
 ;;
 ssr_vp_pp_subst :=  basic_three_arg_subst &
@@ -1509,6 +1549,13 @@ v_np_caus_le_rbst := main_verb &
 				     PUNCT.RPUNCT clause_or_no_punct ] > ] ],
     GENRE robust ].
 
+;; Ditransitives like `give' used as simple transitives
+;;
+v_np_ditrans_le_rbst := main_verb & 
+  [ SYNSEM np_trans_verb &
+	   [ LOCAL.CAT [ VAL.COMPS < [ --MIN non_idiom_nom_rel,
+	                               OPT - ] > ] ],
+    GENRE robust ].
 
 ;; Double negation
 ;
@@ -1609,3 +1656,13 @@ adj_n_int_phrase := adj_head_int_phrase &
 		      PUNCT.RPUNCT comma_or_rbc_or_hyphen_or_pair_or_no_punct ],
              INFLECTD + ],
     INFLECTD #infl ].
+
+adj_n_phrase := adj_n_int_phrase &
+  [ HD-DTR [ SYNSEM.MODIFD notmod_or_rmod,
+	     INFLECTD bool ] ].
+
+;; Since we're not using nonformal comma, change here
+adj_adjn_phrase := adj_n_int_phrase &
+  [ HD-DTR.SYNSEM [ LOCAL.CAT.HEAD nom_or_ttl,
+                    MODIFD lmod & [ LPERIPH na_or_- ] ],
+    NH-DTR.SYNSEM .PUNCT.RPUNCT comma_or_hyphen_or_pair_or_no_punct ].
