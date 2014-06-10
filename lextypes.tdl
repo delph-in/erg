@@ -3817,7 +3817,9 @@ np_adv_verb := verb_synsem & np_adv_subst & trans_lt &
 ; sentences from being admitted as that-less relatives, as in
 ; |*the [cats [said Kim purred]] arrived| (contrast with |the cats Kim said 
 ; purred arrived| 
-
+;; DPF 2014-05-20 - Changed SPR < > to SPR *anti_list* so we can get post
+;; modification of the inverted phrase, as in |we arrived, said Kim yesterday|
+;;
 quoting_verb_inv_synsem_min := synsem_min.
 quoting_verb_inv_synsem := basic_two_arg & quoting_verb_inv_synsem_min &
   [ LOCAL [ CAT [ HEAD verb & 
@@ -3825,7 +3827,7 @@ quoting_verb_inv_synsem := basic_two_arg & quoting_verb_inv_synsem_min &
                          TAM #tam ],
 		  POSTHD -,
                   VAL [ SUBJ *anti_list*,
-			SPR < > ] ],
+			SPR *anti_list* ] ],
             CONT [ HOOK [ LTOP #ltop,
                           INDEX #event & [ E #tam ] ],
                    RELS.LIST < #keyrel, ... > ],
@@ -10253,6 +10255,15 @@ adj_atrans_prp_synsem := adj_vpcomp_prp_synsem &
   [ LOCAL.CONT.HOOK.XARG it-ind,
     LKEYS.--+ARGIND it-ind ].
 
+adj_ssr_synsem := basic_adj_vpcomp_synsem & basic_inf_intrans_subst &
+  [ LOCAL [ CAT.VAL.COMPS < [ LOCAL.CONT.HOOK [ LTOP #cltop,
+						XARG #subjind ] ] >,
+            CONT [ HOOK.XARG #subjind,
+		   RELS <! #keyrel !>,
+		   HCONS <! qeq & [ HARG #arg1, LARG #cltop ] !> ] ],
+    LKEYS.KEYREL adj_arg1_relation & #keyrel &
+                   [ ARG1 #arg1 ] ].
+
 ;; DPF 18-jul-10 - Don't want to inherit from prd_synsem, since this prevents
 ;; e.g |tough problem to solve|.  Likewise for basic_adj_atrans_synsem.  So
 ;; push this down to subtypes like for |pretty|, which do inherit PRD +.
@@ -10750,6 +10761,17 @@ aj_-_i-att-nsp_le := nonc-hm-nab &
                      CONT.RELS <! adj_relation !> ],
 	     MODIFD notmod & [ LPERIPH bool ] ] ].
 
+; <type val="aj_-_i-att-pn_le">
+; <description>Adj, attributive, only modifies proper names: for deverbal adjectives that overcome reluctance to have passive participles modify unspecified proper names.
+; <ex>They acquired closely held Compaq.
+; <nex>
+; <todo>
+; </type>
+aj_-_i-att-pn_le := reg_adj_word &
+  [ SYNSEM basic_attr_adj_synsem & 
+	   [ LOCAL.CAT.HEAD.MOD < [ --MIN named_np_or_num_rel,
+				    LOCAL.CAT.VAL.SPR.FIRST unexpressed ] > ] ].
+
 ; <type val="aj_-_i-prd_le">
 ; <description>Adj, predicative                 
 ; <ex>C is awake.
@@ -11037,6 +11059,15 @@ aj_pp-vp_i-of-it_le := norm_adj_word &
 ; </type>
 aj_vp_i-it-prp_le := norm_adj_word &
   [ SYNSEM adj_atrans_prp_synsem ].
+
+; <type val="aj_vp_i-ssr_le">
+; <description>Adj, vp comp, raising, 
+; <ex>There are destined to be unicorns in the garden.
+; <nex>
+; <todo>
+; </type>
+aj_vp_i-ssr_le := norm_adj_word &
+  [ SYNSEM adj_ssr_synsem ].
 
 reg_adj_atrans_cp_word := norm_adj_word &
   [ SYNSEM adj_atrans_cp_fin_inf_synsem ].
@@ -11544,14 +11575,15 @@ aj_-_i-else_le := reg_intrans_adj &
 ; "Itel Systems Inc.", but instead ensure that SPR is unexpressed, to avoid
 ; spurious ambiguity for "the Stigen farm"
 ;; DPF 2012-12-15 - Restrict to modifying proper names.
+;; DPF 2014-06-05 - Since now using this only for post-titles, remove the
+;; MOD..SPR.FIRST unexpressed, so we can get |the defunct Smith Inc.|
 ;;
 basic_title_synsem := basic_zero_arg & count_noun_synsem &
   [ LOCAL [ CAT [ HEAD ttl &
                   [ MOD < [ LOCAL intersective_mod &
                                   [ CAT basic_nbar_cat &
-                                    [ HEAD.MINORS.MIN abstr_named_rel,
-                                      VAL.SPR < unexpressed &
-						[ OPT - ] > ],
+                                    [ HEAD.MINORS.MIN named_or_part_nom_rel,
+                                      VAL.SPR < [ OPT - ] > ],
                                     CONJ cnil,
                                     CONT.HOOK [ INDEX #nind,
                                                 XARG #nhand ] ],
@@ -11609,7 +11641,6 @@ n_-_tt-post_le := noncqrs-hm &
     SYNSEM title_synsem &
 	   [ LOCAL [ CAT [ POSTHD +,
 			   HEAD [ MOD < [ MODIFD notmod,
-					  --MIN abstr_named_rel,
 					  LOCAL.AGR.PNG.PN 3s ] >,
 				  PRD - ] ],
 		     AGR.PNG.PN 3s ] ] ].
@@ -17055,7 +17086,9 @@ subconj_disc_adv_synsem := norm_onearg_subconj_synsem &
 ;; DPF 2013-02-13 - Constrain to non-local empty on both complements.
 ;
 ; 'For Kim to win, Abrams must lose'
-
+;; DPF 2014-06-04 - Changed COMPS.REST.FIRST..COMPS from *olist* to < > to avoid
+;; spurious ambig of e.g. |with Kim angry, ...|
+;;
 subconj_twoarg_synsem := subconj_lex_synsem & basic_two_arg &
   [ LOCAL [ ARG-S #comps,
             CAT [ HEAD [ TAM.MOOD #mood,
@@ -17076,7 +17109,7 @@ subconj_twoarg_synsem := subconj_lex_synsem & basic_two_arg &
                                 synsem &
                                 [ LOCAL
                                   [ CAT [ HEAD.TAM.MOOD #mood,
-                                          VAL.COMPS *olist* ],
+                                          VAL.COMPS < > ],
                                     CONT.HOOK [ LTOP #chand,
                                                 INDEX.SF prop,
                                                 XARG #ind ] ],
@@ -17102,11 +17135,15 @@ subconj_for_synsem := subconj_twoarg_synsem &
 					       NONLOC.SLASH 0-dlist ] > ]] > ].
                                                 
 ; For predicatives, like "with Kim angry, no one smiled"
+;; DPF 2014-06-04 - Constrain COMPS.REST.FIRST..MOD..HEAD to basic_noun, to
+;; block (in-order-)to-VP as in |with Kim to arrive soon, ...|
+;;
 subconj_with_synsem := subconj_twoarg_synsem &
   [ LOCAL.CAT.VAL.COMPS 
 		  < synsem, 
 		    [ LOCAL.CAT [ HEAD v_or_a_or_p &
-				       [ PRD + ],
+				       [ PRD +,
+					 MOD < [ LOCAL.CAT.HEAD basic_noun ] >],
 				  VAL.SUBJ *olist* ] ] > ].
 
 ; Since we don't (yet) have a treatment of predicative NPs, add separate
@@ -20875,13 +20912,13 @@ lex_degree_spec_synsem := basic_lex_degree_spec_synsem &
 ; For measure_nps as in "two foot tall"
 ; DPF 4-Nov-02 - Removed [ LOCAL.CONT.HOOK.XARG nothing ], since now identify
 ; XARGs of modifier and modifiee.  Why was it added before?
-
-; phr_degree_spec_synsem := degree_spec_synsem & phr_synsem.
+;; DPF 2014-04-27 - This type wrongly required its SPEC..COMPS to be the empty 
+;; list: need nonempty for |10% more cats than dogs|, so remove constraint.
+;;
 phr_degree_spec_synsem := basic_degree_spec_synsem & lex_phr_synsem &
   [ LOCAL [ CAT.VAL [ SPR.FIRST.--MIN just_only_very_deg_rel,
-                      SPEC < [ LOCAL.CAT.VAL.COMPS #comps & < > ] >,
-		      COMPS < >,
-                      SPCMPS #comps ],
+  		      COMPS < >,
+                      SPCMPS < > ],
             CONT [ HOOK.XARG #xarg,
                    RELS.LIST.FIRST.ARG1 #xarg ] ] ].
 
