@@ -1,0 +1,66 @@
+FOL => English paraphrases
+
+;; Test run: Compile a version of the paraphrase grammar, then call Aaron 
+;; Kalb's FOL converter to MRS syntax, then inflate, add paraphrased MRSs, 
+;; generate, sort uniquely, and write to a file.
+
+;; Note: currently need a non-standard version of ACE that allows for more
+;; search space in transfer component, crucial for several examples in the
+;; test suites mentioned below
+
+;; The small development set:
+cd ~/erg; ace -G paraphrase-op.dat -g openproof/config-all.tdl; for i in $(cat openproof/7-12.txt); do \python openproof/scripts/e2e.py $i | ace -g inflatemrs.dat -f | ace -g paraphrase-op.dat -f | ace -g ergopen.dat -e | sort -u; echo "---ITEM---"; done > /tmp/out7-12.txt
+
+;; Small dev set with just coordination paraphrase rules
+cd ~/erg; ace -G paraphrase-op.dat -g openproof/config-crd.tdl; for i in $(cat openproof/7-12.txt); do \python openproof/scripts/e2e.py $i | ace -g inflatemrs.dat -f | ace -g paraphrase-op.dat -f | ace -g ergopen.dat -e | sort -u; echo "---ITEM---"; done > /tmp/out7-12.txt
+
+;; The full set of FOLS used currently in LPP book:
+cd ~/erg; for i in $(cat openproof/fols.txt); do \python openproof/scripts/e2e.py $i | ace -g inflatemrs.dat -f | ace -g paraphrase-op.dat -f | ace -g ergopen.dat -e | sort -u; echo "---ITEM---"; done > /tmp/out.txt
+
+;; One particular test example:
+cd ~/erg; for i in $(cat openproof/test2.txt); do \python openproof/scripts/e2e.py $i | ace -g inflatemrs.dat -f | ace -g paraphrase-op.dat -f | ace -g ergopen.dat -e | sort -u; echo "---ITEM---"; done > /tmp/outtest.txt
+
+;; To evaluate using Aaron's script, do the following
+
+cd ~/erg
+python openproof/scripts/corpus_test.py openproof/fols.txt openproof/scripts/goals.txt openproof/out.txt
+python openproof/scripts/corpus_test.py openproof/7-12.txt openproof/scripts/712goals.txt openproof/out7-12.txt
+
+
+;; To generate from MRS-ified FOL expressions using Aaron's script, do this:
+cd ~/erg
+ace -G inflatemrs.dat -g openproof/config-inflate.tdl
+ace -G paraphrase-op.dat -g openproof/config.tdl
+ace -G paraphrase-all.dat -g openproof/config-all.tdl
+ace -G paraphrase-01.dat -g openproof/config-01.tdl
+ace -G paraphrase-02.dat -g openproof/config-02.tdl
+ace -G ergopen.dat -g ace/config-open.tdl
+
+The mechanism for constraining which paraphrase rules get used is as follows:
+ - The config-*.tdl files determine which paraphrase-op-*.tdl file gets
+   loaded, and these files in turn specify which mtr-op-*.tdl file gets loaded.
+ - The runfol-* files are the executable scripts that can be called by the
+   top-level server.py script (in lingo/openproof/Server), and each of these
+   runfol-* files starts by compiling the relevant set of paraphrase rules, by
+   invoking the appropriate config-*.tdl file.
+Possible improvements:
+ - The runfol scripts currently write output to a particular file:
+   /tmp/out7-12.txt
+   but presumably some non-file data-passing mechanism would be better.
+ - Likewise, there probably could just be one `runfol` script, if we could
+   pass in an additional parameter which is the relevant config-*.tdl file.
+
+In the rule mask files, such as mtr-op-crd.tdl,
+  enable optional rule type with [ OPTIONAL + ]
+  block rule type with [ INPUT.HOOK.INDEX handle ].
+  require rule with [ OPTIONAL - ] or no decoration (use default)
+Note that to use the type-addendum facility, we have to work with types, with
+the advantage that the file of rules themselves (openproof.mtr) does not have
+to change, and can preserve the careful partial order of rule application.
+
+Here is an example from the runfol-crd script:
+
+cd ~/erg; ace -G paraphrase-op.dat -g openproof/config-crd.tdl; for i in $(cat openproof/7-12.txt); do \python openproof/scripts/e2e.py $i | ace -g inflatemrs.dat -f | ace -g paraphrase-op.dat -f | ace -g ergopen.dat -e | sort -u; echo "---ITEM---"; done > /tmp/out7-12.txt
+
+
+
