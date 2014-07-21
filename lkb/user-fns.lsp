@@ -252,7 +252,7 @@
 ;;; MRS transfer rules (MTRs), each of them matching an idiom configuration 
 ;;; and replacing the idiomatic parts of the MRS with a synthesized relation 
 ;;; (or nothing, for the time being).  post-transfer, the filter can then just
-;;; require that no idiomatic relation remain.  (20-feb-05; dan & oe phx - sfo)
+;;; require that no idiomatic relations remain. (20-feb-05; dan & oe phx - sfo)
 ;;;
 (defun idiom-complete-p (tdfs)
   (let* ((mrs (and (tdfs-p tdfs)
