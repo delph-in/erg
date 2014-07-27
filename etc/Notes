@@ -1,0 +1,131 @@
++ export DeepBank (for angelina)
++ re-parse (non-WSJ) Redwoods corpora
++ re-generate WeScience and Redwoods models
++ debug time-outs in 64-bit mode
++ validate that confidence and annotator survice in auto-update
++ debug unification failues in DT overlays
++ validate head table (and compare to DT overlays)
++ parse NANC
+
+
+$LOGONROOT/lingo/terg --> http://logon.emmtee.net/erg/tags/1214
+$LOGONROOT/coli/deepbank --> http://svn.delph-in.net/deepbank/tags/1.1
+
+-------------------------------------------------------------------------------
+          update all the profiles of a forthcoming new ERG release
+-------------------------------------------------------------------------------
+
+for i in csli mrs esd fracas; do
+  /opt/slurm/bin/sbatch ${LOGONROOT}/uio/titan/parse --reset --seconds \
+    --terg --best 500 --compare readings,p-input \
+    --time 180 --memory 2048 --edges 200000 \
+    --update/skeptical --compress --thin $i;
+  sleep 0.5;
+done
+
+for i in hike rondane \
+  jh0 jh1 jh2 jh3 jh4 jh5 jhk jhu tg1 tg2 tgk tgu ps psk psu \
+  cb trec sc01 sc02 sc03 rtc000 rtc001; do
+  /opt/slurm/bin/sbatch ${LOGONROOT}/uio/titan/parse --reset --seconds \
+    --terg+tnt --best 500 --compare readings,p-input \
+    --time 240 --memory 2560 --edges 200000 \
+    --update/skeptical --compress --thin $i;
+  sleep 0.5;
+done
+
+for i in ws01 ws02 ws03 ws04 ws05 ws06 ws07 ws08 ws09 ws10 ws11 ws12 ws13; do
+  /opt/slurm/bin/sbatch ${LOGONROOT}/uio/titan/parse --reset --seconds \
+    --terg+tnt/wiki --best 500 --compare readings,p-input \
+    --time 240 --memory 2560 --edges 200000 \
+    --update/skeptical --compress --thin $i;
+  sleep 0.5;
+done
+
+for i in ws214; do
+  /opt/slurm/bin/sbatch ${LOGONROOT}/uio/titan/parse --reset --seconds \
+    --erg+tnt/gml/wiki --best 500 --compare readings,p-input \
+    --time 240 --memory 2048 --edges 200000 \
+    --update/skeptical --compress --thin $i;
+  sleep 0.5;
+done
+
+for i in wlb03 wnb03; do
+  /opt/slurm/bin/sbatch ${LOGONROOT}/uio/titan/parse --reset --seconds \
+    --terg+tnt/html --best 500 --compare readings,p-input \
+    --time 240 --memory 2560 --edges 200000 \
+    --update/skeptical --compress --thin $i;
+  sleep 0.5;
+done
+
+for i in ecoc ecos ecpa ecpr vm6 vm13 vm31 vm32; do
+  /opt/slurm/bin/sbatch ${LOGONROOT}/uio/titan/parse --reset --seconds \
+    --terg+tnt/speech --best 500 --compare readings,p-input \
+    --time 180 --memory 2560 --edges 200000 \
+    --update/skeptical --compress --thin $i;
+  sleep 0.5;
+done
+
+wsj="wsj00a wsj00b wsj00c wsj00d wsj01a wsj01b wsj01c wsj01d
+  wsj02a wsj02b wsj02c wsj02d wsj03a wsj03b wsj03c
+  wsj04a wsj04b wsj04c wsj04d wsj04e wsj05a wsj05b wsj05c wsj05d wsj05e
+  wsj06a wsj06b wsj06c wsj06d wsj07a wsj07b wsj07c wsj07d wsj07e
+  wsj08a wsj09a wsj09b wsj09c wsj09d wsj09e wsj10a wsj10b wsj10c wsj10d
+  wsj11a wsj11b wsj11c wsj11d wsj11e wsj12a wsj12b wsj12c wsj12d wsj12e
+  wsj13a wsj13b wsj13c wsj13d wsj13e wsj14a wsj14b wsj14c wsj14d wsj14e
+  wsj15a wsj15b wsj15c wsj15d wsj15e
+  wsj16a wsj16b wsj16c wsj16d wsj16e wsj16f wsj17a wsj17b wsj17c wsj17d
+  wsj18a wsj18b wsj18c wsj18d wsj18e wsj19a wsj19b wsj19c wsj19d
+  wsj20a wsj20b wsj20c wsj20d wsj20e wsj21a wsj21b wsj21c wsj21d"
+
+for i in $wsj; do
+  /opt/slurm/bin/sbatch ${LOGONROOT}/uio/titan/parse --reset --seconds \
+    --terg+tnt/wsj --best 500 --suffix .64.2 --compare readings,p-input \
+    --time 600 --memory 4096 --edges 400000 \
+    --gold gold/deepbank/${i} --update/skeptical --compress --thin ${i};
+  sleep 0.5;
+done
+
+for i in $wsj; do
+  /opt/slurm/bin/sbatch ${LOGONROOT}/uio/titan/parse --reset --seconds \
+    --terg+tnt/wsj --best 500 --suffix .32 --compare readings,p-input \
+    --time 240 --memory 2048 --edges 200000 \
+    --gold gold/deepbank/${i} --update/skeptical --compress --thin ${i};
+  sleep 0.5;
+done
+
+{
+  ti=0; tp=0; tr=0;
+  for id in $wsj; do
+    profile=$id/14-07-21/pet.64.1;
+#    profile=$id;
+    if [ -f $profile/parse.gz ]; then 
+      i=$(zcat $profile/item.gz 2> /dev/null | wc -l); 
+      ti=$[$ti + $i];
+      o=$(zcat $profile/parse.gz 2> /dev/null | wc -l);
+      p=$(tsdb -home $profile -query 'select i-id where readings > 0' | wc -l); 
+      tp=$[$tp + $p];
+      r=$(tsdb -home $profile -query 'select i-id where t-active > 0' | wc -l); 
+      tr=$[$tr + $r]; 
+      if [ $i != $o ]; then 
+        echo "incomplete: $id ($i vs. $o)"; 
+      else
+        if [ $r -eq 0 ]; then
+          echo "suspicious: $id";
+        fi
+        echo "$id $i $p $r"
+      fi;
+    else 
+      echo "bogus: $id"; 
+    fi;
+  done
+  raw=$[$tp * 100 / $ti];
+  cooked=$[$tr * 100 / $ti];
+  echo "$tp parses and $tr results for $ti items ($raw% and $cooked% coverage)."
+}
+
+for i in $wsj; do
+  /opt/slurm/bin/sbatch ${LOGONROOT}/uio/titan/redwoods \
+    --deepbank --target ${LOGONROOT}/coli/deepbank/export \
+    --export input,derivation,tree,mrs,eds ${i};
+  sleep 0.5;
+done
