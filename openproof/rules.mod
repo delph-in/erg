@@ -1,0 +1,11 @@
+adj_predn_gpr
+predn_adj_gpr
+same_to_and_loc_op_gpr
+same_to_and_size_op_gpr
+also_adv_pro_op_gpr
+also_adv_part_op_gpr
+also_adv_cond_onearg_gpr
+also_adv_cond_twoarg_comp_gpr
+also_adv_cond_twoarg_gpr
+both_adv_op_gpr
+either_adv_op_gpr
