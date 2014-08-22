@@ -3277,12 +3277,14 @@ conj_mod_phrase := v_mod_phrase &
 		    PUNCT.RPUNCT rbc_or_pair_or_no_punct ] ].
 
 ;; For "and on Tuesday arose" or "and later Kim"
+;; DPF 2014-08-21 - Because some modifiers are adverbs even when the conjoined
+;; phrase is nominal, we can't bind the modifier's MOD..INDEX since that must
+;; be an event for adverbs, but there is no available event.
+;;
 conj_mod_int_phrase := conj_mod_phrase & head_compositional & 
-  [ NH-DTR.SYNSEM.LOCAL [ CAT.HEAD.MOD < [ LOCAL intersective_mod &
-					       [ CONT.HOOK.INDEX #cind ] ] >,
+  [ NH-DTR.SYNSEM.LOCAL [ CAT.HEAD.MOD < [ LOCAL intersective_mod ] >,
 			  CONT.HOOK.LTOP #ltop ],
-    HD-DTR.SYNSEM.LOCAL.CONJ.CREL [ LBL #ltop,
-				    ARG0 #cind ] ,
+    HD-DTR.SYNSEM.LOCAL.CONJ.CREL.LBL #ltop,
     C-CONT.HOOK.LTOP #ltop ].
 
 conj_mod_scop_phrase := conj_mod_phrase &
@@ -5042,6 +5044,8 @@ n_v-or-adj_cmpnd_ig_phr := n_v-or-adj_cmpnd_phr &
 ;; since we want |we admire "Scores Plus," the film.|
 ;; DPF 2013-01-09 - Removed RPERIPH na on mother and RPERIPH bool on NH-DTR,
 ;; to allow appos in coord, such as [[Kim, the cat,] and Abrams].
+;; DPF 2014-08-21 - Further extended HD-DTR..LPUNCT to allow left parens,
+;; since we want |my uncle (Kim Browne, the author)|
 ;;
 basic_appos_phr := head_initial & head_compositional &
   [ INFLECTD +,
@@ -5051,7 +5055,7 @@ basic_appos_phr := head_initial & head_compositional &
                       QUE 0-dlist,
                       REL #rel ],
              MODIFD.LPERIPH na,
-             PUNCT [ LPUNCT #lpunct & dq_or_no_punct,
+             PUNCT [ LPUNCT #lpunct & lparen_or_dq_or_no_punct,
 		     RPUNCT #rpunct,
 		     RCLSTR #rclstr ] ],
     HD-DTR [ INFLECTD +,
@@ -6301,12 +6305,14 @@ partitive_intadj_ppof_phrase := partitive_intadj_phrase &
                                 basic_partitive_num_ppof_phrase &
   [ ARGS < [ SYNSEM.LOCAL.CAT.HEAD intadj ] > ].
 
+;; DPF 2014-08-21 - ARGS..HEAD needs to be basic_adj, since phrasal superlatives
+;; are HEAD adj, not superl_adj, as in |the most important of these|
+;;
 partitive_adj_ppof_phrase := partitive_intadj_phrase &
 			     basic_partitive_num_ppof_phrase &
   [ SYNSEM.LOCAL.CAT.VAL.SPR < expressed_synsem &
 			       [ --MIN def_or_demon_q_rel ] >,
-    ARGS < [ SYNSEM.LOCAL.CAT.HEAD compar_or_superl_adj ] > ].
-
+    ARGS < [ SYNSEM.LOCAL.CAT.HEAD basic_adj ] > ].
 
 ; For 'five chairs arrived' where 'five' is a determiner which can optionally
 ; take a degree specifier as in 'exactly five chairs arrived', contrasted
@@ -10146,6 +10152,10 @@ paren_float_rule := paren_dash_float_rule &
 			  RCLSTR.RPAREN + ] ].
 
 ; "Abrams - I mean it - arrived"
+;; DPF 2014-08-08 - Added qeq between the ARG2 and the LTOP of the clause,
+;; so we don't force quantifiers inside the parenthetical clause to have to
+;; scope outside of that clause.
+;;
 paren_dash_float_s_rule := paren_dash_float_rule &
   [ HD-DTR.SYNSEM.NONLOC non-local_none,
     NH-DTR.SYNSEM.LOCAL [ CAT [ HEAD verb_or_conj-s,
@@ -10154,8 +10164,8 @@ paren_dash_float_s_rule := paren_dash_float_rule &
                                       COMPS < > ],
                                 MC + ],
                           CONT.HOOK.LTOP #nhtop ],
-    C-CONT [ RELS <! [ ARG2 #nhtop ] !>,
-             HCONS <! !>,
+    C-CONT [ RELS <! [ ARG2 #harg ] !>,
+             HCONS <! qeq & [ HARG #harg, LARG #nhtop ] !>,
 	     ICONS <! !> ] ].
 
 paren_float_s_rule := paren_dash_float_s_rule & paren_float_rule.
@@ -10188,34 +10198,6 @@ paren_float_nbar_rule := paren_float_rule & head_initial &
              HCONS <! qeq & [ HARG #rhand,
                               LARG #nhtop ] !>,
 	     ICONS <! !> ] ].
-
-#|
-speech_filler_phrase := head_nexus_rel_phrase & basic_binary_headed_phrase &
-  [ SYNSEM lex_synsem &
-	   [ LOCAL [ CAT #cat,
-                     CONT #cont,
-                     AGR #agr,
-                     CONJ #conj ],
-	     NONLOC #nonloc,
-             MODIFD #modif,
-	     PUNCT #punct ],
-    NH-DTR.SYNSEM [ LOCAL [ CAT.HEAD spfill,
-			    CONJ cnil ],
-		    PUNCT #punct ],
-    HD-DTR [ INFLECTD #infl,
-	     SYNSEM basic_lex_synsem &
-		    [ LOCAL [ CAT #cat & [ HEAD non_frag ],
-			      CONT #cont,
-			      AGR #agr,
-			      CONJ #conj ],
-		      LEX +,
-		      NONLOC #nonloc,
-		      MODIFD #modif ] ],
-    C-CONT [ RELS <! !>,
-	     HCONS <! !>,
-	     ICONS <! !> ],
-    INFLECTD #infl ].
-|#
 
 ;; DPF 2012-11-26 - Constrain dtr's SLASH to be arg-local, to exclude spurious
 ;; RNR analysis of |Kim is arising and arriving in Paris|, which otherwise gets
@@ -10379,8 +10361,17 @@ never_unify_rule := rule &
 				   [ MINORS.MIN never_unify_rel,
 				     PRD - ] ] > ].
 
+;; DPF 2014-08-01 - Added unary and binary bridging rules to accommodate robust
+;; full-forest treebanking.  The strategy is to pump each normal edge in the
+;; chart to a "bridge head" edge via the unary rule, and then combine two
+;; adjacent such bridge-head edges using the binary rule.  This strategy,
+;; proposed by Woodley Packard, results in a mere doubling of the number of
+;; edges in each cell of the chart, rather than the square of the number of
+;; normal edges that resulted from trying just a binary bridging rule that
+;; accepted either bridge or normal edges.
+;;
 bridge_binary_phrase := basic_binary_phrase &
-  [ INFLECTD +,
+  [ INFLECTD -,
     SYNSEM [ LOCAL [ CAT [ HEAD bridge_head & [ MINORS.MIN never_unify_rel,
 						MOD < > ],
 			   VAL [ SUBJ < >,
@@ -10390,10 +10381,23 @@ bridge_binary_phrase := basic_binary_phrase &
 		     CONJ cnil ],
 	     NONLOC non-local_none ],
     C-CONT [ RELS <! !>,
-	     HCONS <! !>,
-	     ICONS <! !> ],
-    ARGS < [ INFLECTD +,
-	     SYNSEM.NONLOC non-local_none ],
-	   [ INFLECTD +,
-	     SYNSEM.NONLOC non-local_none ] > ].
+	     HCONS <! !> ],
+    ARGS < [ SYNSEM.LOCAL.CAT.HEAD bridge_head,
+	     INFLECTD na ],
+	   [ SYNSEM.LOCAL.CAT.HEAD bridge_head ] > ].
 
+bridge_unary_phrase := norm_unary_phrase &
+  [ INFLECTD na,
+    SYNSEM [ LOCAL [ CAT [ HEAD bridge_head & [ MINORS.MIN never_unify_rel,
+						MOD < > ],
+			   VAL [ SUBJ < >,
+				 SPR < >,
+				 COMPS < >,
+				 SPCMPS < > ] ],
+		     CONJ cnil ],
+	     LEX -,
+	     NONLOC non-local_none ],
+    C-CONT [ RELS <! !>,
+	     HCONS <! !> ],
+    ARGS < [ INFLECTD +,
+	     SYNSEM.LOCAL.CAT.HEAD non_frag ] > ].

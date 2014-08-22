@@ -284,7 +284,7 @@ lex_rule_supermost := word_or_lexrule &
 ; So we go back to the original appending model, and leave the proper
 ; treatment of scope holes in fragments for later solutions.
 
-lex_rule_basic := lex_rule_supermost &
+lex_rule_basic := lex_rule_supermost & word_or_nonpunct_rule &
   [ DTR [ SYNSEM [ LOCAL.CONJ cnil,
                    PUNCT #punct & [ LPUNCT no_punct,
 				    RPUNCT no_punct ] ],
@@ -295,12 +295,17 @@ lex_rule_basic := lex_rule_supermost &
     ARGS.FIRST.SYNSEM.PHON.ONSET #onset,
     GENRE #genre ].
 
+;; DPF 2014-08-19 - Make dtr be word_or_nonpunct_rule  to prevent inflectional 
+;; rules from applying spuriously after the italics rules (or other punctuation
+;; rules) have applied.
+;;
 lex_rule_infl_affixed := lex_rule_basic & word_or_infl_rule &
   [ INFLECTD +,
     KEY-ARG #keyarg,   
     SYNSEM #synsem,
     ARGS < #dtr >,
-    DTR #dtr & [ INFLECTD -,
+    DTR #dtr & word_or_nonpunct_rule &
+	       [ INFLECTD -,
                  KEY-ARG #keyarg,   
                  SYNSEM #synsem ],
     C-CONT.RELS <! !> ].
@@ -755,7 +760,8 @@ basic_passive_verb_lr := lex_rule_basic & word_or_infl_rule &
 			 --COMPKEY #cmin,
                          --+COMPKEY #pluscmin,
                          --OCOMPKEY #ocmin,
-                         --+OCOMPKEY #plusocmin ] ] ],
+                         --+OCOMPKEY #plusocmin ],
+		 NONLOC #nonloc ] ],
     SYNSEM basic_passive_synsem &
 	 [ LOCAL verb_participle_affix &
 		 [ CAT [ HEAD verb & [ TAM [ TENSE #tense,
@@ -769,6 +775,7 @@ basic_passive_verb_lr := lex_rule_basic & word_or_infl_rule &
                                INDEX #index,
                                XARG #xarg ],
 		   CTXT #ctxt ],
+	   NONLOC #nonloc,
            LKEYS [ KEYREL #keyrel,
 		   --COMPKEY #cmin,
                    --+COMPKEY #pluscmin,
@@ -788,13 +795,11 @@ basic_passive_verb_lr := lex_rule_basic & word_or_infl_rule &
 ;; admired|.
 ;;
 norm_passive_verb_lr := basic_passive_verb_lr &
-  [ DTR.SYNSEM [ LOCAL.CAT.VAL.SUBJ < [ --SIND #subjind, 
-					NONLOC #snonloc ] >,
-		 NONLOC #nonloc ],
+  [ DTR.SYNSEM.LOCAL.CAT.VAL.SUBJ < [ --SIND #subjind, 
+				      NONLOC #snonloc ] >,
     SYNSEM passive_synsem &
            [ LOCAL.CAT.VAL.COMPS < [ LOCAL.CONT.HOOK.INDEX #subjind,
-				     NONLOC #snonloc ], ... >,
-	     NONLOC #nonloc ] ].
+				     NONLOC #snonloc ], ... > ] ].
 
 ; 'was referred to as ...'
 prep_passive_verb_lr := basic_passive_verb_lr &
@@ -1621,6 +1626,56 @@ dative_shift_lr := lex_rule_basic &
             HCONS <! !>,
 	    ICONS <! !> ] ].
 
+;; Verbs with expletive-it subject and direct object alternate with second
+;; complement as CP or VP:
+;; |It annoyed him that we left|
+;; |It annoyed him to shave himself| 
+;;
+verb_it_cp_vp_lr := lex_rule_basic &
+ [ ORTH #orth,
+   INFLECTD -,
+   DTR #dtr & 
+       [ ORTH #orth,
+         INFLECTD -,
+         SYNSEM expl_it_subj_np_cp_verb &
+	  [ LOCAL [ CAT [ HEAD [ VFORM #vform,
+				 TAM #tam,
+				 AUX #aux,
+				 INV #inv,
+				 MOD #mod ],
+                          VAL.SUBJ #subj,
+                          MC #mc,
+                          HC-LEX #hclex ],
+                    CONT [ HOOK [ LTOP #ltop,
+                                  INDEX #ind ] ],
+                    CONJ cnil,
+                    CTXT #ctxt ],
+            LKEYS [ KEYREL #keyrel,
+                    ALTKEYREL #altkeyrel,
+                    --COMPKEY #cmin ],
+            NONLOC #nonlocal ] ],
+   SYNSEM expl_it_subj_np_vp_verb &
+	  [ LOCAL [ CAT [ HEAD [ VFORM #vform,
+				 TAM #tam,
+				 AUX #aux,
+				 INV #inv,
+				 MOD #mod ],
+			  VAL.SUBJ #subj,
+                          MC #mc,
+                          HC-LEX #hclex ],
+                    CONT [ HOOK [ LTOP #ltop,
+                                  INDEX #ind ] ],
+                    CONJ cnil,
+		    CTXT #ctxt ],
+            LKEYS [ KEYREL #keyrel,
+                    ALTKEYREL #altkeyrel,
+                    --COMPKEY #cmin ],
+	    NONLOC #nonlocal ],
+   ARGS < #dtr >,
+   C-CONT [ RELS <! !>,
+            HCONS <! !>,
+	    ICONS <! !> ] ].
+
 ; Converts e.g. int-adj 'twenty' to minute-noun for 'twenty (minutes) to nine'
 ; Currently does not allow 'twenty-two to nine' - would need to append COMPS
 ; more carefully.
@@ -1805,7 +1860,7 @@ tough_adj_lr := lex_rule_basic &
 ;; DPF 2012-12-01 - Identified missing PUNCT on dtr and mother, to prevent
 ;; e.g. spurious application of the paired_bracket rule.
 ;;
-pre_noun_adj_lr := lex_rule_supermost &
+pre_noun_adj_lr := lex_rule_supermost & word_or_nonpunct_rule &
   [ DTR word_or_lexrule & #stem &
         [ INFLECTD +,
           SYNSEM [ LOCAL [ CAT [ HEAD noun &
@@ -1859,7 +1914,7 @@ pre_noun_adj_lr := lex_rule_supermost &
 ; parsing.  (All ignoring the type/individual contrast which the ERG currently
 ; doesn't distinguish.)
 
-bipart_lr := lex_rule_supermost &
+bipart_lr := lex_rule_supermost & word_or_nonpunct_rule &
   [ INFLECTD -,
     ORTH #orth,
     GENRE prescrip,
@@ -1936,14 +1991,18 @@ inverted_quote_lr := lex_rule_basic &
             HCONS <! !>,
 	    ICONS <! !> ] ].
 
-; Foreign or italicized word
-foreign_or_ital_lr := lex_rule_supermost &
+;; Foreign words
+;;
+foreign_lr := lex_rule_supermost & word_or_nonpunct_rule &
   [ INFLECTD +,
     ORTH #orth,
     KEY-ARG #keyarg,
     DTR #stem &
-	[ ORTH #orth,
-	  SYNSEM [ LOCAL.CONT.HOOK.LTOP #hand,
+	[ INFLECTD na_or_+,
+	  ORTH #orth,
+	  SYNSEM basic_lex_synsem &
+		 [ LOCAL.CONT.HOOK [ LTOP #hand,
+				     INDEX #index1 ],
 		   NONLOC #nonloc,
                    PUNCT [ LPUNCT dq_or_sq_or_lital_punct,
 			   RPUNCT dq_or_sq_or_rital_punct ],
@@ -1951,41 +2010,33 @@ foreign_or_ital_lr := lex_rule_supermost &
 		   PHON.ONSET #onset ],
           KEY-ARG #keyarg,
           GENRE #genre ],
-    SYNSEM [ NONLOC #nonloc,
+    SYNSEM lex_phr_synsem &
+	   [ LOCAL [ CAT nomp_cat &
+			 [ HEAD noun & 
+				[ MOD < >,
+				  MINORS.MIN norm_nom_rel ],
+			   VAL.SPR < > ],
+		     CONT nom-obj &
+			 [ HOOK.INDEX #index ],
+		     CONJ cnil,
+		     AGR #index & [ PNG.PN 3s ] ],
+	     NONLOC #nonloc & non-local_none,
 	     LEX +,
-	     LKEYS #lkeys,
+	     LKEYS #lkeys & [ KEYREL [ CFROM #from, CTO #to ] ],
              PUNCT.RPUNCT clause_or_no_punct,
 	     PHON.ONSET #onset ],
     GENRE #genre,
-    C-CONT.HOOK.LTOP #hand,
-    ARGS < #stem > ].
-
-foreign_lr := foreign_or_ital_lr &
-  [ DTR [ INFLECTD na_or_+,
-	  SYNSEM basic_lex_synsem &
-		 [ LOCAL.CONT.HOOK.INDEX #index1,
-		   LKEYS.KEYREL #keyrel ] ],
-    SYNSEM lex_phr_synsem &
-	   [ LOCAL [ CAT nomp_cat &
-                        [ HEAD noun & 
-                               [ MOD < >,
-				 MINORS.MIN norm_nom_rel ],
-                          VAL.SPR < > ],
-                    CONT nom-obj &
-                        [ HOOK.INDEX #index ],
-                    CONJ cnil,
-                    AGR #index & [ PNG.PN 3s ] ],
-	     NONLOC non-local_none,
-	     LKEYS.KEYREL #keyrel & [ CFROM #from, CTO #to ] ],
     C-CONT [ HOOK [ LTOP #hand,
 		    INDEX #index ],
 	     RELS <! [ LBL #hand,
 		       PRED fw_seq_rel,
 		       ARG0 #index,
 		       L-INDEX #index1,
-		       CFROM #from, CTO #to ]!>,
+		       CFROM #from, CTO #to ] !>,
 	     HCONS <! !>,
-	     ICONS <! !> ] ].
+	     ICONS <! !> ],
+    ARGS < #stem > ].
+
 
 ;; Punctuation rules
 ;
@@ -2302,7 +2353,7 @@ punct_drop_italright_rule := basic_punctuation_rule &
 ;; DPF 2010-10-10 - Consider |reschedule| which has an optional complement,
 ;; even though |schedule| has an obligatory one.  FIX?
 
-verb_prefix_rule := lex_rule_supermost &
+verb_prefix_rule := lex_rule_supermost & word_or_nonpunct_rule &
   [ INFLECTD +,
     DTR word_or_lexrule & #stem &
 	[ INFLECTD +,
