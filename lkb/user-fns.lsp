@@ -506,6 +506,17 @@
             (format t "dt-test(): `~(~a~)' has --DT not on HEAD.~%" id))))
       dt)))
 
+(defun onset-test (le)
+  (let* ((tdfs (lex-entry-full-fs le))
+         (dag (tdfs-indef tdfs))
+         (onset (existing-dag-at-end-of dag '(synsem phon onset)))
+         (type (dag-type onset)))
+    (unless (or (subtype-or-equal type 'con_or_voc)
+                (subtype-or-equal type 'unk_onset))
+      (format
+       t "onset-test(): ~(~a~) has underspecified ONSET value (~(~a~)).~%"
+       (lex-entry-id le) type))))
+
 (defun generate-ctypes (&key file (stream t))
   (when (stringp file)
     (setf stream (open file :direction :output :if-exists :supersede)))
