@@ -118,7 +118,7 @@
 ;;; in token mapping, it is undesirable (tedious, in fact) to distinguish the
 ;;; various types of category suggestions (be they sub-, PoS, or super-tags).
 ;;; furthermore, this way we can even stick to the tried and tested YY input
-;;; format (unless the supertagger is directly interfaced to PET, which be the
+;;; format (unless the supertagger is directly interfaced to PET, which is the
 ;;; preferred form of integration nowadays).  while there may be profiles with
 ;;; old-style derivations around, make the [incr tsdb()] dag reader ignore the
 ;;; feature +STAG globally.  sometime in 2012, we should probably purge this
@@ -360,7 +360,7 @@
 ;; invocation of the idiom filter, where appropriate, and thus may help filter
 ;; out derivations that are actually invalid (because they use fragments of an
 ;; idiom in a non-idiomatic contenxt), which can be among the results computed
-;; by PET (as long as it lacks an implementation of the idion filter).
+;; by PET (as long as it lacks an implementation of the idiom filter).
 ;;
 #+:logon
 (setf tsdb::*derivations-reconstruct-sponsor-p* t)
