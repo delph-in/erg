@@ -147,3 +147,43 @@
 ;; Avoid bogus complaint about PSQL server version - now outdated information
 (defmethod check-psql-server-version ((lex mu-psql-lex-database))
   t)
+
+;; DPF 2014-10-27 (redefined from lkb/src/io-tdl/tdltypeinput.lsp)
+;; Allow type documuntation strings to be marked withh triple quotes, for
+;; compatibility with PET
+;;
+(defun read-tdl-type-comment (istream name)
+  ;;; enclosed in """..."""s - called when we've just peeked a "
+  (let ((start-position (file-position istream))
+	(comment-res nil))
+    ;; record this in case the comment isn't closed
+    (read-char istream)
+    (if (eql (peek-char nil istream nil 'eof) #\")
+      (progn (read-char istream)
+	     (if (eql (peek-char nil istream nil 'eof) #\")
+		 (read-char istream)
+	       (lkb-read-cerror 
+		istream 
+		"Need three double-quote marks for type comment for ~A (comment start at ~A)" 
+		name start-position)))
+      (lkb-read-cerror 
+		istream 
+		"Need three double-quote marks for type comment for ~A (comment start at ~A)" 
+		name start-position))
+    (loop 
+      (let ((new-char (peek-char nil istream nil 'eof)))
+	(cond ((eql new-char 'eof)
+	       (lkb-read-cerror 
+		istream 
+		"File ended in middle of type comment for ~A (comment start at ~A)" 
+		name start-position)
+	       (return))
+	      ((and (eql new-char #\")
+		    (read-char istream)
+		    (eql (peek-char nil istream nil 'eof) #\")
+		    (read-char istream)
+		    (eql (peek-char nil istream nil 'eof) #\")
+		    (read-char istream))
+	       (return))
+	      (t (push (read-char istream) comment-res)))))
+    (coerce (nreverse comment-res) 'string)))

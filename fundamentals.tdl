@@ -73,29 +73,6 @@ word_or_punct_rule := word_or_infl_or_punct_rule.
 word_or_nonpunct_rule := word_or_lexrule.
 word_or_infl_rule := word_or_infl_or_punct_rule & word_or_nonpunct_rule.
 
-;; DPF 2013-06-20 - We have added support for introducing bracketing
-;; and syntactic dependency constraints onto tokens in preprocessing,
-;; recorded in their +TRAIT feature.  These constraints are propagated
-;; here onto attributes of the feature structure which is visible to the
-;; syntactic rules.
-;;
-;; The +LB (left bracket) and +RB (right bracket) attributes take as
-;; value a (possibly empty) list of ctypes, elements in the hierarchy
-;; of construction types defined in the file `ctypes.tdl'.  The basic
-;; idea is that a well-formed phrase cannot cross brackets, and each
-;; construction will unify its own ctype with that required by a
-;; bracket pair (where the bracket ctype can be more or less
-;; construction-specific.  Such bracket constraints could be supplied
-;; by a preprocessor such as a named-entity recognizer or a chunk
-;; parser.  At present we have token-mapping rules that introduce
-;; these brackets to keep hyphenated expressions such as
-;; |snow-covered| together, avoiding spurious analyses that would
-;; associate the left and right sides of the hyphen to different
-;; phrases.  We also have some placeholder token-mapping rules for
-;; named entities such as |New York Stock Exchange|, where eventually
-;; we would expect to get these bracketed expressions from some
-;; external resource.
-;; 
 basic_word := word_or_infl_rule & word_or_punct_rule &
   [ SYNSEM [ PHON.ONSET.--TL #tl,
 	     LKEYS.KEYREL [ CFROM #from,
@@ -110,8 +87,7 @@ word := basic_word &
 orthog := *cons* &
 [ FORM string,
   FROM string,
-  TO string,
-  LB *list*, RB *list* ].
+  TO string ].
 
 orthography := orthog &
 [ CLASS token_class ].
@@ -460,7 +436,8 @@ p_or_basic_adv := head.
 p_or_adv := p_or_v_or_adv & p_or_adv_or_dadv & n_or_a_or_p_or_adv &
             n_or_p_or_adv & p_or_adv_or_comp & p_or_basic_adv.
 adv_or_comp := p_or_adv_or_comp.
-subst_or_adv := head.
+subst_or_adv_or_frag := head.
+subst_or_adv := subst_or_adv_or_frag.
 
 subst := non_frag & subst_or_adv.
 
@@ -640,8 +617,9 @@ cr := verb_or_cr & verbal_or_cr & adverbee_or_modnp.
 
 ; Added poss-able to allow s's as subjects of quoting verbs, as in
 ; 'Kim arrived said Sandy.'
+;; DPF 2014-10-20 - Added comp_spec_able to allow |was more/most admired|
 verb := verbal & v_or_p & n_or_v & v_or_a & poss-able & mobile & 
-	verb_or_conj-s & verb_or_cr.
+	verb_or_conj-s & verb_or_cr & comp_spec_able.
 
 addinfl := *avm* &
   [ ADDPN pn,
@@ -736,7 +714,8 @@ conj_or_frag := verb_or_conj_or_frag.
 
 ; For fragments of all kinds
 ; DPF 12-apr-08 - Try adding disc_adverbee, to allow "Yes, and Kim."
-frag := subst_or_func & verb_or_frag & conj_or_frag & disc_adverbee &
+frag := subst_or_func & verb_or_frag & conj_or_frag & disc_adverbee & mobile &
+	subst_or_adv_or_frag &
   [ MOD < > ].
 
 ; For run-on sentence conjunction (to avoid spurious modifier ambiguity)
@@ -1264,7 +1243,8 @@ lexkeys_full := lexkeys_norm &
     --OCOMPKEY predsort,
     --+COMPKEY predsort,
     --+OCOMPKEY predsort,
-    --COMPHD head_min ].
+    --COMPHD head_min,
+    --IDFORM string ].
 
 ; To support chart dependency filtering for there-copula and expletive-it args
 lexkeys+ := lexkeys_full &
@@ -1904,7 +1884,10 @@ _yonder_a_1_rel := adj_rel.
 _arrear_a_1_rel := adj_rel.
 _one-by-one_a_1_rel := adj_rel.
 _once+again_a_1_rel := miscprep_rel.
-
+;; DPF 2014-10-22 - These are maybe temporary until we find a better analysis
+;; for |people age ten and older|.
+_and_p_rel := miscprep_rel.
+_or_p_rel := miscprep_rel.
 
 much-many_a_rel := adj_rel & card_or_much_rel.
 little-few_a_rel := adj_rel & card_or_much_rel.
@@ -2040,8 +2023,15 @@ pro_ss := expressed_non_canonical &
 
 gappro := pro_ss & gap.
 ; Needed in infinitival vp_fin-frg_c rule to prevent spurious analyis with subj gap.
+#|
 nongappro := pro_ss &
   [ NONLOC.SLASH 0-dlist ].
+|#
+nongappro := expressed_non_canonical &
+  [ LOCAL [ CAT.HEAD noun,
+            CONT.HOOK.INDEX #ind ],
+    NONLOC.SLASH 0-dlist,
+    --SIND #ind ].
 
 *olist_or_prolist* := *list*.
 *ocons_or_procons* := *olist_or_prolist* & *cons* &
@@ -2826,7 +2816,7 @@ _neither_q_rel := explicit_noagr_nodef_q_rel.
 _no_q_rel := no_q_rel.
 _some_q_rel := some_q_rel & indef_or_num_q_rel.
 _some_q_indiv_rel := some_q_rel.
-_such_q_rel := explicit_q_rel.
+_such_q_rel := explicit_q_rel & non_pronoun_q_rel.
 _that_q_dem_rel := demon_far_q_rel.
 _the+most_q_rel := explicit_quant_agr_q_rel.
 _the+least_q_rel := explicit_quant_agr_q_rel.
@@ -2888,7 +2878,7 @@ non_number_rel := predsort.
 norm_non_num_rel := non_number_rel.
 quantity_or_norm_or_no_rel := predsort.
 norm_or_no_rel := quantity_or_norm_or_no_rel.
-norm_rel := norm_non_num_rel & norm_or_no_rel.
+norm_rel := norm_non_num_rel & norm_or_no_rel & quantity_or_norm_rel.
 event_or_degree_or_no_rel := predsort.
 non_conj_rel := predsort.
 norm_non_conj_rel := non_conj_rel & norm_rel.
@@ -3145,7 +3135,7 @@ named_or_part_nom_rel := predsort.
 ; Used in munging rules to make reversible the implicit quantifier
 abstr_named_rel := named_or_part_nom_rel & norm_rel.
 gen_named_rel := abstr_named_rel.
-named_np_or_num_rel := gen_named_rel & named_or_meas_rel.
+named_np_or_num_rel := gen_named_rel & named_or_meas_rel & nonpro_rel.
 abstr_named_np_rel := named_np_or_num_rel.
 named_np_rel := abstr_named_np_rel & reg_nom_rel & norm_nom_or_place_rel.
 		
@@ -3158,12 +3148,13 @@ named_num_or_seq_rel := nom_rel.
 num_or_meas_rel := nom_rel & nonpro_or_num_rel.
 ; DPF 03-may-04 ; Changed non_temp_nonpro_rel to nom_nocmpnd_rel, to prevent
 ; these from appearing in N-N-compounds
-named_num_rel := named_np_or_num_rel & nom_nocmpnd_rel &
+named_num_rel := named_np_or_num_rel & nom_nocmpnd_rel & 
 		 named_num_or_seq_rel & norm_nom_or_place_rel & 
 		 num_or_meas_rel & named_num_or_fract_rel.
 
+;; DPF 14-10-13 - Removed nonpro_or_num_rel since now from named_np_or_num_rel
 num_seq_nom_rel := named_num_or_seq_rel & non_temp_nom_rel & 
-		   nonpro_or_num_rel & named_np_or_num_rel & nonpart_nom_rel.
+		   named_np_or_num_rel & nonpart_nom_rel.
 ;named_card_rel := named_num_rel & card_rel.
 named_times_rel := named_num_rel & times_rel.
 named_plus_rel := named_num_rel & plus_rel.
@@ -3457,6 +3448,7 @@ role_rel := nontemp_rel & nonaux_v_rel.
 ;
 can_able_rel := predsort.
 
+;; add must/have+to like can_able
 modal_rel := aux_arg1_rel.
 _can_v_modal_rel := modal_rel & can_able_rel.
 _could_v_modal_rel := modal_rel.
@@ -3606,7 +3598,8 @@ non_comp_degree_rel := degree_rel.
 
 much_or_very_deg_rel := degree_rel & nonpro_or_num_rel.
 more_or_very_deg_rel := degree_rel.
-much_or_more_deg_rel := degree_rel.
+more_this_deg_rel := degree_rel.
+much_or_more_deg_rel := more_this_deg_rel.
 
 ; For specifiers of adjectives
 deg_rel := non_comp_degree_rel.
@@ -3616,11 +3609,11 @@ very_this_that_rel := deg_rel & much_or_very_deg_rel & more_or_very_deg_rel.
 very_deg_rel := very_this_that_rel & ord_or_very_rel.
 
 ; For degree specifiers "this/that/too/as" as in "that much", "so tall"
-this_that_deg_rel := very_this_that_rel.
+this_that_deg_rel := very_this_that_rel & more_this_deg_rel.
 
-; For 'more" with positive adjectives
+; For 'more" with positive adjectives and with adverbs
 more_deg_rel := more_or_very_deg_rel & just_only_notvery_deg_rel &
-		much_or_more_deg_rel.
+		much_or_more_deg_rel & comp_as_too_enough_rel.
 
 ; For as..as, too..to
 comp_as_too_enough_rel := comp_more_less_rel.
@@ -3714,7 +3707,8 @@ _colon_v_id_rel := cop_id_rel.
 unspec_adj_rel := adj_rel.
 ; To restrict heads in appositives
 quantity_or_no_rel := quantity_or_norm_or_no_rel & non_number_rel.
-quantity_rel := quantity_or_no_rel & norm_non_num_rel.
+quantity_or_norm_rel := quantity_or_norm_or_no_rel.
+quantity_rel := quantity_or_no_rel & norm_non_num_rel & quantity_or_norm_rel.
 prednom_state_rel := reg_diadic_nom_rel.
 defequal_v_rel := v_event_rel.
 
@@ -4030,7 +4024,8 @@ hyphen_dbl_or_no_punct := hyphen_dbl_or_clause_or_no_punct &
                           hyphen_or_pair_or_no_punct.
 3dots_or_no_punct := 3dots_or_clause_or_no_punct.
 pair_or_no_punct := comma_or_pair_or_no_punct & hyphen_or_pair_or_no_punct
-                    & clause_or_pair_or_no_punct & rbc_or_pair_or_no_punct.
+                    & clause_or_pair_or_no_punct & rbc_or_pair_or_no_punct &
+		    semi_or_pair_or_no_punct.
 lital_or_no_punct := basic_punct_mark.
 no_punct := clause_or_no_punct & comma_or_no_punct & hyphen_sgl_or_no_punct &
             hyphen_dbl_or_no_punct & 3dots_or_no_punct & pair_or_no_punct &
@@ -4066,13 +4061,15 @@ comma_or_pair_punct := comma_or_pair_or_no_punct &
 ;; FIX to clean up.
 ;;
 comma_punct := comma_or_clause & comma_or_no_punct & comma_or_pair_punct &
-	       comma_or_rbc_punct & comma_or_semicol &
+	       comma_or_rbc_punct & comma_or_semicol & 
+	       rparen_or_comma_or_no_punct &
 	       quote_or_hyphen_or_clause_or_no_punct.
 
 3dots_or_clause := basic_punct_mark.
 3dots_punct := 3dots_or_clause & 3dots_or_no_punct & basic_clause_punct.
 comma_or_semi_or_no_punct := comma_or_semi_or_pair_or_no_punct.
-semi_or_no_punct := comma_or_semi_or_no_punct.
+semi_or_pair_or_no_punct := comma_or_semi_or_pair_or_no_punct.
+semi_or_no_punct := comma_or_semi_or_no_punct & semi_or_pair_or_no_punct.
 comma_or_semicol := comma_or_semi_or_no_punct.
 basic_semicol_punct := clause_or_semicol & semi_or_no_punct & 
 		       comma_or_semicol & punct_mark.
@@ -4095,7 +4092,8 @@ lparen_or_no_punct := lparen_or_dq_or_no_punct.
 lparen_punct := pair_punct & lparen_or_no_punct & dq_or_sq_or_no_punct.
 
 rparen_or_rbc_or_no_punct := basic_punct_mark.
-rparen_or_no_punct := rparen_or_rbc_or_no_punct.
+rparen_or_comma_or_no_punct := basic_punct_mark.
+rparen_or_no_punct := rparen_or_rbc_or_no_punct & rparen_or_comma_or_no_punct.
 ; Add comma_or_rbc_or_clause_or_no_punct to allow e.g. |(those who smile)|
 rparen_punct := pair_punct & rparen_or_clause_punct &
 		comma_or_rbc_or_clause_or_no_punct & rparen_or_no_punct
@@ -4162,18 +4160,6 @@ br := dialect.
 uk := br.
 au := br.
 
-#|
-basic_root_synsem := canonical_synsem &
-  [ LOCAL [ CAT [ HEAD.TAM indic_tam,
-                  VAL [ SUBJ *olist*,
-                        SPR *olist*,
-                        COMPS < > ] ],
-            CONT.HOOK.INDEX.SF #pred ],
-    NONLOC [ SLASH 0-dlist & [ LIST < > ],
-             REL 0-dlist & [ LIST < > ],
-             QUE 0-dlist & [ LIST < > ] ],
-    PUNCT.RPUNCT.PSF #pred ].
-|#
 basic_root_synsem := canonical_synsem &
   [ LOCAL [ CAT [ HEAD.TAM indic_tam,
                   VAL [ SUBJ *olist*,

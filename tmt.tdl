@@ -26,8 +26,8 @@ token := token_min &
 
 token_trait := *top* &
 [ +UW bool, +IT italics, 
-  +LB *diff-list*, +RB *diff-list*,
-  +LD *diff-list*, +RD *diff-list*,
+  +LB bracket_list, +RB bracket_list,
+  +LD bracket_list, +RD bracket_list,
   +HD token_head ].
 anti_trait := token_trait.
 
@@ -47,16 +47,18 @@ right_italics := italics.
 both_italics := italics.
 
 ;; FIX - oe (see also loading of tmr/ner and tmr/gml
+;;
 #|
-bracket_list := *list*.
-bracket_cons := bracket_list & *cons* &
-[ FIRST ctype, REST bracket_list ].
-bracket_null := bracket_list & *null*.
-anti_bracket_list := bracket_list.
+weak_bracket_list := *list*.
+weak_bracket_cons := weak_bracket_list & *cons* &
+[ FIRST n, REST weak_bracket_list ].
+weak_bracket_null := weak_bracket_list & *null*.
+anti_bracket_list := weak_bracket_list.
 |#
 
 bracket_list := *diff-list*.
 bracket_null := bracket_list & [ LIST #list, LAST #list ].
+
 
 ;;
 ;; the type of entries in delimiter lists (aka weak brackets), a short name to
@@ -64,6 +66,18 @@ bracket_null := bracket_list & [ LIST #list, LAST #list ].
 ;;
 n := *top*.
 
+;;
+;; to integrate predictions from a data-driven dependency parser, say: tokens
+;; can be annotated with (a) an identifier (or maybe index), e.g. the starting
+;; character position; (b) a dependency label (from the CTYPE hierarchy); and
+;; (c) the target identifier (drawing on the same name space as +TI).  here,
+;; the selection is from the dependent to its head, to take advantage of the
+;; common assumption that no token can depend on multiple heads.  later on, in
+;; the syntax, each construction must designate one daughter as its ‘dependency
+;; head’ (in a mostly syntactic perspective), identify its own CTYPE with +LL
+;; on all non-head daugthers, and identify the identifier (+TI) from the head
+;; with +TG on all non-head daughters.
+;;
 token_head := *sort* &
 [ +TI string, +LL ctype , +TG string ].
 
@@ -262,17 +276,17 @@ basic_four_four_ner_tmt := basic_three_three_ner_tmt & basic_four_four_tmt &
 ;;;
 two_two_ner_tmt := basic_two_two_ner_tmt &
 [ +INPUT < [ +TRAIT.+LB bracket_null ], [ +TRAIT.+RB bracket_null ] >,
-  +OUTPUT < [ +TRAIT.+RB <! !> ], [ +TRAIT.+LB <! !> ] >,
+  +OUTPUT < [ +TRAIT.+RB bracket_null ], [ +TRAIT.+LB bracket_null ] >,
   +POSITION "I1<I2, O1@I1, O2@I2" ].
 
 three_three_ner_tmt := basic_three_three_ner_tmt &
 [ +INPUT < [ +TRAIT.+LB bracket_null ], [], [ +TRAIT.+RB bracket_null ] >,
-  +OUTPUT < [ +TRAIT.+RB <! !> ], [], [ +TRAIT.+LB <! !> ] >,
+  +OUTPUT < [ +TRAIT.+RB bracket_null ], [], [ +TRAIT.+LB bracket_null ] >,
   +POSITION "I1<I2<I3, O1@I1, O2@I2, O3@I3" ].
 
 four_four_ner_tmt := basic_four_four_ner_tmt &
 [ +INPUT < [ +TRAIT.+LB bracket_null ], [], [], [ +TRAIT.+RB bracket_null ] >,
-  +OUTPUT < [ +TRAIT.+RB <! !> ], [], [], [ +TRAIT.+LB <! !> ] >,
+  +OUTPUT < [ +TRAIT.+RB bracket_null ], [], [], [ +TRAIT.+LB bracket_null ] >,
   +POSITION "I1<I2<I3<I4, O1@I1, O2@I2, O3@I3, O4@I4" ].
 
 ;;;
@@ -449,8 +463,10 @@ tick_reset_tmt := one_one_tmt &
 ;; be purged from the chart.
 ;;
 prefix_punctuation_tmt := token_mapping_rule &
-[ +CONTEXT < [ +ID [ LIST #front, LAST #middle ], +FROM #from ] >,
-  +INPUT < [ +CLASS #class, +TRAIT #trait, +PRED #pred, +CARG #carg,
+[ +CONTEXT < [ +TRAIT.+HD #hd, 
+               +ID [ LIST #front, LAST #middle ], +FROM #from ] >,
+  +INPUT < [ +CLASS #class, +TRAIT #trait & [ +HD #hd ],
+	     +PRED #pred, +CARG #carg,
              +ID [ LIST #middle, LAST #back ], +TO #to,
              +TNT #tnt ] >,
   +OUTPUT < [ +CLASS #class, +TRAIT #trait, +PRED #pred, +CARG #carg,
@@ -476,21 +492,23 @@ suffix_punctuation_tmt := token_mapping_rule &
 ;; principle get two analyses.  but i see no reason why we should want that?
 ;;                                                              (26-sep-08; oe)
 ne_tmt := one_one_tmt &
-[ +INPUT < [ +FORM #form, +CLASS non_ne, +TRAIT [ +LB #lb, +RB #rb ],
+[ +INPUT < [ +FORM #form, +CLASS non_ne, +TRAIT [ +LB #lb, +RB #rb,
+						  +LD #ld, +RD #rd ],
              +PRED #pred, +CARG #carg, +TNT.+MAIN #main ] >,
   +OUTPUT < [ +FORM #form, +CLASS named_entity,
-              +TRAIT [ +UW +, +LB #lb, +RB #rb ],
+              +TRAIT [ +UW +, +LB #lb, +RB #rb, +LD #ld, +RD #rd ],
               +PRED #pred, +CARG #carg, +TNT null_tnt & [ +MAIN #main ] ] >,
   +CONTEXT <> ].
 
 add_ne_tmt := token_mapping_rule &
-[ +CONTEXT < [ +FORM #form, +CLASS non_ne, +TRAIT [ +LB #lb, +RB #rb ],
+[ +CONTEXT < [ +FORM #form, +CLASS non_ne, +TRAIT [ +LB #lb, +RB #rb,
+						    +LD #ld, +RD #rd ],
                +PRED #pred, +CARG #carg,
                +ID #id, +FROM #from, +TO #to,
                +TNT.+MAIN #main ] >,
   +INPUT <>,
   +OUTPUT < [ +FORM #form, +CLASS named_entity,
-              +TRAIT [ +UW +, +LB #lb, +RB #rb ],
+              +TRAIT [ +UW +, +LB #lb, +RB #rb, +LD #ld, +RD #rd ],
               +PRED #pred, +CARG #carg,
               +ID #id, +FROM #from, +TO #to, 
               +TNT null_tnt & [ +MAIN #main ] ] >,
