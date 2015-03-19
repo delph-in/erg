@@ -1308,12 +1308,15 @@ subconj_prdp_v_init_phr := subconj_prdp_v_init_phrase &
 ; message since it can't know if it will modify a VP or an S; in the latter
 ; case it must supply a message to preserve the convention that there is
 ; always a message at the top.
-
+;; DPF 2015-03-12 - Changed MOD..SUBJ *synlist* to MOD..SPR < synsem_min, ...>,
+;; in order to admit |we arose, said Kim, arriving|.  The problem was that
+;; filler-hd  requires hd-dtr to be [SUBJ *anti_list*].
+;;
 subconj_prdp_final_phr := subconj_prdp_phr &
   [ SYNSEM.LOCAL.CAT 
                   [ POSTHD +,
                     HEAD.MOD < [ LOCAL.CAT [ HEAD.MINORS.ALTMIN non_ellipt_rel,
-                                             VAL.SUBJ *synlist* ],
+                                             VAL.SPR < synsem_min, ... > ],
 				 MODIFD.LPERIPH na_or_- ] > ],
     ARGS < [ SYNSEM.LOCAL.CAT.HEAD.PRD + ] >,
     C-CONT [ HOOK.LTOP #sltop,
@@ -1362,6 +1365,8 @@ subconj_prdp_ellip_phr := subconj_prdp_phr &
 ;; predicative phrases as depictives, such as in |He arrived a year earlier|
 ;; DPF 2012-12-21 - Generalized left dtr's HEAD from noun to basic_noun in
 ;; order to admit |we arose, some terrified|
+;; DPF 2015-03-17 - Removed left-dtr's CASE acc since we want to allow
+;; |we arrived, I happy and you sad|
 ;;
 np_pred_phr := non_headed_phrase & binary_phrase &
   [ SYNSEM basic_subconj_synsem &
@@ -1384,8 +1389,7 @@ np_pred_phr := non_headed_phrase & binary_phrase &
 		     CONJ cnil ],
 	     NONLOC non-local_none & #nonloc ],
     ARGS < [ SYNSEM [ LOCAL [ CAT [ HEAD basic_noun & #head &
-					 [ CASE acc,
-					   MINORS.ALTMIN non_freerel_q_rel,
+					 [ MINORS.ALTMIN non_freerel_q_rel,
 					   --BARE - ],
 				    VAL [ SPR *olist*,
 					  COMPS *olist* ] ],
@@ -1549,7 +1553,7 @@ head_filler_phrase_inf := head_filler_phrase & head_final_infl &
 
 basic_head_subj_phrase := head_nexus_rel_phrase & head_final_infl & phrasal &
   [ SYNSEM [ LOCAL [ CAT.VAL [ COMPS < >,
-                               SPR < >,
+                               SPR #spr,
                                SUBJ *olist* & < anti_synsem_min >,
                                SPEC #spec,
 			       SPCMPS < > ],
@@ -1557,6 +1561,7 @@ basic_head_subj_phrase := head_nexus_rel_phrase & head_final_infl & phrasal &
 	     MODIFD.RPERIPH #rperiph,
              PUNCT.PNCTPR #ppair ],
     HD-DTR.SYNSEM [ LOCAL.CAT [ VAL [ COMPS < >,
+				      SPR.REST #spr,
                                       SPEC #spec ],
                                 MC na ],
 		    MODIFD.RPERIPH #rperiph,
@@ -1813,16 +1818,20 @@ head_marker_phrase_e_phr := head_marker_phrase_event &
 ;; with LCONJ-DTR's head, we can't identify ADDTAM of the second dtr here with
 ;; the mother's E.TAM, because this blocks coord of two S's with differing
 ;; aspect, as in |we arose and they have arrived|.
+;; DPF 2015-03-13 - Removed ARGS < word_or_lexrule, ...> since we also want
+;; |we arise and yet we arrive| where |and yet| is neither word nor lexrule.
+;; Instead, constrain first dtr's CONJ to be lex-conj.
 ;;
 head_marker_phrase_s_phr := head_marker_phrase_event &
-  [ ARGS < word_or_lexrule &
-	   [ SYNSEM.LOCAL.CONJ.CREL.R-HNDL #rhndl ],
+  [ SYNSEM.LOCAL.CAT.MC #mc,
+    ARGS < [ SYNSEM.LOCAL.CONJ lex-conj & [ CREL.R-HNDL #rhndl ] ],
 	   [ SYNSEM.LOCAL [ CAT [ HEAD verbal_or_cr &
 				       [ TAM #tam,
 					 --ADDIN [ ADDTAM #tam,
 						   ADDPN #pn ] ],
 				  VAL [ SUBJ *anti_list*,
 					SPR < > ],
+				  MC #mc,
 				  POSTHD + ],
 			    AGR.PNG.PN #pn,
 			    CONT.HOOK [ LTOP #rtop,
@@ -2758,7 +2767,11 @@ adj_head_int_phrase := adj_head_phrase & isect_mod_phrase &
 ;; DPF 2011-10-01 - Re 4-apr-10: yes, this prevents e.g. 
 ;; |afterwards, in Paris, we relaxed.|  So remove this, and live with the
 ;; extra ambiguity.
-
+;; DPF 2015-03-14 - Re 24-aug-04: But this blocks modif of relative "where"
+;; as in |the place where yesterday we arose|.  So remove, and see if and
+;; why this change affects the cited example (not clear why the REL feature
+;; affected that example).
+;;
 head_adj_int_phrase := head_adj_phrase & isect_mod_phrase & head_initial_infl &
   [ SYNSEM.PUNCT.PNCTPR #ppair,
     HD-DTR.SYNSEM [ LOCAL.CAT [ HEAD adverbee_or_modnp & 
@@ -2766,8 +2779,7 @@ head_adj_int_phrase := head_adj_phrase & isect_mod_phrase & head_initial_infl &
                                 VAL [ SPR *cons*,
                                       COMPS < > ],
                                 POSTHD + ],
-		    MODIFD notmod_or_rmod,
-                    NONLOC.REL 0-dlist ],
+		    MODIFD notmod_or_rmod ],
     NH-DTR.SYNSEM [ LOCAL.CAT.HEAD.MINORS.MIN independent_rel,
 		    NONLOC.REL 0-dlist,
                     PUNCT.PNCTPR #ppair ] ].
@@ -3237,7 +3249,10 @@ adj_h_int_phrase := basic_adj_h_int_phrase.
 ;; for |was studied carefully by Kim|.  It is also unnecessary, since the
 ;; `canonical_synsem' constraint already ensures that it will appear if an 
 ;; intervening modifier is picked up.
-
+;; DPF 2015-03-13 - Pushed NH-DTR--MOD..RPERIPH na_or_+ down to non-conj
+;; subtype, so we can get subord-prdp with conjunctions, as in
+;; |Kim arrived, and, seeing Abrams, arose|
+;;
 v_mod_phrase := head_initial & binary_punct_phrase &
                 head_valence_phrase &
   [ SYNSEM [ LOCAL [ CAT.VAL #val,
@@ -3250,6 +3265,7 @@ v_mod_phrase := head_initial & binary_punct_phrase &
                            [ COMPS.FIRST canonical_synsem &
 			                 [ --MIN nonpro_or_event_rel,
 					   LOCAL.CAT.VAL.COMPS *olist* ] ] ],
+	       PUNCT.RPUNCT #rpunct,
 	       MODIFD notmod ] ],
     NH-DTR 
        [ SYNSEM [ LOCAL [ CAT [ HEAD p_or_basic_adv &
@@ -3260,7 +3276,7 @@ v_mod_phrase := head_initial & binary_punct_phrase &
 					   [ LOCAL [ CAT [ HEAD verb,
 							   VAL.SUBJ <[OPT -]>],
 						     CONT.HOOK.INDEX #ind ],
-					     MODIFD.RPERIPH na_or_+,
+					     PUNCT.RPUNCT #rpunct,
 					     --SIND #ind ] > ],
 				VAL [ SPR *olist*,
                                       COMPS < > ] ] ],
@@ -3276,15 +3292,22 @@ v_mod_phrase := head_initial & binary_punct_phrase &
 ;; |In Paris, Kim is sometimes Abrams| (adjunct extraction after applic of 
 ;; this rule), so instead, make mother [MODIFD notmod & [ RPERIPH + ] and
 ;; restrict the dtr to [RPERIPH na_or_-].
+;; DPF 2015-03-13 - Re 2012-10-23: Since the RPERIPH gets passed up from hd-dtr
+;; to mother in hcomp (because MODIFD is reentrant there), we can't have the
+;; RPERIPH value be +, since that blocks attachment of e.g. absolutives, which
+;; require the mod target to be RPERIPH -, as in 
+;; |Kim is indeed Abrams, her skills admired|
+;; So change to mother having RPERIPH bool and dtr RPERIPH na.
 ;;
 v_mod_vg_phrase := v_mod_phrase &
-  [ SYNSEM.MODIFD notmod & [ RPERIPH + ],
+  [ SYNSEM.MODIFD notmod & [ RPERIPH bool ],
     HD-DTR.SYNSEM [ LOCAL [ CAT [ HEAD v_or_g_or_a_or_n,
 				  VAL.SUBJ *synlist* ],
 			    CONT.HOOK #hook,
 			    CONJ cnil ],
-		    MODIFD.RPERIPH na_or_- ],
-    NH-DTR.SYNSEM.LOCAL.CAT [ HEAD.MOD.FIRST.LOCAL.CONT.HOOK #hook,
+		    MODIFD.RPERIPH na ],
+    NH-DTR.SYNSEM.LOCAL.CAT [ HEAD.MOD.FIRST [ LOCAL.CONT.HOOK #hook,
+					       MODIFD.RPERIPH na_or_+ ],
 			      POSTHD + ],
     GENRE nonformal ].
 
@@ -3313,6 +3336,7 @@ conj_mod_phrase := v_mod_phrase &
 				  VAL.SPR *olist* ],
 			    CONJ lex-conj ],
 		    PUNCT.RPUNCT rbc_or_pair_or_no_punct ] ].
+
 
 ;; For "and on Tuesday arose" or "and later Kim"
 ;; DPF 2014-08-21 - Because some modifiers are adverbs even when the conjoined
@@ -3999,17 +4023,20 @@ detlesspp_np_nomod_phrase := detlesspp_np_phrase &
 ; spurious parse for e.g. "Abrams is interviewing" where hdn_optcmp_c applies.
 ; DPF 28-Nov-02 - HOOK comes only from C-CONT
 ; DPF 31-mar-08 - Maybe don't want XARG constrained on dtr.  FIX.
-
+;; DPF 2015-03-17 - Removed HD-DTR..SPR < unexpressed_reg >, so this rule will
+;; also apply to subjh variants as in |we approve of him admiring Kim|
+;; Then in order to keep this rule from feeding itself, drop SUBJ reentrancy
+;; and change from non-empty to empty list.
+;;
 bare_vger_phrase := head_only & head_valence_phrase & phrasal &
-  [ SYNSEM.LOCAL [ CAT [ VAL [ SUBJ #subj,
+  [ SYNSEM.LOCAL [ CAT [ VAL [ SUBJ < >,
                                SPR < >,
                                COMPS < > ],
                          MC na ] ],
     HD-DTR 
          [ SYNSEM 
 	   [ LOCAL [ CAT [ HEAD gerund & [ MINORS.MIN gerund_rel ],
-                           VAL [ SUBJ #subj,
-                                 SPR < unexpressed_reg >,
+                           VAL [ SUBJ *cons*,
                                  COMPS < > ],
                            MC na_or_- ],
 		     CONJ cnil,
@@ -4168,7 +4195,7 @@ cp_subj_inf_phrase := head_only & phrasal &
     [ LOCAL 
       [ CAT [ VAL [ SUBJ < synsem &
                            [ --MIN non_ellipt_rel,
-                             LOCAL [ CAT [ HEAD comp_or_gerund & 
+                             LOCAL [ CAT [ HEAD comp & 
                                                 [ VFORM bse_or_inf,
                                                   TAM.MOOD ind_or_modal_subj ],
                                            VAL [ COMPS < > ] ],
@@ -5448,8 +5475,12 @@ appos_nbar_phr := norm_appos_phr &
 ;; [LPERIPH na].
 ;; DPF 2011-10-21 - Removed REL 0-dlist from mother, since it blocks e.g.
 ;; |companies whose ads this year were longer prospered|
-
-basic_npadv_mod_phrase := basic_unary_phrase & phrasal &
+;; DPF 2015-03-11 - Changed parent type from basic_unary_phrase to
+;; norm_unary_phrase in order to get the delimiter properties to propagate
+;; from dtr to mother, and also PUNCT, to avoid leaving RPUNCT unbound in
+;; spurious analysis of |when did Kim arise?|
+;;
+basic_npadv_mod_phrase := norm_unary_phrase & phrasal &
   [ SYNSEM [ LOCAL [ CAT [ HEAD modnp &
 				[ MOD < [ LOCAL intersective_mod &
 					  [ CAT 
@@ -5474,8 +5505,7 @@ basic_npadv_mod_phrase := basic_unary_phrase & phrasal &
                      CONJ cnil,
                      CTXT #ctxt ],
              NONLOC #nonloc & [ REL 0-dlist,
-                                SLASH 0-dlist ],
-             PUNCT #punct ],
+                                SLASH 0-dlist ] ],
     ARGS < [ INFLECTD +,
              SYNSEM [ LOCAL [ CAT [ HEAD basic_noun & 
                                          [ MINORS.MIN #altmin,
@@ -5489,8 +5519,7 @@ basic_npadv_mod_phrase := basic_unary_phrase & phrasal &
 				              [ SORT #sort ],
 			      CONJ cnil,
                               CTXT #ctxt ],
-                      NONLOC #nonloc,
-                      PUNCT #punct ] ] >,
+                      NONLOC #nonloc ] ] >,
     ORTH [ FROM #from, TO #to ],
     C-CONT [ HOOK [ LTOP #khand,
                     INDEX #arg0 ],
@@ -5729,7 +5758,8 @@ bare_measure_np_phrase := norm_unary_phrase & basic_measure_np_phrase &
 ;; rule does not mind its dtr with MODIFD notmod, so we go back to notmod.
 ;;
 binary_measure_np_phrase := binary_punct_phrase & basic_measure_np_phrase &
-  [ SYNSEM [ LOCAL [ CAT [ VAL [ SPR < synsem & 
+  [ SYNSEM [ LOCAL [ CAT [ HEAD.CASE #case,
+			   VAL [ SPR < synsem & 
 				   [ --MIN quant_rel,
 				     LOCAL.CAT [ HEAD det,
 						 VAL [ SUBJ < >,
@@ -5745,7 +5775,9 @@ binary_measure_np_phrase := binary_punct_phrase & basic_measure_np_phrase &
                                      MOD < synsem &
                                            [ PHON.ONSET #onset,
                                              --MIN #min,
-                                             LOCAL.AGR #agr ] > ],
+                                             LOCAL [ AGR #agr,
+						     CAT.HEAD.CASE #case ] ] >,
+				     CASE #case ],
 				  VAL [ SPR #spr2 & *unexplist*,
 					COMPS #comps & *phrlist* ] ],
 			    CONT.HOOK [ LTOP #nhand,
@@ -5754,7 +5786,8 @@ binary_measure_np_phrase := binary_punct_phrase & basic_measure_np_phrase &
                                         XARG #index ],
                             CONJ cnil ],
                     LEX + ] ],
-    DTR1.SYNSEM [ LOCAL [ CAT.HEAD [ MINORS.MIN #min ],
+    DTR1.SYNSEM [ LOCAL [ CAT.HEAD [ MINORS.MIN #min,
+				     CASE #case ],
 			  CONT.HOOK [ LTOP #nhand,
 				      INDEX #index ],
 			  AGR #agr ],
@@ -6548,19 +6581,23 @@ partitive_np_phrase := norm_unary_phrase & phrasal &
 ; DPF 22-apr-09 - Changed PRD to + to block these in frag_l_mod
 ;; DPF 2014-04-02 - Extend this rule slightly to include overt possessives, as
 ;; in |my friend, we should disappear|
+;; DPF 2015-03-11 - Changed MOD..HEAD adverbee to verb_or_frag, to
+;; allow |yes, Kim.|
+;; DPF 2015-03-13 - Pushed MOD..SUBJ *olist* down to the pre-head variant, so
+;; we can get |we know, Kim, that you arrived|.
+;;
 vocative_np_phrase := norm_unary_phrase & phrasal &
  [ INFLECTD +,
    SYNSEM disc_adv_phr_synsem &
             [ LOCAL [ CAT [ HEAD [ PRD -,
                                    MOD < [ LOCAL scopal_mod &
-                                            [ CAT [ HEAD adverbee &
-                                                      [ TAM.TENSE real_tense ],
-                                                    VAL.SUBJ *olist* ],
+                                            [ CAT [ HEAD verb_or_frag &
+                                                      [ TAM.TENSE real_tense ]],
                                               CONT.HOOK [ LTOP #ltop,
                                                           INDEX #index ] ],
 					   OPT - ] >,
                                    MINORS.MIN abstr_excl_rel ],
-                            MC + ],
+                            MC bool ],
                       CONJ #conj ],
               NONLOC #nonloc ],
    ARGS < [ INFLECTD +,
@@ -6717,7 +6754,8 @@ vgerund_phrase := unary_phrase & phrasal &
 							 COMPS < > ] ],
                                              CONT.HOOK.XARG #subjind ],
 					 OPT -,
-                                         NONLOC #snonloc ] >,
+                                         NONLOC #snonloc ],
+				       anti_synsem & [ OPT - ]  >,
                                  COMPS < > ],
 			   MC na,
 			   HS-LEX - ],
@@ -6971,6 +7009,100 @@ no_copula_nosubj_phrase := non_rel_clause & head_valence_phrase & head_only &
 	     ICONS <! !> ] ].
 
 
+;; For clause-as-modifier, as in |you will, _I am sure_, be happy|
+;;
+cl_adv_phrase := norm_unary_phrase & phrasal &
+  [ SYNSEM [ LOCAL [ CAT [ HEAD adv &
+			   [ MOD < [ LOCAL scopal_mod &
+				     [ CAT [ HEAD verb,
+					     VAL.COMPS < > ],
+				       CONT.HOOK.LTOP #sltop,
+				       CONJ cnil ],
+				     NONLOC.SLASH 0-dlist,
+				     PUNCT.RPUNCT comma_or_pair_or_no_punct ]>],
+			   POSTHD +,
+			   VAL [ SUBJ < >,
+				 SPR < >,
+                                 COMPS < >,
+				 SPEC < >,
+				 SPCMPS < > ] ],
+                     CONJ cnil,
+                     CTXT #ctxt ],
+             NONLOC non-local_none,
+             PUNCT #punct ],
+    ARGS < [ INFLECTD +,
+             SYNSEM [ LOCAL [ CAT [ HEAD verb,
+                                    VAL [ SPR *olist*,
+                                          SUBJ *olist*,
+					  COMPS < > ] ],
+			      CONT.HOOK [ LTOP #vltop,
+					  INDEX #vind,
+					  XARG #vxarg,
+					  --SLTOP #sltop ],
+			      CONJ cnil,
+                              CTXT #ctxt ],
+                      NONLOC.SLASH 1-dlist & 
+			    <! arg-local & 
+			       [ CAT s_cat_v_c &
+				     [ HEAD.MINORS.MIN v_event_rel ] ] !>,
+		      PUNCT #punct & [ RPUNCT comma_or_no_punct ] ] ] >,
+    C-CONT [ HOOK [ LTOP #vltop,
+		    INDEX #vind,
+		    XARG #vxarg ],
+	     RELS <! !>,
+	     HCONS <! !>,
+	     ICONS <! !> ],
+    INFLECTD + ].
+
+;; For VP-modifying indefinite NP, as in
+;; |he arrived in London a rich man|
+;; The [LPERIPH bool] blocks appositives, to avoid unwanted ambiguity.
+;;
+indef_np_adv_phrase := norm_unary_phrase & phrasal &
+  [ SYNSEM [ LOCAL [ CAT [ HEAD adv &
+			   [ MOD < [ LOCAL intersective_mod &
+			   	     [ CAT [ HEAD verb & [ AUX - ],
+                                             VAL [ SPR < synsem_min, ...>,
+						   COMPS < > ] ],
+				       CONT.HOOK #hook,
+				       CONJ cnil ],
+				     NONLOC.SLASH 0-dlist,
+				     PUNCT.RPUNCT comma_or_pair_or_no_punct] >],
+			   POSTHD +,
+			   VAL [ SUBJ < >,
+				 SPR < >,
+                                 COMPS < >,
+				 SPEC < >,
+				 SPCMPS < > ] ],
+                     CONJ cnil,
+                     CTXT #ctxt ],
+             NONLOC non-local_none,
+             PUNCT #punct ],
+    ARGS < [ INFLECTD +,
+             SYNSEM [ LOCAL [ CAT [ HEAD noun & [ MINORS [ MIN norm_nom_rel,
+							   ALTMIN _a_q_rel ] ],
+				    VAL [ SPR *olist*,
+					  SUBJ < >,
+					  COMPS < > ] ],
+			      CONT.HOOK.INDEX #nind,
+			      CONJ cnil,
+                              CTXT #ctxt ],
+		      MODIFD.LPERIPH bool,
+		      NONLOC non-local_none,
+		      PUNCT #punct & 
+			    [ RPUNCT comma_or_clause_or_pair_or_no_punct ] ]] >,
+    ORTH [ FROM #from, TO #to ],
+    C-CONT [ HOOK #hook & [ LTOP #ltop,
+			    INDEX #vind ],
+	     RELS <! [ PRED mod_rel,
+		       LBL #ltop,
+		       ARG1 #vind,
+		       ARG2 #nind,
+		       CFROM #from, CTO #to ] !>,
+	     HCONS <! !>,
+	     ICONS <! !> ],
+    INFLECTD + ].
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
 ;; Proto-instance types
@@ -6984,12 +7116,17 @@ no_copula_nosubj_phrase := non_rel_clause & head_valence_phrase & head_only &
 ;; wrong to aim to treat "everybody be quiet" as a subj-head - better to
 ;; treat "everybody" as vocative.  Allowing `comm' leaves the SF value too
 ;; underspecified for ordinary declarative clauses, so let's try blocking it.
-
+;; DPF 2015-03-17 - Re 2013-09-26 - But adding SF here forces the index to
+;; be an event, but verbal gerunds as in |we approve of his hiring Kim|
+;; need to have an index unifiable with non_expl-ind, as in
+;; |Kim was bothered by me admiring cats|.  So let's push the SF constraint
+;; down to lower type.
+;;
+;; 		  CONT.HOOK.INDEX.SF prop-or-like-or-pol-ques ],
 subjh_rule_basic := binary_rule_right_to_left & basic_binary_headed_phrase &
                     head_valence_phrase &
-  [ SYNSEM.LOCAL [ CAT [ MC bool,
-			 POSTHD + ],
-		  CONT.HOOK.INDEX.SF prop-or-like-or-pol-ques ],
+  [ SYNSEM.LOCAL.CAT [ MC bool,
+		       POSTHD + ],
     HD-DTR.SYNSEM.NONLOC.QUE 0-dlist,
     NH-DTR.SYNSEM [ LOCAL.CAT.HEAD.POSS -,
                     NONLOC.QUE 0-dlist ] ].
@@ -7012,7 +7149,7 @@ subjh_mc_rule := subjh_rule_decl & head_subj_phrase & clause &
                                   TAM indic_tam ],
 			   VAL.SPR *olist*,
                            MC + ],
-                     CONT.HOOK [ INDEX.SF #pred,
+                     CONT.HOOK [ INDEX.SF #pred & prop-or-like-or-pol-ques,
 				 LTOP #ltop,
 				 --SLTOP #ltop ] ],
 	     NONLOC.SLASH 0-dlist,
@@ -7211,6 +7348,8 @@ np_cp_wh_rule := rule & np_cp_wh_phrase.
 cp_subj_rule := rule & cp_subj_phrase.
 cp_subj_inf_rule := rule & cp_subj_inf_phrase.
 vgerund_rule := rule & vgerund_phrase.
+cl_adv_rule := rule & cl_adv_phrase.
+npindef_adv_rule := rule & indef_np_adv_phrase.
 
 fw_seq_l_rule := rule & fw_sequence_left_phrase.
 fw_seq_r_rule := rule & fw_sequence_right_phrase.
@@ -9531,15 +9670,15 @@ vocative_np_rule := vocative_np_phrase & rule &
                          HEAD.MOD < [ PUNCT.RPUNCT comma_punct ] > ],
              MODIFD.RPERIPH - ],
     ARGS < [ SYNSEM [ LOCAL.CONT.HOOK.INDEX nonconj_ref-ind,
-		      MODIFD.RPERIPH na_or_+,
-		      PUNCT.RPUNCT comma_or_clause ] ] > ].
+		      MODIFD.RPERIPH na_or_+ ] ] > ].
 
 ;; DPF 2012-03-13 - Restrict to HEAD verb_or_frag to avoid modifying
 ;; conj-initial sentence: |Kim hired Abrams and we quit.|
 vocative_np_lmod_rule := vocative_np_phrase & rule &
   [ SYNSEM [ LOCAL.CAT [ POSTHD -,
                          HEAD.MOD < [ MODIFD.LPERIPH -,
-				      LOCAL [ CAT.HEAD verb_or_frag,
+				      LOCAL [ CAT [ HEAD verb_or_frag,
+                                                    VAL.SUBJ *olist* ],
 					      CONJ cnil ] ] > ],
              MODIFD.LPERIPH + ],
     ARGS < [ SYNSEM.PUNCT.RPUNCT comma_or_pair_punct ] > ].
@@ -9672,7 +9811,8 @@ frag_nbar_rule := frag_nom_rule &
 ;; DPF 02-mar-15 - Re 28-aug-07: But this no_rel now conflicts with allowing
 ;; these PP fragments as complements of "say" as in |Kim said, "in the park".|
 ;; Happily, the example |Kim arrived yesterday, in Paris| is now blocked in
-;; cl-cl_runon_c for other reasons.
+;; cl-cl_runon_c for other reasons. But |When did Kim arise?| now slips
+;; through.
 ;;
 frag_pp_ind_rule := unary_frag_rule &
   [ ARGS < [ SYNSEM.LOCAL [ CAT [ HEAD prep_or_modnp & 
@@ -10406,6 +10546,7 @@ right_node_raise_nbar_phrase := right_node_raise_phrase &
 right_node_raise_vp_rule := right_node_raise_vp_phrase & rule.
 right_node_raise_nonvp_rule := right_node_raise_nonvp_phrase & rule.
 right_node_raise_nbar_rule := right_node_raise_nbar_phrase & rule.
+
 
 ;; Experimental - Sing.Eng Prd-AdjP as head of S
 #|
