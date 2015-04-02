@@ -508,6 +508,10 @@ decl_phrase := basic_non_rel_clause & phrasal &
 ; for "arise and leave."
 ;; DPF 2012-02-20 - Restrict SLASH to *modlist*, to prevent spurious analysis
 ;; of e.g. |politicians believe| with object fronting.
+;; DPF 2015-04-01 - Re 23-mar-10: But this prevents imperatives with right-node
+;; raising, and in |admire and hire Kim!|, where there is no alternative
+;; aaalysis.  So have to live with the extra ambiguity for imperatives with
+;; normal VP coord.
 
 imp_phrase := basic_non_rel_clause & head_valence_phrase & head_only &
   [ SYNSEM [ LOCAL [ CAT [ HEAD verb &
@@ -531,7 +535,7 @@ imp_phrase := basic_non_rel_clause & head_valence_phrase & head_only &
 						LOCAL.CONT.HOOK.INDEX #inst ]>,
 					COMPS < > ] ],
                             CONT.HOOK [ LTOP #hdtop,
-                                        INDEX #hdind & non_conj_event ] ],
+                                        INDEX #hdind ] ],
                     LEX #lex,
                     NONLOC.QUE 0-dlist,
                     PUNCT.RPUNCT.PSF basic-comm & #sf ],
@@ -2771,16 +2775,21 @@ adj_head_int_phrase := adj_head_phrase & isect_mod_phrase &
 ;; as in |the place where yesterday we arose|.  So remove, and see if and
 ;; why this change affects the cited example (not clear why the REL feature
 ;; affected that example).
+;; DPF 2015-03-25 - Added identity of NEGPOL on hd-dtr and mother, to enable
+;; blocking of robust "not" in |they told her to not eat pie before her dinner|
 ;;
 head_adj_int_phrase := head_adj_phrase & isect_mod_phrase & head_initial_infl &
-  [ SYNSEM.PUNCT.PNCTPR #ppair,
+  [ SYNSEM [ LOCAL.CAT.NEGPOL #negpol,
+	     PUNCT.PNCTPR #ppair ],
     HD-DTR.SYNSEM [ LOCAL.CAT [ HEAD adverbee_or_modnp & 
                                      [ MINORS.MIN event_rel ],
                                 VAL [ SPR *cons*,
                                       COMPS < > ],
-                                POSTHD + ],
+                                POSTHD +,
+				NEGPOL #negpol ],
 		    MODIFD notmod_or_rmod ],
-    NH-DTR.SYNSEM [ LOCAL.CAT.HEAD.MINORS.MIN independent_rel,
+    NH-DTR.SYNSEM [ LOCAL [ CAT.HEAD.MINORS.MIN independent_rel,
+                            CONT.HOOK.INDEX.E.ASPECT [ PROGR -, PRF - ] ],
 		    NONLOC.REL 0-dlist,
                     PUNCT.PNCTPR #ppair ] ].
 
@@ -3070,7 +3079,8 @@ n_adj_redrel_phrase := n_adj_int_phrase & head_compositional &
        [ LOCAL [ CAT [ HEAD n_or_a_or_p_or_adv &
                             [ MOD < [ LOCAL intersective_mod ] > ],
                        VAL.SUBJ *olist* ],
-                 CONT.HOOK.LTOP #hand ],
+                 CONT.HOOK [ LTOP #hand,
+			     INDEX.E.ASPECT [ PROGR -, PRF - ] ] ],
 	 NONLOC.REL [ LIST #middle, LAST #last ],
          PUNCT.LPUNCT comma_or_hyphen_or_pair_or_no_punct,
          LEX - ],
@@ -3136,7 +3146,12 @@ h_adj_sl_phrase := head_adj_int_phrase &
 ; DPF 28-jun-09 - Pulled RPUNCT constraint up from two subtypes, since we
 ; want to allow informal comma in both constructions, to admit e.g.
 ; "The angry, or unhappy, cat arrives."
-
+;; DFP 2015-03-27 - Constrain the NH-DTR to be PRF - so that we can still
+;; allow the SEM-I to default the value of PERF to -, and succeed in generating
+;; e.g. |the grumpy cat arose| once the resulting MRS from the parser has
+;; gone through the SEM-I, assuming `grumpy' is underspecified for PRF (as it
+;; has to be in order to admit |the cat has been grumpy|.
+;;
 adj_n_int_phrase := adj_head_int_phrase &
   [ HD-DTR [ SYNSEM [ LOCAL.CAT [ HEAD basic_nom_or_ttl,
 				  VAL [ SPR.FIRST 
@@ -3147,7 +3162,10 @@ adj_n_int_phrase := adj_head_int_phrase &
 	     INFLECTD #infl ],
     NH-DTR [ SYNSEM [ LOCAL [ CAT [ HEAD.MOD < [ PHON.ONSET #onset ] >,
 				    VAL.SUBJ *synlist* ],
-			      CONT.HOOK.INDEX event & [ E.TENSE no_tense ] ],
+			      CONT.HOOK.INDEX event & 
+                                              [ E [ TENSE no_tense,
+			                            ASPECT [ PROGR bool,
+							     PRF - ] ] ] ],
                       LEX + ],
              INFLECTD + ],
     INFLECTD #infl ].
@@ -3199,10 +3217,10 @@ adj_adjn_phrase := adj_n_int_phrase &
 ; DPF 21-dec-07 Changed NH-DTR..COMPS from <> to *olist* to allow e.g.
 ; "The most quickly hired cat arrives."
 ; DPF 31-mar-08 - Why the re-entrancy of XARG on the two dtrs?  FIX
-
+;
 basic_adj_h_int_phrase := adj_head_int_phrase & head_final_infl &
   [ HD-DTR.SYNSEM.LOCAL [ CAT.HEAD adverbee,
-                          CONT.HOOK.XARG #xarg ],
+			  CONT.HOOK.XARG #xarg ],
     NH-DTR.SYNSEM [ LOCAL [ CAT.HEAD.TAM [ TENSE no_tense,
 					   ASPECT no_aspect ],
 			    CONT.HOOK.XARG #xarg ],
@@ -4286,6 +4304,8 @@ cp_subj_inf_phrase := head_only & phrasal &
 ; DPF 14-nov-05 - Added MODIFD notmod_or_lmod to nonhd-dtr as well.
 ;; DPF 2014-11-17 - Moved NH-DTR..MODIFD notmod_or_lmod down to subtypes, to 
 ;; allow the city-state rule to admit |IBM Corp., Texas|.
+;; DPF 2015-03-27 - Added PT notpro to non-head dtr, to prevent unwanted
+;; anaphor substitution when paraphrasing.
 ;;
 basic_n_n_cmpnd_phr := head_final & head_compositional & binary_punct_phrase &
   [ SYNSEM [ LOCAL.CAT [ VAL #valence,
@@ -4305,7 +4325,7 @@ basic_n_n_cmpnd_phr := head_final & head_compositional & binary_punct_phrase &
     NH-DTR.SYNSEM 
 	   [ LOCAL [ CAT [ HEAD.MINORS.MIN nom_or_mnp_rel,
 			   VAL.COMPS < > ],
-		     CONT.HOOK.INDEX non_expl-ind ],
+		     CONT.HOOK.INDEX non_expl-ind & [ PT notpro ] ],
 	     NONLOC [ SLASH 0-dlist & [ LIST < > ],
 		      QUE 0-dlist,
 		      REL 0-dlist ] ] ].
@@ -5123,8 +5143,10 @@ n_v-or-adj_cmpnd_ig_phr := n_v-or-adj_cmpnd_phr &
 ;; to allow appos in coord, such as [[Kim, the cat,] and Abrams].
 ;; DPF 2014-08-21 - Further extended HD-DTR..LPUNCT to allow left parens,
 ;; since we want |my uncle (Kim Browne, the author)|
+;; DPF 2015-03-27 - Added PT notpro_or_refl to non-head dtr, to prevent unwanted
+;; anaphor substitution when paraphrasing, while still allowing |Kim herself|
 ;;
-basic_appos_phr := head_initial & head_compositional &
+basic_appos_phr := head_compositional & basic_binary_headed_phrase &
   [ INFLECTD +,
     SYNSEM phr_synsem &
 	   [ LOCAL.CAT [ VAL #valence ],
@@ -5145,7 +5167,7 @@ basic_appos_phr := head_initial & head_compositional &
                                   [ SPR *olist*,
                                     SUBJ *olist*,
                                     COMPS < > ] ],
-                       CONT.HOOK.INDEX #hind & ref-ind,
+                       CONT.HOOK.INDEX ref-ind & #hind,
 		       CONJ cnil ],
                NONLOC [ SLASH 0-dlist,
                         QUE 0-dlist,
@@ -5159,7 +5181,7 @@ basic_appos_phr := head_initial & head_compositional &
                                            ALTMIN appos-able_rel ],
                                   --BARE - ],
                              VAL.COMPS < > ],
-                       CONT [ HOOK.INDEX #modind ] ],
+		       CONT.HOOK.INDEX #modind & [ PT notpro_or_refl ] ],
                NONLOC [ SLASH 0-dlist & [ LIST < > ],
                         QUE 0-dlist,
                         REL 0-dlist ],
@@ -5174,11 +5196,13 @@ basic_appos_phr := head_initial & head_compositional &
                                ARG2 #modind,
 			       CFROM #from, CTO #to ] ] ].
 
+reg_appos_phr := basic_appos_phr & head_initial.
+
 ;; DPF 2014-05-12 - Constraining the HD-DTR..HEAD to basic_noun precludes
 ;; punctuated appositives such as |program trading - the popular practice . ...|
 ;; so instead move this constraint down to the non-paired variants.
 ;;
-norm_appos_phr := basic_appos_phr &
+norm_appos_phr := reg_appos_phr &
   [ HD-DTR.SYNSEM.LOCAL [ CAT.VAL.SUBJ < >,
 			  CONT.HOOK.INDEX.SORT #sort ],
     NH-DTR.SYNSEM.LOCAL.CONT.HOOK.INDEX.SORT #sort ].
@@ -5273,7 +5297,7 @@ appos_phr_rbc := appos_np_phr &
                     PUNCT.RPUNCT rbcomma_punct ] ].
 |#
 
-appos_indef_phr := basic_appos_phr &
+appos_indef_phr := reg_appos_phr &
   [ HD-DTR.SYNSEM [ LOCAL.CAT.HEAD basic_noun &
 				   [ CASE #case,
 				     MINORS.NORM norm_rel ],
@@ -5358,6 +5382,25 @@ appos_nbar_phr := norm_appos_phr &
              HCONS <! qeq & [ HARG #rhand,
                               LARG #nhand ] !>,
 	     ICONS <! !> ] ].
+
+;; Reverse appos phrase, to enable paraphrase generation of |the teacher Kim|
+;; with the same MRS as |Kim the teacher|.  Not used in normal parsing to
+;; avoid spurious ambiguity.
+;;
+appos_np_reverse_phr := basic_appos_phr & head_final &
+  [ HD-DTR.SYNSEM [ LOCAL.CAT [ HEAD.MINORS.NORM norm_rel,
+		                VAL.SUBJ < > ],
+                    PUNCT [ PAIRED #pnctpr,
+                            PNCTPR #paired ] ],
+    NH-DTR.SYNSEM [ LOCAL.CAT [ HEAD.MINORS.NORM norm_rel,
+		  	        VAL.SUBJ < > ],
+		    PUNCT [ PNCTPR #pnctpr,
+			    PAIRED #paired,
+			    RPUNCT comma_or_pair_or_no_punct ] ],
+    C-CONT [ RELS <! relation !>,
+             HCONS <! !>,
+	     ICONS <! !> ],
+    GENRE paraphrase ].
 
 ;;
 ;; Adverbial-NP modifiers
@@ -6437,6 +6480,8 @@ partitive_adj_ppof_phrase := partitive_intadj_phrase &
 ;; DPF 2012-03-09 - The LPUNCT no_punct on the daughter is just wrong, since
 ;; we want to allow NP-initial punctuation like |(one idea| or |`one idea|.
 ;; So remove, and see what happens.
+;; DFP 2015-03-27 - For [PRF -] on mother, see comment (same date) for 
+;; type adj_n_int_phrase.
 ;
 num_det_phrase := unary_phrase &
   [ SYNSEM basic_det_synsem &
@@ -6470,7 +6515,8 @@ num_det_phrase := unary_phrase &
                               CONJ cnil,
                               CONT.HOOK [ LTOP #nhand,
                                           INDEX event & #aind &
-                                               [ E.TENSE no_tense ],
+                                               [ E [ TENSE no_tense,
+					             ASPECT.PRF - ] ],
                                           XARG #index  ] ],
                       NONLOC [ SLASH 0-dlist,
                                QUE 0-dlist,
@@ -7335,6 +7381,7 @@ appos_nopair_pnr_rule := binary_rule_right_to_left & appos_phr_prop_nopair.
 appos_indef_rule := binary_rule_right_to_left & appos_indef_phr.
 appos_indef_paren_rule := binary_rule_right_to_left & appos_indef_paren_phr.
 appos_nbar_rule := binary_rule_right_to_left & appos_nbar_phr.
+appos_reverse_rule := binary_rule_left_to_right & appos_np_reverse_phr.
 npadv_mod_rule := rule & npadv_mod_phrase.
 npadv_yofc_rule := rule & npadv_yofc_phrase.
 npadv_measnp_rule := rule & npadv_measnp_phrase.
@@ -10592,15 +10639,51 @@ paired_bracket_rule := rule & phrase_or_lexrule & word_or_bracketed_phrase &
     DIALECT #dialect,
     GENRE #genre,
     ORTH [ TO #to,
+	   LB #lb, RB #rb,
 	   LD [ LIST #ld, LAST #llast & *null* ],
 	   RD [ LIST #rd, LAST #rlast & *null* ] ],
     ARGS < non_unary-rule &
 	   [ SYNSEM #synsem &
 		    [ LOCAL.CONT.HOOK #hook ],
 	     ORTH [ TO #to,
+		    LB #lb, RB #rb,
 		    LD [ LIST.REST #ld,
                          LAST #llast ],
 		    RD [ LIST.REST #rd,
+                         LAST #rlast ] ],
+	     IDIOM #idiom,
+	     DIALECT #dialect,
+	     GENRE #genre,
+	     INFLECTD #infl ] >,
+    C-CONT [ HOOK #hook,
+	     RELS <! !>,
+	     HCONS <! !>,
+	     ICONS <! !> ] ].
+
+;; DPF 2012-11-01 
+;; Rule to discharge a pair of brackets introduced in chart-mapping, where
+;; all binary rules refuse to cross the brackets.  This rule is blocked by
+;; a temporary expedient in the LKB.
+;;
+paired_strong_bracket_rule := rule & phrase_or_lexrule & 
+			      word_or_bracketed_phrase &
+  [ SYNSEM #synsem,
+    INFLECTD #infl,
+    IDIOM #idiom,
+    DIALECT #dialect,
+    GENRE #genre,
+    ORTH [ TO #to,
+	   LD #ld, RD #rd,
+	   LB [ LIST #lb, LAST #llast & *null* ],
+	   RB [ LIST #rb, LAST #rlast & *null* ] ],
+    ARGS < non_unary-rule &
+	   [ SYNSEM #synsem &
+		    [ LOCAL.CONT.HOOK #hook ],
+	     ORTH [ TO #to,
+		    LD #ld, RD #rd,
+		    LB [ LIST.REST #lb,
+                         LAST #llast ],
+		    RB [ LIST.REST #rb,
                          LAST #rlast ] ],
 	     IDIOM #idiom,
 	     DIALECT #dialect,

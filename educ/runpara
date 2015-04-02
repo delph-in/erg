@@ -1,0 +1,108 @@
+#!/bin/bash
+# Argument = -f sentfile -l rulelist -r rules -b blocklist -x blockrules -a addrules
+
+usage()
+{
+cat << EOF
+usage: $0 options
+
+This script produces paraphrases of an FOL expression
+
+OPTIONS:
+   -f      Sentence kernel file
+   -l      Rule list
+   -r      Rule file
+   -b      Blocked rule list
+   -x      Blocked rule file
+   -a      Added rule file
+   -h      Show this message
+
+EOF
+}
+
+FILE=
+RULELIST=
+RULES=
+BLOCKED=
+ADDED=
+while getopts “hf:l:r:b:x:a:” OPTION
+do
+     case $OPTION in
+         h)
+             usage
+             exit 1
+             ;;
+         f)
+             FILE=$OPTARG
+             ;;
+         l)
+             RULELIST=$OPTARG
+             ;;
+         r)
+             RULES=$OPTARG
+             ;;
+         b)
+             BLOCKLIST=$OPTARG
+             ;;
+         x)
+             BLOCKED=$OPTARG
+             ;;
+         a)
+             ADDED=$OPTARG
+	     ;;
+         ?)
+             usage
+             exit
+    esac
+done
+
+if [[ -z $FILE ]]
+then
+     usage
+     exit 1
+else
+if [[ -z $RULELIST && -z $RULES ]]
+ then 
+  RULES=educ/rules.all
+fi
+if [[ -z $BLOCKED ]]
+ then 
+  BLOCKED=educ/rules.none
+fi;
+allrules="/tmp/allrules.$RANDOM"
+blockrules="/tmp/blockrules.$RANDOM"
+newrules="/tmp/newrules.$RANDOM"
+userules="/tmp/rules.$RANDOM"
+if [[ -n $RULELIST ]]
+ then
+  echo $RULELIST | sed -e 's/\s\+/\n/g' | cat $RULES - | sort -u > $allrules
+ else 
+  sort $RULES > $allrules
+fi;
+if [[ -n $BLOCKLIST ]]
+ then
+  echo $BLOCKLIST | sed -e 's/\s\+/\n/g' | cat $BLOCKED - | sort -u > $blockrules
+ else
+  sort $BLOCKED > $blockrules
+fi;
+comm -23 $allrules $blockrules > $newrules;
+if [[ -n $ADDED ]]
+   then
+   cat $ADDED $newrules > $userules
+   else
+   cp $newrules $userules
+fi;
+cd /home/danf/erg; ace -g educ.dat -1T /home/danf/educ/kernels/$FILE | ace -g educ/educpara.dat --transfer-config $userules | ace -g educ.dat -e > /tmp/sentsout; sort -u /tmp/sentsout > /home/danf/educ/paraphrase/$FILE
+fi;
+if [ -f $allrules ]; then
+rm $allrules
+fi;
+if [ -f $blockrules ]; then
+rm $blockrules
+fi;
+if [ -f $newrules ]; then
+rm $newrules
+fi;
+if [ -f $userules ]; then
+rm $userules
+fi;

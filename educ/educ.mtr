@@ -1,6 +1,42 @@
 ;;; -*- Mode: tdl; Coding: utf-8; -*-
 
-;; The three small blue flowers are growing in the flower pot.
+;;; Verbs: near-equivalence
+;;
+like_enjoy := verb_mtr &
+[ INPUT [ HOOK.INDEX #ind,
+	  RELS <! [ PRED "_like_v_1_rel" ] !> ],
+  OUTPUT [ HOOK.INDEX #ind,
+	   RELS <! [ PRED "_enjoy_v_1_rel" ] !> ] ].
+
+like_love := verb_mtr &
+[ INPUT [ HOOK.INDEX #ind,
+	  RELS <! [ PRED "_like_v_1_rel" ] !> ],
+  OUTPUT [ HOOK.INDEX #ind,
+	   RELS <! [ PRED "_love_v_1_rel" ] !> ] ].
+
+;;; Verbs - object restriction
+;;
+make_cook_br := verb_mtr &
+[ CONTEXT.RELS <! [ PRED "_breakfast_n_1_rel", ARG0 #x1 ] !>,
+  INPUT [ HOOK.INDEX #ind,
+          RELS <! [ PRED "_make_v_1_rel", ARG2 #x1 ] !> ],
+  OUTPUT [ HOOK.INDEX #ind,
+           RELS <! [ PRED "_cook_v_1_rel" ] !> ] ].
+
+make_cook_dn := verb_mtr &
+[ CONTEXT.RELS <! [ PRED "_dinner_n_1_rel", ARG0 #x1 ] !>,
+  INPUT [ HOOK.INDEX #ind,
+          RELS <! [ PRED "_make_v_1_rel", ARG2 #x1 ] !> ],
+  OUTPUT [ HOOK.INDEX #ind,
+           RELS <! [ PRED "_cook_v_1_rel" ] !> ] ].
+
+make_build_fort := verb_mtr &
+[ CONTEXT.RELS <! [ PRED "_fort_n_1_rel", ARG0 #x1 ] !>,
+  INPUT [ HOOK.INDEX #ind,
+          RELS <! [ PRED "_make_v_1_rel", ARG2 #x1 ] !> ],
+  OUTPUT [ HOOK.INDEX #ind,
+           RELS <! [ PRED "_build_v_1_rel" ] !> ] ].
+
 
 ;; "spicy food" => "food that is spicy"
 ;;
@@ -13,20 +49,6 @@ mod_word_rel_clause := norm_monotonic_omtr &
                   ARG1 #x1, ARG2 event  ] !>,
   OUTPUT.RELS <! +copy+ & [ ARG0.E [ TENSE present, ASPECT [ PRF - ] ] ] !>,
   FLAGS.EQUAL < #e2, #lbl > ].
-
-;; "flower in the pot" => "flower"
-;; "flower pot" => "pot"
-mod_phrase_deletion := np_deletion_omtr &
-[ FILTER.RELS <! [ LBL #h1, ARG1 #x2 ] !>,
-  CONTEXT.RELS <! [ PRED "~._[nv]_", LBL #lbl, ARG0 #i1 & individual ] !>,
-  INPUT [ HOOK.INDEX #ind,
-	  RELS <! [ PRED "~._n_", LBL #h1, ARG0 #x2 & ref-ind ],
-		[ PRED quant_rel, ARG0 #x2 ],
-	        [ LBL #lbl & handle, ARG0 #e2 & [ E.TENSE untensed ], 
-		  ARG1 #i1, ARG2 #x2 ] !> ],
-  OUTPUT [ HOOK.INDEX #ind,
-	   RELS <! !> ],
-  FLAGS.EQUAL < #x2, #h1 > ].
 
 ;; "small flower" => "flower"
 ;; "three flowers" => "flowers"
@@ -44,6 +66,37 @@ mod_word_deletion := norm_monotonic_omtr &
                   ARG1 #i1, ARG2 event  ] !>,
   OUTPUT.RELS <! !>,
   FLAGS.EQUAL < #e2, #lbl > ].
+
+;; "flower in the pot" => "flower"
+;; "flower pot" => "pot"
+mod_phrase_deletion := np_deletion_omtr &
+[ FILTER.RELS <! [ LBL #h1, ARG1 #x2 ] !>,
+  CONTEXT.RELS <! [ LBL #lbl, ARG0 #i1 & individual ] !>,
+  INPUT [ HOOK.INDEX #ind,
+	  RELS <! [ LBL #h1, ARG0 #x2 & ref-ind ],
+		[ PRED quant_rel, ARG0 #x2 ],
+	        [ LBL #lbl & handle, ARG0 #e2 & [ E.TENSE untensed ], 
+		  ARG1 #i1, ARG2 #x2 ] !> ],
+  OUTPUT [ HOOK.INDEX #ind,
+	   RELS <! !> ],
+  FLAGS.SUBSUME < #x2, #h1 > ].
+
+appos_deletion := np_deletion_omtr &
+[ FILTER.RELS <! [ LBL #h1, ARG1 #x2 ] !>,
+  INPUT [ HOOK.INDEX #ind,
+	  RELS <! [ PRED "~._n_", LBL #h1, ARG0 #x2 & ref-ind ],
+		[ PRED quant_rel, ARG0 #x2 ],
+	        [ PRED appos_rel, ARG2 #x2 ] !>],
+  OUTPUT [ HOOK.INDEX #ind,
+	   RELS <! !> ],
+  FLAGS.SUBSUME < #x2, #h1 > ].
+
+;; "his flowers" => "the flowers"
+poss_deletion := possessive_deletion_omtr &
+[ INPUT [ HOOK.INDEX #ind,
+	  RELS.LIST.FIRST.PRED def_explicit_q_rel ],
+  OUTPUT [ HOOK.INDEX #ind,
+	   RELS <! [ PRED _the_q_rel ] !> ] ].
 
 ;; "the flowers" => "flowers"
 determiner_deletion := quantifier_substitution_omtr &
@@ -63,16 +116,30 @@ both_the_subst := quantifier_substitution_omtr &
 
 
 ;; "the flowers" => "they"
+;; DPF 2015-04-01 - Deleted the following, to get |he cooks for them|
+;; CONTEXT.RELS <! [ PRED "~._n_", LBL #h5 ] !>,
+;; (also FLAGS.EQUAL < ..., #h5 >)
 pronoun_subst := norm_monotonic_omtr &
-[ FILTER.RELS <! [ LBL #h1, ARG1 #x2 ] !>,
+[ FILTER.RELS <! [ PRED compound_rel, LBL #h1 ] !>,
   INPUT.RELS <! [ PRED "~._n_", LBL #h1, 
-		  ARG0 #x1 & ref-ind & [ PNG [ PN 3, GEN neut ] ] ],
+		  ARG0 #x1 & ref-ind & [ PNG [ PN 3 ], PT std ] ],
                 [ PRED quant_rel, LBL #h2 & handle, ARG0 #x1,
 		  RSTR #h3 & handle, BODY #h4 & handle ] !>,
   OUTPUT.RELS <! [ PRED pron_rel, LBL #h1, ARG0 #x1 & [ PT std ] ],
                  [ PRED pronoun_q_rel, LBL #h2, ARG0 #x1, RSTR #h3, 
-		   BODY #h4 ] !> ].
+		   BODY #h4 ] !>,
+  FLAGS.EQUAL < #h1 > ].
 
+pronoun_name_subst := norm_monotonic_omtr &
+[ FILTER.RELS <! [ PRED compound_rel, LBL #h1 ] !>,
+  INPUT.RELS <! [ PRED named_rel, LBL #h1, 
+		  ARG0 #x1 & ref-ind & [ PNG.PN 3, PT std ] ],
+                [ PRED quant_rel, LBL #h2 & handle, ARG0 #x1,
+		  RSTR #h3 & handle, BODY #h4 & handle ] !>,
+  OUTPUT.RELS <! [ PRED pron_rel, LBL #h1, ARG0 #x1 & [ PT std ] ],
+                 [ PRED pronoun_q_rel, LBL #h2, ARG0 #x1, RSTR #h3, 
+		   BODY #h4 ] !>,
+  FLAGS.EQUAL < #h1 > ].
 
 ;; "are growing" => "are"
 verb_ellipsis := norm_monotonic_omtr &
@@ -81,22 +148,25 @@ verb_ellipsis := norm_monotonic_omtr &
 		   ARG0 #e2 & [ E.ASPECT.PROGR - ], ARG1 #x3 ] !>,
   FLAGS.EQUAL < #e2, #h1 > ].
 
+;; "in the garden" => "there"
+locative_anaphora := norm_monotonic_omtr &
+[ INPUT.RELS <! [ PRED nontemp_prep_rel, LBL #h1, ARG0 #e2, 
+                  ARG1 #i3, ARG2 #x4 ],
+                [ PRED "~._n_", LBL #h7, ARG0 #x4 ],
+		[ PRED def_or_proper_q_rel, ARG0 #x4, RSTR #h5, BODY #h6 ] !>,
+  OUTPUT.RELS <! [ PRED loc_nonsp_rel, LBL #h1, ARG0 #e2, ARG1 #i3, ARG2 #x8 ],
+                [ PRED place_n_rel, LBL #h7, ARG0 #x8  ],
+		[ PRED def_implicit_q_rel, ARG0 #x8, RSTR #h5, BODY #h6 ],
+		[ PRED _there_a_1_rel, LBL #h7, 
+		  ARG0 event & 
+		       [ E [ TENSE untensed, ASPECT [ PROGR -, PRF - ] ] ],
+		  ARG1 #x8 ] !> ].
+
 prog_nonprog := norm_monotonic_omtr &
 [ INPUT.RELS <! [ PRED "~._v_", ARG0 #e2 & [ E.ASPECT.PROGR + ] ] !>,
   OUTPUT.RELS <! +copy+ & [ ARG0.E.ASPECT.PROGR - ] !>,
   FLAGS.EQUAL < #e2 > ].
 
-like_enjoy := verb_mtr &
-[ INPUT [ HOOK.INDEX #ind,
-	  RELS <! [ PRED "_like_v_1_rel" ] !> ],
-  OUTPUT [ HOOK.INDEX #ind,
-	   RELS <! [ PRED "_enjoy_v_1_rel" ] !> ] ].
-
-like_love := verb_mtr &
-[ INPUT [ HOOK.INDEX #ind,
-	  RELS <! [ PRED "_like_v_1_rel" ] !> ],
-  OUTPUT [ HOOK.INDEX #ind,
-	   RELS <! [ PRED "_love_v_1_rel" ] !> ] ].
 
 #|
 ;;; Verbs - full lexical congruence
@@ -113,14 +183,6 @@ bathe_wash := verb_mtr &
 [ INPUT.RELS <! [ PRED "_bathe_v_1_rel" ] !>,
   OUTPUT.RELS <! [ PRED "_wash_v_1_rel" ] !> ].
 
-;;; Verbs - object restriction
-
-make_cook := verb_mtr &
-[ CONTEXT.RELS <! [ PRED "_breakfast_n_1_rel",
-  	            ARG0 #x1 ] !>,
-  INPUT.RELS <! [ PRED "_make_v_1_rel",
-                  ARG2 #x1 ] !>,
-  OUTPUT.RELS <! [ PRED "_cook_v_1_rel" ] !> ].
 
 |#
 

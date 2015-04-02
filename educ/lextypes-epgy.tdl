@@ -116,6 +116,11 @@ adj_vp_bse_mal_lr := lex_rule &
              HCONS <! !> ],
     GENRE robust ].
 
+;; Block noun-noun compounds such as |movie five times|
+;;
+adj_bare_unspecified_card_lexent := basic_adj_bare_unspecified_card_lexent &
+  [ SYNSEM.MODIFD.LPERIPH bool ].
+
 ; Remove COMPS..--BARE - since we want to flag "She is good student"
 be_id := be_verb &
   [ SYNSEM aux_np_verb &
@@ -144,6 +149,16 @@ v_np_is_le := be_is_lex_entry & be_id_pos &
 |#
 v_np_is_le := be_is_lex_entry & be_id_pos.
 
+;; Remove GENRE nonformal so we can generate contracted forms even with
+;; root_strict.  Also constrain COMPS.FIRST to canonical_synsem so we avoid
+;; generating stranded contractions like |Here he's|, even though this also
+;; means we won't generate |Where's Kim?|.
+;;
+contracted_aux_word := word &
+  [ ALTS [ VPELLIP -,
+           SQPNCT -,
+	   CSAI - ],
+    SYNSEM.LOCAL.CAT.VAL.COMPS.FIRST canonical_synsem ].
 
 ; Add COMPS..--BARE - here to avoid spurious analysis for e.g.
 ; |the team's goalie kept running|
@@ -193,8 +208,10 @@ loc_inv_be_word := basic_loc_inv_be_word &
 ;;
 np_title_cmpnd_phr := basic_np_title_cmpnd_phr &
   [ HD-DTR.SYNSEM.LOCAL [ CAT.VAL.SPR < [ OPT - ] >,
-			  CONT.HOOK.LTOP #lbl ],
-    NH-DTR.SYNSEM.LOCAL.CAT.HEAD.MINORS.MIN pre_title_rel,
+			  CONT.HOOK [ LTOP #lbl,
+			              INDEX.PNG.GEN #gen ] ],
+    NH-DTR.SYNSEM.LOCAL [ CAT.HEAD.MINORS.MIN pre_title_rel,
+    			  CONT.HOOK.INDEX.PNG.GEN #gen ],
     C-CONT.RELS.LIST.FIRST.LBL #lbl ].
 
 
@@ -264,17 +281,6 @@ p_np-ptcl_i_le := p_ditrans_lexent &
                           HCONS <! !> ] ] ].
 
 
-
-; Add lex-entry for "in bed" to sidestep PET's failure to do idiom check
-_in+bed_p_rel := miscprep_rel.
-_out+of+bed_p_rel := miscprep_rel.
-_to+bed_p_rel := dir_rel.
-_above+ground_p_rel := miscprep_rel.
-_at+home_p_rel := miscprep_rel.
-_during+break_p_rel := miscprep_rel.
-_day+by+day_p_rel := miscprep_rel.
-_day+to+day_p_rel := miscprep_rel.
-_face+to+face_p_rel := miscprep_rel.
 
 ; Restrict normal transitives missing object to --MAL3SG + to prevent
 ; these from appearing in conjoined verb phrases, avoiding spurious ambiguity
@@ -1651,7 +1657,10 @@ adj_n_int_phrase := adj_head_int_phrase &
 	     INFLECTD #infl ],
     NH-DTR [ SYNSEM [ LOCAL [ CAT [ HEAD.MOD < [ PHON.ONSET #onset ] >,
 				    VAL.SUBJ *synlist* ],
-			      CONT.HOOK.INDEX event & [ E.TENSE no_tense ] ],
+			      CONT.HOOK.INDEX event & 
+			                      [ E [ TENSE no_tense,
+			                            ASPECT [ PROGR bool,
+							     PRF - ] ] ] ],
                       LEX +,
 		      PUNCT.RPUNCT comma_or_rbc_or_hyphen_or_pair_or_no_punct ],
              INFLECTD + ],
@@ -1666,3 +1675,14 @@ adj_adjn_phrase := adj_n_int_phrase &
   [ HD-DTR.SYNSEM [ LOCAL.CAT.HEAD nom_or_ttl,
                     MODIFD lmod & [ LPERIPH na_or_- ] ],
     NH-DTR.SYNSEM .PUNCT.RPUNCT comma_or_hyphen_or_pair_or_no_punct ].
+
+;; Block pre-VP modif, as in |she had [[eaten before she] [had her dinner]]|
+subconj_prdp_v_init_phrase := subconj_prdp_init_phr &
+  [ SYNSEM.LOCAL.CAT [ POSTHD -,
+		       HEAD.MOD.FIRST.LOCAL.CAT.VAL.SPR < > ],
+    ARGS < [ SYNSEM.LOCAL.CAT.HEAD verb & [ VFORM pas_or_prp ] ] > ].
+
+;; Add subtypes of appos_rel so we can use paraphrase rule to reverse the
+;; order of args to generate both |Kim the teacher| and |the teacher Kim|
+appos_norm_rel := appos_rel.
+appos_rev_rel := appos_rel.
