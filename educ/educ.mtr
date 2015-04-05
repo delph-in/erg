@@ -2,40 +2,46 @@
 
 ;;; Verbs: near-equivalence
 ;;
-like_enjoy := verb_mtr &
-[ INPUT [ HOOK.INDEX #ind,
-	  RELS <! [ PRED "_like_v_1_rel" ] !> ],
-  OUTPUT [ HOOK.INDEX #ind,
-	   RELS <! [ PRED "_enjoy_v_1_rel" ] !> ] ].
+like_enjoy := word_mtr &
+[ INPUT.RELS <! [ PRED "_like_v_1_rel" ] !>,
+  OUTPUT.RELS <! [ PRED "_enjoy_v_1_rel" ] !> ].
 
-like_love := verb_mtr &
-[ INPUT [ HOOK.INDEX #ind,
-	  RELS <! [ PRED "_like_v_1_rel" ] !> ],
-  OUTPUT [ HOOK.INDEX #ind,
-	   RELS <! [ PRED "_love_v_1_rel" ] !> ] ].
+like_love := word_mtr &
+[ INPUT.RELS <! [ PRED "_like_v_1_rel" ] !>,
+  OUTPUT.RELS <! [ PRED "_love_v_1_rel" ] !> ].
+
+drop_cause := causative-inchoative_omtr &
+[ INPUT.RELS.LIST < [ PRED "_drop_v_cause_rel" ], ... >,
+  OUTPUT.RELS <! [ PRED "_drop_v_1_rel" ] !> ].
+
+drop_fall := word_mtr &
+[ INPUT.RELS <! [ PRED "_drop_v_1_rel" ] !>,
+  OUTPUT.RELS <! [ PRED "_fall_v_1_rel" ] !> ].
+
+travel_go := word_mtr &
+[ INPUT.RELS <! [ PRED "_travel_v_1_rel" ] !>,
+  OUTPUT.RELS <! [ PRED "_go_v_1_rel" ] !> ].
+
+house_home := word_mtr &
+[ INPUT.RELS <! [ PRED "_house_n_of_rel" ] !>,
+  OUTPUT.RELS <! [ PRED "_home_n_of-n_rel" ] !> ].
 
 ;;; Verbs - object restriction
 ;;
-make_cook_br := verb_mtr &
+make_cook_br := word_mtr &
 [ CONTEXT.RELS <! [ PRED "_breakfast_n_1_rel", ARG0 #x1 ] !>,
-  INPUT [ HOOK.INDEX #ind,
-          RELS <! [ PRED "_make_v_1_rel", ARG2 #x1 ] !> ],
-  OUTPUT [ HOOK.INDEX #ind,
-           RELS <! [ PRED "_cook_v_1_rel" ] !> ] ].
+  INPUT.RELS <! [ PRED "_make_v_1_rel", ARG2 #x1 ] !>,
+  OUTPUT.RELS <! [ PRED "_cook_v_1_rel" ] !> ].
 
-make_cook_dn := verb_mtr &
+make_cook_dn := word_mtr &
 [ CONTEXT.RELS <! [ PRED "_dinner_n_1_rel", ARG0 #x1 ] !>,
-  INPUT [ HOOK.INDEX #ind,
-          RELS <! [ PRED "_make_v_1_rel", ARG2 #x1 ] !> ],
-  OUTPUT [ HOOK.INDEX #ind,
-           RELS <! [ PRED "_cook_v_1_rel" ] !> ] ].
+  INPUT.RELS <! [ PRED "_make_v_1_rel", ARG2 #x1 ] !>,
+  OUTPUT.RELS <! [ PRED "_cook_v_1_rel" ] !> ].
 
-make_build_fort := verb_mtr &
+make_build_fort := word_mtr &
 [ CONTEXT.RELS <! [ PRED "_fort_n_1_rel", ARG0 #x1 ] !>,
-  INPUT [ HOOK.INDEX #ind,
-          RELS <! [ PRED "_make_v_1_rel", ARG2 #x1 ] !> ],
-  OUTPUT [ HOOK.INDEX #ind,
-           RELS <! [ PRED "_build_v_1_rel" ] !> ] ].
+  INPUT.RELS <! [ PRED "_make_v_1_rel", ARG2 #x1 ] !>,
+  OUTPUT.RELS <! [ PRED "_build_v_1_rel" ] !> ].
 
 
 ;; "spicy food" => "food that is spicy"
@@ -115,20 +121,20 @@ both_the_subst := quantifier_substitution_omtr &
 ;; "both flowers" => "both (of) the flowers"
 
 
-;; "the flowers" => "they"
-;; DPF 2015-04-01 - Deleted the following, to get |he cooks for them|
-;; CONTEXT.RELS <! [ PRED "~._n_", LBL #h5 ] !>,
-;; (also FLAGS.EQUAL < ..., #h5 >)
-pronoun_subst := norm_monotonic_omtr &
-[ FILTER.RELS <! [ PRED compound_rel, LBL #h1 ] !>,
-  INPUT.RELS <! [ PRED "~._n_", LBL #h1, 
-		  ARG0 #x1 & ref-ind & [ PNG [ PN 3 ], PT std ] ],
-                [ PRED quant_rel, LBL #h2 & handle, ARG0 #x1,
-		  RSTR #h3 & handle, BODY #h4 & handle ] !>,
-  OUTPUT.RELS <! [ PRED pron_rel, LBL #h1, ARG0 #x1 & [ PT std ] ],
-                 [ PRED pronoun_q_rel, LBL #h2, ARG0 #x1, RSTR #h3, 
-		   BODY #h4 ] !>,
-  FLAGS.EQUAL < #h1 > ].
+;; "the flowers" => "they", "the book" => "it"
+;; DPF 2015-04-03 - Divided into two rules, one for singular that preserves
+;; GEN, and one for plural that drops gender, so we can still generate with
+;; |they, them, their| with GEN unspecified.
+;;
+pronoun_sg_subst := pronoun_substitution_omtr &
+[ INPUT.RELS.LIST < [ ARG0.PNG.PN sg ], ... >,
+  OUTPUT.RELS.LIST < [ ARG0.IND bool ], ... > ].
+
+;; Drop gender for plurals
+pronoun_pl_subst := pronoun_substitution_omtr &
+[ INPUT.RELS.LIST < [ ARG0.PNG.PN pl ], ... >,
+  OUTPUT.RELS.LIST < [ ARG0 [ PNG.GEN real_gender, IND bool ] ], ... > ].
+
 
 pronoun_name_subst := norm_monotonic_omtr &
 [ FILTER.RELS <! [ PRED compound_rel, LBL #h1 ] !>,
@@ -167,22 +173,20 @@ prog_nonprog := norm_monotonic_omtr &
   OUTPUT.RELS <! +copy+ & [ ARG0.E.ASPECT.PROGR - ] !>,
   FLAGS.EQUAL < #e2 > ].
 
-
 #|
 ;;; Verbs - full lexical congruence
 
-start_commence := verb_mtr &
+start_commence := word_mtr &
 [ INPUT.RELS <! [ PRED "_start_v_cause_rel" ] !>,
   OUTPUT.RELS <! [ PRED "_commence_v_1_rel" ] !> ].
 
-shower_bathe := verb_mtr &
+shower_bathe := word_mtr &
 [ INPUT.RELS <! [ PRED "_shower_v_1_rel" ] !>,
   OUTPUT.RELS <! [ PRED "_bathe_v_1_rel" ] !> ].
 
-bathe_wash := verb_mtr &
+bathe_wash := word_mtr &
 [ INPUT.RELS <! [ PRED "_bathe_v_1_rel" ] !>,
   OUTPUT.RELS <! [ PRED "_wash_v_1_rel" ] !> ].
-
 
 |#
 
