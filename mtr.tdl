@@ -66,11 +66,11 @@ optional_mtr := mrs_transfer_rule &
 basic_word_mtr := monotonic_omtr &
 [ INPUT [ HOOK.INDEX #ind,
 	  RELS.LIST < [ LBL #h1, 
-                      ARG0 #i2, ARG1 #x3, ARG2 #x4, ARG3 #x5, ARG4 #x6 ], ...>],
+                        ARG0 #i2, ARG1 #x3, ARG2 #x4, ARG3 #x5 ], ... > ],
   OUTPUT [ HOOK.INDEX #ind,
 	   RELS.LIST 
                < [ LBL #h1, 
-                   ARG0 #i2, ARG1 #x3, ARG2 #x4, ARG3 #x5, ARG4 #x6 ], ... > ]].
+                   ARG0 #i2, ARG1 #x3, ARG2 #x4, ARG3 #x5 ], ... > ] ].
 
 word_mtr := basic_word_mtr &
 [ INPUT.RELS <! relation !> ].
@@ -123,10 +123,23 @@ light_verb_mtr := monotonic_mtr &
   OUTPUT.RELS.LIST < [ LBL #h1, ARG0 #e2, ARG1 #x3 ], ... > ].
 
 np_deletion_omtr := monotonic_omtr &
-[ INPUT [ RELS.LIST < [ LBL #h1, ARG0 #x1 & ref-ind ],
+[ INPUT [ HOOK.INDEX #index,
+	  RELS.LIST < [ LBL #h1, ARG0 #x1 & ref-ind ],
 		      [ PRED quant_rel, ARG0 #x1, RSTR #h2 ], ... >,
 	  HCONS <! qeq & [ HARG #h2, LARG #h1 ] !> ],
-  OUTPUT.HCONS <! !> ].
+  OUTPUT [ HOOK.INDEX #index,
+	   HCONS <! !> ] ]
+.
+;; Wednesday night => Wednesday
+day_part_deletion_omtr := np_deletion_omtr &
+[ INPUT.RELS <! [ ARG0 #x1 & ref-ind ],
+		[ PRED quant_rel, ARG0 #x1 ], 
+		[ PRED of_p_rel, ARG0 #e0 & event, ARG1 #x1, ARG2 #x2 ],
+		[ PRED quant_rel, LBL #h5, ARG0 #x2, RSTR #h6, BODY #h7 ],
+		[ PRED dofw_rel, LBL #h8, ARG0 #x2 & ref-ind, CARG #carg ] !>,
+  OUTPUT.RELS <! [ PRED proper_q_rel, LBL #h5, ARG0 #x1, RSTR #h6, BODY #h7 ],
+	         [ PRED dofw_rel, LBL #h8, ARG0 #x1, CARG #carg ] !>,
+  FLAGS.EQUAL < #x1, #x2, #e0, #h5 > ].
 
 quantifier_substitution_omtr := monotonic_omtr &
 [ CONTEXT.RELS <! [ LBL #lbl,
@@ -141,9 +154,10 @@ quantifier_substitution_omtr := monotonic_omtr &
 ;; (also FLAGS.EQUAL < ..., #h5 >)
 ;;
 pronoun_substitution_omtr := norm_monotonic_omtr &
-[ FILTER.RELS <! [ PRED compound_rel, LBL #h1 ] !>,
-  INPUT.RELS <! [ PRED "~._n_", LBL #h1, 
-		  ARG0 #x1 & ref-ind & [ PNG [ PN 3 ], PT std ] ],
+[ FILTER.RELS <! [ PRED compound_or_prep_rel, LBL #h1 ] !>,
+  INPUT.RELS <! [ LBL #h1, 
+		  ARG0 #x1 & ref-ind & [ PNG [ PN 3 ], PT std ], 
+		  ARG1 unbound-ind ],
                 [ PRED quant_rel, LBL #h2 & handle, ARG0 #x1,
 		  RSTR #h3 & handle, BODY #h4 & handle ] !>,
   OUTPUT.RELS <! [ PRED pron_rel, LBL #h1, ARG0 #x1 & [ PT std ] ],
@@ -173,6 +187,32 @@ causative-inchoative_omtr := norm_monotonic_omtr &
           HCONS <! qeq & [ HARG #h6, LARG #h5 ] !> ],
   OUTPUT.RELS <! [ LBL #h1 & handle, ARG0 #e2 & event, ARG1 #x4 & ref-ind ] !>,
   FLAGS.EQUAL < #x3, #x4, #h1 > ].
+
+;; agentless passive
+;;
+agentless_passive_omtr := norm_monotonic_omtr &
+[ INPUT [ RELS <! [ PRED #pred & "~._v_", LBL #h1 & handle, ARG0 #e2 & event, 
+		    ARG1 #x3 & ref-ind, ARG2 #x4 & ref-ind ],
+		  [ LBL #h5, ARG0 #x3 & ref-ind ],
+	  	  [ PRED quant_rel, ARG0 #x3, RSTR #h6 ] !>,
+          HCONS <! qeq & [ HARG #h6, LARG #h5 ] !> ],
+  OUTPUT [ RELS <! [ PRED #pred, LBL #h1, ARG0 #e2, 
+		     ARG1 individual, ARG2 #x4 ] !>,
+	   HCONS <! !> ],
+  FLAGS.EQUAL < #x3, #x4, #h1 > ].
+
+dative_obj_deletion_omtr := norm_monotonic_omtr &
+[ INPUT [ HOOK.INDEX #index,
+	  RELS <! [ PRED #pred & "~._v_", LBL #h1 & handle, ARG0 #e2 & event, 
+		    ARG1 #x3 & ref-ind, ARG2 #x4 & ref-ind, ARG3 #x5 ],
+		  [ LBL #h5, ARG0 #x5 & ref-ind ],
+	  	  [ PRED quant_rel, ARG0 #x5, RSTR #h6 ] !>,
+          HCONS <! qeq & [ HARG #h6, LARG #h5 ] !> ],
+  OUTPUT [ HOOK.INDEX #index,
+	   RELS <! [ PRED #pred, LBL #h1, ARG0 #e2, 
+		     ARG1 #x3, ARG2 #x4 ] !>,
+	   HCONS <! !> ],
+  FLAGS.SUBSUME < #x3, #x4, #x5, #h1 > ].
 
 ;;;
 ;;; a few `special-purpose' types, transfer operators in a sense
