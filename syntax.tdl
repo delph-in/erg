@@ -4362,19 +4362,24 @@ n_n_cmpnd_phr := basic_n_n_cmpnd_phr &
 ; "Chiang cat" before "Chiang" discharges det specifier.
 ;; DPF 2012-08-25 - Re 25-may-09: But that constraint no longer works, and
 ;; sadly it blocks |the 2012 third quarter|.  So change back to [LPERIPH bool].
-
+;; DPF 2015-05-06 - Since we want to analyze |The November 6 event| as an NP-N
+;; compound, and since we want to keep INFLECTD + constraint on most rules,
+;; including spr-hd (to avoid unwanted ambiguity), we have to change INFLECTD
+;; (and PRD) values on non-hd dtr from - to +.  This will likely be expensive
+;; in treebank updating, but I don't see a good alternative.  Also note the
+;; original motive for [PRD -] from 10-dec-03 above, and check.
+;;
 basic_np_n_cmpnd_phr := n_n_cmpnd_phr &
   [ HD-DTR.SYNSEM abstr_lex_synsem &
                       [ LEX +,
                         LOCAL.CAT.HEAD.MINORS.MIN nbar_or_nger_rel,
                         MODIFD.LPERIPH bool ],
     NH-DTR 
-     [ INFLECTD -,
+     [ INFLECTD +,
        SYNSEM [ LOCAL [ CAT [ HEAD basic_noun &
 				   [ MINORS [ MIN named_or_meas_rel,
 					      ALTMIN impl_or_proper_q_rel,
-					      NORM norm_rel ],
-				     PRD - ],
+					      NORM norm_rel ] ],
 			      VAL [ SUBJ < >,
 				    SPR.FIRST [ LOCAL.CAT.HEAD a_or_adv,
 						OPT + ] ] ] ],
@@ -4427,6 +4432,8 @@ np_n_cmpnd_pr_phr := basic_np_n_cmpnd_phr &
 ;; down, since we want |parent General Electric Co.|.
 ;; DPF 2014-11-17 - Moved LEX + on NH-DTR down to subtypes, to allow the
 ;; city-state rule to admit |IBM Corp., Texas|.
+;; DPF 2015-04-30 - Re 28-jun-09: But we now want to use this construction
+;; for |paragraph (b)|, so let's accept the ambiguity for |Abrams (2000)|.
 ;;		    
 basic_np_name_cmpnd_phr := basic_n_n_cmpnd_phr &
   [ SYNSEM lex_phr_synsem & [ LOCAL.CAT.HEAD.MOD < > ],
@@ -4434,7 +4441,6 @@ basic_np_name_cmpnd_phr := basic_n_n_cmpnd_phr &
            [ LOCAL [ CAT.HEAD noun,
                      CONT.HOOK.INDEX #ind ],
              NONLOC non-local_none,
-	     PUNCT.LPUNCT dq_or_no_punct,
              MODIFD notmod_or_rmod ],
     NH-DTR [ INFLECTD +,
              SYNSEM [ LOCAL [ CAT [ HEAD basic_noun &
@@ -4612,6 +4618,8 @@ np_num_cmpnd_phr := basic_np_name_cmpnd_phr &
 
 ;; DPF 2014-05-13 - Generalize NH-DTR..MIN from named_city_rel to
 ;; named_np_or_num_rel, to admit e.g. |Bank One, Dover|
+;; DPF 2015-05-04 - Added SORT basic_entity to exclude time expressions such
+;; as yofc |2002| as nh-dtr.
 ;;
 np_city_state_phr := norm_np_name_cmpnd_phr &
   [ SYNSEM.MODIFD notmod,
@@ -4622,6 +4630,7 @@ np_city_state_phr := norm_np_name_cmpnd_phr &
     NH-DTR.SYNSEM [ LOCAL [ CAT [ HEAD.MINORS [ MIN named_np_or_num_rel,
 						NORM norm_rel ],
 				  VAL.SPR.FIRST.LOCAL.CAT.HEAD adv ],
+			    CONT.HOOK.INDEX.SORT basic_entity,
 			    AGR.PNG.PN 3s ],
 		    MODIFD notmod_or_rmod,
                     PUNCT [ LPUNCT no_punct,
@@ -5567,6 +5576,11 @@ npadv_mod_phrase := basic_npadv_mod_phrase &
 		      MODIFD hasmod & [ LPERIPH + ] ] ] > ].
 
 ; Special construction for n_year_le as in 'July 14, 1984'
+;; DPF 2015-05-06 - No longer used, once we realized that to get
+;; |the December 4, 2005 event| as an NP-N compound, the year has to be an
+;; optional complement of the dofm (and similarly for mofy).
+;;
+#|
 npadv_yofc_phrase := basic_npadv_mod_phrase &
   [ SYNSEM.LOCAL 
             [ CAT [ HEAD [ MINORS.MIN loc_nonsp_rel,
@@ -5579,6 +5593,7 @@ npadv_yofc_phrase := basic_npadv_mod_phrase &
               CONT.HOOK.LTOP #ltop ],
     ARGS < [ SYNSEM [ LOCAL.CAT.HEAD.MINORS.MIN yofc_rel,
                       MODIFD notmod ] ] > ].
+|#
 
 ; For "Kim fell three meters."
 ; DPF 31-dec-08 - Added NORM norm_rel to prevent these from appearing in
@@ -6594,6 +6609,7 @@ partitive_np_phrase := norm_unary_phrase & phrasal &
 ;; allow |yes, Kim.|
 ;; DPF 2015-03-13 - Pushed MOD..SUBJ *olist* down to the pre-head variant, so
 ;; we can get |we know, Kim, that you arrived|.
+;; DPF 2015-05-04 - Added NORM no_rel to block year and month naems.
 ;;
 vocative_np_phrase := norm_unary_phrase & phrasal &
  [ INFLECTD +,
@@ -6611,7 +6627,8 @@ vocative_np_phrase := norm_unary_phrase & phrasal &
               NONLOC #nonloc ],
    ARGS < [ INFLECTD +,
             SYNSEM [ LOCAL [ CAT [ HEAD noun & 
-                                        [ MINORS.ALTMIN def_expl_or_prop_q_rel],
+                                      [ MINORS [ ALTMIN def_expl_or_prop_q_rel,
+						 NORM no_rel ] ],
                                    VAL [ SPR *olist*,
                                          COMPS < >,
                                          SPEC < anti_synsem_min > ] ],
@@ -7347,7 +7364,7 @@ appos_indef_paren_rule := binary_rule_right_to_left & appos_indef_paren_phr.
 appos_nbar_rule := binary_rule_right_to_left & appos_nbar_phr.
 appos_reverse_rule := binary_rule_left_to_right & appos_np_reverse_phr.
 npadv_mod_rule := rule & npadv_mod_phrase.
-npadv_yofc_rule := rule & npadv_yofc_phrase.
+;;npadv_yofc_rule := rule & npadv_yofc_phrase.
 npadv_measnp_rule := rule & npadv_measnp_phrase.
 measure_np_rule := binary_rule_right_to_left & measure_np_phrase.
 measure_np_symbol_rule := binary_rule_left_to_right & measure_np_symbol_phrase.
@@ -9601,17 +9618,23 @@ np_s_phrase := basic_run_on_rule & non_headed_phrase &
 ;; DPF 2012-11-06 - Changed PHON.ONSET to PHON.DIGIT. Also added ALTMIN
 ;; number_q_rel, to avoid admitting complex phrases headed by a number, 
 ;; such as |[the one Devito] we arrived|
+;; DPF 2015-05-06 - Added SPR *olist*, to avoid admitting compound |Dec. 4|.
+;; DPF 2015-05-09 - Right dtr was ALTMIN norm_rel, for mysterious reasons, but
+;; it blocks |5. Kim is to arise.| since that |is| has ALTMIN no_rel.  Let's
+;; try generalizing to norm_or_no_rel.
 ;;
 npnum_s_rule := np_s_phrase &
  [ SYNSEM.LOCAL.CAT.MC +,
-   ARGS < [ SYNSEM [ LOCAL [ CAT.HEAD noun & [ MINORS [ MIN named_num_rel,
-							ALTMIN number_q_rel ]],
+   ARGS < [ SYNSEM [ LOCAL [ CAT [ HEAD noun & 
+					[ MINORS [ MIN named_num_rel,
+						   ALTMIN number_q_rel ] ],
+				   VAL.SPR *olist* ],
 			     CONJ cnil_or_lexconj ],
 		     PUNCT.RPUNCT hyphen_or_comma_or_clause_or_no_punct & 
 			          [ PSF prop ],
 		     MODIFD notmod,
 		     PHON.DIGIT + ] ],
-	  [ SYNSEM.LOCAL.CAT.HEAD.MINORS.ALTMIN norm_rel ] > ].
+	  [ SYNSEM.LOCAL.CAT.HEAD.MINORS.ALTMIN norm_or_no_rel ] > ].
 
 ;; DPF 2011-08-14 - Added rule for NP+S where initial NP is indefinite
 ;; `depictive', such as |A competent programmer, Devito works for Abrams.|
