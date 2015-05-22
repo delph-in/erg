@@ -1671,10 +1671,10 @@ rebracket_coord_gpr := monotonic_omtr &
 	    HCONS <! qeq & [ HARG #h7, LARG #h1 ],
 		     qeq & [ HARG #h13, LARG #h2 ] !> ],
   INPUT [ HOOK.INDEX #index,
-	  RELS <! [ PRED conj_rel & #pred1, LBL #h3, ARG0 #e4 & event, 
+	  RELS <! [ PRED _and_c_rel & #pred1, LBL #h3, ARG0 #e4 & event, 
 		    L-INDEX #e5 & event, R-INDEX #e10 & event, L-HNDL #h7, 
 		    R-HNDL #h8 ],
-                  [ PRED conj_rel & #pred2, LBL #h9, ARG0 #e10 & event, 
+                  [ PRED _and_c_rel & #pred2, LBL #h9, ARG0 #e10 & event, 
 		    L-INDEX #e11 & event, R-INDEX #e12 & event, 
 		    L-HNDL #h13, R-HNDL #h14 ] !>,
           HCONS <! qeq & [ HARG #h8, LARG #h9 ] !> ],
@@ -2067,3 +2067,82 @@ paired_conj_refind_rind_gpr := paired_conj_refind_and_gpr &
 [ INPUT.RELS <! [ ARG0 #x1 ] !>,
   CONTEXT.RELS <! [ ], [ R-INDEX #x1 ] !> ].
 |#
+
+;; Wrap "it is the case that" around conjoined Ss, to enable reduction in
+;; ambiguity
+;;
+basic_conj_s_thecase_gpr := openproof_omtr &
+[ CONTEXT.RELS <! [ PRED conj_rel, LBL #clbl, ARG0 #e1, L-INDEX event ] !>,
+  OUTPUT [ RELS.LIST < [ ], [ PRED "_thecasethat_v_rel",
+                              ARG0 non_conj_event, ARG1 #arg ], ... >,
+	   HCONS.LIST < qeq & [ HARG #arg, LARG #clbl ], ... > ],
+  FLAGS.SUBSUME < #e1 > ].
+
+;; The conj-S is outermost, so change INDEX on output: the point of introducing
+;; this new predication is to replace a conj_event index with a non_conj one,
+;; so we can generate from [[B and C] or [D and E]] while blocking overt
+;; conjunction in left member of [S conj S].
+;; Block if conj-S is argument of neg_rel, since dealt with separately via
+;; "it is not the case that ..."
+;;
+conj_s_thecase_top_gpr := basic_conj_s_thecase_gpr &
+[ FILTER [ RELS <! [ PRED neg_rel, ARG1 #h1 ] !>,
+           HCONS <! qeq & [ HARG #h1, LARG #h2 ] !> ],
+  CONTEXT.RELS <! [ LBL #h2, ARG0 #e1 ] !>,
+  INPUT [ HOOK.INDEX #e1,
+          RELS <! !>,
+	  HCONS <! !> ],
+  OUTPUT [ HOOK.INDEX #e2 & [ E [ ASPECT [ PRF - ], TENSE present ], SF prop ],
+           RELS <! [ ], [ ARG0 #e2 ] !>,
+	   HCONS <! qeq !> ] ].
+
+;; The conj-S is not outermost, and so must (in our simple universe) be an
+;; argument of a conjunction, left or right
+;; 
+;;
+#|
+conj_s_thecase_nontop_conjarg_gpr := basic_conj_s_thecase_gpr &
+[ CONTEXT [ RELS <! [ LBL #h0 ] !> ],
+  INPUT [ HOOK.INDEX #e2,
+          RELS <! [ PRED #pred & conj_rel, LBL #h3, ARG0 #e4,
+	            L-HNDL #h5, R-HNDL #h6 ] !>,
+	  HCONS <! qeq & [ HARG #h7 ] !> ],
+  OUTPUT [ HOOK.INDEX #e2,
+           RELS <! [ ], [ ],
+	           [ PRED #pred, LBL #h3, ARG0 #e4,
+	            L-HNDL #h5, R-HNDL #h6 ] !>,
+           HCONS <! qeq, qeq & [ HARG #h7 ] !> ] ].
+
+conj_s_thecase_nontop_cleft_gpr := conj_s_thecase_nontop_conjarg_gpr &
+[ CONTEXT.RELS <! [ ARG0 #e1 ] !>,
+  INPUT.RELS <! [ L-INDEX #e1, R-INDEX #e3 ] !>,
+  OUTPUT [ RELS <! [ ], [ LBL #h5, ARG0 #e6 ],
+                   [ L-INDEX #e6, L-HNDL #h7, R-INDEX #e3 ] !>,
+           HCONS <! qeq, [ HARG #h7, LARG #h5 ] !> ] ].
+|#
+
+conj_s_thecase_nontop_conjarg_gpr := basic_conj_s_thecase_gpr &
+[ CONTEXT [ RELS <! [ LBL #h0 ] !> ],
+  INPUT [ HOOK.INDEX #e2,
+          RELS <! [ PRED #pred & conj_rel, LBL #h3, ARG0 #e4 ] !>,
+	  HCONS <! qeq & [ HARG #h7 ] !> ],
+  OUTPUT [ HOOK.INDEX #e2,
+           RELS <! [ ], [ ],
+	           [ PRED #pred, LBL #h3, ARG0 #e4 ] !>,
+           HCONS <! qeq, qeq & [ HARG #h7 ] !> ] ].
+
+;; Also reverse the order of the top-level conjuncts, to avoid remaining ambig
+;; in |iitc that B and C or D|
+conj_s_thecase_nontop_cleft_gpr := conj_s_thecase_nontop_conjarg_gpr &
+[ CONTEXT.RELS <! [ ARG0 #e1 ] !>,
+  INPUT.RELS <! [ L-INDEX #e1, R-INDEX #e3, L-HNDL #h7, R-HNDL #h9 ] !>,
+  OUTPUT [ RELS <! [ ], [ LBL #h5, ARG0 #e6 ],
+                   [ L-INDEX #e3, R-INDEX #e6, L-HNDL #h9, R-HNDL #h7 ] !>,
+           HCONS <! qeq, [ HARG #h7, LARG #h5 ] !> ] ].
+
+conj_s_thecase_nontop_cright_gpr := conj_s_thecase_nontop_conjarg_gpr &
+[ CONTEXT.RELS <! [ ARG0 #e1 ] !>,
+  INPUT.RELS <! [ L-INDEX #e3, R-INDEX #e1, L-HNDL #h8, R-HNDL #h7 ] !>,
+  OUTPUT [ RELS <! [ ], [ LBL #h5, ARG0 #e6 ],
+                   [ L-INDEX #e3, R-INDEX #e6, L-HNDL #h8, R-HNDL #h7 ] !>,
+           HCONS <! qeq, [ HARG #h7, LARG #h5 ] !> ] ].

@@ -179,9 +179,20 @@ basic_partitive_num_phrase := unary_phrase & phrasal &
 			   CFROM #from, CTO #to ], ... > ] ].
 
 ;; Constrain coord-Ss to exclude subjunctive.
+;; Also prevent conjoined first daughter, to avoid ambig of |B and C or D|
+;; Also ensure that both conjuncts have same HEAD value indirectly (because
+;; of lossy HEAD constraint on embedded coord-S) via CASE, e.g. to block
+;; |It is the case either that |a| is small, or [ |c| is large, and |d| is 
+;; large ]|.
+;; And prevent conjoined second daughter, to avoid ambig of |B or C and D|
+
 s_coord_top_phr :+
-  [ LCONJ-DTR.SYNSEM.LOCAL.CONT.HOOK.INDEX.E.MOOD indicative,
-    RCONJ-DTR.SYNSEM.LOCAL.CONT.HOOK.INDEX.E.MOOD indicative ].
+  [ LCONJ-DTR.SYNSEM.LOCAL [ CONT.HOOK.INDEX non_conj_event &
+					     [ E.MOOD indicative ],
+			     CAT.HEAD.CASE #case ],
+    RCONJ-DTR.SYNSEM.LOCAL [ CONT.HOOK.INDEX.E.MOOD indicative,
+			     CAT.HEAD.CASE #case,
+			     CONJ.CREL.R-INDEX non_conj_event ] ].
 
 ;; Add constraint to prevent |D either's large or is small|
 head_marker_phrase_atomic :+
@@ -254,33 +265,131 @@ head_adj_prule_rule := isect_mod_phrase & head_initial & rule &
                             CONT.HOOK.INDEX.PORD #pord ],
 		    NONLOC non-local_none ] ].
 
-;; Hack lexical entry for "it is not the case (that)" to improve efficiency
+;; Hack lexical entries for "it is (not) the case that" to improve efficiency
 ;; in generation.
+;; Added CASE non_nom so we can block 
+;; |it is the case [it is not the case that S and i-i-n-t-c that S]|
 ;;
-v_cp_notthecase_le := root_marker_word &
+#|
+v_cp_phrase_lexent := root_marker_word &
   [ SYNSEM [ LOCAL 
              [ CAT [ HEAD [ MOD < anti_synsem_min >,
                             PRD -,
                             VFORM fin,
+			    CASE non_nom,
                             MINORS.MIN nonaux_v_rel ],
                      VAL [ SPR < >,
 			   SUBJ < anti_synsem >,
-			   COMPS < [ LOCAL [ CAT s_cat_v_c & [ HEAD comp ],
-					     CONT.HOOK [ LTOP #khand,
-							 INDEX #ind ] ] ] >,
+			   COMPS < [ LOCAL [ CAT s_cat_v_c & 
+						 [ HEAD comp & [ CASE nom ] ],
+					     CONT.HOOK.INDEX #ind ],
+				     OPT - ] >,
 			   SPCMPS < > ],
 		     MC bool ],
-               CONT [ HOOK [ LTOP #ltop,
-                             INDEX #ind & [ E.MOOD indicative ] ],
+	       CONT [ HOOK.INDEX #ind & [ E.MOOD indicative ],
+		      ICONS <! !> ] ] ] ].
+
+v_cp_notthecase_le := v_cp_phrase_lexent &
+  [ SYNSEM [ LOCAL 
+             [ CAT.VAL.COMPS < [ LOCAL.CONT.HOOK.LTOP #khand ] >,
+               CONT [ HOOK.LTOP #ltop,
                       RELS <! #keyrel &
 		              [ PRED neg_rel,
 		                LBL #ltop,
 				ARG0 event & [ E.TENSE untensed, SF prop ],
 				ARG1 #arg ] !>,
                       HCONS <! qeq & [ HARG #arg,
-				       LARG #khand ] !>,
-		      ICONS <! !> ] ],
+				       LARG #khand ] !> ] ],
              LKEYS.KEYREL #keyrel ] ].
+
+;; Similarly, for "it is the case that ...", used for embeded conjoined CP
+;; complements, to provide unambiguous expression of (B or (C and D)) as
+;; |B or it is the case both that C and that D|.
+;;
+v_cp_thecase_le := v_cp_phrase_lexent &
+  [ SYNSEM [ LOCAL [ CAT.VAL.COMPS < [ LOCAL.CONT.HOOK [ LTOP #ltop,
+							 INDEX conj_event ] ] >,
+		     CONT [ HOOK.LTOP #ltop,
+			    RELS <! !>,
+			    HCONS <! !> ] ],
+	     LKEYS.KEYREL.PRED "_thecasethat_v_rel" ] ].
+|#
+;; Similarly, for "it is the case that ...", used for embeded conjoined CP
+;; complements, to provide unambiguous expression of (B or (C and D)) as
+;; |B or it is the case both that C and that D|.
+;;
+#|
+v_cp_phrase_lexent := root_marker_word &
+  [ SYNSEM [ LOCAL 
+             [ CAT [ HEAD [ MOD < anti_synsem_min >,
+                            PRD -,
+                            VFORM fin,
+			    CASE non_nom,
+                            MINORS.MIN nonaux_v_rel ],
+                     VAL [ SPR < >,
+			   SUBJ < anti_synsem >,
+			   COMPS < [ LOCAL [ CAT s_cat_v_c & 
+						 [ HEAD comp & [ CASE nom ] ],
+					     CONT.HOOK [ LTOP #chand,
+							 INDEX.E #e ] ],
+				     OPT - ] >,
+			   SPCMPS < > ],
+		     MC bool ],
+	       CONT [ HOOK [ LTOP #ltop,
+			     INDEX #ind & non_conj_event & 
+				   [ E #e & [ MOOD indicative ] ] ],
+                      RELS <! #keyrel &
+		              [ LBL #ltop,
+				ARG0 #ind,
+				ARG1 #arg ] !>,
+                      HCONS <! qeq & [ HARG #arg,
+				       LARG #chand ] !>,
+		      ICONS <! !> ] ],
+	     LKEYS.KEYREL #keyrel ] ].
+
+v_cp_notthecase_le := v_cp_phrase_lexent &
+  [ SYNSEM.LKEYS.KEYREL.PRED neg_rel ].
+
+v_cp_thecase_le := v_cp_phrase_lexent &
+  [ SYNSEM [ LOCAL.CAT.VAL.COMPS < [ --SIND conj_event ] >,
+	     LKEYS.KEYREL.PRED "_thecasethat_v_rel" ] ].
+|#
+v_cp_phrase_lexent := root_marker_word &
+  [ SYNSEM [ LOCAL 
+             [ CAT [ HEAD [ MOD < anti_synsem_min >,
+                            PRD -,
+                            VFORM fin,
+			    CASE non_nom,
+                            MINORS.MIN nonaux_v_rel ],
+                     VAL [ SPR < >,
+			   SUBJ < anti_synsem >,
+			   COMPS < [ LOCAL [ CAT s_cat_v_c & 
+						 [ HEAD comp & [ CASE nom ] ],
+					     CONT.HOOK.LTOP #chand ],
+				     OPT - ] >,
+			   SPCMPS < > ],
+		     MC bool ],
+	       CONT [ HOOK.LTOP #ltop,
+                      RELS <! #keyrel &
+		              [ LBL #ltop,
+				ARG1 #arg ] !>,
+                      HCONS <! qeq & [ HARG #arg,
+				       LARG #chand ] !>,
+		      ICONS <! !> ] ],
+	     LKEYS.KEYREL #keyrel ] ].
+
+v_cp_notthecase_le := v_cp_phrase_lexent &
+  [ SYNSEM [ LOCAL [ CAT.VAL.COMPS < [ --SIND #index ] >,
+		     CONT.HOOK.INDEX #index ],
+	     LKEYS.KEYREL [ PRED neg_rel,
+			    ARG0 event & [ E.TENSE untensed, SF prop ] ] ] ].
+
+v_cp_thecase_le := v_cp_phrase_lexent &
+  [ SYNSEM [ LOCAL [ CAT.VAL.COMPS < [ --SIND conj_event & [ E #e ] ] >, 
+                     CONT.HOOK.INDEX #ind & non_conj_event & 
+				   [ E #e & [ MOOD indicative ] ] ],
+	     LKEYS.KEYREL [ PRED "_thecasethat_v_rel",
+	                    ARG0 #ind ] ] ].
 
 ;; Block extraction from complement clauses, for improved generator efficiency
 sor_compl_word :+
@@ -315,4 +424,11 @@ c_xp_nor_le := conj_complex_lexent &
   [ SYNSEM.LOCAL [ CONJ lex-conj & [ CHEAD neither ],
 		   CONT.RELS <! [ PRED _nor_c_rel ] !> ] ].
 
+;; For |both that S and that S| but not |both S and S|
+c_xp_both-cp_le := conj_atomic_lexent &
+  [ SYNSEM.LOCAL [ CONJ both,
+		   CAT.VAL.COMPS < [ LOCAL.CAT [ HEAD comp,
+						 VAL.COMPS < >,
+						 MC - ] ] > ] ].
+ctst := cl-cl. ;; cl-cl_crd-that-t_c
 
