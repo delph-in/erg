@@ -77,6 +77,9 @@ word_mtr := basic_word_mtr &
 
 verb_mtr := word_mtr.
 
+word_hcons_mtr := word_mtr &
+[ OUTPUT.HCONS <! qeq !> ].
+
 verb_prtcl_cp_mtr := monotonic_mtr &
 [ INPUT [ RELS <! [ LBL #h1, ARG0 #e2, ARG2 #h3 ], [ LBL #h5 ] !>,
 	  HCONS <! qeq & [ HARG #h3, LARG #h5 ] !> ],
@@ -128,13 +131,13 @@ np_deletion_omtr := monotonic_omtr &
 		      [ PRED quant_rel, ARG0 #x1, RSTR #h2 ], ... >,
 	  HCONS <! qeq & [ HARG #h2, LARG #h1 ] !> ],
   OUTPUT [ HOOK.INDEX #index,
-	   HCONS <! !> ] ]
-.
+	   HCONS <! !> ] ].
+
 compound_head_deletion_omtr := np_deletion_omtr &
-[ INPUT.RELS <! [ PRED #pred, ARG0 #x2 & ref-ind ], [ ],
+[ INPUT.RELS <! [ PRED #pred, ARG0 #x2 & ref-ind & [ PNG.GEN #gen ] ], [ ],
 		[ LBL #h1, ARG0 #x1 & ref-ind ],
 	        [ LBL #h1, PRED compound_rel, ARG1 #x1, ARG2 #x2 ] !>,
-  OUTPUT.RELS <! [ PRED #pred, LBL #h1, ARG0 #x1 ] !>,
+  OUTPUT.RELS <! [ PRED #pred, LBL #h1, ARG0 #x1 & [ PNG.GEN #gen ] ] !>,
   FLAGS.SUBSUME < #x1, #x2, #h1 > ].
 
 appos_deletion_omtr := np_deletion_omtr &
@@ -198,6 +201,19 @@ possessive_deletion_omtr := monotonic_omtr &
            HCONS <! !> ],
   FLAGS.SUBSUME < #x1, #x2 > ].
 
+;; |Chicago's skyscrapers| => |the skyscrapers of Chicago|
+possessive_ppof_omtr := monotonic_omtr &
+[ CONTEXT.RELS <! [ PRED "~._n_", ARG0 #x1 & ref-ind ],
+		  [ PRED quant_rel, ARG0 #x2 ] !>,
+  INPUT [ RELS <! [ PRED def_explicit_q_rel, LBL #h2, ARG0 #x1,
+                    RSTR #h3 & handle, BODY #h4 & handle ],
+		  [ PRED poss_rel, LBL #h5, ARG0 #x0, ARG1 #x1, ARG2 #x2 ] !>,
+	  HCONS <! !> ],
+  OUTPUT [ RELS <! [ PRED _the_q_rel, LBL #h2, ARG0 #x1, RSTR #h3, BODY #h4 ],
+		   [ PRED _of_p_rel, LBL #h5, ARG0 #x0, ARG1 #x1, ARG2 #x2 ] !>,
+           HCONS <! !> ],
+  FLAGS.SUBSUME < #x1, #x2 > ].
+
 ;; causative/inchoative
 ;;
 causative-inchoative_omtr := norm_monotonic_omtr &
@@ -211,30 +227,17 @@ causative-inchoative_omtr := norm_monotonic_omtr &
 ;; agentless passive
 ;;
 agentless_passive_omtr := norm_monotonic_omtr &
-[ INPUT [ RELS <! [ PRED #pred & "~._v_", LBL #h1 & handle, ARG0 #e2 & event, 
+[ FILTER.RELS <! [ LBl #h5, ARG1 #x3 ] !>,
+  INPUT [ RELS <! [ PRED #pred & "~._v_", LBL #h1 & handle, ARG0 #e2 & event, 
 		    ARG1 #x3 & ref-ind, ARG2 #x4 & ref-ind ],
-		  [ LBL #h5, ARG0 #x3 & ref-ind ],
+		  [ LBL #h5, ARG0 #x3 ],
 	  	  [ PRED quant_rel, ARG0 #x3, RSTR #h6 ] !>,
           HCONS <! qeq & [ HARG #h6, LARG #h5 ] !> ],
   OUTPUT [ RELS <! [ PRED #pred, LBL #h1, ARG0 #e2, 
 		     ARG1 individual, ARG2 #x4 ] !>,
 	   HCONS <! !> ],
-  FLAGS.EQUAL < #x3, #x4, #h1 > ].
-
-#|
-dative_obj_deletion_omtr := norm_monotonic_omtr &
-[ INPUT [ HOOK.INDEX #index,
-	  RELS <! [ PRED #pred & "~._v_", LBL #h1 & handle, ARG0 #e2 & event, 
-		    ARG1 #x3 & ref-ind, ARG2 #x4 & ref-ind, ARG3 #x5 ],
-		  [ LBL #h5, ARG0 #x5 & ref-ind ],
-	  	  [ PRED quant_rel, ARG0 #x5, RSTR #h6 ] !>,
-          HCONS <! qeq & [ HARG #h6, LARG #h5 ] !> ],
-  OUTPUT [ HOOK.INDEX #index,
-	   RELS <! [ PRED #pred, LBL #h1, ARG0 #e2, 
-		     ARG1 #x3, ARG2 #x4 ] !>,
-	   HCONS <! !> ],
-  FLAGS.SUBSUME < #x3, #x4, #x5, #h1 > ].
-|#
+  FLAGS [ EQUAL < #x4, #h1 >,
+          SUBSUME < #x3 > ] ].
 
 dative_object_deletion_omtr := norm_monotonic_omtr &
 [ INPUT [ HOOK.INDEX #index,
@@ -248,7 +251,6 @@ dative_object_deletion_omtr := norm_monotonic_omtr &
 		     ARG1 #x3 ] !>,
 	   HCONS <! !> ],
   FLAGS.SUBSUME < #x3, #x4, #x5, #h1, #x10 > ].
-
 
 ;;;
 ;;; a few `special-purpose' types, transfer operators in a sense
@@ -838,3 +840,123 @@ be_cop_promote_ind_gtr := arg0e_gtr &
 norm_monotonic_omtr := monotonic_omtr &
  [ INPUT.HOOK.INDEX #ind,
    OUTPUT.HOOK.INDEX #ind ].
+
+;; Common subj in coord Ss
+;; |Kim arose and Kim arrived| => |Kim arose and arrived|
+;;
+basic_coord_vp_gpr := norm_monotonic_omtr &
+[ CONTEXT.RELS <! [ ARG0 event & #e1 & [ E.TENSE real_tense ], ARG1 #x1 ],
+		  [ ARG0 #x1 & ref-ind ] !>,
+  INPUT [ HOOK.INDEX #index,
+	  RELS <! [ PRED pos_conj_rel & #pred1, LBL #h14, ARG0 #e7, L-INDEX #e1, 
+		    R-INDEX #e2, L-HNDL #h10 & handle, R-HNDL #h11 & handle ],
+		  [ ARG0 #x2 & ref-ind, LBL #h9 ],
+		  [ PRED quant_rel, ARG0 #x2, RSTR #h20 & handle ],
+		  [ PRED #pred2, LBL #h4, ARG0 event & #e2, ARG1 #x2 ] !>,
+	  HCONS <! qeq & [ HARG #h20, LARG #h9 ], 
+		   qeq & [ HARG #h10, LARG #h12 ],
+		   qeq & [ HARG #h11, LARG #h13 ] !> ],
+  OUTPUT [ HOOK.INDEX #index,
+	   RELS <! [ PRED #pred1, LBL #h14, ARG0 #e7, L-INDEX #e1, R-INDEX #e2,
+		     L-HNDL #h12, R-HNDL #h13 ],
+		   [ PRED #pred2, LBL #h4, ARG0 #e2, ARG1 #x1 ] !>,
+	   HCONS <! !> ],
+  FLAGS.SUBSUME < #e1, #e2, #x1, #x2, ... > ].
+
+;; Never have verbs taking events as ARG2, so this hack restricts to one-args
+;;
+#|
+coord_vp_onearg_named_gpr := basic_coord_vp_gpr &
+[ CONTEXT.RELS <! [ ], [ PRED named_rel, CARG #carg ] !>,
+  INPUT.RELS <! [], [ PRED named_rel, CARG #carg ], [], [ ARG2 event ] !>,
+  FLAGS.SUBSUME < semarg, semarg, semarg, semarg > ].
+
+coord_vp_twoarg_named_gpr := basic_coord_vp_gpr &
+[ CONTEXT.RELS <! [ ], [ PRED gen_named_rel, CARG #carg ] !>,
+  INPUT.RELS <! [], [ PRED gen_named_rel, CARG #carg ], [], 
+	        [ ARG2 #x3 & ref-ind ] !>,
+  OUTPUT.RELS <! [ ], [ ARG2 #x3 ] !>,
+  FLAGS.SUBSUME < semarg, semarg, semarg, semarg, #x3 > ].
+
+coord_vp_onearg_noun_gpr := basic_coord_vp_gpr &
+[ CONTEXT.RELS <! [ ], [ PRED #pred & string ] !>,
+  INPUT.RELS <! [], [ PRED #pred ], [ ], [ ARG2 event ] !>,
+  FLAGS.SUBSUME < semarg, semarg, semarg, semarg > ].
+
+coord_vp_twoarg_noun_gpr := basic_coord_vp_gpr &
+[ CONTEXT.RELS <! [ ], [ PRED #pred & string ] !>,
+  INPUT.RELS <! [], [ PRED #pred ], [], [ ARG2 #x3 & ref-ind ] !>,
+  OUTPUT.RELS <! [ ], [ ARG2 #x3 ] !>,
+  FLAGS.SUBSUME < semarg, semarg, semarg, semarg, #x3 > ].
+|#
+
+;; Make sure the name's CARGs match
+;;
+coord_vp_named_gpr := basic_coord_vp_gpr &
+[ CONTEXT.RELS <! [ ], [ PRED gen_named_rel, CARG #carg ] !>,
+  INPUT.RELS <! [], [ PRED gen_named_rel, CARG #carg ], [], [] !>,
+  FLAGS.SUBSUME < semarg, semarg, semarg, semarg > ].
+
+;; Matching PNG values
+coord_vp_pron_gpr := basic_coord_vp_gpr &
+[ CONTEXT.RELS <! [ ], [ PRED pron_rel, ARG0.PNG #png ] !>,
+  INPUT.RELS <! [], [ PRED pron_rel, ARG0.PNG #png ], [], [] !>,
+  FLAGS.SUBSUME < semarg, semarg, semarg, semarg > ].
+
+coord_vp_noun_gpr := basic_coord_vp_gpr &
+[ CONTEXT.RELS <! [ ], [ PRED #pred & string ] !>,
+  INPUT.RELS <! [], [ PRED #pred ], [], [] !>,
+  FLAGS.SUBSUME < semarg, semarg, semarg, semarg > ].
+
+;; Reverse the order of two nonconjoined phrases: |X and Y| => |Y and X|
+;;
+conj_reverse_gpr := norm_monotonic_omtr &
+[ INPUT.RELS <! [ PRED conj_nonrev_rel, LBL handle & #clbl, ARG0 #i1, 
+                  L-INDEX nonconj_indiv & #i2, L-HNDL handle & #h1, 
+		  R-INDEX nonconj_indiv & #i3, R-HNDL handle & #h2 ] !>,
+  OUTPUT.RELS <! [ PRED conj_reversed_rel, LBL #clbl, ARG0 #i1, 
+                   L-INDEX #i3, L-HNDL #h2, R-INDEX #i2, R-HNDL #h1 ] !> ].
+
+basic_pro_subj_gpr := norm_monotonic_omtr &
+[ CONTEXT.RELS.LIST < [ ARG0 event & [ E.TENSE real_tense ], ARG1 #x1 ],
+		      [ ARG0 event & [ E.TENSE real_tense ], ARG1 #x2 ],
+		      [ ARG0 #x1 & ref-ind ],
+		      [ PRED quant_rel & #qpred, ARG0 #x1 ], ... >,
+  INPUT [ HOOK.INDEX #index,
+	  RELS.LIST < [ LBL #h10, ARG0 #x2 & ref-ind ],
+		      [ PRED #qpred, ARG0 #x2, RSTR #h20 ], ... > ],
+  OUTPUT [ HOOK.INDEX #index,
+	   RELS <! [ PRED pron_rel, LBL #h10, ARG0 #x2 ],
+		   [ PRED pronoun_q_rel, LBL handle, ARG0 #x2, RSTR #h20 ] !> ],
+  FLAGS.SUBSUME < #x2, ... > ].
+
+;; |Mary arose and Mary arrived| => |Mary arose and she arrived|
+;;
+pro_subj_gpr := basic_pro_subj_gpr &
+[ CONTEXT.RELS <! [ ], [ ], [ PRED gen_named_rel, CARG #carg ] !>,
+  INPUT.RELS <! [ PRED gen_named_rel, CARG #carg ], [ ] !>,
+  FLAGS.SUBSUME < semarg > ].
+
+pro_coord_subj_gpr := basic_pro_subj_gpr &
+[ CONTEXT.RELS.LIST < [ ], [ ], 
+		      [ PRED _and_c_rel, L-INDEX #x1, R-INDEX #x2 ], [ ],
+		      [ PRED gen_named_rel, ARG0 #x1, CARG #carg1 ],
+		      [ PRED gen_named_rel, ARG0 #x2, CARG #carg2 ], ... >,
+  INPUT [ RELS <! [ PRED pos_conj_rel, ARG0 ref-ind & [ SORT #sort ], 
+		    L-INDEX #x3, R-INDEX #x4 ], [ ],
+		  [ PRED gen_named_rel, ARG0 #x3, CARG #carg1 ],
+		  [ PRED gen_named_rel, ARG0 #x4, CARG #carg2 ], 
+		  [ PRED quant_rel, ARG0 #x3, RSTR #h20 ],
+		  [ PRED quant_rel, ARG0 #x4, RSTR #h21 ] !>,
+	  HCONS <! qeq & [ HARG #h20 ], qeq & [ HARG #h21 ] !> ],
+  OUTPUT [ RELS.LIST < [ ARG0.SORT #sort ], [ ], ... > ] ].
+
+;; |B and C arose and B and C arrived| => |B and C arose and they arrived|
+;;
+conjnct_pro_coord_subj_gpr := pro_coord_subj_gpr &
+[ CONTEXT.RELS <! [ ARG0 #e1 ], [ ARG0 #e2, ARG1 #x3 ], [ ],
+		  [ ], [ ], [ ], 
+		  [ PRED conj_rel, ARG0.SORT #sort,
+		    L-INDEX #e1, R-INDEX #e2 ] !>,
+  OUTPUT.RELS.LIST < [ ARG0 #x3 & [ PNG.PN 3p, SORT #sort ] ], ... >,
+  FLAGS.SUBSUME < semarg > ].
