@@ -8166,10 +8166,20 @@ n_-_pn-nonom_le := n_proper_lexent &
 	     MODIFD [ LPERIPH +,
 		      RPERIPH + ] ] ].
 
+; <type val="n_-_pn-upcase_le">
+; <description>Proper noun (pn), all uppercase
+; <ex>Group A arrived.
+; <ex>We flew in on ANA.
+; <nex>
+; <todo>
+; </type>
+n_-_pn-upcase_le := n_proper_lexent &
+  [ TOKENS.+LIST.FIRST.+CLASS.+CASE capitalized+upper ].
+
 ; <type val="n_-_pn-nounif_le">
-; <description>Non-unifying, only for noun |A| to block generic NP
+; <description>Non-unifying, to block generic proper NP for e.g. |Mr.|
 ; <ex>
-; <nex>*A number arose.
+; <nex>*Mr. Mr. Browne
 ; <todo>
 ; </type>
 n_-_pn-nounif_le := n_proper_lexent &
@@ -10244,6 +10254,12 @@ norm_adj_lex_synsem := basic_adj_synsem & lex_synsem &
                   VAL.SPR.FIRST.LOCAL.CONT.HOOK.XARG #arg0 ],
             CONT.HOOK.INDEX #arg0 ],
     LKEYS.KEYREL.ARG0 #arg0 & non_conj_event ].
+
+;; DPF 2015-09-02 - Analogous to the introduction of the derived_verb_synsem,
+;; add this one to avoid spurious interaction among derivational lexical rules
+;; for adjectives, such as |un-| prefix rule plus attributive-adj rule.
+;;
+derived_adj_synsem := norm_adj_lex_synsem.
 
 ;; We assume for now, counterfactually, that all modifying adjectives are
 ;; intersective.
@@ -14423,6 +14439,8 @@ n_x_to_y_lexent := basic_n-or-p_x_to_y_lexent &
 ;; while the other will be named_np_rel.
 ;; DPF 2012-09-26 - Removed COMPS.MIN and SPR..MIN abstr_named_rel, to allow 
 ;; meas-NPs, so let's see where this overgenerates.
+;; DPF 2015-09-08 - Removed COMPS..MODIFD notmod_or_lmod so we can admit
+;; |Paris - Berlin (via Brussels)|
 ;
 ; <type val="n_np_x-to-y-sg_le">
 ; <description>Diadic n 'to' (XtoY) -sg np cmp  
@@ -14449,8 +14467,7 @@ n_np_x-to-y-sg_le := n_x_to_y_lexent &
 			OPT - ] >,
 		COMPS < [ --MIN named_or_meas_rel,
 			  LOCAL [ AGR.PNG.PN 3s,
-				  CAT.VAL.SPR *olist* ],
-			  MODIFD notmod_or_lmod ] > ] ],
+				  CAT.VAL.SPR *olist* ] ] > ] ],
 	CONT [ HOOK [ LTOP #nhand,
 		      INDEX #index ],
 	       RELS <! [ LBL #nhand, ARG0 #index ],
@@ -18520,6 +18537,8 @@ c_xp_and-not_le := conj_complex_lexent &
 
 ; DPF 31-oct-05 - Make [CONJ phr-conj] to avoid spurious ambiguity for
 ; "Then we should go."
+;; DPF 2015-09-07 - Re 31-oct-05 - But phr-conj constraints CHEAD to cnil,
+;; so never get |first X then Y|.  Remove, and revisit the ambiguity.
 ; 'first Kim, then Sandy'
 ; <type val="c_xp_then_le">
 ; <description>Conj, only 'then'                
@@ -18530,9 +18549,20 @@ c_xp_and-not_le := conj_complex_lexent &
 c_xp_then_le := conj_complex_lexent &
   [ SYNSEM.LOCAL [ CAT.VAL.COMPS < [ LOCAL.CAT [ HEAD subst,
 						 VAL.COMPS < > ] ] >,
-		   CONJ phr-conj & [ CHEAD first_or_cnil ],
+		   CONJ.CHEAD first_or_cnil,
 		   CONT.RELS <! [ PRED _then_c_rel ] !> ] ].
 
+; <type val="c_xp_then_le">
+; <description>Conj, only 'then'                
+; <ex>B tripped then fell.
+; <nex>
+; <todo>
+; </type>
+c_xp_and-then_le := conj_complex_lexent &
+  [ SYNSEM.LOCAL [ CAT.VAL.COMPS < [ LOCAL.CAT [ HEAD subst,
+						 VAL.COMPS < > ] ] >,
+		   CONJ.CHEAD first,
+		   CONT.RELS <! [ PRED _and_c_then_rel ] !> ] ].
 
 ; <type val="c_xp_or-else_le">
 ; <description>Conj, only 'or else'             
@@ -22730,10 +22760,12 @@ basic_norm_num_synsem := anycard_norm_num_synsem &
                      XARG #xarg ],
               RELS.LIST.FIRST [ ARG0 #index,
                                 ARG1 #xarg ] ] ],
-    MODIFD notmod_or_rmod & [ LPERIPH na_or_+ ] ].
+    MODIFD notmod_or_rmod ].
 
-norm_num_synsem := basic_norm_num_synsem & zero_arg &
+norm_num_lex_synsem := basic_norm_num_synsem & zero_arg.
+norm_num_synsem := norm_num_lex_synsem &
   [ LOCAL.CONT.RELS.LIST.FIRST #keyrel,
+    MODIFD.LPERIPH na_or_+,
     LKEYS.KEYREL #keyrel ].
 
 ; DPF 9-jul-04 - Is this used?
@@ -22743,7 +22775,8 @@ phr_norm_num_synsem := basic_norm_num_synsem & phr_synsem &
                               [ E [ TENSE no_tense,
                                     ASPECT no_aspect ] ],
                    HCONS <! !>,
-		   ICONS <! !> ] ] ].
+		   ICONS <! !> ] ],
+    MODIFD.LPERIPH na_or_+ ].
 
 ; DPF 05-apr-05 - Moved PRD - to norm_card_word since it blocks "Kim was third"
 
@@ -22862,12 +22895,16 @@ complemented_number := norm_num_word &
 ; Need head-compositional since the handle of the phrase "two hundred" must
 ; be the handle of the times_rel from the head "hundred" (which contains as
 ; arguments the other two handles).
-
+;; DPF 2015-09-05 - Added CASE real_case to the SPR, now that REPP is producing
+;; two generic entries for each decimal number: one ordinary cardinal used
+;; here, and a decimal one used in compounds, where CASE is not constrained.
+;;
 specified_number := norm_num_word &
   [ SYNSEM.LOCAL.CAT.VAL.SPR < synsem &
                                [ OPT -,
                                  LOCAL [ CAT [ HEAD intadj & 
-                                                    [ CARDINAL + ],
+                                                    [ CARDINAL +,
+						      CASE real_case ],
                                                VAL [ COMPS < >,
                                                      SPR *olist*,
                                                      SPCMPS < > ] ] ] ] > ].
@@ -22991,6 +23028,7 @@ adj_bare_unspecified_card_wcomps_lexent := card_only_word &
 aj_-_i-crd-one_le := adj_bare_unspecified_card_lexent &
   [ SYNSEM [ LOCAL.CAT.HEAD intadj1,
 	     PHON.DIGIT - ] ].
+
 ; <type val="aj_-_i-crd-two_le">
 ; <description>Adj, card, 2 digit, no cmp       
 ; <ex>Thirty cats ran.
@@ -23000,6 +23038,7 @@ aj_-_i-crd-one_le := adj_bare_unspecified_card_lexent &
 aj_-_i-crd-two_le := adj_bare_unspecified_card_lexent &
   [ SYNSEM [ LOCAL.CAT.HEAD intadj2,
 	     PHON.DIGIT - ] ].
+
 ; <type val="aj_-_i-crd-thr_le">
 ; <description>Adj, card, 3 digit, no cmp       
 ; <ex>1000 cats ran.
@@ -23010,33 +23049,31 @@ aj_-_i-crd-thr_le := adj_bare_unspecified_card_lexent &
   [ SYNSEM [ LOCAL.CAT.HEAD intadj3,
 	     PHON.DIGIT - ] ].
 
-; <type val="aj_-_i-dig-one_le">
-; <description>Adj, digit, 1 digit, no cmp      
+; <type val="aj_-_i-rom-pl_le">
+; <description>Adj, roman numeral, greater than one
 ; <ex>6 is even.
 ; <nex>
 ; <todo>
 ; </type>
-aj_-_i-dig-one_le := basic_adj_bare_unspecified_card_lexent &
-  [ SYNSEM [ LOCAL.CAT.HEAD intadj1,
+aj_-_i-rom-pl_le := basic_adj_bare_unspecified_card_lexent &
+  [ SYNSEM [ LOCAL.CAT.HEAD intadj1 & [ MOD < [ LOCAL.AGR.PNG.PN 3p ]>,
+					CASE real_case ],
              MODIFD.LPERIPH + ] ].
-; <type val="aj_-_i-dig-two_le">
-; <description>Adj, digit, 2 digit, no cmp      
-; <ex>16 is even.
-; <nex>
+
+; <type val="aj_-_i-rom-one_le">
+; <description>Adj, roman digit I only (also letter |I|)
+; <ex>We study type I.
+; <ex>We study type I diabetes.
+; <nex>We study I.
 ; <todo>
 ; </type>
-aj_-_i-dig-two_le := basic_adj_bare_unspecified_card_lexent &
-  [ SYNSEM [ LOCAL.CAT.HEAD intadj2,
-             MODIFD.LPERIPH + ] ].
-; <type val="aj_-_i-dig-thr_le">
-; <description>Adj, digit, 3+ digit, no cmp     
-; <ex>1000 is even. 
-; <nex>
-; <todo>
-; </type>
-aj_-_i-dig-thr_le := basic_adj_bare_unspecified_card_lexent &
-  [ SYNSEM [ LOCAL.CAT.HEAD intadj3,
-             MODIFD.LPERIPH + ] ].
+aj_-_i-rom-one_le := norm_card_word & unspecified_num_without_complements &
+  [ SYNSEM [ LOCAL.CAT.HEAD intadj1 & [ CARDINAL +,
+					MOD < anti_synsem &
+					      [ LOCAL.AGR.PNG.PN 3s ] >,
+					CASE real_case ],
+             MODIFD.LPERIPH +,
+	     LKEYS.KEYREL.PRED card_rel ] ].
 
 ; <type val="aj_np_i-crd-one_le">
 ; <description>Adj, card, 1 dig, comp           
@@ -23062,6 +23099,7 @@ adj_bare_specified_card_lexent := card_only_word &
 aj_-_i-crd-hnd_le := adj_bare_specified_card_lexent &
   [ SYNSEM.LOCAL.CAT [ HEAD intadj3,
                        VAL.SPR.FIRST.LOCAL.CAT.HEAD intadj2- ] ].
+
 ; <type val="aj_-_i-crd-dzn_le">
 ; <description>Adj, card, only 'dozen'          
 ; <ex>Two dozen cats ran.
@@ -23081,6 +23119,7 @@ aj_-_i-crd-dzn_le := adj_bare_specified_card_lexent &
 aj_-_i-crd-thd_le := adj_bare_specified_card_lexent &
   [ SYNSEM.LOCAL.CAT [ HEAD intadj6,
                        VAL.SPR.FIRST.LOCAL.CAT.HEAD intadj3- ] ].
+
 ; <type val="aj_-_i-crd-mln_le">
 ; <description>Adj, card, only 'million'        
 ; <ex>Two million cats ran.
@@ -23090,6 +23129,7 @@ aj_-_i-crd-thd_le := adj_bare_specified_card_lexent &
 aj_-_i-crd-mln_le := adj_bare_specified_card_lexent &
   [ SYNSEM.LOCAL.CAT [ HEAD intadj9,
                        VAL.SPR.FIRST.LOCAL.CAT.HEAD intadj3- ] ].
+
 ; <type val="aj_-_i-crd-bln_le">
 ; <description>Adj, card, only 'billion'        
 ; <ex>Two billion cats ran.
@@ -23099,6 +23139,7 @@ aj_-_i-crd-mln_le := adj_bare_specified_card_lexent &
 aj_-_i-crd-bln_le := adj_bare_specified_card_lexent &
   [ SYNSEM.LOCAL.CAT [ HEAD intadj12,
                        VAL.SPR.FIRST.LOCAL.CAT.HEAD intadj3- ] ].
+
 ; <type val="aj_-_i-crd-trln_le">
 ; <description>Adj, card, only 'trillion'       
 ; <ex>Two trillion cats ran.
@@ -23158,6 +23199,7 @@ aj_np_i-crd-hnd_le := adj_complemented_specified_card_lexent &
                        VAL [ SPR.FIRST.LOCAL.CAT.HEAD intadj2-,
                              COMPS.FIRST [ LOCAL.CAT.HEAD intadj2-,
                                            MODIFD.LPERIPH na ] ] ] ].
+
 ; <type val="aj_np_i-crd-thd_le">
 ; <description>Adj, card, only 'thousnd'        
 ; <ex>Two thousand ten cats ran.
@@ -23168,6 +23210,7 @@ aj_np_i-crd-thd_le := adj_complemented_specified_card_lexent &
   [ SYNSEM.LOCAL.CAT [ HEAD intadj6,
                        VAL [ SPR.FIRST.LOCAL.CAT.HEAD intadj3-,
                              COMPS.FIRST.LOCAL.CAT.HEAD intadj3- ] ] ].
+
 ; <type val="aj_np_i-crd-mln_le">
 ; <description>Adj, card, only 'million'        
 ; <ex>Two million ten cats ran.
@@ -23178,6 +23221,7 @@ aj_np_i-crd-mln_le := adj_complemented_specified_card_lexent &
   [ SYNSEM.LOCAL.CAT [ HEAD intadj9,
                        VAL [ SPR.FIRST.LOCAL.CAT.HEAD intadj3-,
                              COMPS.FIRST.LOCAL.CAT.HEAD intadj6- ] ] ].
+
 ; <type val="aj_np_i-crd-bln_le">
 ; <description>Adj, card, only 'billion'        
 ; <ex>Two billion ten cats ran.
@@ -23452,7 +23496,7 @@ aj_-_i-one-d_le := aj_-_i-one_lexent.
 
 ; <type val="aj_np_i-frct-one_le">
 ; <description>First half of fraction w/'one'   
-; <ex>Two and one third eggs are
+; <ex>One and one third eggs are
 ; <nex>
 ; <todo>
 ; </type>
@@ -23549,7 +23593,8 @@ aj_-_i-an-nmd_le := adj_one_prd_lexent &
 ; <todo>
 ; <native> aj_-_i-one-nmd_le
 ; </type>
-aj_-_i-one-gen_le := adj_one_prd_lexent & basic_unknown_word.
+aj_-_i-one-gen_le := adj_one_prd_lexent & basic_unknown_word &
+  [ SYNSEM.LOCAL.CAT.HEAD.CASE no_case ].
 
 ; For 'several thousand' 'a few dozen'
 ; DPF 3-May-08 - Add MOD..NORM norm_rel to block "a few cat" from being
