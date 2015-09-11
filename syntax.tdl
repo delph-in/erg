@@ -2706,16 +2706,26 @@ adj_head_scop_nopair_phrase := adj_head_scop_xp_phrase &
 ;; This constraint has the side effect of specializing the INDEX to event,
 ;; which might not be desirable; if not, will have to divide this into two
 ;; subrules, one for clausal heads and one for the rest.
+;; DPF 2015-09-09 - Re 2015-04-20: But this is wrong for embedded WH-clauses,
+;; as in |We explain how Kim arrives laughing.| with low attachment, since
+;; |how ...| has to be a question, but the PSF value imposed too low will 
+;; exclude questions.
+;; So to preserve the PSF value for |[we stay][if he sings.]| we would need to
+;; either split this phrase into MC + and MC - variants, parallel to the
+;; subj-hd and filler-hd types, or move to a unary `root' phrase which would
+;; do the identity of PSF and INDEX.SF.  Note that we want to be sure to get
+;; |we explain how [[he arises][if we arise.]]|
 ;;
 head_adj_scop_phrase := head_adj_phrase & scopal_mod_phrase & 
 			head_initial_infl &
   [ NH-DTR.SYNSEM [ LOCAL.CAT.VAL.COMPS < >,
-		    NONLOC.REL 0-dlist,
-		    PUNCT.RPUNCT.PSF #psf ],
-    HD-DTR.SYNSEM.PUNCT.RPUNCT comma_or_pair_or_no_punct,
-    C-CONT.HOOK.INDEX.SF #psf ].
+		    NONLOC.REL 0-dlist ],
+    HD-DTR.SYNSEM.PUNCT.RPUNCT comma_or_pair_or_no_punct ].
 
 ; The paired variant - see comment 7-may-05 for n_adj_relcl_phrase.
+;; DPF 2015-09-09 - Following up from note above, splitting this paired type
+;; into subtypes for MC+/- because of the interaction with PSF/SF.
+;;
 head_adj_scop_prpnct := head_adj_scop_phrase &
   [ SYNSEM.PUNCT.PAIRED #paired,
     HD-DTR.SYNSEM.PUNCT [ PNCTPR #pnctpr,
@@ -2723,6 +2733,14 @@ head_adj_scop_prpnct := head_adj_scop_phrase &
                           RPUNCT comma_or_pair_punct ],
     NH-DTR.SYNSEM.PUNCT [ PAIRED #pnctpr,
                           PNCTPR #paired ] ].
+
+head_adj_scop_prpnct_mc := head_adj_scop_prpnct &
+  [ SYNSEM [ LOCAL [ CAT.MC +,
+		     CONT.HOOK.INDEX.SF #psf ],
+	     PUNCT.RPUNCT.PSF #psf ] ].
+
+head_adj_scop_prpnct_nmc := head_adj_scop_prpnct &
+  [ SYNSEM.LOCAL.CAT.MC na_or_- ].
 
 ; Non-paired variant - propagate comma or clause-punct onward
 ; DPF 10-sept-07 - Added RPERIPH + to mother to enable blocking of stacked
@@ -7066,6 +7084,9 @@ no_copula_nosubj_phrase := non_rel_clause & head_valence_phrase & head_only &
 
 
 ;; For clause-as-modifier, as in |you will, _I am sure_, be happy|
+;; DPF 2015-09-11 - Added VFORM finite to dtr, to block |considered|, which has
+;; an optional SUBJ.  Also conostrain to MC bool, in case a relative clause
+;; might try to sneak in.
 ;;
 cl_adv_phrase := norm_unary_phrase & phrasal &
   [ SYNSEM [ LOCAL [ CAT [ HEAD adv &
@@ -7088,10 +7109,11 @@ cl_adv_phrase := norm_unary_phrase & phrasal &
              PUNCT #punct,
 	     --BRDG na ],
     ARGS < [ INFLECTD +,
-             SYNSEM [ LOCAL [ CAT [ HEAD verb,
+             SYNSEM [ LOCAL [ CAT [ HEAD verb & [ VFORM fin ],
                                     VAL [ SPR *olist*,
                                           SUBJ *olist*,
-					  COMPS < > ] ],
+					  COMPS < > ],
+				    MC bool ],
 			      CONT.HOOK [ LTOP #vltop,
 					  INDEX #vind,
 					  XARG #vxarg,
@@ -7304,7 +7326,8 @@ adjh_i_rule := binary_rule_left_to_right & adj_h_int_phrase.
 adjh_i_inv_rule := binary_rule_left_to_right & adj_head_inv_phrase.
 adjh_i_rel_rule := binary_rule_left_to_right & adj_head_rel_phrase.
 
-hadj_s_prpnct_rule := binary_rule_right_to_left & head_adj_scop_prpnct.
+hadj_s_prpnct_nmc_rule := binary_rule_right_to_left & head_adj_scop_prpnct_nmc.
+hadj_s_prpnct_mc_rule := binary_rule_right_to_left & head_adj_scop_prpnct_mc.
 hadj_s_nopair_rule := binary_rule_right_to_left & head_adj_scop_nopair.
 hadj_i_relcl_pr_rule := binary_rule_right_to_left & n_adj_relcl_prpnct.
 hadj_i_relcl_npr_rule := binary_rule_right_to_left & n_adj_relcl_nopair.
@@ -9715,6 +9738,10 @@ npindef_s_rule := np_s_phrase &
 ;; here, to avoid |*Kim arrived, who arose|
 ;; DPF 2013-01-09 - Constrain vp-final-relcl_phrase to exclude s-final punct 
 ;; on hd-dtr. (See generator for "a cat arrived who arose.")
+;; DPF 2015-09-10 - Re 2011-08-14: But this blocks |Kim arrived, which surprised
+;; us.|  So until and unless we differentiate between the "event-modifying"
+;; relative clauses with "which" and the "extraposed" ref-ind-modifying ones
+;; (they can include "which"), let's let them in.
 ;;
 vp-final-relcl_phrase := head_initial_infl &
  [ SYNSEM phr_synsem &
@@ -9724,9 +9751,7 @@ vp-final-relcl_phrase := head_initial_infl &
    ARGS < [ SYNSEM [ LOCAL [ CAT #cat &
 			     [ HEAD verb & [ MINORS.MIN norm_rel ],
 			       VAL [ SUBJ < expressed_synsem &
-					    [ LOCAL.CAT.HEAD basic_noun &
-					      [ MINORS.ALTMIN
-				                impl_or_expl_or_pron_q_rel ]] >,
+					    [ LOCAL.CAT.HEAD basic_noun ] >,
 				     COMPS < > ] ],
 			     CONT.HOOK #hook,
 			     CONJ cnil ],
@@ -9735,8 +9760,7 @@ vp-final-relcl_phrase := head_initial_infl &
 	  [ SYNSEM [ LOCAL [ CAT [ HEAD [ VFORM fin,
 					  INV -,
 					  MOD < synsem & 
-						[ --SIND #modind &
-						      [ SORT entity ],
+						[ --SIND #modind,
 						  LOCAL.CONT.HOOK.XARG
 							         basic_non_expl,
 						  MODIFD.RPERIPH na_or_+ ] > ],
