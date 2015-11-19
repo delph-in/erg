@@ -1,0 +1,60 @@
+;;; Hey, emacs(1), this is -*- Mode: TDL; Package: LKB; -*- got it?
+
+quantifier_mark := monotonic_mtr &
+[ INPUT.RELS < [ PRED "~_q_rel$", LBL #h0, ARG0 #x ] >,
+  FILTER.RELS < [ PRED quantifier_mark, LBL #h0, ARGM #x ] >,
+  OUTPUT.RELS < +copy+ & [ ARG0 [ MARK none ] ],
+                [ PRED quantifier_mark, LBL #h0, ARGM #x ] > ].
+
+;;;
+;;; to detect intersective modifiers, we traverse the argument links from the
+;;; top of the structure, effectively coloring all EPs that participate in the
+;;; top-level proposition, which we call the ‘spine’.  any remaining EPs that
+;;; take spinal EPs as their arguments, we treat as intersective modifers, i.e.
+;;; mark them for label sharing with their heads.  we these are identified, we
+;;; need to recurse into intersective modifier propositions, i.e. re-run both
+;;; parts of the coloring process—until a fixpoint is reached.  quantifier EPs
+;;; are excluded from this process, by virtue of bearing a mark already.
+;;;
+;;; _fix_me_
+;;; we still need to (a) provide flow control in the transfer formation, so as
+;;; to actually iterate the process and (b) deal adequately with sub-ordinated
+;;; intersective modifiers (‘the dog i believe barked is fierce’), i.e. equate
+;;; the top-most sub-ordinating label rather than the local top of the relative
+;;; clause; presumably, we can ‘push’ the intersective mark upwards in a chain
+;;; of propositional sub-ordination.                            (19-nov-15; oe)
+;;;
+anti_spine_mark := monotonic_mtr &
+[ INPUT.RELS < [ ARG0 [ MARK test ] ] >,
+  OUTPUT.RELS < +copy+ & [ ARG0 [ MARK none ] ] > ].
+
+index_spine_mark := monotonic_mtr &
+[ CONTEXT.INDEX #i,
+  INPUT.RELS < [ ARG0 #i & [ MARK none ] ] >,
+  OUTPUT.RELS < +copy+ & [ ARG0 [ MARK spine ] ] > ].
+
+top_spine_mark := monotonic_mtr &
+[ CONTEXT [ TOP #h0,
+            HCONS < qeq & [ HARG #h0, LARG #h1 ] > ],
+  INPUT.RELS < [ LBL #h1, ARG0 [ MARK none ] ] >,
+  OUTPUT.RELS < +copy+ & [ ARG0 [ MARK spine ] ] > ].
+
+arg1_spine_mark := monotonic_mtr &
+[ CONTEXT.RELS < [ ARG1 #i & i & [ MARK none ] ] >,
+  INPUT.RELS < [ ARG0 #i & [ MARK none ] ] >,
+  OUTPUT.RELS < +copy+ & [ ARG0 [ MARK spine ] ] >,
+  FLAGS.SUBSUME < #i > ].
+
+intersective_mark := monotonic_mtr &
+[ CONTEXT.RELS < [ ARG0 #i0 & [ MARK spine ] ] >,
+  INPUT.RELS < [ LBL #h, ARG0 #i1 & [ MARK none ], ARG1 #i0 & i ] >,
+  OUTPUT.RELS < +copy+ & [ ARG0 [ MARK intersective ] ],
+                [ PRED intersective_modifier_mark, LBL #h, ARGM #i1 ] >,
+  FLAGS.SUBSUME < #i0 > ].
+
+not_mark := monotonic_mtr &
+[ CONTEXT.RELS < [ PRED neg_rel, LBL #h, ARG0 #i0 & i, ARG1 #i1 & i ],
+                 [ ARG0 #i1 ] >,
+  FILTER.RELS < [ PRED scopal_arg1_mark, LBL #h, ARGM #i0 ] >,
+  OUTPUT.RELS < [ PRED scopal_arg1_mark, LBL #h, ARGM #i0 ] >,
+  FLAGS.EQUAL < #i0, #i1 > ].
