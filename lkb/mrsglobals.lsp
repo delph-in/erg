@@ -5,10 +5,11 @@
 (setf *value-feats* `(,(vsym "CARG")))
 
 (setf *feat-priority-list*  
-  `( ,(vsym "LTOP") ,(vsym "INDEX") ,(vsym "LBL")
-     ,(vsym "ARG0") ,(vsym "ARG1") ,(vsym "ARG2") ,(vsym "ARG3") 
-     ,(vsym "RSTR") ,(vsym "BODY")
-     ,(vsym "MARG") ,(vsym "CARG")))
+  `(,(vsym "LTOP") ,(vsym "INDEX") ,(vsym "LBL")
+    ,(vsym "ARG0") ,(vsym "ARG1") ,(vsym "ARG2") ,(vsym "ARG3") 
+    ,(vsym "RSTR") ,(vsym "BODY")
+    ,(vsym "L-HNDL") ,(vsym "L-INDEX") ,(vsym "R-HNDL") ,(vsym "R-INDEX")
+    ,(vsym "MARG") ,(vsym "CARG")))
                                  
 (setf *ignored-sem-features* 
   (append 
