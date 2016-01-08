@@ -78,6 +78,8 @@
 
 (setf *rel-name-path* `(,(vsym "PRED") ))
 
+(setf *normalize-predicates-p* t)
+
 ;;;
 ;;; as of late 2008, the VPM (aka variable property mapping) machinery also 
 ;;; defines the correspondence of grammar-internal variable types to variable
@@ -119,6 +121,22 @@
 ; DPF 1-Jul-03 Upped from 200 to 500 due to treatment of unspec_loc_rel for
 ; e.g. free relatives.  Maybe should make this generic rel more specific.
 (setf *maximum-genindex-relations* 500)
+
+;;;
+;;; EDS configuration options (these used to be default values in the EDS code,
+;;; but better make the ERG settings explicit with each release of the grammar).
+;;;
+(setf *eds-show-properties-p* t)
+(setf *eds-show-status-p* nil)
+(setf *eds-include-quantifiers-p* t)
+(setf *eds-quantifier-argument* (vsym "BV"))
+(setf *eds-message-relation* nil)
+(setf *eds-bleached-relations* (list (vsym "selected_rel")))
+(setf *eds-non-representatives*
+  (list (vsym "appos_rel") (vsym "focus_d_rel") (vsym "parg_d_rel")))
+(setf *eds-predicate-modifiers*
+  (list (ppcre:create-scanner "_x_deg_rel$")))
+(setf *eds-untensed* (list (cons (vsym "TENSE") (vsym "untensed"))))
 
 ;;;
 ;;; a function currently only used in the paraphraser transfer grammar, to do
