@@ -73,8 +73,8 @@
   ;'(root_informal root_spoken root_spoken_frag)
   ;'(root_informal root_frag root_inffrag root_robust)
   #+(or :educ :essay)
-  '(root_decl root_question root_robust_s root_inffrag root_lex 
-    root_robust_ques)
+  '(root_decl root_question root_robust_s root_inffrag root_robust_frag 
+    root_lex root_robust_ques)
   ;'(root_formal)
   ;'(root_decl)
   #+:arboretum
