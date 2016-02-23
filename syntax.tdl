@@ -4815,6 +4815,8 @@ noun_adjn_cmpnd_phr := basic_noun_n_cmpnd_phr &
 		      [ PUNCT.RPUNCT no_punct ] ],
     GENRE nonformal ].
 
+;; DPF 2016-02-16 - Exclude conjoined non-head to avoid ambig.
+;;
 noun_n_cmpnd_pl_phr := basic_noun_n_cmpnd_phr &
   [ HD-DTR.SYNSEM [ MODIFD notmod_or_lmod & [ LPERIPH na ],
 		    PUNCT.LPUNCT dq_or_no_punct ],
@@ -4822,7 +4824,8 @@ noun_n_cmpnd_pl_phr := basic_noun_n_cmpnd_phr &
 	     SYNSEM [ LOCAL [ AGR.PNG.PN 3p,
 			      CAT [ HEAD.--BARE -,
 				    VAL.SPR.FIRST.LOCAL.CAT.HEAD det ],
-			      CONT.HOOK.INDEX.PNG.PN 3p ],
+			      CONT.HOOK.INDEX nonconj_ref-ind &
+					      [ PNG.PN 3p ] ],
 		      MODIFD notmod_or_lmod ] ] ].
 
 ; n-adj phrases: "wide-eyed" "pea-sized", "sky blue"
@@ -9164,38 +9167,50 @@ nbar_coord_top_1_rule := top_coord_rule & nbar_coord_symmet_rule &
 ;; DPF 2015-09-06 - Trying underspecification of number on mother, since we
 ;; want |how much and gravel arrives?| with singular agreement, but also
 ;; |sand and gravel arrive|.
+;; DPF 2016-02-16 - Also need to split the div rule to preserve the LEX value,
+;; to avoid non-head coord nbar where one of the conjuncts is nonlex, as in 
+;; |the [[[knowledge of cats] and ignorance] debate]|
 ;;
+
 nbar_coord_top_1_div_rule := nbar_coord_top_1_rule &
   [ SYNSEM.LOCAL.AGR.PNG.PN 3,
     LCONJ-DTR.SYNSEM.LOCAL.AGR.DIV +,
     RCONJ-DTR.SYNSEM.LOCAL.AGR.DIV + ].
 
-;; |the [sand and gravel] is ...|
-;;
-;; DPF 2014-04-14 - Let's restrict this to [CASE nom] to avoid spurious
-;; ambiguity elsewhere.  
-;; DPF 2015-09-06 - But then we don't get a parse for 
-;; |how much sand and gravel arrives?|
-;; since |how much| wants singular agreement.  So let's instead try
-;; underspecifying number on the mother in the above rule.
-;;
-#|
-nbar_coord_top_1_div_sg_rule := nbar_coord_top_1_rule &
-  [ SYNSEM.LOCAL [ AGR.PNG.PN #pn & 3s ],
-    LCONJ-DTR [ INFLECTD +,
-		SYNSEM.LOCAL.AGR [ DIV +,
-				   PNG.PN 3s ] ],
-    RCONJ-DTR [ INFLECTD +,
-		SYNSEM.LOCAL [ AGR.DIV +,
-			       CONJ.CREL.R-INDEX.PNG.PN #pn ] ] ].
-|#
+nbar_coord_top_1_div_samelex_rule := nbar_coord_top_1_div_rule &
+  [ LCONJ-DTR.SYNSEM.LEX #lex,
+    RCONJ-DTR.SYNSEM.LEX #lex ].
+
+nbar_coord_top_1_div_asymlex1_rule := nbar_coord_top_1_div_rule &
+  [ LCONJ-DTR.SYNSEM.LEX -,
+    RCONJ-DTR.SYNSEM.LEX + ].
+
+nbar_coord_top_1_div_asymlex2_rule := nbar_coord_top_1_div_rule &
+  [ LCONJ-DTR.SYNSEM.LEX +,
+    RCONJ-DTR.SYNSEM.LEX - ].
 
 nbar_coord_top_1_nondiv_rule := nbar_coord_top_1_rule &
-  [ SYNSEM.LOCAL.AGR [ PNG.PN #pn,
+  [ INFLECTD +,
+    SYNSEM.LOCAL.AGR [ PNG.PN #pn,
 		       DIV - ],
-    LCONJ-DTR.SYNSEM.LOCAL.CAT.HEAD basic_noun,
-    RCONJ-DTR.SYNSEM.LOCAL [ CAT.HEAD basic_noun,
-			     CONJ.CPNG.PN #pn ] ].
+    LCONJ-DTR [ INFLECTD +,
+		SYNSEM.LOCAL.CAT.HEAD basic_noun ],
+    RCONJ-DTR [ INFLECTD +,
+		SYNSEM.LOCAL [ CAT.HEAD basic_noun,
+			       CONJ.CPNG.PN #pn ] ] ].
+#|
+nbar_coord_top_1_nondiv_samelex_rule := nbar_coord_top_1_nondiv_rule &
+  [ LCONJ-DTR.SYNSEM.LEX #lex,
+    RCONJ-DTR.SYNSEM.LEX #lex ].
+
+nbar_coord_top_1_nondiv_asymlex1_rule := nbar_coord_top_1_nondiv_rule &
+  [ LCONJ-DTR.SYNSEM.LEX -,
+    RCONJ-DTR.SYNSEM.LEX + ].
+
+nbar_coord_top_1_nondiv_asymlex2_rule := nbar_coord_top_1_nondiv_rule &
+  [ LCONJ-DTR.SYNSEM.LEX +,
+    RCONJ-DTR.SYNSEM.LEX - ].
+|#
 
 ; Require both dtrs to be INFLECTD + to avoid spurious ambiguity for N-N
 ; compounds with a conjoined left dtr: "summer and winter routes"
@@ -9770,10 +9785,14 @@ vocative_np_lmod_rule := vocative_np_phrase & rule &
 
 ; This normal rule ensures number agreement of the determiner and head noun.
 ; (but allows the supertype to be used for a robustness rule on number)
+; Propagate dtr's MOD..--BARE value to SPEC, in order to constrain robust 
+; "all" as in "all pizza"
 ;
 num_det_rule := num_det_phrase & rule &
-  [ SYNSEM.LOCAL.CAT.VAL.SPEC < [ LOCAL.AGR.PNG.PN #pn ] >,
-    ARGS < [ SYNSEM.LOCAL.CAT.HEAD.MOD < [ LOCAL.AGR.PNG.PN #pn ] > ] > ].
+  [ SYNSEM.LOCAL.CAT.VAL.SPEC < [ LOCAL [ CAT.HEAD.--BARE #bare,
+					  AGR.PNG.PN #pn ] ] >,
+    ARGS < [ SYNSEM.LOCAL.CAT.HEAD.MOD < [ LOCAL [ CAT.HEAD.--BARE #bare,
+						   AGR.PNG.PN #pn ] ] > ] > ].
 
 
 ; DPF 14-aug-05 - Made frags be MC + (rather than na_or_+) to prevent non-MC
