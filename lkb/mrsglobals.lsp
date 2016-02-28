@@ -131,11 +131,18 @@
 (setf *eds-include-quantifiers-p* t)
 (setf *eds-quantifier-argument* (vsym "BV"))
 (setf *eds-message-relation* nil)
-(setf *eds-bleached-relations* (list (vsym "selected_rel")))
+(setf *eds-bleached-relations*
+  (if *normalize-predicates-p*
+    (list (vsym "selected"))
+    (list (vsym "selected_rel"))))
 (setf *eds-non-representatives*
-  (list (vsym "appos_rel") (vsym "focus_d_rel") (vsym "parg_d_rel")))
+  (if *normalize-predicates-p*
+    (list (vsym "appos") (vsym "focus_d") (vsym "parg_d"))
+    (list (vsym "appos_rel") (vsym "focus_d_rel") (vsym "parg_d_rel"))))
 (setf *eds-predicate-modifiers*
-  (list (ppcre:create-scanner "_x_deg_rel$")))
+  (if *normalize-predicates-p*
+    (list (ppcre:create-scanner "_x_deg$"))
+    (list (ppcre:create-scanner "_x_deg_rel$"))))
 (setf *eds-untensed* (list (cons (vsym "TENSE") (vsym "untensed"))))
 
 ;;;
@@ -151,15 +158,15 @@
 ;;; the normalized PRED value.
 ;;;
 (defparameter *mrs-normalization-heuristics*
-  '(("JJ[RS]?" nil "_~a_a_unknown_rel")
-    ("(?:FW|NN)" nil "_~a_n_unknown_rel")
-    ("NNS" nil "_~a_n_unknown_rel")
-    ("RB" nil "_~a_a_unknown_rel")
-    ("VBP?" :v_3s-fin_olr "_~a_v_unknown_rel")
-    ("VBD" :v_pst_olr "_~a_v_unknown_rel")
-    ("VBG" :v_prp_olr "_~a_v_unknown_rel")
-    ("VBN" :v_psp_olr "_~a_v_unknown_rel")
-    ("VBZ" :v_3s-fin_olr "_~a_v_unknown_rel")))
+  '(("JJ[RS]?" nil "_~a_a_unknown")
+    ("(?:FW|NN)" nil "_~a_n_unknown")
+    ("NNS" nil "_~a_n_unknown")
+    ("RB" nil "_~a_a_unknown")
+    ("VBP?" :v_3s-fin_olr "_~a_v_unknown")
+    ("VBD" :v_pst_olr "_~a_v_unknown")
+    ("VBG" :v_prp_olr "_~a_v_unknown")
+    ("VBN" :v_psp_olr "_~a_v_unknown")
+    ("VBZ" :v_3s-fin_olr "_~a_v_unknown")))
 
 (defun normalize-mrs (mrs)
   (loop
@@ -168,7 +175,7 @@
       when (stringp pred) do
         (loop
             for (tag rule pattern) in *mrs-normalization-heuristics*
-            for re = (format nil "^_([^_]+)/~a_u_unknown_rel$" tag)
+            for re = (format nil "^_([^_]+)/~a_u_unknown$" tag)
             thereis 
               (multiple-value-bind (start end starts ends) (ppcre:scan re pred)
                 (when (and start end)
