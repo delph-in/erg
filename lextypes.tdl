@@ -10275,10 +10275,14 @@ norm_adj_lex_synsem := basic_adj_synsem & lex_synsem &
 ;; add this one to avoid spurious interaction among derivational lexical rules
 ;; for adjectives, such as |un-| prefix rule plus attributive-adj rule.
 ;; DPF 2016-02-15 - Added ALTMIN no_rel to block applic of partitive rule for
-;; integers/comparatives, to avoid |jnchanged arose|
+;; integers/comparatives, to avoid |unchanged arose|
+;; DPF 2016-02-29 - But this blocks degree specification as in |very unhappy|,
+;; So instead specialize HEAD value from basic_adj to adj, excluding intadj
+;; so the partitive rule cannot apply (as should have been done in the first
+;; place).
 ;;
 derived_adj_synsem := norm_adj_lex_synsem &
-  [ LOCAL.CAT.HEAD nonint_adj & [ MINORS.ALTMIN no_rel ] ].
+  [ LOCAL.CAT.HEAD adj ].
 
 ;; We assume for now, counterfactually, that all modifying adjectives are
 ;; intersective.
@@ -11113,13 +11117,8 @@ attr_adj_onearg_synsem := norm_adj_synsem & basic_one_arg &
                 HS-LEX #hslex ],
     NONLOC.REL 0-dlist ].
 
-; <type val="aj_-_i-mneg_le">
-; <description>Adj, only 'not many/not much'    
-; <ex>Not many dogs ran.
-; <nex>
-; <todo>
-; </type>
-aj_-_i-mneg_le := norm_adj_word &
+;; 'not many/not much'
+aj_-_i-mneg_lexent := norm_adj_word &
   [ SYNSEM attr_adj_onearg_synsem &
            [ LOCAL [ CAT.HEAD.MOD 
                            < [ LOCAL 
@@ -11138,6 +11137,24 @@ aj_-_i-mneg_le := norm_adj_word &
 			    ICONS <! !> ] ],
              LKEYS [ KEYREL.ARG1 #ind & non_event,
 		     ALTKEYREL #altkeyrel ] ] ].
+
+; <type val="aj_-_i-mneg-c_le">
+; <description>Adj, only 'not many'
+; <ex>Not many dogs ran.
+; <nex>
+; <todo>
+; </type>
+aj_-_i-mneg-c_le := aj_-_i-mneg_lexent &
+  [ SYNSEM.LOCAL.CAT.HEAD.MOD < [ LOCAL.AGR.IND + ] > ].
+
+; <type val="aj_-_i-mneg-m_le">
+; <description>Adj, only 'not much'
+; <ex>Not much rice arrived.
+; <nex>
+; <todo>
+; </type>
+aj_-_i-mneg-m_le := aj_-_i-mneg_lexent &
+  [ SYNSEM.LOCAL.CAT.HEAD.MOD < [ LOCAL.AGR.IND - ] > ].
 
 ; <type val="aj_-_i-att_le">
 ; <description>Adj, attributive                 
@@ -12760,6 +12777,9 @@ p_np_i-poss-gen_le := basic_prep_word &
 		 ICONS <! !> ] ],
        NONLOC.SLASH 0-dlist ] ].
 
+
+;; DPF 2016-03-01 - Also prevent these from being extracted as a whole
+;;
 ; e.g. since
 ; <type val="p_np_i-ngap_le">
 ; <description>Prep, np, no gap                 
@@ -12767,8 +12787,24 @@ p_np_i-poss-gen_le := basic_prep_word &
 ; <nex>
 ; <todo>
 ; </type>
-p_np_i-ngap_le := prep_word & 
-  [ SYNSEM [ LOCAL.CAT.VAL.COMPS < [ OPT - ] >,
+p_np_i-ngap_le := basic_prep_word & 
+  [ SYNSEM norm_prep_synsem &
+	   [ LOCAL [ CAT [ HEAD prep_nonmob &
+				[ MOD < [ --MIN independent_rel,
+                                         LOCAL intersective_mod &
+                                         [ CAT [ HEAD subst &
+                                                         [ AUX - ],
+                                                 VAL [ SPR < synsem_min, ... >,
+                                                       COMPS < > ] ],
+			  	           CONJ cnil ],
+                                          --SIND basic_non_expl ] > ],
+		  	   VAL [ COMPS < synsem & 
+                                       [ LOCAL [ CAT nomp_cat_nonnom_min,
+                                                 CONT.HOOK.INDEX index,
+                                                 CONJ cnil ],
+                                         OPT - ] >,
+			         SPR *anti_list* ] ],
+		     CONT [ RELS <! relation !> ] ],
              NONLOC.SLASH 0-dlist ] ].
 
 ; For particles
@@ -17210,7 +17246,8 @@ n_freerel_pro_lexent := free_rel_pro_word &
 	     NONLOC.SLASH 1-dlist &
                    <! [ CAT.HEAD noun & [ MOD < >,
                                           PRD -,
-					  MINORS #minors ],
+					  MINORS #minors,
+					  --BARE + ],
                         CONT.HOOK.INDEX #ind,
                         AGR non_expl-ind ] !> ] ].
 
@@ -19039,8 +19076,11 @@ c_xp_tog-with_le := conj_complex_lexent &
 		   CONT.RELS <! [ PRED _together-with_c_rel ] !> ] ].
 
 
+;; DPF 2016-02-29 - Changed COMPS..HEAD from non_noun_or_adv to a_or_adv
+;; in order to avoid with VP coord as in "we arise or arrive if a machine fails|
+;;
 c_xp_if-though_lexent := conj_complex_lexent &
-  [ SYNSEM.LOCAL [ CAT.VAL.COMPS < [ LOCAL.CAT [ HEAD non_noun_or_adv,
+  [ SYNSEM.LOCAL [ CAT.VAL.COMPS < [ LOCAL.CAT [ HEAD a_or_adv,
 						 VAL [ SUBJ *synlist*,
 						       SPR *olist*,
                                                        COMPS < > ] ] ] >,
@@ -19358,6 +19398,8 @@ c_xp_and-fract_le := conj_word &
 ;; SLASH.  Sigh.
 ;; DPF 2012-12-24 - Also added SPR < > to avoid conjoined S's feeding the
 ;; sp-hd rule.
+;; DPF 2016-02-29 - Replace CONJ phr-conj with complex-conj because it was
+;; blocking |Kim at al.| with regular np-np_crd-t_c
 ;;
 et_conj_lexent := basic_word &
   [ INFLECTD +,
@@ -19370,7 +19412,7 @@ et_conj_lexent := basic_word &
                      VAL [ SPR < >,
 			   COMPS < >,
 			   SPEC < > ] ],
-               CONJ phr-conj & [ CREL #keyrel ],
+               CONJ complex-conj & [ CREL #keyrel ],
 	       AGR.PNG png & [ PN 3p ],
                CONT [ HOOK [ LTOP #chand,
                              INDEX #cind ],
@@ -20384,7 +20426,9 @@ x_-_who-cp_le := s_compl_phrase_lexent &
 ; '_MATH_'
 ;; Can't have SF prop-or-comm, because we want |in time, _MATH| but we don't
 ;; have a gapped-S lexical entry for _MATH_
-
+;; Can't have LEX + because the aj-hd-scop rule wants the head to be LEX -,
+;; for |if _MATH_ then _MATH_.|
+;;
 ; <type val="x_-_generic-cp_le">
 ; <description>Tokens such as _MATH_ which replace a `clause' in text
 ; <ex>B proved (that) _MATH_.
@@ -20401,7 +20445,6 @@ x_-_generic-cp_le := basic_s_compl_phrase_lexent &
                             RELS <! relation & #keyrel & [ LBL #khand ] !>,
                             HCONS <! !>,
 			    ICONS <! !> ] ],
-	     LEX +,
 	     LKEYS.KEYREL #keyrel & [ PRED v_event_rel ] ] ].
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
