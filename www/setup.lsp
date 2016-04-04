@@ -13,7 +13,7 @@
 (setf *www-roots*
   '(("sentences" lkb::root_informal "$root_standard" t)
     ("fragments" lkb::root_inffrag "$root_inffrag" nil)
-    ("less ambiguity" lkb::root_strict "$root_strict" nil)
+    ("textbook grammar" lkb::root_strict "$root_strict" nil)
     ("minor errors" lkb::root_robust "$root_robust" nil)))
 
 (setf *www-generics* t)
