@@ -11,14 +11,32 @@
 ;;;
 ;;; _fix_me_
 ;;; ? sps-descend(): cop_id > person_name.
+;;; DPF: No longer used, so it should not be included in the SEM-I.
 ;;; ? sps-descend(): cop_id > be_v_prd-or-id.
 ;;; ? sps-descend(): cop_id > be_v_prd-or-nv.
+;;; DPF: These two subtypes of cop_id are syntax-only, so not for SEM-I.
 ;;; ? sps-descend(): excl > polite.
+;;; DPF: 'polite' used (only) for adverb "please" in 1214; will revise in trunk
 ;;; ? what really is ‘e_event’ (it seems to crop in from at least one entity)
+;;; DPF: I can't find any occurrence of `e_event' anywhere in 1214
 ;;; ? how do ‘def_explicit_q’ and ‘def_implicit_q’ sneak in
+;;; DPF: def_explicit_q is introduced in several subtypes of nominal adverbials
+;;;  as in |Kim stayed awhile| and |Kim left earlier|.  Also used in possessive
+;;;  determines such as |my|.  Should probably be changed to def_implicit_q in 
+;;;  both uses.  Will revise in trunk.
+;;;  def_implicit_q is introduced in the lexical type basic_np_adv_lexent as in
+;;;  |Kim arrived early.|, and also in type for possessive pronouns such as 
+;;;  "mine", and in ;;;  type for determiners "next" and "last" as in 
+;;;  |last weekend|
 ;;; ? embed-semi(): minute < card.
+;;; DPF: This subtype of card shows up in the semantics of "o'clock", and in
+;;; approximate times such as |three thirtyish|.  It should in principle also 
+;;; show up in "half past three", but apparently not in 1214.
 ;;; + minimize parents: ‘_at_p_temp’ has both ‘_at_p’ and ‘unspec_loc’
+;;; DPF: The SEM-I should only have parent`_at_p', a subtype of unspec_loc.
 ;;; ? expose ‘temp_loc’, ‘dir’, and ‘state_loc’
+;;; DPF: If these distinctions seem to you to be ones we can expect consumers
+;;; to make use of, then sure.
 ;;;
 ((:block "card")
  (:block "comp")
