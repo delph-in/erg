@@ -28,22 +28,19 @@
 ;;;  |Kim arrived early.|, and also in type for possessive pronouns such as 
 ;;;  "mine", and in ;;;  type for determiners "next" and "last" as in 
 ;;;  |last weekend|
-;;; ? embed-semi(): minute < card.
-;;; DPF: This subtype of card shows up in the semantics of "o'clock", and in
-;;; approximate times such as |three thirtyish|.  It should in principle also 
-;;; show up in "half past three", but apparently not in 1214.
-;;; + minimize parents: ‘_at_p_temp’ has both ‘_at_p’ and ‘unspec_loc’
-;;; DPF: The SEM-I should only have parent`_at_p', a subtype of unspec_loc.
 ;;; ? expose ‘temp_loc’, ‘dir’, and ‘state_loc’
 ;;; DPF: If these distinctions seem to you to be ones we can expect consumers
 ;;; to make use of, then sure.
 ;;;
-((:block "card")
+((:block "be_v_prd-or-id")
+ (:block "be_v_prd-or-nv")
+ (:block "card")
  (:block "comp")
  (:block "dofm")
  (:block "every_q")
  (:block "interval_p_end")
  (:block "numbered_hour")
+ (:block "person_name")
  (:block "plus")
  (:block "some_q")
  (:block "temp")
