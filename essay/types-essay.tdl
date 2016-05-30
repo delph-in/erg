@@ -47,10 +47,11 @@ lex_rule_plural_mass := lex_rule_basic & word_or_infl_rule &
     C-CONT.RELS <! !>,
     GENRE robust ].
 
-; Add feature for blocking mal-3sg and mal-n3sg
+; Add feature for blocking mal-3sg, mal-n3sg, and be-have
 ;
 vc_add :+ [ --MAL3SG bool,
-            --MALN3SG bool ].
+            --MALN3SG bool,
+	    --MALHAVE bool ].
 
 ;; |this cats|
 mal_det_pl_le := det_pl_lexent &
@@ -185,6 +186,14 @@ v_vp_prp_le_rbst := main_verb_mliszt &
    [ SYNSEM mal_v_bse-inf_vp_comp_verb &
        [ LOCAL.CAT [ VAL.COMPS < [ OPT - ] > ] ],
      GENRE robust ].
+
+;; obj-equi or obj-raising as CP complement
+;; |kim wants they win| instead of |Kim wants them to win|
+;;
+v_cp_le_rbst := main_verb & 
+  [ SYNSEM cp_intrans_verb,
+    GENRE robust ].
+
 
 ;; Mal lex entry for e.g. "enjoy" taking a bare-VP or inf-VP complement
 ;; instead of a gerund, as in |we enjoy read the book|.
@@ -521,14 +530,15 @@ v_np_its-mal_le := be_is_mal_lex_entry &
 			    ARG0 #event,
 			    PRED _be_v_id_rel ] ] ].
 
-;; For |have went ...|
+;; For |have went ...| and |have admire ...|
 ;; FIX: block this for ordinary -ed past participles
+;;
 psp_aux_verb_mal_ssr := basic_have_aux_verb_synsem &
   [ LOCAL.CAT.VAL.COMPS < synsem &
 			  [ LOCAL [ CAT vp_cat &
 					[ HEAD verb &
 					       [ VFORM fin,
-						 TAM.TENSE past ],
+					         --MAL3SG - ],
 					  VAL.SUBJ < [ LOCAL.CAT.HEAD noun ] >],
 				    CONJ cnil ],
 			    OPT - ] > ].
@@ -645,6 +655,8 @@ n_-_c-pl_le_rbst := n_intr_infl_lex_entry &
 mal_n_plur_ppcomp_le := n_plur_ppcomp_lexent &
   [ GENRE robust ].
 
+;; Only robust for AESW task
+#|
 contracted_aux_word := word &
   [ INFLECTD na,
     ALTS [ VPELLIP -,
@@ -652,6 +664,7 @@ contracted_aux_word := word &
 	   CSAI - ],
     SYNSEM.LOCAL.CAT.VAL.COMPS.FIRST expressed_synsem,
     GENRE robust ].
+|#
 
 ;; DPF 2016-02-29 - Added NORM no_rel to prevent mal-agreement as in
 ;; |the set of members is[are] fixed|
@@ -667,3 +680,182 @@ av_-_s-cp-pr-nlx_le := norm_adv_word &
 av_-_s-cp-pr_le_rbst := adv_s_pre_lexent &
   [ SYNSEM.LOCAL.CAT.HEAD.MINORS.MIN adv_rel,
     GENRE robust ].
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Aux do with aux VP complement
+;; for |does he be happy?|
+
+do_aux_word_auxcomp := nonc-hm &
+  [ INFLECTD +,
+    SYNSEM basic_do_aux_synsem &
+           [ LOCAL.CAT.VAL.COMPS.FIRST [ --MIN aux_event_rel,
+	                                 LOCAL.CAT vp_bse_unspec_cat &
+					           [ HEAD.AUX + ] ] ],
+    ALTS.CSAI -,
+    GENRE robust ].
+
+do_fin_synsem_auxcomp := basic_do_fin_synsem & basic_do_aux_synsem.
+
+do_fin_auxcomp := do_aux_word_auxcomp & raise_cont & 
+  [ SYNSEM do_fin_synsem_auxcomp ].
+
+do_aux_neg_synsem_auxcomp := basic_do_aux_neg_synsem & basic_do_aux_synsem.
+
+do_aux_neg_word_auxcomp := do_aux_word_auxcomp &
+  [ SYNSEM do_aux_neg_synsem_auxcomp ].
+
+do_pres_synsem_auxcomp := basic_do_pres_synsem & do_fin_synsem_auxcomp.
+
+do_pres_auxcomp := do_fin_auxcomp &
+  [ SYNSEM do_pres_synsem_auxcomp ].
+
+v_vp_does_le_ac_rbst := do_pres_auxcomp & 
+  [ SYNSEM.LOCAL.CAT.VAL.SUBJ < [ --SIND.PNG png & [ PN 3s ] ] > ].
+
+v_vp_do-f_le_ac_rbst := do_pres_auxcomp &
+  [ SYNSEM.LOCAL.CAT.VAL.SUBJ 
+			     < [ --SIND.PNG png & [ PN -3s ] ] > ].
+
+v_vp_did_le_ac_rbst := do_fin_auxcomp &
+  [ SYNSEM.LOCAL.CAT.HEAD [ TAM past_or_subj_tam ] ].
+
+do_aux_neg_pres_auxcomp := do_aux_neg_word_auxcomp &
+  [ SYNSEM.LOCAL.CAT.HEAD.TAM indic_tam &
+                              [ TENSE present,
+				ASPECT no_aspect ] ].
+
+v_vp_did-n_le_ac_rbst := do_aux_neg_word_auxcomp & 
+  [ SYNSEM.LOCAL.CAT.HEAD.TAM past_or_subj_tam ].
+
+v_vp_does-n_le_ac_rbst := do_aux_neg_pres_auxcomp & 
+  [ SYNSEM.LOCAL.AGR.PNG png & [ PN 3s ] ].
+
+v_vp_do-f-n_le_ac_rbst := do_aux_neg_pres_auxcomp &
+  [ SYNSEM.LOCAL.AGR.PNG png & [ PN -3s ] ].
+
+;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Aux do with finite 3sg VP complement
+;; for |does he admires Kim?|
+
+do_aux_word_fincomp := nonc-hm &
+  [ INFLECTD +,
+    SYNSEM basic_do_aux_synsem &
+           [ LOCAL.CAT.VAL.COMPS.FIRST.LOCAL.CAT.HEAD verb & 
+	                                              [ VFORM fin,
+						        --ADDIN.ADDPN 3s,
+							--MAL3SG - ] ],
+    ALTS.CSAI -,
+    GENRE robust ].
+
+do_fin_synsem_fincomp := basic_do_fin_synsem & basic_do_aux_synsem.
+
+do_fin_fincomp := do_aux_word_fincomp & raise_cont & 
+  [ SYNSEM do_fin_synsem_fincomp ].
+
+do_aux_neg_synsem_fincomp := basic_do_aux_neg_synsem & basic_do_aux_synsem.
+
+do_aux_neg_word_fincomp := do_aux_word_fincomp &
+  [ SYNSEM do_aux_neg_synsem_fincomp ].
+
+do_pres_synsem_fincomp := do_fin_synsem_fincomp &
+  [ LOCAL [ CAT.VAL.SUBJ < [ --SIND.PNG #png ] >,
+            AGR.PNG #png ] ].
+
+do_pres_fincomp := do_fin_fincomp &
+  [ SYNSEM do_pres_synsem_fincomp ].
+
+v_vp_does_le_fc_rbst := do_pres_fincomp & 
+  [ SYNSEM.LOCAL.CAT.VAL.SUBJ < [ --SIND.PNG png & [ PN 3s ] ] > ].
+
+v_vp_do-f_le_fc_rbst := do_pres_fincomp &
+  [ SYNSEM.LOCAL.CAT.VAL.SUBJ 
+			     < [ --SIND.PNG png & [ PN -3s ] ] > ].
+
+v_vp_did_le_fc_rbst := do_fin_fincomp &
+  [ SYNSEM.LOCAL.CAT.HEAD [ TAM past_or_subj_tam ] ].
+
+do_aux_neg_pres_fincomp := do_aux_neg_word_fincomp &
+  [ SYNSEM.LOCAL.CAT.HEAD.TAM indic_tam &
+                              [ TENSE present,
+				ASPECT no_aspect ] ].
+
+v_vp_did-n_le_fc_rbst := do_aux_neg_word_fincomp & 
+  [ SYNSEM.LOCAL.CAT.HEAD.TAM past_or_subj_tam ].
+
+v_vp_does-n_le_fc_rbst := do_aux_neg_pres_fincomp & 
+  [ SYNSEM.LOCAL.AGR.PNG png & [ PN 3s ] ].
+
+v_vp_do-f-n_le_fc_rbst := do_aux_neg_pres_fincomp &
+  [ SYNSEM.LOCAL.AGR.PNG png & [ PN -3s ] ].
+
+;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; |do you remember how do you arise?|
+
+cp_ques_fin_inf_intrans_verb_mc_synsem := basic_cp_ques_fin_inf_intrans_verb &
+				  basic_cp_intrans_subst & cp_addin_tam_pn &
+  [ LOCAL.CAT.VAL.COMPS < [ LOCAL.CAT basic_s_cat_v_c &
+                                      [ VAL.SUBJ < anti_synsem_min >,
+				        HEAD.VFORM fin,
+                                        MC + ],
+			    NONLOC.SLASH 0-dlist ] > ].
+
+v_cp_fin-inf-q_le_rbst := main_verb & 
+  [ SYNSEM cp_ques_fin_inf_intrans_verb_mc_synsem,
+    GENRE robust ].
+;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; Who he admires?
+filler_head_rule_wh_nr_fin_rbst := binary_rule_left_to_right & 
+			      head_filler_phrase_wh_fin & wh_interrog_fin &
+  [ SYNSEM.LOCAL.CAT [ HEAD.INV -,
+                       VAL.SUBJ *anti_null*,
+		       MC + ],
+    HD-DTR.SYNSEM.LOCAL [ CAT.MC -,
+                          CONT.HOOK.LTOP #hdtop ],
+    NH-DTR.SYNSEM [ LOCAL.CAT.HEAD.CASE non_nom,
+                    PUNCT.RPUNCT comma_or_pair_or_no_punct ],
+    C-CONT [ HOOK.LTOP #hdtop,
+             RELS <! !>,
+             HCONS <! !>,
+	     ICONS <! !> ],
+    GENRE robust ].
+
+;; |we'll wait 4 you|
+prep_informal_lr := lex_rule_basic &
+  [ ORTH #orth,
+    DTR word_or_lexrule & #stem &
+        [ ORTH #orth,
+	  SYNSEM.LOCAL.CAT.HEAD intadj ],
+    SYNSEM basic_mod_n_or_vp_synsem &
+           [ LOCAL.CAT [ HEAD prep,
+                         VAL [ COMPS < synsem & 
+			               [ LOCAL [ CAT nomp_cat_nonnom_min,
+                         	                 CONT.HOOK.INDEX index,
+                                                 CONJ cnil ],
+			                 OPT - ] >,
+			       SPR < >,
+			       SUBJ < >,
+			       SPEC < > ] ] ],
+    ARGS < #stem >,
+    INFLECTD +,
+    C-CONT [ RELS <! prep_relation !>,
+             HCONS <! !>,
+	     ICONS <! !> ] ].
+
+;; For `give' allowing --BARE + second complement as in 
+;; |can you give me a cheaper prices?|,
+ditrans_verb_barenp2 := verb_synsem & ditrans_subst & ditrans_lt &
+  [ LOCAL.CAT.VAL.COMPS < synsem_min, synsem > ].
+
+v_np-np_barenp2_le := main_verb & 
+  [ SYNSEM ditrans_verb_barenp2 &
+	   [ LOCAL.CAT [ VAL.COMPS < [ OPT - ], [ OPT - ] > ],
+	     LKEYS [ --OCOMPKEY #ocmin,
+		     --+OCOMPKEY #ocmin ] ] ].

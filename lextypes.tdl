@@ -1491,9 +1491,12 @@ non_trans_subst := unsat_two_arg_subst &
   [ LOCAL.CAT.VAL.COMPS < synsem & [ LOCAL.CONJ cnil,
                                      NONLOC.REL 0-dlist ], ... > ].
   
+;; DPF 2016-04-21 - Changed complement from nomp_cat_nonnom_min to 
+;; nomp_cat_acc_min to block spurious NP-CP analysis of complement in
+;; |*we thought why he arrived|
 np_non_trans_subst := non_trans_subst & two_arg_subst & 
   [ LOCAL.CAT.VAL.COMPS < synsem & 
-                          [ LOCAL.CAT nomp_cat_nonnom_min,
+                          [ LOCAL.CAT nomp_cat_acc_min,
                             --SIND index ] > ].
 
 ; became president
@@ -1665,10 +1668,15 @@ basic_ditrans_subst := basic_three_arg_subst &
   
 ;; DPF 18-feb-10 - We want to catch "She taught student the lesson", so
 ;; remove --BARE - from first daughter, and see what happens.
+;; DPF 2016-05-02 - Also want to catch |can you give me a cheaper prices?|,
+;; so would like to remove --BARE - from second dtr as well.  But then we
+;; get wrong ranking for |should I show the train ticket|, so push this
+;; 'default' down to the subtypes, and make special robust type for `give'.
+;;
 ditrans_subst := basic_ditrans_subst & trans_subst &
   [ LOCAL [ CAT.VAL.COMPS < [ LOCAL.CAT nomp_cat_acc_min ],
-                            [ LOCAL.CAT nomp_cat_acc_min &
-					[ HEAD.--BARE -  ] ] >,
+                            [ LOCAL.CAT nomp_cat_acc_min ] >,
+
             CONT [ RELS <! #keyrel !>,
 		   HCONS <! !>,
 		   ICONS <! !> ] ],
@@ -2873,10 +2881,12 @@ np_as_seq_verb := verb_synsem & np_comp_subst & basic_prd_comp_lt &
 empty_to_trans_verb := empty_prep_trans_verb &
   [ LKEYS.--OCOMPKEY _to_p_sel_rel ].
 
-ditrans_verb := verb_synsem & ditrans_subst & ditrans_lt.
+ditrans_verb := verb_synsem & ditrans_subst & ditrans_lt &
+  [ LOCAL.CAT.VAL.COMPS < synsem_min, [ LOCAL.CAT.HEAD.--BARE - ] > ].
   
 ditrans_only_verb := verb_synsem & ditrans_subst & ditrans_lt &
-  [ LOCAL.CAT.VAL.COMPS < synsem, synsem > ].
+  [ LOCAL.CAT.VAL.COMPS < synsem, synsem &
+                                  [ LOCAL.CAT.HEAD.--BARE - ] > ].
 
 ; 'elect him president'
 ditrans_np_nbar_verb := verb_synsem & ditrans_np_nbar_subst & arg1_subj_lt &
@@ -8055,8 +8065,7 @@ np_sing_synsem := basic_np_sing_synsem & np_synsem &
 ;
 basic_n_proper_lexent := noncrs-hm & basic_noun_word &
   [ SYNSEM noun_nocomp_synsem &
-	   [ MODIFD notmod,
-             LOCAL [ CAT [ HEAD.MINORS [ MIN named_np_rel,
+	   [ LOCAL [ CAT [ HEAD.MINORS [ MIN named_np_rel,
                                        ALTMIN quant_or_wh_rel ],
                            VAL [ SPR < [ --MIN quant_or_wh_rel,
                                          NONLOC.QUE #que ] >,
@@ -8073,7 +8082,10 @@ basic_n_proper_lexent := noncrs-hm & basic_noun_word &
                               LBL #ltop ],
                      ALTKEYREL.PRED implicit_q_rel ] ] ].
 
-norm_n_proper_lexent := basic_n_proper_lexent &
+reg_n_proper_lexent := basic_n_proper_lexent &
+  [ SYNSEM.MODIFD notmod ].
+
+norm_n_proper_lexent := reg_n_proper_lexent &
   [ SYNSEM.LKEYS.KEYREL.PRED named_rel,
     INFLECTD - ].
 
@@ -8147,13 +8159,13 @@ n_-_pn-sg_le := n_proper_lexent &
 ; <nex>
 ; <todo>
 ; </type>
-n_-_pn-pl_le := basic_n_proper_lexent &
+n_-_pn-pl_le := reg_n_proper_lexent &
   [ INFLECTD +,
     SYNSEM [ LKEYS.KEYREL.PRED named_rel,
 	     LOCAL plur_noun & [ CAT.HEAD.MINORS.MIN named_rel ] ] ].
 
 ; Restrict plurals to nominative case, for 'ersatz' names like "OSCARCOMPOUND"
-n_-_pn-pl-nom_le := basic_n_proper_lexent &
+n_-_pn-pl-nom_le := reg_n_proper_lexent &
   [ INFLECTD +,
     SYNSEM [ LKEYS.KEYREL.PRED named_rel,
 	     LOCAL plur_noun & [ CAT.HEAD [ MINORS.MIN named_rel,
@@ -8165,7 +8177,7 @@ n_-_pn-pl-nom_le := basic_n_proper_lexent &
 ; <nex>
 ; <todo>
 ; </type>
-n_-_pn-pl-def_le := basic_n_proper_lexent &
+n_-_pn-pl-def_le := reg_n_proper_lexent &
   [ INFLECTD +,
     SYNSEM [ LKEYS.KEYREL.PRED named_rel,
 	     LOCAL plur_noun & [ CAT [ HEAD.MINORS.MIN named_rel,
@@ -8220,13 +8232,16 @@ n_-_pn-cap_le := n_proper_lexent &
 ; <nex>*Mr. Mr. Browne
 ; <todo>
 ; </type>
-n_-_pn-nounif_le := n_proper_lexent &
+n_-_pn-nounif_le := basic_n_proper_lexent &
   [ SYNSEM [ LOCAL [ CAT.HEAD [ CASE non_nom,
-				MINORS.NORM no_rel ],
+				MINORS [ MIN named_np_rel,
+					 NORM no_rel ] ],
 		     AGR [ PNG.PN 3p,
 			   DIV - ] ],
-	     MODIFD [ LPERIPH +,
-		      RPERIPH + ] ] ].
+	     MODIFD lmod & [ LPERIPH +,
+			     RPERIPH + ],
+	     LKEYS.KEYREL.PRED named_rel ],
+    INFLECTD - ].
 
 ; DPF 19-sept-08 - Can we collapse the following two entries?  Why is CARG
 ; set in the pn-unk type but not in the pn-gen one?
@@ -8241,7 +8256,7 @@ n_-_pn-nounif_le := n_proper_lexent &
 ; <todo>
 ; <native> n_-_pn_le
 ; </type>
-n_-_pn-gen_le := basic_n_proper_lexent & generic_ne_lex_entry &
+n_-_pn-gen_le := reg_n_proper_lexent & generic_ne_lex_entry &
   [ INFLECTD -,
     SYNSEM [ LOCAL.CAT.HEAD.MINORS.MIN named_np_rel,
 	     MODIFD.LPERIPH +,
@@ -8254,7 +8269,7 @@ n_-_pn-gen_le := basic_n_proper_lexent & generic_ne_lex_entry &
 ; <todo>
 ; <native> n_-_pn_le
 ; </type>
-n_-_pn-unk_le := basic_n_proper_lexent & basic_unknown_word &
+n_-_pn-unk_le := reg_n_proper_lexent & basic_unknown_word &
   [ INFLECTD -,
     SYNSEM [ LOCAL.CAT.HEAD.MINORS.MIN named_rel,
 	     MODIFD.LPERIPH +,
@@ -8270,7 +8285,7 @@ n_-_pn-unk_le := basic_n_proper_lexent & basic_unknown_word &
 ; <todo>
 ; <native> n_-_pn-pl_le
 ; </type>
-n_-_pn-pl-unk_le := basic_n_proper_lexent & basic_unknown_word &
+n_-_pn-pl-unk_le := reg_n_proper_lexent & basic_unknown_word &
   [ INFLECTD +,
     SYNSEM [ LOCAL [ CAT.HEAD.MINORS.MIN named_rel,
 		     AGR [ PNG.PN 3p, DIV + ] ],
@@ -11861,9 +11876,10 @@ aj_pp_i-onemore_le := adj_comp_lexent &
 ; <todo>
 ; </type>
 aj_pp_i-cmp-dif_le := basic_adj_comp_lexent &
-  [ SYNSEM [ LOCAL [ CAT [ HEAD adj,
-                           VAL.SPR.FIRST.--MIN much_or_very_deg_rel ],
-                     CONT.RELS <! relation, 
+  [ SYNSEM [ LOCAL [ CAT [ HEAD adj & [ MINORS.ALTMIN non_ellipt_rel ],
+                           VAL.SPR.FIRST synsem & 
+				[ --MIN much_or_very_deg_rel ] ],
+		     CONT.RELS <! relation, 
 				  relation !> ],
              MODIFD.LPERIPH bool,
              LKEYS.ALTKEYREL.PRED comp_rel ] ].
@@ -11878,8 +11894,9 @@ aj_pp_i-cmp-sme_lexent := basic_adj_comp_lexent &
      [ HEAD superl_adj &
 	    [ PRD -,
 	      MOD < [ LOCAL.CAT.VAL.SPR < expressed_synsem &
-				          [ --MIN def_or_demon_q_rel ] > ] > ],
-       VAL.SPR.FIRST.--MIN much_deg_rel,
+				          [ --MIN def_or_demon_q_rel ] > ] >,
+	      MINORS.ALTMIN non_ellipt_rel ],
+       VAL.SPR.FIRST synsem & [ --MIN much_deg_rel ],
        POSTHD - ],
       CONT.RELS <! relation, relation !> ],
      MODIFD.LPERIPH bool,
@@ -13050,6 +13067,9 @@ p_np_ptcl-ngap_le := p_noslash_prtcl_lexent &
 							 INDEX ref-ind ] ] ] >,
 		   CONT.HOOK.LTOP #ltop ] ].
 
+;; DPF 2016-04-22 - Propagate --BARE from NP complement to phrase, so we can
+;; avoid mal-rule analysis of |what kind of cat| with bare-sg |cat|.
+
 ; <type val="p_np_ptcl-of_le">
 ; <description>Prep, np, sem empty, meas-np ok  
 ; <ex>B reached a height of 3 ft
@@ -13057,7 +13077,9 @@ p_np_ptcl-ngap_le := p_noslash_prtcl_lexent &
 ; <todo>
 ; </type>
 p_np_ptcl-of_le := p_prtcl_lexent &
-  [ SYNSEM.LOCAL [ CAT.VAL.COMPS.FIRST.LOCAL.CAT.VAL.SPR *olist*,
+  [ SYNSEM.LOCAL [ CAT [ VAL.COMPS.FIRST.LOCAL.CAT [ VAL.SPR *olist*,
+						     HEAD.--BARE #bare ],
+			 HEAD.--BARE #bare ],
 		   CONT [ RELS <! !>,
 			  HCONS <! !> ] ] ].
 
@@ -14062,6 +14084,11 @@ p_nb_i_le := p_nbar_comp_spr_lexent &
   [ SYNSEM.LOCAL.CAT.VAL.COMPS < abstr_lex_synsem & 
 				 [ MODIFD notmod_or_lmod,
 				   LOCAL.CAT.HEAD.MINORS.NORM norm_rel ] > ].
+
+;; DPF 2016-04-23 - Since we also want |how many hours does he sleep per day|
+;; we have to give up on restricting MOD to nominals for |per|.  So no need
+;; for this special type.
+#|
 ; <type val="p_nb_i-per_le">
 ; <description>Prep, nbar, temp noun ok         
 ; <ex>One cat per dog is good.
@@ -14071,6 +14098,7 @@ p_nb_i_le := p_nbar_comp_spr_lexent &
 p_nb_i-per_le := p_nbar_comp_spr_lexent &
   [ SYNSEM.LOCAL.CAT.HEAD.MOD < [ LOCAL.CAT [ HEAD noun_or_nomger,
 					      VAL.SPR.FIRST synsem ] ] > ].
+|#
 
 ; For preps like "as" which can take phrasal nbar complements
 ; <type val="p_nb_i-phr_le">
@@ -18432,13 +18460,14 @@ p_np-np_s-ncop_le := noncqrs-nab &
 p_cp_i-nmod_lexent := basic_prep_word &
   [ SYNSEM prep_prd_or_nonprd_synsem &
     [ LOCAL 
-      [ CAT.VAL.COMPS < [ LOCAL [ CAT s_cat_unspec &
+      [ CAT [ HEAD.MOD.FIRST.LOCAL.CAT.HEAD basic_noun,
+	      VAL.COMPS < [ LOCAL [ CAT s_cat_unspec &
 				      [ MC -,
 					HEAD verb & [ VFORM fin ] ],
-				  CONT.HOOK [ LTOP #cltop,
-					      INDEX [ E.TENSE real_tense,
-						      SF prop-or-comm ] ] ],
-			  OPT - ] >,
+				    CONT.HOOK [ LTOP #cltop,
+						INDEX [ E.TENSE real_tense,
+							SF prop-or-comm ] ] ],
+			    OPT - ] > ],
 	CONT [ RELS <! prep_relation &
 		       [ ARG2 #arg2 ] !>,
 	       HCONS <! qeq & [ HARG #arg2,
@@ -20719,6 +20748,9 @@ comp_how_about_n_or_p_lexent := how_about_word &
                                         ARG0 #event,
                                         ARG2 #ind ], ... > ] ] ].
 
+;; DPF 2016-05-02 - Restrict complement to [PRD +] to exclude subordinate
+;; clauses, including |why you strict?|
+
 ; how about
 ; <type val="x_xp_howabt-n-p_le">
 ; <description>WH-about, NP or PP comp          
@@ -20728,6 +20760,7 @@ comp_how_about_n_or_p_lexent := how_about_word &
 ; </type>
 x_xp_howabt-n-p_le := comp_how_about_n_or_p_lexent &
   [ SYNSEM.LOCAL [ CAT.VAL.COMPS < [ --SIND #ind,
+                                     LOCAL.CAT.HEAD.PRD +,
                                      OPT - ] >,
                    CONT.RELS <! relation, [ ARG2 #ind ] !> ] ].
 
