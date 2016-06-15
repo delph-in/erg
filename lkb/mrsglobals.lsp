@@ -78,6 +78,19 @@
 
 (setf *rel-name-path* `(,(vsym "PRED") ))
 
+;;;
+;;; starting with its 1214 release, the ERG makes MRS predicate normalization
+;;; the default, i.e. eliminates the symbol vs. string contrast on predicates;
+;;; whereas a grammar might use either one (or both, even for the abstractly
+;;; same predicate, e.g. _afterwards_p and "_afterwards_p" in the 1214 ERG),
+;;; these shall be treated as equivalent in the MRS universe.  also, we will
+;;; now always strip the (optional) *sem-relation-suffix* (‘_rel’ in the ERG)
+;;; from predicate names, as this is a mechanism on the TFS side only (to give
+;;; the grammar something like a separate namespace for its predicates).  in
+;;; the past, some MRS serializations suppressed the symbol vs. type contrast,
+;;; some exposed it; likewise, some stripped the suffix, and others kept it.
+;;; see the discussion on the ‘developers’ list from january 2016 for details.
+;;;
 (setf *normalize-predicates-p* t)
 
 ;;;
