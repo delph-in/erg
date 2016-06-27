@@ -20,6 +20,6 @@
           (vsym "focus_d_rel") (vsym "parg_d_rel"))))
 (setf *eds-predicate-modifiers*
   (if *normalize-predicates-p*
-    (list (ppcre:create-scanner "_x_deg$"))
+    (list (ppcre:create-scanner "_x_deg$|^neg$|^_quite_x$"))
     (list (ppcre:create-scanner "_x_deg_rel$"))))
 (setf *eds-untensed* (list (cons (vsym "TENSE") (vsym "untensed"))))
