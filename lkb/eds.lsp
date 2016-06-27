@@ -15,8 +15,9 @@
     (list (vsym "selected_rel"))))
 (setf *eds-non-representatives*
   (if *normalize-predicates-p*
-    (list (vsym "appos") (vsym "focus_d") (vsym "parg_d"))
-    (list (vsym "appos_rel") (vsym "focus_d_rel") (vsym "parg_d_rel"))))
+    (list (vsym "appos") (vsym "id") (vsym "focus_d") (vsym "parg_d"))
+    (list (vsym "appos_rel") (vsym "id_rel")
+          (vsym "focus_d_rel") (vsym "parg_d_rel"))))
 (setf *eds-predicate-modifiers*
   (if *normalize-predicates-p*
     (list (ppcre:create-scanner "_x_deg$"))
