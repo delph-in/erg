@@ -51,6 +51,11 @@
 (setf *variable-type-mapping* t)
 
 ;;;
+;;; turn on ‘modern’ MRS predicate normalization and SEM-I-based comparison
+;;;
+(setf *normalize-predicates-p* t)
+
+;;;
 ;;; for better debugging, print MRS structures readably, by default
 ;;;
 #-:debug
