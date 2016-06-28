@@ -1,7 +1,7 @@
 (in-package :mt)
 
 
-(setf *transfer-edge-limit* 500)
+(setf *transfer-edge-limit* 200)
 
 ;;
 ;; limit post-transfer SEM-I comparison to checking the validity of predicate
