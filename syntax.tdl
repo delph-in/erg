@@ -1344,11 +1344,15 @@ subconj_prdp_v_init_phr := subconj_prdp_v_init_phrase &
 ;; DPF 2015-03-12 - Changed MOD..SUBJ *synlist* to MOD..SPR < synsem_min, ...>,
 ;; in order to admit |we arose, said Kim, arriving|.  The problem was that
 ;; filler-hd  requires hd-dtr to be [SUBJ *anti_list*].
+;; DPF 2016-07-03 - Changed [MOD..ALTMIN non_ellipt_rel] to 
+;; MOD..MIN noncop_event_rel, to  allow |Kim could drunk| while still blocking 
+;; spurious |Kim was drunk|.
 ;;
 subconj_prdp_final_phr := subconj_prdp_phr &
   [ SYNSEM.LOCAL.CAT 
                   [ POSTHD +,
-                    HEAD.MOD < [ LOCAL.CAT [ HEAD.MINORS.ALTMIN non_ellipt_rel,
+                   HEAD.MOD < [ LOCAL.CAT [ HEAD.MINORS [ MIN noncop_event_rel,
+							  ALTMIN norm_rel ],
                                              VAL.SPR < synsem_min, ... > ],
 				 MODIFD.LPERIPH na_or_- ] > ],
     ARGS < [ SYNSEM.LOCAL.CAT.HEAD.PRD + ] >,
@@ -1408,6 +1412,8 @@ subconj_prdp_ellip_phr := subconj_prdp_phr &
 ;; DPF 2016-02-03 - Added NORM no_rel to first dtr, to prevent foreign words
 ;; (output of lexical rule) from appearing here, to avoid spurious analyses
 ;; in |the abbreviation ["in" for "inches"]|
+;; DPF 2016-07-04 - Added MOD..LEX na_or_- to exclude lexical CP targets such
+;; as |what| as in |what Kim happy|
 ;;
 np_pred_phr := non_headed_phrase & binary_phrase &
   [ SYNSEM basic_subconj_synsem &
@@ -1416,6 +1422,7 @@ np_pred_phr := non_headed_phrase & binary_phrase &
 						      MC #mc ],
 					  MODIFD [ LPERIPH na_or_-,
                                                    RPERIPH - ],
+					  LEX na_or_-,
 					  NONLOC.SLASH 0-dlist,
 					  PUNCT.RPUNCT 
 					  clause_or_semi_or_comma_or_no_punct &
@@ -2997,13 +3004,17 @@ adj_head_rel_phrase := adj_head_phrase & head_mod_phrase_simple &
 ; "the time when".
 ; DPF 13-nov-05 - Changed HD-DTR..RPUNCT from rbc_or_pair_or_no_punct to
 ; comma_or_rbc_or_pair_or_no_punct
+;; DPF 2016-07-03 - Preserved NEGPOL from hd-dtr to mother since this type
+;; does not inherit from head_adj_int_phrase as one might expect.
 ;
 n_adj_int_phrase := head_adj_phrase &
   [ INFLECTD +,
+    SYNSEM.LOCAL.CAT.NEGPOL #negpol,
     HD-DTR [ INFLECTD na_or_+,
 	     SYNSEM [ LOCAL.CAT [ HEAD supnoun,
 				  VAL [ COMPS < >,
-					SPR.FIRST synsem_min ] ],
+					SPR.FIRST synsem_min ],
+				  NEGPOL #negpol ],
 		      NONLOC.SLASH 0-dlist,
 		      PUNCT [ LPUNCT pair_or_no_punct,
 			      RPUNCT comma_or_rbc_or_pair_or_no_punct ],
@@ -3298,7 +3309,7 @@ adj_adjn_phrase := adj_n_int_phrase &
   [ HD-DTR.SYNSEM [ LOCAL.CAT.HEAD nom_or_ttl,
                     MODIFD lmod & [ LPERIPH na_or_-,
 				    RPERIPH na_or_- ] ],
-    NH-DTR.SYNSEM .PUNCT.RPUNCT rbc_or_hyphen_or_pair_or_no_punct ].
+    NH-DTR.SYNSEM.PUNCT.RPUNCT rbc_or_hyphen_or_pair_or_no_punct ].
 
 
 ; DPF 29-Nov-02 - Removed NH-DTR..HEAD..TENSE no_tense, since the adjunct
@@ -3968,6 +3979,9 @@ num_np_noconj := num_np_phrase &
 ; unbound and cancels the SPR list.
 ; DPF 25-may-09 - Added propagation of INFLECTD from dtr to mother, in part
 ; to block "[Kim and many] gems"
+;; DPF 2016-07-03 - NEGPOL was being stamped with value - on mother, but this
+;; removes the distinction between |any of the cats| and |all of the cats|.  So
+;; preserve from daughter to mother, and let's if something goes amiss.
 
 bare_npq_phrase := norm_unary_phrase &
   [ INFLECTD #infl,
@@ -3982,7 +3996,7 @@ bare_npq_phrase := norm_unary_phrase &
                                                  CONT.HOOK.LTOP #ltop ],
                                          OPT + ] > ],
                            MC na,
-			   NEGPOL - ],
+			   NEGPOL #negpol ],
                      AGR ref-ind &
                          [ PNG #png,
 			   DIV #div ],
@@ -3999,7 +4013,8 @@ bare_npq_phrase := norm_unary_phrase &
                                    SPR < unexpressed &
 					 [ LOCAL.CONT.HOOK.LTOP #ltop,
 					   NONLOC.QUE 0-dlist,
-					   OPT - ], ... > ] ],
+					   OPT - ], ... > ],
+			     NEGPOL #negpol ],
                        AGR [ PNG #png,
 			     DIV #div ],
                        CONJ #conj & cnil,
@@ -6017,7 +6032,7 @@ meas_np_degadv_pred_phrase := meas_np_degadv_phrase &
 ;; color nouns in compounds, as in |the red-green light|
 ;;
 num_or_color_noun_phrase := norm_unary_phrase &
-  [ SYNSEM [ LOCAL [ CAT nbar_cat & 
+  [ SYNSEM [ LOCAL [ CAT basic_nbar_cat & 
                          [ HEAD noun & [ MOD < > ],
                            VAL [ SPR < [ --MIN quant_rel,
                                          LOCAL [ CAT [ HEAD det,
@@ -7733,6 +7748,9 @@ filler_head_rule_wh_nr_inf := binary_rule_left_to_right &
 ;; DPF 2014-10-20 - Re 2013-08-26: But we want |the cat which, in Paris, slept|
 ;; so we take advantage of the punctuation pairing to distingish this from
 ;; the unwanted |the cat, which, arose|, by adding |PNCTPR ppair|.
+;; DPF 2016-07-04 - Re 19-dec-03: Now that we want NORM to distinguish that-rel
+;; from WH-rel (for fragments; see 2016-07-04 on filler_head_fin_rule_rel),
+;; try dropping propagation of NORM from filler to MOD's NORM.
 ;;
 filler_head_rule_rel := binary_rule_left_to_right & rel_cl & 
 			basic_head_filler_phrase & 
@@ -7742,8 +7760,7 @@ filler_head_rule_rel := binary_rule_left_to_right & rel_cl &
 				  AUX #aux,
 				  INV #inv,
 				  PRD -,
-				  MOD < [ LOCAL [ CONT.HOOK.XARG #xarg,
-						CAT.HEAD.MINORS.NORM #modmin ],
+				  MOD < [ LOCAL.CONT.HOOK.XARG #xarg,
 					  --SIND #ind ] >,
 				  --ADDIN #addin,
 				  MINORS.MIN #min ],
@@ -7752,8 +7769,7 @@ filler_head_rule_rel := binary_rule_left_to_right & rel_cl &
 		     AGR #agr ],
              MODIFD.RPERIPH na_or_+ ],
     ARGS < [ INFLECTD na_or_+,
-	     SYNSEM [ LOCAL [ CAT [ HEAD.MINORS.NORM #modmin,
-				    VAL.COMPS < > ],
+	     SYNSEM [ LOCAL [ CAT.VAL.COMPS < >,
                               CONJ cnil ],
 		      NONLOC [ QUE 0-dlist,
                                REL 1-dlist &
@@ -7794,10 +7810,15 @@ filler_head_rule_rel := binary_rule_left_to_right & rel_cl &
 ;; the relative pronoun `that' as uninflected, to prevent it from appearing
 ;; in pied-piping relative clauses, since the head-complement rule requires
 ;; the non-head to be INFLECTD +.
-
+;; DPF 2016-07-04 - Propagate NORM value from left dtr to mother, so we
+;; can distinguish that-relatives from WH-relatives, to allow the latter as
+;; fragments but not the former, as in |Which we said earlier.|
+;;
 filler_head_fin_rule_rel := filler_head_rule_rel &
-  [ ARGS < sign, [ SYNSEM.LOCAL.CAT [ HEAD verb & [ VFORM fin ],
-                                      VAL.SUBJ *olist* ] ] > ].
+  [ SYNSEM.LOCAL.CAT.HEAD.MINORS.NORM #norm,
+    ARGS < [ SYNSEM.LOCAL.CAT.HEAD.MINORS.NORM #norm ],
+	   [ SYNSEM.LOCAL.CAT [ HEAD verb & [ VFORM fin ],
+				VAL.SUBJ *olist* ] ] > ].
 
 ;; DPF 16-jul-10 - Also constrain the infinitival variant to only allow the
 ;; head to be a VP, to block |*cats with which Abrams to play|
@@ -9563,7 +9584,9 @@ basic_run_on_rule := binary_rule_right_to_left & basic_binary_phrase &
 ; "This man's isolation is not merely momentary, it is permanent."
 ;; DPF 2012-01-29 - Removed RCONJ-DTR..LPERIPH - to allow 
 ;; |we arise, maybe they arrive.|
-
+;; DPF 2016-07-03 - Removed ALTMIN norm_rel from each of two dtrs, since
+;; this prevented clauses such as |this is to say that we arise| as either dtr.
+;;
 basic_run_on_coord_rule := basic_run_on_rule & basic_coord_phr &
  [ SYNSEM [ LOCAL.CAT [ VAL.SUBJ #subj & *anti_list*,
 			MC + ],
@@ -9572,16 +9595,14 @@ basic_run_on_coord_rule := basic_run_on_rule & basic_coord_phr &
              [ SYNSEM [ LOCAL [ CAT [ HEAD verb_or_frag &
                                           [ TAM.MOOD ind_or_modal_subj,
 					    MOD *anti_list*,
-                                            MINORS [ MIN norm_rel,
-                                                     ALTMIN norm_rel ] ],
+                                            MINORS [ MIN norm_rel ] ],
                                       VAL.SUBJ #subj,
                                       MC + ],
                                 CONT.HOOK [ LTOP #ltop,
 					    INDEX.E indic_tam ] ] ] ],
    RCONJ-DTR #rconj &
              [ SYNSEM [ LOCAL [ CAT [ HEAD verb_or_conj_or_frag &
-                                           [ MINORS [ MIN norm_rel,
-                                                      ALTMIN norm_rel ] ],
+                                           [ MINORS [ MIN norm_rel ] ],
                                       VAL.SUBJ *anti_list*,
                                       MC + ],
                                 CONT [ HOOK [ LTOP #rltop,
@@ -9604,6 +9625,12 @@ run_on_coord_rule := basic_run_on_coord_rule &
 		      PUNCT.RPUNCT clause_or_semicol ],
    RCONJ-DTR.SYNSEM.LOCAL.CAT.HEAD verb_or_conj_or_frag ].
 
+;; DPF 2016-07-04 - Not clear why we want HEAD verb_or_conj-s for right dtr,
+;; since this gives spurious analysis for |we arrive, and Kim arises|.  So
+;; change to just HEAD verb, and see what we lose.
+;; -- Well, we need conj-s to admit |we arise, we arrive, we sleep.|  So
+;; restore, and instead make the fragment |and we arise| not be HEAD conj-s.
+;;
 run_on_coord_comma_rule := basic_run_on_coord_rule &
  [ LCONJ-DTR.SYNSEM phr_synsem &
 		    [ LOCAL.CAT.HEAD verb,
@@ -10041,7 +10068,7 @@ frag_sent_adv_rule := basic_unary_frag_rule &
 ;; in order to admit e.g. |and should he arise?|
 ;;
 frag_sent_conj_rule := basic_frag_rule & norm_unary_phrase &
-  [ SYNSEM [ LOCAL [ CAT [ HEAD conj-s & 
+  [ SYNSEM [ LOCAL [ CAT [ HEAD frag & 
                               [ MOD < >,
                                 MINORS.ALTMIN no_rel ],
                          VAL.SPR < > ],
@@ -10385,12 +10412,17 @@ frag_sbar_rule := frag_verbal_rule &
              HCONS <! !>,
 	     ICONS <! !> ] ].
 
+;; DPF 2016-07-03 - Added dtr's MOD..MIN reg_nom_rel to exclude modable_rel
+;; in order to avoid fragment analysis for mod-gap relative clauses such as
+;; |Kim arrived happy.|
+;;
 frag_relcl_rule := frag_verbal_rule &
   [ ARGS < [ SYNSEM [ LOCAL [ CAT [ HEAD verb &
                                        [ MINORS [ MIN norm_rel,
                                                   NORM norm_rel ],
                                          VFORM fin,
-                                         MOD < synsem > ],
+                                         MOD < synsem &
+					       [ --MIN reg_nom_rel ] > ],
                                     MC na,
                                     VAL.SUBJ *anti_list* ],
                               CONJ cnil ],
