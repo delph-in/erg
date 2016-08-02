@@ -134,27 +134,31 @@ one_arg := basic_one_arg &
   [ LOCAL.CONT [ HCONS <! !>,
 		 ICONS <! !> ] ].
 
-basic_two_arg := lex_synsem &
+basic_basic_two_arg := lex_synsem &
   [ LOCAL [ ARG-S < [ NONLOC [ SLASH [ LIST #smiddle,
 				       LAST #slast ],
 			       REL [ LIST #rmiddle,
 				     LAST #rlast ],
 			       QUE [ LIST #qmiddle,
 				     LAST #qlast ] ] ],
-		    [ LOCAL.CONT.HOOK.--SLTOP #sltop,
-		      NONLOC [ SLASH [ LIST #sfirst,
+		    [ NONLOC [ SLASH [ LIST #sfirst,
 				       LAST #smiddle ],
 			       REL [ LIST #rfirst,
 				     LAST #rmiddle ],
 			       QUE [ LIST #qfirst,
-				     LAST #qmiddle ] ] ] >,
-	    CONT.HOOK.--SLTOP #sltop ],
+				     LAST #qmiddle ] ] ] > ],
     NONLOC [ SLASH [ LIST #sfirst,
                      LAST #slast ],
              REL [ LIST #rfirst,
                    LAST #rlast ],
              QUE [ LIST #qfirst,
                    LAST #qlast ] ] ].
+
+
+basic_two_arg := basic_basic_two_arg &
+  [ LOCAL [ ARG-S < [ ],
+		    [ LOCAL.CONT.HOOK.--SLTOP #sltop ] >,
+	    CONT.HOOK.--SLTOP #sltop ] ].
 
 two_arg := basic_two_arg &
   [ LOCAL.CONT [ HCONS <! !>,
@@ -3312,11 +3316,19 @@ cp_passivable_verb := norm_basic_verb_synsem.
 ; Type for inputs to inverted_quote_lr for "Kim arrived, said Abrams"
 cp_comp_verb := norm_basic_verb_synsem.
 
+;; DPF 2016-07-26 - Make this type inherit from basic_basic_two_arg to avoid
+;; identifying --SLTOP of its complement with its own, because the subtype
+;; that takes a main-clause question-CP complement already necessarily has the 
+;; complement's --SLTOP identified with that complement's LTOP.  So push the
+;; --SLTOP identity (of complement and self) down to this type's subtypes that
+;; do not allow main-clause complements.
+;;
 basic_cp_fin_inf_intrans_verb := fin_or_inf_cp_prop+ques_verb & 
-			   basic_cp_intrans_subst & basic_two_arg & arg12h_lt &
-			   cp_passivable_verb & cp_comp_verb.
+			   basic_cp_intrans_subst & basic_basic_two_arg & 
+			   arg12h_lt & cp_passivable_verb & cp_comp_verb.
 
-cp_fin_inf_intrans_verb := basic_cp_fin_inf_intrans_verb & cp_intrans_subst.
+cp_fin_inf_intrans_verb := basic_cp_fin_inf_intrans_verb & cp_intrans_subst &
+			   basic_two_arg.
 
 ;; 'ask', allowing main clause question complements
 ;; FIX: generalize to other verbs, but still block extraction out of 
@@ -13161,6 +13173,9 @@ p_cp_ptcl-npgap_le := p_cp_ptcl-gap_lexent &
 		   AGR #slagr ],
     ORTH [ FROM #cfrom, TO #cto ] ].
 
+;; DPF 2016-08-01 - The COMPS..SLASH..HEAD was just `mobile' but should be
+;; `prep' to exclude CP-gaps as in |it is higher than the treaty allows|.
+;;
 ; <type val="p_cp_ptcl-ppgap_le">
 ; <description>Prep, S-with-PP-gap, particle       
 ; <ex>B arrived as soon as we disappeared.
@@ -13168,7 +13183,7 @@ p_cp_ptcl-npgap_le := p_cp_ptcl-gap_lexent &
 ; <todo>
 ; </type>
 p_cp_ptcl-ppgap_le := p_cp_ptcl-gap_lexent &
-  [ SYNSEM.LOCAL [ CAT.VAL.COMPS < [ NONLOC.SLASH <! [ CAT.HEAD mobile & 
+  [ SYNSEM.LOCAL [ CAT.VAL.COMPS < [ NONLOC.SLASH <! [ CAT.HEAD prep & 
 							    [ MOD < synsem > ],
 						       CONT.HOOK.XARG #event &
 							  non_expl ] !> ] >,
@@ -15414,8 +15429,8 @@ av_-_s-cp-pr_le := adv_s_pre_lexent &
   [ SYNSEM.LOCAL.CAT.HEAD.MINORS.MIN adv_rel ].
 
 ; <type val="av_-_s-cp-pr-inv_le">
-; <description>Scop, S, pre-hd                  
-; <ex>Obviously B won.
+; <description>Scop, inverted S, pre-hd
+; <ex>Never had B won.
 ; <nex>
 ; <todo>
 ; </type>
@@ -15426,6 +15441,24 @@ av_-_s-cp-pr-inv_le := norm_adv_word &
 				PRD -,
 				MOD < [ LOCAL.CAT [ HEAD.INV +,
 						    MC na ] ] > ] ] ] ].
+
+; <type val="av_-_s-cp-pr-inv-ell_le">
+; <description>Scop, inverted and elided S, pre-hd                  
+; <ex>So did Kim.
+; <ex>As did Kim.
+; <nex>
+; <todo>
+; </type>
+av_-_s-cp-pr-inv-ell_le := norm_adv_word &
+  [ SYNSEM scopal_s_adverb_synsem &
+	   [ LOCAL.CAT [ POSTHD -,
+			 HEAD [ MINORS.MIN adv_rel,
+				PRD -,
+				MOD < [ LOCAL.CAT 
+					 [ HEAD [ INV +,
+						  MINORS.ALTMIN ellipsis_rel ],
+					   MC na ] ] > ] ] ] ].
+
 
 ; For "(3)" or "3)" meaning 'thirdly'
 ; <type val="av_-_s-cp-gen_le">
@@ -15513,9 +15546,14 @@ av_-_s-cp_le := norm_adv_word &
 						  MC bool ] ] >,
                               MINORS.MIN adv_rel ] ] ].
 
+;; DPF 2016-08-02 - Added constraint to allow only VP and not S, as the type
+;; name suggests, to block |So did Kim arise.|
+;;
 av_-_s-vp_lexent := adverb_word &
-  [ SYNSEM.LOCAL.CAT.HEAD [ MOD < [ LOCAL.CAT.HEAD v_or_g_or_a,
-                                    MODIFD [ LPERIPH na_or_-,
+  [ SYNSEM.LOCAL.CAT.HEAD [ MOD < [ LOCAL.CAT [ HEAD v_or_g_or_a,
+						VAL [ SUBJ *synlist*,
+						      COMPS < > ] ],
+                                  MODIFD [ LPERIPH na_or_-,
                                              RPERIPH na_or_- ] ] >,
                             MINORS.MIN adv_rel ] ].
 
@@ -15526,6 +15564,7 @@ av_-_s-vp_lexent := adverb_word &
 ; <todo>
 ; </type>
 av_-_s-vp_le := av_-_s-vp_lexent.
+
 ; <type val="av_-_s-vp-only_le">
 ; <description>Scop, VP (no AdjP)               
 ; <ex>B won too.
