@@ -1,6 +1,6 @@
 ;;; -*- Mode: tdl; Coding: utf-8; -*-
 ;;;
-;;;  Copyright (c) 1994-2013
+;;;  Copyright (c) 1994-2016
 ;;;    Dan Flickinger, Rob Malouf, Emily M. Bender
 ;;;    see LICENSE for conditions
 ;;;
@@ -1448,20 +1448,37 @@ attr_verb_part_ptcl_psv_lr := basic_attr_verb_part_lr &
 ; For "the bewitching Abrams"
 ; DPF 30-sept-06 - The DTR..VFORM prp constraint prevents e.g. "the newly
 ; built Paris", so remove and see what happens to added ambiguity.
+;; DPF 2016-09-15 - The constraint MOD..SPR expressed_synsem blocks 
+;; |spoken English|.  But removing it means we would get an undesirable
+;; analysis for |Abrams is hiring Browne|, so we'll further split these
+;; rules each into two, one for passives and one for pres-part.
 
 attr_verb_part_namemod_lr := basic_attr_verb_part_lr & lex_rule &
-  [ SYNSEM [ LOCAL.CAT [ HEAD.MOD < [ --MIN named_rel,
-				      LOCAL.CAT.VAL.SPR < expressed_synsem > ]>,
-			 VAL.COMPS < > ],
+  [ SYNSEM [ LOCAL.CAT [ HEAD.MOD < [ --MIN named_rel ] >,
+ 			 VAL.COMPS < > ],
 	     LEX + ],
     DTR.SYNSEM.LKEYS.--COMPKEY independent_rel ].
 
-attr_verb_part_intr_namemod_lr := attr_verb_part_namemod_lr &
+attr_verb_part_intr_namemod_lexrule := attr_verb_part_namemod_lr &
   [ DTR.SYNSEM.LOCAL.CAT.VAL.COMPS < > ].
 
-attr_verb_part_tr_namemod_lr := attr_verb_part_namemod_lr &
+attr_verb_part_intr_namemod_lr := attr_verb_part_intr_namemod_lexrule &
+  [ DTR.SYNSEM.LOCAL.CAT.HEAD.VFORM pas ].
+
+attr_verb_part_intr_namemod_prp_lr  := attr_verb_part_intr_namemod_lexrule &
+  [ SYNSEM.LOCAL.CAT.HEAD.MOD < [ LOCAL.CAT.VAL.SPR < expressed_synsem > ] >,
+    DTR.SYNSEM.LOCAL.CAT.HEAD.VFORM prp ].
+		       
+attr_verb_part_tr_namemod_lexrule := attr_verb_part_namemod_lr &
   [ DTR.SYNSEM.LOCAL.CAT.VAL.COMPS < unexpressed &
                                      [ LOCAL.CAT.HEAD n_or_p ] > ].
+
+attr_verb_part_tr_namemod_lr := attr_verb_part_tr_namemod_lexrule &
+  [ DTR.SYNSEM.LOCAL.CAT.HEAD.VFORM pas ].
+
+attr_verb_part_tr_namemod_prp_lr := attr_verb_part_tr_namemod_lexrule &
+  [ SYNSEM.LOCAL.CAT.HEAD.MOD < [ LOCAL.CAT.VAL.SPR < expressed_synsem > ] >,
+    DTR.SYNSEM.LOCAL.CAT.HEAD.VFORM prp ].
 
 ;; DPF 2016-02-23 - Let's finally add a rule to produce -ly adverbs from 
 ;; adjectives
@@ -1786,16 +1803,22 @@ minute_prep_lr := basic_minute_lex_rule &
  [ SYNSEM minute_noun_wcomp_synsem ].
 
 ; |three twenty p.m.|
+;; DPF 2016-08-026 - Instead of identifying INFL -, change mother to na_or_-,
+;; as we need for |the ten thirty departure| where the head-comp rule requires
+;; the head to be na_or_+.
+;;
 hour_np_lr := word_or_nonpunct_rule &
   [ SYNSEM hour_np_synsem &
 	   [ PUNCT #punct,
 	     PHON.ONSET #onset,
-	     LOCAL.CONT.RELS <! relation, relation, #altkeyrel, #alt2keyrel !>],
-    IDIOM #idiom, DIALECT #dialect, ALTS #alts, GENRE #genre, INFLECTD #infl,
+	     LOCAL.CONT.RELS <! relation, relation, relation, relation,
+			        #altkeyrel, #alt2keyrel !>],
+    IDIOM #idiom, DIALECT #dialect, ALTS #alts, GENRE #genre, 
+    INFLECTD na_or_-,
     ORTH #orth,
     ARGS < [ ORTH #orth,
 	     IDIOM #idiom, DIALECT #dialect, ALTS #alts, GENRE #genre,
-	     INFLECTD #infl & -,
+	     INFLECTD -,
 	     SYNSEM [ LOCAL [ CAT [ HEAD noun & [ MINORS.MIN numbered_hour_rel],
 				    VAL.COMPS < synsem > ],
 			      CONJ cnil ],
@@ -2149,6 +2172,12 @@ cp_frag_lr := lex_rule_basic &
 ;; |the expression "foo"|
 ;; Also added NORM norm_rel to output, to prevent these from appearing as first
 ;; daughter in np_pred phrases, as in |the abbreviation ["in" for "inches"]|
+;; DPF 2016-09-18 - Re 2016-02-03: Well, it may be annoying to have the fw
+;; |"in"| appear in np_pred, but in general we do want to allow other foreign
+;; words there, as in |we gasped, "glump" being such a rude word|.  So remove
+;; norm_rel on mother, which has the added benefit of allowing in particular
+;; |We speak two languages, the other being Spanish| where special adj |other|
+;; is [NORM no_rel].
 ;;
 foreign_lr := lex_rule_supermost & word_or_nonpunct_rule &
   [ INFLECTD +,
@@ -2172,8 +2201,7 @@ foreign_lr := lex_rule_supermost & word_or_nonpunct_rule &
 			 [ HEAD noun & 
 				[ MOD < >,
 				  MINORS [ MIN norm_nom_rel,
-					   ALTMIN proper_q_rel,
-					   NORM norm_rel ] ],
+					   ALTMIN proper_q_rel ] ],
 			   VAL.SPR < anti_synsem_min > ],
 		     CONT nom-obj &
 			 [ HOOK.INDEX #index ],
@@ -2482,17 +2510,20 @@ punctuation_italright_rule := basic_punctuation_rule &
 ;; of e.g. ¦ini¦
 ;; So for now, we'll sacrifice the tokens like |``(For|, until a better
 ;; solution emerges to control the interaction of these two rules.
+;; DPF 2016-09-18 - Now that we've added IGNOREQ + on right-drop rule's mother
+;; (needed separately for handling foreigh-word sequences), let's use it to
+;; enforce left-before-right dropping rules to avoid spurious ambiguity.
 ;;
 punct_drop_italleft_rule := basic_punctuation_rule &
   [ INFLECTD #infl,
     SYNSEM.PUNCT [ LPUNCT no_punct,
                    RPUNCT #rpunct,
                    RCLSTR #rclstr ],
-    ARGS < word_or_infl_rule &
+    ARGS < word_or_infl_or_punct_rule &
 	   [ INFLECTD #infl,
 	     SYNSEM [ PHON.ONSET con_or_voc,
 		      PUNCT [ RPUNCT #rpunct & no_punct,
-			      RCLSTR #rclstr ] ],
+			      RCLSTR #rclstr & [ IGNOREQ - ] ] ],
              GENRE #genre ] >,
     GENRE #genre ].
     
@@ -2501,7 +2532,8 @@ punct_drop_italright_rule := basic_punctuation_rule &
     SYNSEM.PUNCT [ LPUNCT #lpunct,
                    RPUNCT #rpunct,
 		   RCLSTR [ RPAREN #rparen,
-			    RFP - ] ],
+			    RFP -,
+			    IGNOREQ + ] ],
     ARGS < [ INFLECTD #infl,
 	     SYNSEM [ PHON.ONSET con_or_voc,
 		      PUNCT [ LPUNCT #lpunct & no_punct,

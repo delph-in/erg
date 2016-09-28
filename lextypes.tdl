@@ -1,6 +1,6 @@
 ;;; -*- Mode: tdl; coding: utf-8; -*-
 ;;;
-;;;  Copyright (c) 1994-2013
+;;;  Copyright (c) 1994-2016
 ;;;    Dan Flickinger, Rob Malouf, Emily M. Bender
 ;;;    see LICENSE for conditions
 ;;;
@@ -1500,9 +1500,13 @@ non_trans_subst := unsat_two_arg_subst &
 ;; DPF 2016-04-21 - Changed complement from nomp_cat_nonnom_min to 
 ;; nomp_cat_acc_min to block spurious NP-CP analysis of complement in
 ;; |*we thought why he arrived|
+;; DPF 2016-08-05 - Re 2016-04-21: But this blocks |we left town| because we
+;; make the bare singular NPs be nonnom.  So push this case constraint down to
+;; subtypes.
+;;
 np_non_trans_subst := non_trans_subst & two_arg_subst & 
   [ LOCAL.CAT.VAL.COMPS < synsem & 
-                          [ LOCAL.CAT nomp_cat_acc_min,
+                          [ LOCAL.CAT nomp_cat_min,
                             --SIND index ] > ].
 
 ; became president
@@ -2107,8 +2111,7 @@ expl_np_pp_cp_subst :=  four_arg_subst &
                               --SIND basic_non_event ], 
 			    synsem &
                             [ LOCAL [ CAT basic_pp_cat,
-                                      CONJ cnil ],
-			      --MIN selected_rel ],
+                                      CONJ cnil ] ],
 			    synsem & #keycomp &
 			           [ LOCAL [ CAT cat & 
                                                  [ HEAD comp,
@@ -2585,12 +2588,14 @@ np_non_trans_verb := twoarg_verb_synsem & np_non_trans_subst & trans_lt &
     LKEYS.KEYREL #keyrel ].
 
 np_non_trans_fin_bse_verb := np_non_trans_verb &
-  [ LOCAL bse_or_non3sg_verb ].
+  [ LOCAL bse_or_non3sg_verb & 
+	  [ CAT.VAL.COMPS.FIRST.LOCAL.CAT nomp_cat_acc_min ] ].
 
 np_non_trans_nb_verb := np_non_trans_verb &
   [ LOCAL.CAT.VAL.COMPS < canonical_synsem &
 			  [ OPT -,
-			    LOCAL.CAT.VAL.SPEC < > ] > ].
+			    LOCAL.CAT nomp_cat_nonnom_min &
+				[ VAL.SPEC < > ] ] > ].
 
 np_trans_refl_verb := twoarg_verb_synsem & np_trans_subst & trans_lt &
 		      poss_idiom_lt &
@@ -3682,6 +3687,14 @@ expl_it_subj_np_pp_cp_verb := norm_cp_prop+ques_verb &
 			    --MIN _to_p_sel_rel ],
 			  [ LOCAL.CONT.HOOK.INDEX.SF prop ] > ].
 
+;; DPF 2016-09-17
+;; |it took them until Friday to arrive|
+expl_it_subj_np_pp_cp_inf_verb := norm_cp_prop+ques_verb & 
+			 expl_np_pp_cp_subst & expl_it_subj_np_prdp_cp_lt &
+  [ LOCAL.CAT.VAL.COMPS < [ ], 
+			  [ LOCAL.CAT.HEAD.MINORS.MIN independent_rel ],
+			  [ LOCAL.CAT.HEAD comp & [ VFORM inf ],
+			    OPT - ] > ].
 
 expl_it_subj_prtcl_cp_verb := norm_cp_prop+ques_verb & expl_prtcl_cp_subst & 
                               expl_it_subj_prtcl_cp_lt.
@@ -5991,6 +6004,9 @@ n_pp_c-nt-of_le := norm_noun_empty_ppcomp_word &
 
 ; DPF 10-sept-07 - Type for e.g. 'thing' which we don't want as left member
 ; of compounds.
+;; DPF 2016-08-10 - Removed SORT non-time-sort because we want to accept
+;; |the only thing I have open is the afternoon|
+;;
 ; <type val="n_pp_c-nsnc-of_le">
 ; <description>Cn, PP-of, unmrkd sort, no cmpnd 
 ; <ex>That is the thing of it.
@@ -5998,9 +6014,8 @@ n_pp_c-nt-of_le := norm_noun_empty_ppcomp_word &
 ; <todo>
 ; </type>
 n_pp_c-nsnc-of_le := norm_noun_empty_ppcomp_word &
-  [ SYNSEM [ LOCAL [ CAT.HEAD.MINORS [ MIN norm_nom_rel,
-				       NORM norm_rel ],
-		     CONT.HOOK.INDEX.SORT non-time-sort ],
+  [ SYNSEM [ LOCAL.CAT.HEAD.MINORS [ MIN norm_nom_rel,
+				     NORM norm_rel ],
              LKEYS.--COMPKEY _of_p_sel_rel ] ].
 
 ; <type val="n_pp_c-ns-nocnh_le">
@@ -7220,7 +7235,8 @@ n_plur_lexent := basic_n_plur_lexent &
                                                DIV + ] ] >,
                    CONT.RELS <! relation !> ] ].
 
-;; DPF 2015-07-20 - Merged this type with n_-_c-pl-ifl_le
+;; DPF 2015-07-20 - Merged this type with n_-_c-pl-ifl_le, but then adopted
+;; this same name for the merged type below.
 ; <type val="n_-_c-pl_le">
 ; <description>Icn, plur only                   
 ; <ex>Cattle grazed.
@@ -7455,18 +7471,30 @@ n_-_c-sg-cpd_le := n_-_c-sg_lexent &
              LKEYS.KEYREL reg_nom_relation ] ].
 
 ; For plural nouns which are already inflected
+n_-_c-pl_lexent := n_intr_infl_lex_entry &
+  [ SYNSEM [ LOCAL [ CAT.VAL.SPR < [ LOCAL.AGR [ PNG.PN 3p,
+						 DIV + ] ] >,
+		     CONT.HOOK.INDEX [ PNG.PN 3p,
+				       DIV + ] ],
+	     MODIFD notmod ] ].
+
 ; <type val="n_-_c-pl_le">
 ; <description>Icn, plur, inflected    
 ; <ex>These beings have disappeared.
 ; <nex>
 ; <todo>
 ; </type>
-n_-_c-pl_le := n_intr_infl_lex_entry &
-  [ SYNSEM [ LOCAL [ CAT.VAL.SPR < [ LOCAL.AGR [ PNG.PN 3p,
-						 DIV + ] ] >,
-		     CONT.HOOK.INDEX [ PNG.PN 3p,
-				       DIV + ] ],
-	     MODIFD notmod ] ].
+n_-_c-pl_le := n_-_c-pl_lexent.
+
+; <type val="n_-_c-pl-nocnh_le">
+; <description>Icn, plur, inflected, no non-head in N-N cpds, expressed spr
+; <ex>The Spanish are arriving.
+; <nex>
+; <todo>
+; </type>
+n_-_c-pl-nocnh_le := n_-_c-pl_lexent &
+  [ SYNSEM.LOCAL.CAT [ HEAD.MINORS.NORM norm_rel,
+		       VAL.SPR < expressed_synsem > ] ].
 
 ;; DPF 2014-06-12 - The terms |percent| and |%| create unwanted ambiguity if
 ;; allowed to combine without of-PP complements, so add plural-only nominative
@@ -10507,7 +10535,7 @@ pred_adj_synsem := adj_unsp_ind_synsem & prd_synsem &
 ; Not marked for LEX
 
 intrans_pred_adj_synsem := basic_adj_synsem & one_arg & isect_synsem &
-                           norm_adj_synsem &
+                           norm_adj_synsem & basic_lex_synsem &
   [ LOCAL [ CAT [ HEAD adj &
                        [ PRD +,
                          MOD < [ --SIND #ind & non_expl-ind ] >,
@@ -13315,6 +13343,9 @@ p_temp_lexent :=  basic_prep_word &
 ; </type>
 p_np_i-tmp_le := p_temp_lexent.
 
+;; DPF 2016-08-10 - Generalize from MOD..HEAD v_or_p to v_or_a_or_p in order
+;; to also get |I'll be awake by then|
+;;
 ; <type val="p_np_i-tmp-vm_le">
 ; <description>Prep, np, temporal, vp mod       
 ; <ex>B had won by Friday.
@@ -13322,7 +13353,7 @@ p_np_i-tmp_le := p_temp_lexent.
 ; <todo>
 ; </type>
 p_np_i-tmp-vm_le := p_temp_lexent &
-  [ SYNSEM.LOCAL.CAT [ HEAD.MOD < [ LOCAL.CAT.HEAD v_or_p ] >,
+  [ SYNSEM.LOCAL.CAT [ HEAD.MOD < [ LOCAL.CAT.HEAD v_or_a_or_p ] >,
                        VAL.SPR < [ LOCAL.CAT.HEAD adv ] > ] ].
 
 ; This looks tempting, but prevents e.g. "We camped two kilometers before the
@@ -14520,6 +14551,12 @@ minute_noun_wcomp_synsem := basic_minute_noun_synsem &
 ; 'hire Kim'.  We'll remind ourselves of why this identity was clever?
 ; DPF 17-may-09 - Changed SPR..MIN nonpro_rel to nonpro_or_num_rel, to allow
 ; |items 1 - 3|
+;; DPF 2016-08-07 - Re 06-mar-06: But constraining HS-LEX this way wrongly
+;; excludes |the two to four meeting|, since |four| is necessarily [LEX -] to
+;; exclude |*the four meeting|.  And anyway, seems grammatical for at least
+;; some post-modified X-to-Y phrases in compounds, as in
+;; |the city of love to city of flowers tour|.  So remove this constraint, and
+;; live with the awkwardness of example above.
 
 basic_n-or-p_x_to_y_lexent := noncqrs-hm &
   [ SYNSEM basic_two_arg &
@@ -14556,12 +14593,10 @@ basic_n-or-p_x_to_y_lexent := noncqrs-hm &
                                           CONJ cnil ],
 				  NONLOC non-local_none &
 					[ SLASH.LIST < > ],
-                                  LEX #lex,
                                   --SIND [ SORT #sort ],
                                   OPT -,
                                   PUNCT.LPUNCT no_punct ] >,
-                        SPCMPS < > ],
-                      HS-LEX #lex ] ],
+                        SPCMPS < > ] ] ],
 	LKEYS.--COMPKEY #cmin ] ].
 
 n-or-p_x_to_y_lexent := basic_n-or-p_x_to_y_lexent &
@@ -14627,6 +14662,10 @@ n_x_to_y_lexent := basic_n-or-p_x_to_y_lexent &
 ;; meas-NPs, so let's see where this overgenerates.
 ;; DPF 2015-09-08 - Removed COMPS..MODIFD notmod_or_lmod so we can admit
 ;; |Paris - Berlin (via Brussels)|
+;; DPF 2016-08-06 - Removed strange OPT - from second specifier, since it
+;; must be unexpressed anyway, and the constraint blocked the projected phrase
+;; from undergoing npadv rule to admit (the admittedly informal but occurring)
+;; |we'll meet ten to twelve| meaning `from ten o'clock to twelve o'clock'.
 ;
 ; <type val="n_np_x-to-y-sg_le">
 ; <description>Diadic n 'to' (XtoY) -sg np cmp  
@@ -14638,7 +14677,7 @@ n_np_x-to-y-sg_le := n_x_to_y_lexent &
   [ SYNSEM 
     [ LOCAL 
       [ CAT 
-	[ HEAD [ MINORS.MIN interval_rel,
+	[ HEAD [ MINORS.MIN interval_modable_rel,
 		 AUX +,
 		 PRD - ],
 	  VAL [ SPR < [ LOCAL 
@@ -14649,8 +14688,8 @@ n_np_x-to-y-sg_le := n_x_to_y_lexent &
 			MODIFD notmod_or_lmod ],
 		      unexpressed_reg &
 		      [ LOCAL.CAT.HEAD det,
-			--MIN abstr_def_or_udef_q_rel,
-			OPT - ] >,
+			OPT +,
+			--MIN abstr_def_or_udef_q_rel ] >,
 		COMPS < [ --MIN named_or_meas_rel,
 			  LOCAL [ AGR.PNG.PN 3s,
 				  CAT.VAL.SPR *olist* ] ] > ] ],
@@ -15455,7 +15494,8 @@ av_-_s-cp-pr-inv-ell_le := norm_adv_word &
 			 HEAD [ MINORS.MIN adv_rel,
 				PRD -,
 				MOD < [ LOCAL.CAT 
-					 [ HEAD [ INV +,
+					 [ HEAD verb &
+						[ INV +,
 						  MINORS.ALTMIN ellipsis_rel ],
 					   MC na ] ] > ] ] ] ].
 
@@ -18166,12 +18206,15 @@ subconj_cp_cp-gap_synsem := subconj_lex_synsem & lex_synsem &
 ; VP modification and one for S.  But let's try managing with just one entry.
 ; DPF 2011-04-17 - Removed identify of COMPS..PSF and INDEX.SF, since this
 ; blocked |this is why we arise to arrive|.  Don't recall why this was here.
+;; DPF 2016-09-09 - Re 28-jul-06: But requiring XARG to be non_expl prevents
+;; analysis of e.g. |in order to grow corn, it has to rain| or |in order to
+;; grow corn, there has to be rain| or |in order to win, it is known that runs 
+;; have to be scored|.  So remove this constraint, and also remove the identity
+;; of MOD..SUBJ..INDEX and HOOK..XARG and COMPS..XARG for the same reason.
 
 subconj_bse_or_inf_synsem := basic_onearg_subconj_synsem & subconj_lex_synsem &
   [ LOCAL [ CAT [ HEAD 
-		  [ MOD 
-		     < [ MODIFD.LPERIPH -,
-			 LOCAL.CAT.VAL.SUBJ.FIRST.LOCAL.CONT.HOOK.INDEX #xarg]>,
+		  [ MOD < [ MODIFD.LPERIPH - ] >,
 		    PRD + ],
                   VAL [ SPR < [ --MIN just_only_deg_rel ] >,
 			COMPS < [ LOCAL 
@@ -18179,11 +18222,9 @@ subconj_bse_or_inf_synsem := basic_onearg_subconj_synsem & subconj_lex_synsem &
                                       [ VAL [ SPR *olist* ] ],
                                   CONT.HOOK [ LTOP #vpltop,
                                               INDEX event &
-                                                [ E.TENSE no_tense ],
-                                              XARG non_expl-ind & #xarg ]]] > ],
+                                                [ E.TENSE no_tense ] ] ] ] > ],
                   HC-LEX - ],
-            CONT [ HOOK.XARG #xarg,
-		   RELS <! subord_relation & [ ARG2 #subord ] !>,
+            CONT [ RELS <! subord_relation & [ ARG2 #subord ] !>,
                    HCONS <! qeq, 
                             qeq & [ HARG #subord,
                                     LARG #vpltop ] !>,
@@ -20849,7 +20890,10 @@ comp_how_about_n_or_p_lexent := how_about_word &
 
 ;; DPF 2016-05-02 - Restrict complement to [PRD +] to exclude subordinate
 ;; clauses, including |why you strict?|
-
+;; DPF 2016-08-07 - Re 2016-05-02: But this also blocks |how about two to three|
+;; so let's draw the distinction instead using SUBJ *synnull* since subord adv
+;; phrases are SUBJ *anti_null*.
+;;
 ; how about
 ; <type val="x_xp_howabt-n-p_le">
 ; <description>WH-about, NP or PP comp          
@@ -20859,8 +20903,8 @@ comp_how_about_n_or_p_lexent := how_about_word &
 ; </type>
 x_xp_howabt-n-p_le := comp_how_about_n_or_p_lexent &
   [ SYNSEM.LOCAL [ CAT.VAL.COMPS < [ --SIND #ind,
-                                     LOCAL.CAT.HEAD.PRD +,
-                                     OPT - ] >,
+				     LOCAL.CAT.VAL.SUBJ *synnull*,
+				     OPT - ] >,
                    CONT.RELS <! relation, [ ARG2 #ind ] !> ] ].
 
 ; how long before the end?  how long before kim arrives?
@@ -20964,10 +21008,12 @@ x_-_why_le := basic_how_about_word &
 ; arrive"
 ;; DPF 2012-08-09 - Added SPR *olist* to prevent spurious attachment of 
 ;; `like' adverbs to both N-bar and NP, as in |Kim though though arose.|
+;; DPF 2016-09-15 - Re 2012-08-09 - But we do (for now, at least) want to
+;; allow some subtypes to attach to N-bar, such as |or so| of |ten feet or so|
+;; in order to get |[75% or more] reliable|.  So push this down to subtypes.
 
 basic_disc_adv_synsem := synsem &
-  [ LOCAL [ CAT [ HEAD [ MOD < [ LOCAL.CAT [ MC #mc,
-                                             VAL.SPR *olist* ] ] > ],
+  [ LOCAL [ CAT [ HEAD [ MOD < [ LOCAL.CAT.MC #mc ] > ],
 		  VAL [ SUBJ < >,
 			SPR < >,
 			COMPS < >,
@@ -21115,11 +21161,14 @@ disc_adv_like_synsem := basic_disc_adv_synsem & lex_synsem &
 		   ICONS <! !> ] ],
     LKEYS.KEYREL.PRED abstr_excl_rel ].
 
-adv_disc_like_lexent := noncqr-h-nab &
+basic_adv_disc_like_lexent := noncqr-h-nab &
   [ SYNSEM disc_adv_like_synsem &
            [ LOCAL.CONT.HOOK.LTOP #ltop,
              LKEYS.KEYREL [ LBL #ltop,
                             PRED excl_rel ] ] ].
+
+adv_disc_like_lexent := basic_adv_disc_like_lexent &
+  [ SYNSEM.LOCAL.CAT.HEAD.MOD < [ LOCAL.CAT.VAL.SPR *olist* ] > ].
 
 ;; DPF 2012-10-23 - Generlized LPERIPH from na to na_or_+ in order to also
 ;; get |Kim, that is, the hero, arrived|
@@ -21220,8 +21269,9 @@ av_-_dc-like-po-pnct_le := adv_disc_like_lexent &
 ; <nex>
 ; <todo>
 ; </type>
-av_-_dc-meas-po_le := adv_disc_like_lexent &
+av_-_dc-meas-po_le := basic_adv_disc_like_lexent &
  [ SYNSEM.LOCAL.CAT [ HEAD.MOD < [ --MIN abstr_meas_nom_rel,
+				   LOCAL.CAT.VAL.SPR.FIRST.OPT -,
                                    PUNCT.RPUNCT comma_or_pair_or_no_punct ] >,
                       POSTHD + ] ].
 
@@ -21339,18 +21389,27 @@ x_-_wh-the-hell_le := noncqr-h-nab &
 ; specifiers of the sp-hd_n_c rule; preferring instead the sp-hd_hc_c rule for "nine 
 ; to ten pm'.  Can't say SPEC < > since particle preps want NP complement
 ; which is SPEC < anti_synsem_min >.
-;; DPF 2014-07-08 - These can't be stamped INFLECTED + because we also see
+;; DPF 2014-07-08 - These can't be stamped INFLECTD + because we also see
 ;; them as nonheads in compounds, as in |the six o'clock news|.  So change to
 ;; INFLECTD -, and count on the AGR..PN 3s to exclude plural inflection.
 ;; DPF 2015-05-18 - Added PRD + to prevent these as non-heads in N-N compounds,
 ;; now that INFLECTD no longer stops them.
+;; DPF 2016-08-06 - Removed MODIFD notmod since this prevented the phrase
+;; |ten to twelve| from undergoing npadv rule (because MODIFD value of spec-hd
+;; phrase is identified with MODIFD value of left dtr, and npadv rule requires
+;; dtr to have a MODIFD value of hasmod).  Let's see what happens.  FIX?
+;; And RE 13-May-01: We do want |eleven in the morning| to be ordinary modif,
+;; so instead add NORM no_rel to prevent modification by relative clauses.
+;; DPF 2016-08-26 - Re 2015-05-18 - But we want |the ten thirty departure|,
+;; and already have the LEX feature to prevent |the ten departure|, so remove
+;; PRD constraint.
 ;;
 basic_hour_synsem := count_noun_synsem &
   [ LOCAL 
       [ CAT [ HEAD noun & [ POSS -,
 			    MINORS [ MIN numbered_hour_rel,
-				     ALTMIN implicit_q_rel ],
-			    PRD +,
+				     ALTMIN implicit_q_rel,
+				     NORM no_rel ],
 			    MOD < > ],
 	      VAL [ SUBJ < >,
 		    SPR < [ --MIN just_only_deg_rel,
@@ -21380,43 +21439,38 @@ basic_hour_synsem := count_noun_synsem &
 			 ICONS <! !> ],
 	AGR #index,
 	ARG-S < > ],
+      NONLOC non-local_none,
       LKEYS [ ALTKEYREL [ LBL #nhand,
 			  PRED basic_numbered_hour_rel,
 			  ARG0 #index & [ PNG.PN 3s,
 					  SORT time ] ],
 	      ALT2KEYREL [ PRED def_implicit_q_rel,
 			   ARG0 #index,
-			   RSTR #rhand ] ],
-      MODIFD notmod & [ RPERIPH + ] ].
+			   RSTR #rhand ] ] ].
 
-basic_abstr_hour_word := noncqrs-m & basic_noun_word &
-  [ INFLECTD na_or_-,
-    SYNSEM basic_hour_synsem & 
-	   [ LOCAL.CONT [ RELS.LIST < #altkeyrel, #alt2keyrel, ... >,
-			  HCONS <! qeq !> ],
-	     LKEYS [ ALTKEYREL #altkeyrel & 
-			       [ PRED numbered_hour_rel ],
-		     ALT2KEYREL #alt2keyrel ] ] ].
-
-;; |at three|
-abstr_hour_word := basic_abstr_hour_word &
- [ SYNSEM.LOCAL [ CAT.VAL [ COMPS < #ampmcomp >,
-			    KCMP #ampmcomp ],
-		  CONT [ HOOK.INDEX #ind,
-			 RELS <! [ ARG0 #ind ],
-			       relation !> ] ] ].
+;; DPF 2016-08-07 - These were INFLECTD na_or_-, but now that we used n-modif
+;; to admit |eleven in the morning|, we would get spurious ambig since that
+;; rule only constrains the dtr to INFLECTD na_or_+.  So change to INFLECTD -,
+;; and see what the na was for.
+;; DPF 2016-08-26 - Re 2016-08-07: The INFLECTD na would be necessary to let us
+;; admit |the ten thirty departure| since the head-comp rule requires the head
+;; to be na_or_+.  But since we now have a lexical rule applying to |ten| to
+;; add the complement, we'll have the rule change INFLECTD, so we can continue
+;; to avoid the above ambiguity.
+;; 
+abstr_hour_word := noncqrs-m & basic_noun_word &
+  [ INFLECTD -,
+    SYNSEM basic_hour_synsem ].
 
 ; |at three twenty|
 hour_np_synsem := basic_hour_synsem &
-  [ LOCAL [ CAT.VAL [ COMPS < [ LOCAL [ CAT [ HEAD noun & 
-						   [ MINORS.MIN minute_n_rel ],
-					      VAL [ SPR *olist*,
-						    COMPS *olist*,
-						    SPEC *synlist* ] ],
+  [ LOCAL [ CAT.VAL [ COMPS < [ LOCAL [ CAT [ HEAD intadj2,
+					      VAL.COMPS *olist* ],
 					CONJ cnil,
-					CONT.HOOK.INDEX #minind ],
-				NONLOC.SLASH 0-dlist,
+					CONT.HOOK [ LTOP #mlbl,
+						    XARG #minind ] ],
 				OPT -,
+				NONLOC.SLASH 0-dlist,
 				PUNCT.LPUNCT no_punct ],
 			      #ampmcomp >,
 		      KCMP #ampmcomp ],
@@ -21429,6 +21483,13 @@ hour_np_synsem := basic_hour_synsem &
 			 [ PRED udef_q_rel,
 			   ARG0 #cind,
 			   RSTR #rhand ],
+			 [ PRED minute_n_rel,
+			   LBL #mlbl,
+			   ARG0 #minind & ref-ind,
+			   CFROM #cfrom, CTO #cto ],
+			 [ PRED def_implicit_q_rel,
+			   ARG0 #minind,
+			   CFROM #cfrom, CTO #cto ],
 			 #altkeyrel & [ ARG0 #index ],
 			 #alt2keyrel !>,
 		   HCONS <! qeq, qeq & [ HARG #rhand, LARG #clbl ] !> ] ],
@@ -21442,7 +21503,24 @@ hour_np_synsem := basic_hour_synsem &
 ; <todo>
 ; </type>
 n_-_pn-hour_le := abstr_hour_word &
-  [ SYNSEM.LEX - ].
+  [ SYNSEM [ LOCAL [ CAT.VAL [ COMPS < #kcmp >,
+			       KCMP #kcmp ],
+		     CONT [ HOOK.INDEX #ind,
+			    RELS <! #altkeyrel & [ ARG0 #ind ],
+				    #alt2keyrel !>,
+			    HCONS <! qeq !> ] ],
+	     LEX -,
+	     LKEYS [ ALTKEYREL #altkeyrel,
+		     ALT2KEYREL #alt2keyrel ] ] ].
+
+; <type val="n_-_pn-hour_le">
+; <description>Named hour of day with oblig minute complement
+; <ex>B won at ten oh four.
+; <nex>
+; <todo>
+; </type>
+n_np_pn-hour_le := abstr_hour_word &
+  [ SYNSEM hour_np_synsem & [ LEX + ] ].
 
 ; sixish
 ; <type val="n_-_pn-hour-apx_le">
@@ -21451,20 +21529,23 @@ n_-_pn-hour_le := abstr_hour_word &
 ; <nex>
 ; <todo>
 ; </type>
-n_-_pn-hour-apx_le := basic_abstr_hour_word &
-  [ SYNSEM.LOCAL [ CAT.VAL [ COMPS < #ampmcomp >,
-			     KCMP #ampmcomp ],
-		   CONT [ HOOK [ LTOP #hand,
-				 INDEX #arg0 ],
-			  RELS <! relation &
-			        [ LBL #hand,
-				  ARG0 #arg0,
-				  CFROM #cfrom, CTO #cto ],
-			         relation, 
-			         [ LBL #hand,
-                                   PRED approx_grad_rel,
-				   ARG1 #arg0,
-				   CFROM #cfrom, CTO #cto ] !> ] ] ].
+n_-_pn-hour-apx_le := abstr_hour_word &
+  [ SYNSEM [ LOCAL [ CAT.VAL [ COMPS < #ampmcomp >,
+			       KCMP #ampmcomp ],
+		     CONT [ HOOK [ LTOP #hand,
+				   INDEX #arg0 ],
+			    RELS <! #altkeyrel &
+				  [ LBL #hand,
+				    ARG0 #arg0,
+				    CFROM #cfrom, CTO #cto ],
+				  #alt2keyrel,
+				  [ LBL #hand,
+				    PRED approx_grad_rel,
+				    ARG1 #arg0,
+				    CFROM #cfrom, CTO #cto ] !>,
+			    HCONS <! qeq !> ] ],
+	     LKEYS [ ALTKEYREL #altkeyrel,
+		     ALT2KEYREL #alt2keyrel ] ] ].
 
 ; <type val="n_np_pn-hour-gen_le">
 ; <description>Named hour, generic              
@@ -21473,8 +21554,10 @@ n_-_pn-hour-apx_le := basic_abstr_hour_word &
 ; <todo>
 ; <native> n_-_pn-hour_le
 ; </type>
-n_np_pn-hour-gen_le := abstr_hour_word & generic_ne_lex_entry &
-  [ SYNSEM.LEX - ].
+n_np_pn-hour-gen_le := abstr_hour_word & generic_lex_entry &
+  [ SYNSEM hour_np_synsem &
+	   [ LKEYS.ALTKEYREL.CARG #carg ],
+    TOKENS.+LIST < [ +CARG #carg ] > ].
 
 abstr_minute_word := np_word_no_aff &
   [ SYNSEM [ LOCAL [ CAT.HEAD intadj2 &
@@ -21681,6 +21764,11 @@ d_-_month_le := abstr_det_word &
   [ SYNSEM det_date_synsem &
 	     [ LOCAL.CAT.HEAD.MINORS.ALTMIN mofy_rel ] ].
 
+;; DPF 2016-08-07 - This type seems to be necessary for non-head of compounds
+;; as in |my Monday the tenth appointment|, but we don't want the spurious
+;; ambiguity under normal conditions, as in |Monday the tenth is good|.  So
+;; let's constrain the spec nominal to be [CASE no_case].
+;;
 ; <type val="d_-_month_le">
 ; <description>Det, day-of-week plus 'the'            
 ; <ex>This Friday the 13th party began.
@@ -21689,7 +21777,8 @@ d_-_month_le := abstr_det_word &
 ; </type>
 d_-_dow_le := abstr_det_word &
   [ SYNSEM det_date_synsem &
-	   [ LOCAL.CAT.HEAD.MINORS.ALTMIN dofw_rel ] ].
+	   [ LOCAL.CAT [ HEAD.MINORS.ALTMIN dofw_rel,
+			 VAL.SPEC.FIRST.LOCAL.CAT.HEAD.CASE no_case ] ] ].
 
 common_noun_nomod_comp_synsem := basic_count_noun_synsem & 
                                  nonpro_nomod_synsem & two_arg.
@@ -21819,10 +21908,14 @@ generic_dom_synsem := basic_noun_synsem & lex_synsem &
 ;; be *unexplist*.  Happily, even without this constraint, these guys do not
 ;; undergo the plural/mass bare-NP rule because they are DIV -, and not the
 ;; bare-NP num rule because their MIN value is incompatible.
+;; DPF 2016-08-06 - Added SPR expressed_synsem to avoid 
+;; |eleventh in the morning| from becoming bare-NP, even though its HEAD value
+;; is partn.
 ;;
 basic_dom_synsem := generic_dom_synsem & count_noun_synsem &
   [ LOCAL [ CAT [ HEAD partn & [ MOD < > ],
-		  VAL [ SPR < [ --MIN quant_or_wh_rel,
+		  VAL [ SPR < expressed_synsem &
+			      [ --MIN quant_or_wh_rel,
 				LOCAL.AGR.PNG.PN 3s,
 				OPT - ],
 			      [ OPT + ] >,
