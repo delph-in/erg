@@ -134,7 +134,7 @@ one_arg := basic_one_arg &
   [ LOCAL.CONT [ HCONS <! !>,
 		 ICONS <! !> ] ].
 
-basic_basic_two_arg := lex_synsem &
+basic_basic_two_arg := basic_lex_synsem &
   [ LOCAL [ ARG-S < [ NONLOC [ SLASH [ LIST #smiddle,
 				       LAST #slast ],
 			       REL [ LIST #rmiddle,
@@ -155,7 +155,7 @@ basic_basic_two_arg := lex_synsem &
                    LAST #qlast ] ] ].
 
 
-basic_two_arg := basic_basic_two_arg &
+basic_two_arg := basic_basic_two_arg & lex_synsem &
   [ LOCAL [ ARG-S < [ ],
 		    [ LOCAL.CONT.HOOK.--SLTOP #sltop ] >,
 	    CONT.HOOK.--SLTOP #sltop ] ].
@@ -3328,7 +3328,7 @@ cp_comp_verb := norm_basic_verb_synsem.
 ;; --SLTOP identity (of complement and self) down to this type's subtypes that
 ;; do not allow main-clause complements.
 ;;
-basic_cp_fin_inf_intrans_verb := fin_or_inf_cp_prop+ques_verb & 
+basic_cp_fin_inf_intrans_verb := fin_or_inf_cp_prop+ques_verb &
 			   basic_cp_intrans_subst & basic_basic_two_arg & 
 			   arg12h_lt & cp_passivable_verb & cp_comp_verb.
 
@@ -3770,6 +3770,10 @@ NP_particle_ppfrom_verb := NP_particle_pp_verb &
   [ LOCAL.CAT.VAL.COMPS < synsem, synsem,
 			  [ LOCAL.CAT.HEAD.MINORS.MIN _from_p_sel_rel ]> ].
 
+NP_particle_ppin_verb := NP_particle_pp_verb &
+  [ LOCAL.CAT.VAL.COMPS < synsem, synsem,
+			  [ LOCAL.CAT.HEAD.MINORS.MIN _in_p_sel_rel ]> ].
+
 ; 'give him back his dog'
 NP_particle_np_verb := generic_NP_particle_verb & NP_particle_np_subst &
                        NP_particle_np_lt.
@@ -3940,7 +3944,12 @@ passive_unerg_neg_synsem := basic_passive_unerg_synsem &
     LKEYS.ALTKEYREL #altkeyrel ].
 
 ; 'Kim was referred to often'
-prep_passive_synsem := basic_passive_synsem & particle_subst & basic_three_arg &
+;; DPF 2016-10-08 - We can't make this inherit from basic_three_arg, since
+;; we also want it to apply to `make' in |was made up of X| which is four-arg.
+;; So instead have to make sure the nonloc values are correclty linked up from
+;; dtr to mother in the lexical rules that use this type.
+;; 
+prep_passive_synsem := basic_passive_synsem & particle_subst &
   [ LOCAL.CAT.VAL.COMPS *obliquecons* &
                         < synsem & [ LOCAL.CAT [ HEAD prep,
 						 VAL.COMPS *cons* ] ],
@@ -6715,6 +6724,11 @@ n_-_m-nomod_le := noun_word &
 	     MODIFD lmod & [ LPERIPH na_or_+,
 			     RPERIPH + ] ] ].
 
+;; DPF 2016-09-28 - Worked hard to set up MIN time_nomod_rel just for this
+;; mass noun `time', but it's wrong: |the amount of time we waited|.  So
+;; change to non_day_time_rel, and maybe revisit whatever ambiguity we were 
+;; trying to block with this special entry.
+;;
 ; <type val="n_-_m-time_le">
 ; <description>Intransitive mass noun, only for `time'
 ; <ex>We arrived at breakfast time.
@@ -6723,7 +6737,7 @@ n_-_m-nomod_le := noun_word &
 ; </type>
 n_-_m-time_le := noun_word &
   [ SYNSEM mass_noun_onearg_synsem &
-	   [ LOCAL [ CAT.HEAD [ MINORS.MIN time_nomod_rel,
+	   [ LOCAL [ CAT.HEAD [ MINORS.MIN non_day_time_rel,
 				--BARE - ],
 		     CONT.RELS <! relation !> ],
 	     MODIFD notmod ] ].
@@ -7496,6 +7510,20 @@ n_-_c-pl-nocnh_le := n_-_c-pl_lexent &
   [ SYNSEM.LOCAL.CAT [ HEAD.MINORS.NORM norm_rel,
 		       VAL.SPR < expressed_synsem > ] ].
 
+;; DPF 2016-09-28 - Well, we want to allow |Japanese visit often| unlike
+;; |*French visit often|, so make a variant of the above which still blocks
+;; non-hd compound use, but leaves spr optional.
+;;
+; <type val="n_-_c-pl-nocnh-ospr_le">
+; <description>Icn, plur, inflected, no non-head in N-N cpds, expressed spr
+; <ex>Japanese are arriving.
+; <nex>
+; <todo>
+; </type>
+n_-_c-pl-nocnh-ospr_le := n_-_c-pl_lexent &
+  [ SYNSEM.LOCAL.CAT.HEAD.MINORS.NORM norm_rel ].
+
+
 ;; DPF 2014-06-12 - The terms |percent| and |%| create unwanted ambiguity if
 ;; allowed to combine without of-PP complements, so add plural-only nominative
 ;; case entry to admit |ten percent arise| while limiting ambiguity.
@@ -7703,7 +7731,8 @@ n_-_m-gr_le := n_group_nocomp_lexent &
 
 n_part_lexent := basic_noun_noaffix_word &
   [ SYNSEM partitive_noun_synsem &
-	   [ LOCAL [ CAT.VAL.SPR.FIRST [ LOCAL.CAT.HEAD adv,
+	   [ LOCAL [ CAT.VAL.SPR.FIRST [ LOCAL.CAT [ HEAD adv,
+						     VAL.SPR *unexplist* ],
 					 --MIN just_only_deg_rel ],
                      CONT [ RELS.LIST < #keyrel, #altkeyrel, ... >,
                             HCONS <! qeq !>,
@@ -9934,7 +9963,8 @@ generic_pro_adv_word := que_word & basic_pronoun_word &
         [ CAT [ HEAD #head & 
                      [ MINORS.ALTMIN indef_or_udef_rel ],
                 VAL [ SPR < [ --MIN degree_rel,
-                              LOCAL [ CAT.HEAD adv,
+                              LOCAL [ CAT [ HEAD adv,
+					    VAL.SPR *unexplist* ],
 				      CONT.HOOK [ LTOP #khand,
 						  XARG #inst ] ],
                               NONLOC [ QUE 0-dlist,
@@ -10018,7 +10048,8 @@ n_deictic_pro_lexent := norm_pronoun_word &
       [ CAT [ HEAD.MINORS [ MIN generic_nom_rel,
                             ALTMIN demonstrative_q_rel ],
               VAL [ SPR < [ --MIN just_only_deg_rel,
-                            LOCAL.CONT.HOOK.LTOP #khand,
+                            LOCAL [ CAT.VAL.SPR *unexplist*,
+				    CONT.HOOK.LTOP #khand ],
                             NONLOC [ QUE 0-dlist,
                                      REL 0-dlist ] ],
 			  anti_synsem_min & [ OPT - ] >,
@@ -10070,7 +10101,8 @@ n_pp_pr-dei-3pl_le := noncqrs-m-nab & basic_pronoun_word &
     [ LOCAL [ CAT [ HEAD.MINORS [ MIN generic_nom_rel,
                                   ALTMIN demonstrative_q_rel ],
                     VAL [ SPR < [ --MIN just_only_deg_rel,
-                                  LOCAL.CONT.HOOK.LTOP #dhand,
+                                  LOCAL [ CAT.VAL.SPR *unexplist*,
+					  CONT.HOOK.LTOP #dhand ],
                                   NONLOC [ QUE 0-dlist,
                                            REL 0-dlist ] ],
 				anti_synsem_min & [ OPT - ] >,
@@ -10267,7 +10299,7 @@ tag_synsem := lex_synsem &
 ;; rule does not apply to non-conjoined adjectives.  (Without this constraint,
 ;; RNR applied in |sequences are the same in every person|).
 
-basic_adj_synsem_lex_or_phrase := canonical_synsem &
+basic_adj_synsem_lex_or_phrase := canonical_lex_or_phrase_synsem &
   [ LOCAL [ AGR #agr,
             CAT [ HEAD [ MINORS.MIN basic_adj_rel ],
 		  VAL [ SUBJ < >,
@@ -10394,10 +10426,12 @@ basic_adj_onearg_synsem := basic_adj_synsem & one_arg &
 adj_twoarg_synsem := adj_synsem & two_arg.
 
 ; For comparatives and other semantically complex adjectives with new INDEX
-adj_unsp_ind_synsem := basic_adj_lex_synsem & lex_synsem & 
+basic_adj_unsp_ind_synsem := basic_adj_lex_synsem &
 		       adj_synsem_lex_or_phrase & isect_synsem &
   [ LOCAL.CONT.HOOK.INDEX #ind,
     LKEYS.KEYREL.ARG0 #ind ].
+
+adj_unsp_ind_synsem := basic_adj_unsp_ind_synsem & lex_synsem.
 
 adj_unsp_ind_onearg_synsem := adj_unsp_ind_synsem & one_arg &
   [ LOCAL.CAT [ HEAD.MINORS.MIN abstr_adj_rel,
@@ -10407,17 +10441,22 @@ adj_unsp_ind_twoarg_synsem := adj_unsp_ind_synsem & two_arg.
 ;; DPF 2015-09-16 - Generalized SPR's MIN to allow `much' alongside 'very'
 ;; for deverbal adjectives, so we can admit |the much admired cat| alongside
 ;; |the very respected teacher|.
+;; DPF 2016-10-06 - Removed the requirement that the MOD element be of type
+;; `synsem' since this runs afoul of the constraint added 29-apr-07 to the
+;; type `extracted_adj_int_vp_phrase', which wants its MOD to be compatible
+;; with *anti_list*.  Should be okay, but monitor and maybe FIX?
 ;;
 basic_adj_synsem_constr := norm_adj_synsem &
   [ LOCAL [ CAT [ HEAD adj &
-		       [ MOD < synsem &
-			       [ LOCAL intersective_mod,
+		       [ MOD < [ LOCAL intersective_mod,
 				 NONLOC.REL 0-dlist ] >,
 			 MINORS [ MIN norm_adj_rel,
 				  NORM norm_rel ] ],
 		  VAL [ SPR < [ --MIN much_or_more_or_very_deg_rel,
-				LOCAL [ CAT.HS-LEX #hslx ],
-				LEX + ], anti_synsem_min >,
+				LOCAL [ CAT [ HS-LEX #hslx,
+					      VAL.SPR *unexplist* ] ],
+				LEX + ], 
+			      anti_synsem_min >,
 			SPEC < > ],
 		  HS-LEX #hslx ] ],
     NONLOC non-local_none ].
@@ -10504,11 +10543,35 @@ intrans_adj_synsem := adj_synsem & one_arg &
   [ LOCAL.CAT [ HEAD.MINORS.MIN abstr_adj_rel,
                 VAL.COMPS < > ] ].
 
-attr_adj_constr_synsem := norm_adj_synsem & isect_synsem &
-			  one_arg & basic_adj_synsem & nonprd_synsem &
-  [ LOCAL.CAT [ HEAD.MINORS.MIN abstr_adj_rel,
-                VAL.COMPS < >,
-		POSTHD - ],
+attr_adj_constr_synsem := adj_synsem_lex_or_phrase & one_arg & 
+			  abstr_lex_synsem &
+  [ LOCAL 
+    [ CAT [ HEAD adj_or_intadj &
+		 [ MINORS [ MIN abstr_adj_rel,
+			    ALTMIN #altmin ],
+		   TAM #tam,
+		   PRD -,
+		   MOD < [ LOCAL intersective_mod ] > ],
+	    VAL [ COMPS < >,
+		  SPR < #spr & 
+			[ LOCAL 
+			  [ CAT [ HEAD.MINORS.ALTMIN #altmin,
+				  VAL [ SPR *olist*,
+					SPEC < [ LOCAL.CAT.HS-LEX #hslex ] > ],
+				  MC na ],
+			    CONT.HOOK.LTOP #ltop ],
+			  NONLOC.SLASH 0-dlist,
+			  OPT + ],
+			anti_synsem_min & [ --MIN degree_rel ] >,
+		  COMPS #comps ],
+	    HS-LEX #hslex,
+	    POSTHD - ],
+      CONT [ HOOK [ LTOP #ltop,
+		    INDEX.E #tam,
+		    XARG basic_non_expl ],
+	     RELS.LIST < [ LBL #ltop ], ... > ],
+      ARG-S < #spr . #comps > ],
+    MODIFD.LPERIPH bool,
     NONLOC.REL 0-dlist ].
 
 basic_attr_adj_synsem := intrans_adj_synsem & nonprd_synsem &
@@ -10523,14 +10586,17 @@ attr_adj_synsem := basic_attr_adj_synsem &
     NONLOC.QUE 0-dlist,
     LKEYS.KEYREL.ARG1 #ind & basic_non_expl-ind ].
 
-pred_adj_synsem := adj_unsp_ind_synsem & prd_synsem &
+basic_pred_adj_synsem := basic_adj_unsp_ind_synsem &
   [ LOCAL [ CAT [ HEAD adj &
-		       [ MINORS.ALTMIN #altmin ],
+		       [ MINORS.ALTMIN #altmin,
+			 PRD + ],
 		  VAL.SPR.FIRST.LOCAL [ CAT.HEAD.MINORS.ALTMIN #altmin,
 					CONT.HOOK.XARG #arg0 ],
 		  POSTHD + ],
             CONT.HOOK.INDEX #arg0 ],
     MODIFD.LPERIPH bool ].
+
+pred_adj_synsem := basic_pred_adj_synsem & adj_unsp_ind_synsem & prd_synsem.
 
 ; Not marked for LEX
 
@@ -10557,7 +10623,7 @@ pred_adj_two_arg_synsem := pred_adj_synsem & two_arg &
             CONT.HOOK.XARG #ind & basic_non_expl ],
     LKEYS.KEYREL.ARG1 #ind ].
 
-basic_trans_adj_pred_synsem := pred_adj_synsem &
+basic_trans_adj_pred_synsem := basic_pred_adj_synsem &
   [ LOCAL [ CAT.VAL.COMPS < canonical_or_unexpressed &
 			    [ --MIN #cmin,
                               LOCAL [ CAT basic_pp_cat,
@@ -10572,10 +10638,26 @@ basic_trans_adj_pred_synsem := pred_adj_synsem &
 		     ARG2 #ind ],
             --COMPKEY #cmin ] ].
 
-trans_adj_pred_two_arg_synsem := basic_trans_adj_pred_synsem & adj_synsem &
+trans_adj_pred_synsem := basic_trans_adj_pred_synsem & pred_adj_synsem.
+trans_adj_pred_two_arg_synsem := trans_adj_pred_synsem & adj_synsem &
 				 two_arg.
-trans_adj_pred_three_arg_synsem := basic_trans_adj_pred_synsem & three_arg &
+trans_adj_pred_three_arg_synsem := trans_adj_pred_synsem & three_arg &
 				   norm_adj_synsem & basic_adj_synsem.
+
+;; DPF 2016-10-07 - Added type not marked for LEX, to allow |rooms available|.
+;; This means copying constraints from types such as two_arg and
+;; norm_adj_lex_synsem, to overcome the default LEX +.
+;;
+trans_adj_pred_two_arg_nolex_synsem := basic_trans_adj_pred_synsem & 
+				       basic_adj_synsem & basic_basic_two_arg &
+				       norm_adj_synsem &
+  [ LOCAL [ CAT [ HEAD basic_adj,
+                  VAL.SPR.FIRST.LOCAL.CONT.HOOK.XARG #arg0 ],
+            CONT.HOOK [ INDEX #arg0,
+			--SLTOP #sltop ],
+	    ARG-S < [ ],
+		    [ LOCAL.CONT.HOOK.--SLTOP #sltop ] > ],
+    LKEYS.KEYREL.ARG0 #arg0 & non_conj_event ].
 
 ; For adjectives like "accessible (by car)" which take a contentful PP compl.
 trans_adj_pp_ind_synsem := pred_adj_two_arg_synsem & adj_synsem &
@@ -10975,14 +11057,15 @@ aj_-_i-spobl_le := reg_intrans_adj &
 		       VAL.SPR.FIRST expressed_synsem ] ].
 
 ; <type val="aj_-_i-nopn_le">
-; <description>Adj (intersective), no comp, no mod of proper NPs
+; <description>Adj (intersective), no comp, no mod of proper NPs, attrib
 ; <ex>We respond with all due respect.
 ; <nex>The due 1998 arrived.
 ; <todo>
 ; </type>
 aj_-_i-nopn_le := reg_intrans_adj &
-  [ SYNSEM.LOCAL.CAT.HEAD [ MOD < [ --MIN norm_nom_rel ] >,
-			    MINORS.MIN norm_adj_rel ] ].
+  [ SYNSEM.LOCAL.CAT [ HEAD [ MOD < [ --MIN norm_nom_rel ] >,
+			      MINORS.MIN norm_adj_rel ],
+		       POSTHD - ] ].
 
 aj_-_i-color_lexent := norm_adj_word &
   [ SYNSEM adj_unsp_ind_onearg_synsem &
@@ -11403,13 +11486,17 @@ aj_-_i-cmpd_lexent := intrans_adj_oddsem &
 ; </type>
 aj_-_i-cmpd_le := aj_-_i-cmpd_lexent.
 
+
+
 ;; {OPT +] is on reg_trans_adj and not on trans_adj_synsem because the 
 ;; comparison_lr uses trans_adj_synsem and requires OPT -. Same for semantics.
 
-adj_trans_lexent := reg_adj_word &
+basic_adj_trans_lexent := norm_adj_word &
   [ SYNSEM trans_adj_pred_two_arg_synsem &
 	   [ LOCAL [ CAT.VAL.COMPS < [] >,
 		     CONT.RELS <! relation !> ] ] ].
+
+adj_trans_lexent := basic_adj_trans_lexent & reg_adj_word.
 
 ; <type val="aj_pp_i_le">
 ; <description>Adj, pp comp w/sem empty prep    
@@ -11436,9 +11523,12 @@ aj_pp_i-er_le := adj_trans_lexent &
 ; <nex>
 ; <todo>
 ; </type>
-aj_pp_i-prd_le := adj_trans_lexent &
-  [ SYNSEM.LOCAL.CAT.HEAD [ PRD +,
-                            MINORS.MIN norm_adj_rel ],
+aj_pp_i-prd_le := norm_adj_word &
+  [ SYNSEM trans_adj_pred_two_arg_nolex_synsem &
+	   [ LOCAL [ CAT [ HEAD [ PRD +,
+				  MINORS.MIN norm_adj_rel ],
+			   VAL.COMPS < [] > ],
+		     CONT.RELS <! relation !> ] ],
     ALTS.ATTRJ - ].
 
 ; <type val="aj_pp_i-obl_le">
@@ -13632,7 +13722,8 @@ p_prd_ptcl_le := basic_prep_word &
   [ SYNSEM basic_prep_nomod_synsem &
            [ LOCAL 
              [ CAT [ HEAD.PRD -,
-                     VAL [ SPR < [ --MIN just_only_deg_rel ] >,
+                     VAL [ SPR < [ LOCAL.CAT.VAL.SPR *unexplist*,
+				   --MIN just_only_deg_rel ] >,
                            COMPS < synsem &
                                    [ LOCAL [ CAT prd_cat,
                                              CONJ cnil,
@@ -14557,6 +14648,10 @@ minute_noun_wcomp_synsem := basic_minute_noun_synsem &
 ;; some post-modified X-to-Y phrases in compounds, as in
 ;; |the city of love to city of flowers tour|.  So remove this constraint, and
 ;; live with the awkwardness of example above.
+;; DPF 2016-10-15 - Push the SPR..COMPS < > constraint down to subtypes, since
+;; at least for the dom subtype as in |June 23 - 25| we want to constrain the
+;; SPR to still have its COMPS nonempty, so we can ensure that it is not
+;; inflected (see below).
 
 basic_n-or-p_x_to_y_lexent := noncqrs-hm &
   [ SYNSEM basic_two_arg &
@@ -14570,7 +14665,7 @@ basic_n-or-p_x_to_y_lexent := noncqrs-hm &
                                       PRD #prd,
                                       MINORS [ MIN nonpro_or_num_rel ] ],
                                     VAL [ SUBJ *olist*,
-                                          COMPS < >,
+                                          COMPS *olist*,
 					  SPEC < [ LOCAL.CAT.VAL.COMPS < > ] >,
 					  SPCMPS < > ] ],
 				  CONT.HOOK.INDEX non_expl,
@@ -14600,7 +14695,8 @@ basic_n-or-p_x_to_y_lexent := noncqrs-hm &
 	LKEYS.--COMPKEY #cmin ] ].
 
 n-or-p_x_to_y_lexent := basic_n-or-p_x_to_y_lexent &
-  [ SYNSEM [ LOCAL [ CAT.VAL.SPR.FIRST.MODIFD notmod_or_lmod,
+  [ SYNSEM [ LOCAL [ CAT.VAL.SPR.FIRST [ MODIFD notmod_or_lmod,
+					 LOCAL.CAT.VAL.COMPS < > ],
 		     CONT [ RELS.LIST < [ LBL #nhand,
 					ARG0 #index,
 					CFROM #from,
@@ -14619,6 +14715,11 @@ n-or-p_x_to_y_lexent := basic_n-or-p_x_to_y_lexent &
 ;; DPF 2013-02-12 - Anchored CFROM and CTO to those of the first rel.
 ;; DPF 2013-06-13 - Added [LPERIPH +] to first SPR, to prevent these
 ;; interval expressions as right members of compounds.
+;; DPF 2016-10-14 - Re 2013-16-13: But we do want these in the head-dtr of
+;; compounds when they are not themselves the head, as in 
+;; |real-time face-to-face event|.  
+;; So instead add constraint MODIFD rmod so these cannot be heads in compounds,
+;; but can still modify the head dtr in a compound.
 ;;
 n_x_to_y_lexent := basic_n-or-p_x_to_y_lexent &
   [ INFLECTD na_or_+,
@@ -14628,8 +14729,7 @@ n_x_to_y_lexent := basic_n-or-p_x_to_y_lexent &
 			     MOD < > ],
 		      VAL [ SPR.FIRST [ --SIND #arg1,
 					LOCAL.CAT.HEAD.MINORS.ALTMIN 
-                                                 abstr_def_or_udef_q_rel,
-					MODIFD.LPERIPH + ],
+                                                 abstr_def_or_udef_q_rel ],
 			    COMPS.FIRST.--SIND #arg2 ] ],
                 CONT nom-obj &
                     [ HOOK.INDEX #index,
@@ -14653,6 +14753,7 @@ n_x_to_y_lexent := basic_n-or-p_x_to_y_lexent &
                                     ARG1 #index,
                                     ARG2 #arg2,
 				    CFROM #from, CTO #to ], ... > ] ],
+	MODIFD rmod,
 	LKEYS.KEYREL #keyrel ] ].
 
 ;; DPF 2010-sept-13 - Removed identity of --MIN on SPR and COMPS, since we
@@ -14684,7 +14785,8 @@ n_np_x-to-y-sg_le := n_x_to_y_lexent &
 			[ AGR.PNG.PN 3s,
 			  CAT [ HEAD.MINORS [ MIN named_or_meas_rel & #sprmin,
 					      ALTMIN impl_or_proper_q_rel ],
-				VAL [ SPR *olist* ] ] ],
+				VAL [ SPR *olist*,
+				      COMPS < > ] ] ],
 			MODIFD notmod_or_lmod ],
 		      unexpressed_reg &
 		      [ LOCAL.CAT.HEAD det,
@@ -14717,7 +14819,8 @@ n_np_x-to-y-pl_le := n_x_to_y_lexent &
 		     AUX +,
 		     PRD - ],
 	      VAL [ SPR < [ --MIN part_nom_rel,
-			    LOCAL.CAT.VAL.SPR *olist*,
+			    LOCAL.CAT.VAL [ SPR *olist*,
+					    COMPS < > ],
 			    MODIFD notmod_or_lmod ],
 			  anti_synsem_min >,
 		    COMPS < [ --MIN abstr_named_rel,
@@ -14741,6 +14844,18 @@ n_np_x-to-y-pl_le := n_x_to_y_lexent &
       LKEYS [ --+COMPKEY card_rel,
 	      --+OCOMPKEY card_rel ] ] ].
 
+;; DPF 2016-10-11 - The SPR was constrained to be LOCAL noninfl_noun_local,
+;; but this prevents |peer to peer| even though we were getting |text to speech|
+;; because |text| also underwent n-opt-comp rule which just gives [LOCAL local]
+;; on mother.  Since the head-spec rule type identifies INFLECTD on mother and
+;; both dtrs, and this lex type sets INFLECTD to na_or_+, we must drop the LOCAL
+;; constraint here.  So let's see if we still overgenerate.
+;; -- Yes, we're getting |old to hire| as a full NP, because we had to undo that
+;; identify of INFLECTD on the two dtrs of the head-spec rule.  So go back to
+;; LOCAL noninfl_noun_local on SPR, and live with the ambig (for now) for those
+;; nouns that have an optional complement, and hence can slip by this 
+;; constraint.
+
 ; <type val="n_nb_x-to-y_le">
 ; <description>Diadic n 'to' (XtoY) - nbar comp and spr
 ; <ex>The text to speech engine worked.
@@ -14748,7 +14863,8 @@ n_np_x-to-y-pl_le := n_x_to_y_lexent &
 ; <todo>
 ; </type>
 n_nb_x-to-y_le := n_x_to_y_lexent &
-  [ SYNSEM 
+  [ INFLECTD na,
+    SYNSEM 
     [ LOCAL 
       [ CAT 
 	[ HEAD [ MINORS.MIN interval_rel,
@@ -14756,7 +14872,8 @@ n_nb_x-to-y_le := n_x_to_y_lexent &
 		 PRD - ],
 	  VAL [ SPR < [ --MIN non_temp_nbar_rel,
 		      	LOCAL noninfl_noun_local &
-			      [ CAT [ VAL.SPR.FIRST synsem & [ OPT - ],
+			      [ CAT [ VAL [ SPR.FIRST synsem & [ OPT - ],
+					    COMPS < > ],
 				      HEAD.--BARE - ],
 				CONT.HOOK [ LTOP #spltop,
 					    INDEX #spind ] ],
@@ -14797,6 +14914,10 @@ n_nb_x-to-y_le := n_x_to_y_lexent &
 ;; DPF 2013-06-13 - Restricted first SPR to be non-inflected, since we
 ;; only want one analysis, and can't easily force them to be inflected.  Using
 ;; constraint [LOCAL noninfl_noun_local].
+;; DPF 2016-10-15 - Re 2013-06-13: For this to continue to work, now that we
+;; make dofm nouns take an optional yofc complement, we constrain the COMPS
+;; list to be non-empty, so the optcomp rule won't apply and thus lose the
+;; type constraint on LOCAL.
 ;;
 n_nb_x-to-y-dom_lexent := n_x_to_y_lexent &
   [ SYNSEM
@@ -14804,7 +14925,8 @@ n_nb_x-to-y-dom_lexent := n_x_to_y_lexent &
       [ CAT [ HEAD.MINORS.MIN interval_modable_rel,
               VAL [ SPR < [ --MIN dofm_rel & #sprmin,
 			    LOCAL noninfl_noun_local &
-				  [ CAT.VAL.SPR.FIRST synsem & [ OPT - ],
+				  [ CAT.VAL [ SPR.FIRST synsem & [ OPT - ],
+					      COMPS *cons* ],
 				    CONT.HOOK [ LTOP #sptop,
 						INDEX #spind ] ] ],
 			  synsem &
@@ -14889,7 +15011,8 @@ p_nb_pre-meas_lexent := basic_n-or-p_x_to_y_lexent &
 		      VAL [ SPR <
 			     [ LOCAL 
 			        [ CAT [ HEAD.MINORS [ MIN meas_nom_rel,
-						      ALTMIN implicit_q_rel ] ],
+						      ALTMIN implicit_q_rel ],
+					VAL.COMPS < > ],
 				  CONT.HOOK [ INDEX #arg1,
 					      XARG #shand ] ],
 			       MODIFD notmod_or_lmod,
@@ -17615,7 +17738,8 @@ free_rel_det_word_gen := noncr-hm-nab &
 			     [ LIST < index  > ],
 			 SLASH 1-dlist &
 			     <! [ CAT.HEAD noun & [ MOD < > ],
-                                  CONT.HOOK.INDEX #arg0 ] !> ] ] ].
+                                  CONT.HOOK.INDEX #arg0,
+				  CONJ cnil ] !> ] ] ].
 
 ; whatever, what
 ; DPF 25-Nov-03 - Removed [SLASH..CASE acc] since also want "whichever books
@@ -18218,8 +18342,7 @@ subconj_bse_or_inf_synsem := basic_onearg_subconj_synsem & subconj_lex_synsem &
 		    PRD + ],
                   VAL [ SPR < [ --MIN just_only_deg_rel ] >,
 			COMPS < [ LOCAL 
-                                [ CAT vp_cat &
-                                      [ VAL [ SPR *olist* ] ],
+                                [ CAT.VAL [ SPR *olist* ],
                                   CONT.HOOK [ LTOP #vpltop,
                                               INDEX event &
                                                 [ E.TENSE no_tense ] ] ] ] > ],
@@ -18235,8 +18358,15 @@ subconj_bse_synsem := subconj_bse_or_inf_synsem &
 				      [ HEAD.MINORS.ALTMIN non_ellipt_rel,
 					VAL.SUBJ < unexpressed_reg > ] ] > ].
 
+;; |so as to ...|
+;;
 subconj_inf_synsem := subconj_bse_or_inf_synsem &
   [ LOCAL.CAT.VAL.COMPS < [ LOCAL.CAT vp_inf_cat ] > ].
+
+;; |in order (for Kim) to ...|
+;;
+subconj_inf_vp_or_s_synsem := subconj_bse_or_inf_synsem &
+  [ LOCAL.CAT.VAL.COMPS < [ LOCAL.CAT s_or_vp_inf_cat ] > ].
 
 ; DPF 2/6/02 - Changed COMPS..SPR synsem to synsem_min in order to support 
 ; e.g. 'I slipped while dancing'
@@ -18658,12 +18788,21 @@ p_vp_bse_le := nonconj & non_affix_bearing &
 
 ; <type val="p_vp_inf_le">
 ; <description>Prep, VP, inf                    
-; <ex>B raced in order to win.
+; <ex>B raced so as to win.
 ; <nex>
 ; <todo>
 ; </type>
 p_vp_inf_le := nonconj & non_affix_bearing &
   [ SYNSEM subconj_inf_synsem ].
+
+; <type val="p_vp_inf-or-s_le">
+; <description>Prep, VP or S, inf                    
+; <ex>B raced in order (for C) to win.
+; <nex>
+; <todo>
+; </type>
+p_vp_inf-or-s_le := nonconj & non_affix_bearing &
+  [ SYNSEM subconj_inf_vp_or_s_synsem ].
 
 ; <type val="p_prd_s_le">
 ; <description>Prep, pred-phr, scopal           
@@ -19645,7 +19784,7 @@ c_xp_and-fract_le := conj_word &
 ;; DPF 2016-02-29 - Replace CONJ phr-conj with complex-conj because it was
 ;; blocking |Kim at al.| with regular np-np_crd-t_c
 ;;
-et_conj_lexent := basic_word &
+basic_et_conj_lexent := basic_word &
   [ INFLECTD +,
     ORTH [ CLASS #class, FROM #from, TO #to, FORM #form ],
     TOKENS tokens &
@@ -19653,17 +19792,16 @@ et_conj_lexent := basic_word &
              +LAST.+TO #to ],
     SYNSEM synsem &
      [ LOCAL [ CAT [ HEAD.MINORS.MIN norm_rel,
-                     VAL [ SPR < >,
-			   COMPS < >,
+                     VAL [ COMPS < >,
 			   SPEC < > ] ],
                CONJ complex-conj & [ CREL #keyrel ],
 	       AGR.PNG png & [ PN 3p ],
                CONT [ HOOK [ LTOP #chand,
                              INDEX #cind ],
                       RELS <! relation & #keyrel &
-                             [ LBL #chand,
-                               ARG0 #cind ] !>,
-                      HCONS <! !>,
+			      [ LBL #chand,
+				ARG0 #cind ] !>,
+		      HCONS <! !>,
 		      ICONS <! !> ] ],
        NONLOC non-local_none,
        LKEYS.KEYREL #keyrel & 
@@ -19672,6 +19810,9 @@ et_conj_lexent := basic_word &
        PUNCT [ LPUNCT comma_or_clause_or_no_punct,
                RPUNCT no_punct ],
        PHON.ONSET.--TL #tl ] ].
+
+et_conj_lexent := basic_et_conj_lexent &
+  [ SYNSEM.LOCAL.CAT.VAL.SPR < > ].
 
 etc_conj_lexent := et_conj_lexent &
   [ SYNSEM.LOCAL.CONT.RELS <! [ PRED _etc_c_rel ] !> ].
@@ -19761,6 +19902,16 @@ c_-_etal_le := et_conj_lexent &
 c_-_name-few_le := et_conj_lexent &
   [ SYNSEM [ LOCAL.CONT.RELS <! [ PRED _to+name+a+few_c_rel ] !>,
              PUNCT.PNCTPR ppair ] ].
+
+;; DPF 2016-10-12 - Version for N-bars as in |my cat, mouse, etc.|, with
+;; non-empty SPR.
+;;
+c_-_etc-nb_le := basic_et_conj_lexent &
+  [ SYNSEM [ LOCAL.CAT [ HEAD noun_or_nomger,
+			 VAL.SPR < synsem & [ OPT - ] > ],
+	     LKEYS.KEYREL [ PRED _etc_c_rel,
+			    ARG0 ref-ind ] ] ].
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; NEG

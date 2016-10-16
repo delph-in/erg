@@ -237,7 +237,7 @@ est_super_adj := local &
 ;;; ND-AFF ('needs affix') is used to determine whether a rule has an overt
 ;;; suffix which triggers the spelling-change rules.
 
-lex_rule_supermost := word_or_lexrule &
+basic_lex_rule_supermost := word_or_lexrule &
   [ ND-AFF bool,
     DTR sign & [ IDIOM #idiom,
                  DIALECT #dialect,
@@ -252,7 +252,7 @@ lex_rule_supermost := word_or_lexrule &
     IDIOM #idiom,
     DIALECT #dialect,
     ALTS #alts,
-    SYNSEM abstr_lex_synsem & 
+    SYNSEM canonical_lex_or_phrase_synsem &
            [ LOCAL local &
                    [ CONT [ RELS [ LIST #rfirst,
                                    LAST #rlast ],
@@ -273,6 +273,8 @@ lex_rule_supermost := word_or_lexrule &
 	     ICONS [ LIST #icmiddle,
                      LAST #iclast ] ] ].
 
+lex_rule_supermost := basic_lex_rule_supermost &
+  [ SYNSEM abstr_lex_synsem ].
 
 ; DPF 14-Aug-99 - Reorder appending of RELS from above since treatment of 
 ; fragments looks for the first scope hole from left to right in RELS, and 
@@ -1052,9 +1054,12 @@ intrans_nominal_gerund := nominal_gerund &
 ; DPF 26-aug-07 - Re 23-may-07: Still want to require that verbs with
 ; empty PP complements still require them. So propagate OPT value from DTR's
 ; COMP to mother.
-
+;; DPF 2016-10-03 - Changed DTR.SYNSEM from unsat_two_arg_subst to
+;; abstr_lex_synsem so we can also get derived verbs such as |overloading|
+;; to be input, where the synsem type is derived_verb_synsem.
+;;
 intrans_pp_nominal_gerund := nominal_gerund &
-  [ DTR.SYNSEM unsat_two_arg_subst &
+  [ DTR.SYNSEM abstr_lex_synsem &
 	       [ LOCAL.CAT.VAL.COMPS < phr_synsem &
                                        [ LOCAL #local & 
                                                [ CAT.HEAD prep ],
@@ -1111,8 +1116,11 @@ intrans_pp_nominal_gerund := nominal_gerund &
 trans_nominal_gerund := nominal_gerund &
   [ DTR [ ALTS.NGER +,
           SYNSEM trans_subst & 
-	       [ LOCAL.CAT.VAL.COMPS < [ --SIND #index,
-                                         NONLOC #nonloc ] . *olist* >,
+	       [ LOCAL.CAT.VAL.COMPS < synsem & 
+				       [ LOCAL [ CAT nomp_cat_acc_min,
+						 CONJ cnil ],
+					 --SIND #index,
+					 NONLOC #nonloc ] . *olist* >,
                  LKEYS.--COMPKEY independent_rel ] ],
     SYNSEM.LOCAL [ CAT.VAL.COMPS < [ --MIN _of_p_sel_rel,
                                      LOCAL [ CAT basic_pp_cat,
@@ -1265,9 +1273,11 @@ dom_ppof_lr := lex_rule_basic &
 ; Relate transitive predicative adjectives to their intransitive attributive
 ; counterparts
 
-attr_adj_lr := lex_rule &
+attr_adj_lr := basic_lex_rule_supermost & 
   [ ORTH #orth,
-    DTR [ ORTH #orth,
+    DTR word_or_lexrule & #stem &
+	[ ORTH #orth,
+	  INFLECTD +,
 	  ALTS.ATTRJ +,
 	  SYNSEM pred_adj_synsem &
 	         [ LOCAL [ CAT [ HEAD [ MOD #mod,
@@ -1275,20 +1285,36 @@ attr_adj_lr := lex_rule &
 				 VAL [ SUBJ #subj,
 				       SPR #spr,
                                        COMPS *olist*,
-				       SPCMPS #spcmps ] ],
+				       SPCMPS #spcmps ],
+				 MC #mc,
+				 HC-LEX #hclex ],
+			   CONJ cnil,
                            CTXT #ctxt ],
 		   NONLOC #non-local,
-		   MODIFD #modif ] ],
+		   MODIFD #modif,
+		   PUNCT #punct & [ LPUNCT no_punct,
+				    RPUNCT no_punct ] ],
+	  GENRE #genre,
+	  KEY-ARG #keyarg ],
     SYNSEM attr_adj_constr_synsem &
 	  [ LOCAL [ CAT [ HEAD adj &
                                [ MOD #mod,
                                  MINORS.MIN #min ],
 			  VAL [ SUBJ #subj,
 				SPR #spr,
-				SPCMPS #spcmps ] ],
+				SPCMPS #spcmps ],
+			  MC #mc,
+			  HC-LEX #hclex ],
+		    CONJ cnil,
 		    CTXT #ctxt ],
 	    NONLOC #non-local,
-	    MODIFD #modif ],
+	    MODIFD #modif,
+	    PUNCT #punct,
+	    PHON.ONSET #onset ],
+    KEY-ARG #keyarg,
+    ARGS < #stem & [ SYNSEM.PHON.ONSET #onset ] >,
+    INFLECTD +,
+    GENRE #genre,
     C-CONT [ RELS <! !>,
              HCONS <! !>,
 	     ICONS <! !> ] ].
@@ -2250,7 +2276,7 @@ basic_punctuation_rule := lex_rule_supermost & word_or_punct_rule &
                       PHON #phon,
                       PUNCT [ LPUNCT pair_or_no_punct,
 			      RPUNCT.PSF #psf ],
-                      LKEYS #lkeys,
+		      LKEYS #lkeys,
 		      --BRDG #brdg ] ] >,
     SYNSEM lex_punct_synsem &
            [ OPT #opt,
@@ -2261,7 +2287,7 @@ basic_punctuation_rule := lex_rule_supermost & word_or_punct_rule &
              --SIND #sind,
              PHON #phon,
 	     PUNCT.RPUNCT.PSF #psf,
-             LKEYS #lkeys,
+	     LKEYS #lkeys,
 	     --BRDG #brdg ],
     C-CONT.RELS <! !> ].
 
@@ -2513,14 +2539,16 @@ punctuation_italright_rule := basic_punctuation_rule &
 ;; DPF 2016-09-18 - Now that we've added IGNOREQ + on right-drop rule's mother
 ;; (needed separately for handling foreigh-word sequences), let's use it to
 ;; enforce left-before-right dropping rules to avoid spurious ambiguity.
+;; DPF 2016-10-12 - Re 2016-09-18: And hence let's drop the constraint on
+;; dtr being word_or_infl_or_punct_rule, since it was also blocking the attrib
+;; adj analysis of |the ¦icomplete cati¦|.
 ;;
 punct_drop_italleft_rule := basic_punctuation_rule &
   [ INFLECTD #infl,
     SYNSEM.PUNCT [ LPUNCT no_punct,
                    RPUNCT #rpunct,
                    RCLSTR #rclstr ],
-    ARGS < word_or_infl_or_punct_rule &
-	   [ INFLECTD #infl,
+    ARGS < [ INFLECTD #infl,
 	     SYNSEM [ PHON.ONSET con_or_voc,
 		      PUNCT [ RPUNCT #rpunct & no_punct,
 			      RCLSTR #rclstr & [ IGNOREQ - ] ] ],
@@ -2600,6 +2628,7 @@ v_v-pre_rule := verb_prefix_rule.
 v_v-re_rule := verb_prefix_rule.
 v_v-self_rule := verb_prefix_rule.
 v_v-un_rule := verb_prefix_rule.
+v_v-cross_rule := verb_prefix_rule.
 
 basic_noun_prefix_rule := derivational_prefix_rule &
   [ DTR.SYNSEM.LOCAL.CAT.HEAD basic_noun &
@@ -2623,14 +2652,33 @@ n_n-counter-ni_rule := noun_prefix_noninfl_rule.
 ;; DPF 16-02-16 - Can't identify CAT values, since we want the un-prefixing
 ;; rule to change PRD value of daughter from - to bool, in order to get intended
 ;; analysis of |the cat is unchanged|
+;; DPF 2016-10-11 - To avoid spurious reordering of attrib and this rule for
+;; e.g. |unhappy| or |nonlinear|, tried to restrict dtr to exclude lex-rule.
+;; But this is wrong, since we want un- rule to apply to the result of passive,
+;; as in |unintended|.  So let's try constraining dtr to be PRD +, forcing the
+;; attrib-adj lexical rule to apply afterward.
+;; No, the rule converting passive V to adj constrains the output to be PRD -,
+;; of course, to avoid adj analysis for |Kim was hired|.  So if we were going to
+;; use PRD here, it would have to be PRD -, but we are already using the PRD
+;; contrast to allow post-mod for a few adjectives such as |available|, and we
+;; still want |the seat is unavailable|, where this input |available| would 
+;; have to be PRD +.  It might appear that the source of the spurious ambiguity
+;; in ordering is because this rule was not preserving PRD from dtr to mother.
+;; But while we want the adj |evaluated| to be PRD - (to avoid ambiguity), the 
+;; analysis we want for |he was unevaluated| must have |unevaluated| as not 
+;; PRD -.
+;; So instead, let's make the attr-adj rule have its output be of a synsem
+;; type that is not compatible with basic_lex_synsem, and hence it will
+;; have to apply after the adj-prefix rules.
 ;;
 adj_prefix_rule := basic_derivational_prefix_rule &
-  [ DTR.SYNSEM.LOCAL.CAT [ HEAD nonint_adj & 
-				[ MINORS #minors,
-				  MOD #mod ],
-			   VAL #val,
-			   HC-LEX #hclex,
-			   HS-LEX #hslex ],
+  [ DTR word_or_lexrule &
+	[ SYNSEM.LOCAL.CAT [ HEAD nonint_adj & 
+				   [ MINORS #minors,
+				     MOD #mod ],
+			      VAL #val,
+			      HC-LEX #hclex,
+			      HS-LEX #hslex ] ],
     SYNSEM derived_adj_synsem & 
 	   [ LOCAL.CAT [ HEAD [ MINORS #minors,
 				MOD #mod ],
@@ -2640,6 +2688,7 @@ adj_prefix_rule := basic_derivational_prefix_rule &
 
 j_j-co_rule := adj_prefix_rule.
 j_j-un_rule := adj_prefix_rule.
+j_j-non_rule := adj_prefix_rule.
 
 dependency_annotation_lr := lex_rule_supermost & word_or_punct_rule &
   [ ND-AFF +,
