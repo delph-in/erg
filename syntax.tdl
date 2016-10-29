@@ -673,7 +673,7 @@ yesno_phrase := interrog & inv_subj_phrase & head_compositional &
 
 inv_decl_phrase := inv_subj_phrase & non_rel_clause &
   [ SYNSEM [ NONLOC.SLASH 0-dlist,
-	     PUNCT.RPUNCT comma_or_clause_or_no_punct ],
+	     PUNCT.RPUNCT comma_or_clause_or_pair_or_no_punct ],
     HD-DTR.SYNSEM [ LOCAL.CAT.NEGPOL +,
 		    MODIFD lmod ],
     C-CONT.HOOK.INDEX.SF prop ].
@@ -1248,7 +1248,8 @@ subconj_prdp_phr := unary_phrase &
                                   MINORS.NORM no_rel ],
                            VAL [ COMPS < >,
 				 SUBJ *anti_null*,
-                                 SPR < > ] ],
+                                 SPR < >,
+				 SPCMPS < > ] ],
                      CONJ #conj ],
              NONLOC [ SLASH 0-dlist,
                       REL 0-dlist,
@@ -1301,13 +1302,16 @@ subconj_prdp_phr := unary_phrase &
 ;; analysis we want for |In Paris, following the party, we celebrated|.  So
 ;; remove, and note that the unwanted analysis is now blocked for other reasons
 ;; for |the women evaluated their own staffs|
+;; DPF 2016-10-26 - Re 2016-10-04: It's doubtful that we want to impose an
+;; RPERIPH - constraint on the pre-modifying subtypes, since they should not
+;; care about their mod target's right periphery.  And this currently blocks
+;; |halting, we arose to shout.|  So remove, and monitor for possible FIX?
 ;;
 subconj_prdp_init_phr := subconj_prdp_phr &
   [ SYNSEM [ LOCAL.CAT [ POSTHD -,
                          HEAD.MOD < [ LOCAL [ CAT [ HEAD verb,
                                                     VAL.SUBJ 
 						         < anti_synsem_min > ]],
-				      MODIFD.RPERIPH -,
 				      PUNCT.RPUNCT.PSF #pred ] > ],
              PUNCT [ LPUNCT pair_or_no_punct,
                      RPUNCT comma_or_pair_or_no_punct ] ],
@@ -1430,6 +1434,10 @@ subconj_prdp_ellip_phr := subconj_prdp_phr &
 ;; too strong, so remove NORM on mother of the fw lexical rule, and also from
 ;; the left dtr of this rule, allowing us once again to admit |we speak two
 ;; languages, the other being Spanish|.
+;; DPF 2016-10-27 - Re 2012-12-21: But we also want predicative modifiers marked
+;; as non-noun-modifying, such as |on| in |we left, the stove still on|.  So
+;; remove the identity of HEAD for first dtr and second dtr's MOD, and constrain
+;; the second dtr's MOD to be HEAD n_or_v.
 ;;
 np_pred_phr := non_headed_phrase & binary_phrase &
   [ SYNSEM basic_subconj_synsem &
@@ -1453,7 +1461,7 @@ np_pred_phr := non_headed_phrase & binary_phrase &
 		     AGR #agr,
 		     CONJ cnil ],
 	     NONLOC non-local_none & #nonloc ],
-    ARGS < [ SYNSEM [ LOCAL [ CAT [ HEAD basic_noun & #head &
+    ARGS < [ SYNSEM [ LOCAL [ CAT [ HEAD basic_noun &
 					 [ MINORS.ALTMIN non_freerel_q_rel,
 					   --BARE - ],
 				    VAL [ SPR *olist*,
@@ -1464,7 +1472,7 @@ np_pred_phr := non_headed_phrase & binary_phrase &
 		      PUNCT.RPUNCT no_punct ] ],
 	   [ SYNSEM [ LOCAL [ CAT [ HEAD 
 				    [ MOD < [ LOCAL intersective_mod &
-					      [ CAT [ HEAD #head,
+					      [ CAT [ HEAD n_or_v,
 						      VAL.SPR < synsem > ] ],
 					      --SIND #modind ] >,
 				      MINORS.ALTMIN norm_rel,
@@ -2160,6 +2168,12 @@ extracted_arg_phrase := head_nexus_phrase & head_only &
 ; on dtr, so we get |for and with Abrams|, now that we're doing right-node
 ; raising.  We'll accept the ambiguity for |consultants interview|, since 
 ; we have no principled reason to block it, given |this movie see right away|.
+;; DPF 2016-10-24 - We were constraining HD-DTR..INDEX to be non_conj_sement,
+;; presumably to avoid spurious ambiguity somehow with coordination and 
+;; extraction.  But this blocked extraction of a conjoined NP complement of
+;; an empty prep, as in |Kim and Browne, we rely on|, since the index of the
+;; PP/NP would be the index of the conjoined NP.  Removing this constraint now
+;; seems to leave no ill effects, but monitor and if necessary, FIX?
 ;;
 extracted_comp_phrase := extracted_arg_phrase & head_compositional &
   [ SYNSEM canonical_synsem &
@@ -2185,8 +2199,7 @@ extracted_comp_phrase := extracted_arg_phrase & head_compositional &
 					       NONLOC.SLASH #slash ]
 					     . #comps > ],
 			       MC #mc,
-			       HC-LEX #hclex ],
-			 CONT.HOOK.INDEX non_conj_sement ],
+			       HC-LEX #hclex ] ],
 		 NONLOC.SLASH #slash ] ],
     C-CONT [ HOOK.--SLTOP #sltop,
 	     RELS <! !>,
@@ -2695,6 +2708,9 @@ adj_head_phrase := basic_head_mod_phrase_simple & head_final &
 ;; mother and head-dtr, since we don't want WH-pied-piping (unlike for REL).
 ;; Further, restrict non-hd to have empty QUE, to avoid pied-piping as in
 ;; |difficult in corpora in which|
+;; DPF 2016-10-17 - Re 2016-09-28: But we do need WH in adjuncts for in-situ WH
+;; as in |Kim lives in which town?|  So remove empty QUE here, and on non-noun
+;; subtype, identify non-head and mother's Que.
 ;;
 basic_head_adj_phrase := basic_head_mod_phrase_simple & head_initial & phrasal &
   [ SYNSEM [ LOCAL [ CAT.VAL.COMPS #comps,
@@ -2715,17 +2731,22 @@ basic_head_adj_phrase := basic_head_mod_phrase_simple & head_initial & phrasal &
                             CONT.HOOK.INDEX.--TPC #tpc ],
                     NONLOC [ SLASH *diff-list* &
                                    [ LIST #first,
-                                     LAST #middle ],
-			     QUE 0-dlist ] ] ].
+                                     LAST #middle ] ] ] ].
 
+#|
 head_adj_phrase := basic_head_adj_phrase &
   [ SYNSEM.NONLOC.QUE *diff-list* & [ LIST #qfirst,
 				      LAST #qlast ],
     HD-DTR.SYNSEM.NONLOC.QUE *diff-list* & [ LIST #qmiddle,
 					     LAST #qlast ],
-					     
     NH-DTR.SYNSEM.NONLOC.QUE *diff-list* & [ LIST #qfirst,
 					     LAST #qmiddle ] ].
+|#
+head_adj_phrase := basic_head_adj_phrase &
+  [ SYNSEM.NONLOC.QUE #que,
+    NH-DTR.SYNSEM.NONLOC.QUE #que ].
+			
+
 
 ; DPF (07-17-98) Split head_adj_phrase and adj_head_phrase into two each,
 ; one for intersective modifiers and one for scopal modifiers, in order to
@@ -3552,11 +3573,13 @@ conj_mod_int_phrase := conj_mod_phrase & head_compositional &
 
 ;; DPF 2016-09-26 - Add NORM norm_rel to nh-dtr, to avoid spurious analysis of
 ;; e.g. |we were separate from [and related] to Kim|.
+;; DPF 2016-10-21 - Re 2016-09-26: But this prevents 
+;; |we arose and, laughing, departed|.  Cf. 
+;; | we ran from and, exhausted, to Paris|.  So accept the ambiguity.
 ;;
 conj_mod_scop_phrase := conj_mod_phrase &
   [ NH-DTR.SYNSEM.LOCAL [ CAT.HEAD [ MOD < [ LOCAL scopal_mod &
-					       [ CONT.HOOK.LTOP #ltop ] ] >,
-				     MINORS.NORM norm_rel ],
+					       [ CONT.HOOK.LTOP #ltop ] ] > ],
 			  CONT.HOOK #hook ],
     HD-DTR.SYNSEM.LOCAL.CONT.HOOK.LTOP #ltop,
     C-CONT.HOOK #hook ].
@@ -4219,15 +4242,23 @@ bare_vger_phrase := head_only & head_valence_phrase & phrasal &
 ;; whether-CP phrases, to admit e.g. "about whether Kim won".  But this
 ;; also wrongly admits non-WH topicalized clauses.  So instead make "whether"
 ;; have an empty SUBJ, so it projects clauses like other WH-clauses.
-
+;; DPF 2016-10-27 - Re 07-apr-08: But this is still too restrictive, since
+;; we want coordination of ordinary NP and WH-CP as in 
+;; |we admire her and who she represents| (where the latter can't be a free
+;; relative clause).  We might think to fiddle with CASE in a conjoined NP, but
+;; we want them to agree on the dtrs, so can't just stamp result on mother.
+;; Also can't use the hack of stamping OPT - on the mother's SUBJ, which could
+;; work since ordinary transitive verbs require their complement to be SUBJ 
+;; *olist*, and the NP-coord rule does not propagate SUBJ from each of the dtrs.
+;; But prepositions also demand SUBJ *olist*, 
+;;
 np_cp_wh_phrase := unary_phrase & phrasal &
   [ SYNSEM [ LOCAL [ CAT [ HEAD noun & 
                                 [ MOD < >,
-                                  CASE nom_or_obliq,
                                   MINORS [ MIN nominalize_rel,
                                            ALTMIN udef_q_rel,
 					   NORM no_rel ] ],
-                           VAL [ SUBJ < anti_synsem_min >,
+                           VAL [ SUBJ < anti_synsem_min & [ OPT - ] >,
                                  SPR < >,
                                  COMPS < >,
                                  SPEC < anti_synsem_min > ],
@@ -5760,13 +5791,15 @@ npadv_yofc_phrase := basic_npadv_mod_phrase &
 ;; ambiguity for |prices rose 10% or 20%|. But this blocks 
 ;; |we arrive Nov. 2 or 3|.  So unless we add a non-head syntactic feature that
 ;; distinguishes between coord and non-coord structures, can't avoid this ambig.
+;; DPF 2016-10-16 - Constraining the MOD to be HEAD v_or_a was too cautious,
+;; since it blocks e.g. |we have been in Paris two weeks|.  So generalize.
 ;;
 npadv_measnp_phrase := basic_npadv_mod_phrase &
   [ SYNSEM [ LOCAL.CAT [ HEAD [ MINORS [ MIN miscprep_rel,
 					 NORM norm_rel ],
 				PRD -,
 				MOD < [ LOCAL.CAT
-					  [ HEAD v_or_a,
+					  [ HEAD v_or_a_or_p,
 					    VAL.SPR < synsem_min, ... > ] ] >],
 			 VAL.SPR < synsem &
 				   [ --MIN just_only_degree_rel,
@@ -6788,17 +6821,18 @@ vocative_np_phrase := norm_unary_phrase & phrasal &
                       CONJ #conj ],
               NONLOC #nonloc ],
    ARGS < [ INFLECTD +,
-            SYNSEM [ LOCAL [ CAT [ HEAD noun & 
-                                      [ MINORS [ ALTMIN def_poss_or_prop_q_rel,
-						 NORM no_rel ] ],
-                                   VAL [ SPR *olist*,
-                                         COMPS < >,
-                                         SPEC < anti_synsem_min > ] ],
-                             CONT.HOOK.INDEX #argind,
-                             CONJ #conj ],
-                     NONLOC #nonloc,
-                     PUNCT [ LPUNCT lparen_or_dq_or_no_punct,
-                             RPUNCT hyphen_or_comma_or_pair_or_clause ] ] ] >,
+            SYNSEM 
+	     [ LOCAL [ CAT [ HEAD noun & 
+			     [ MINORS [ ALTMIN def_poss_or_barepl_or_prop_q_rel,
+					NORM no_rel ] ],
+			     VAL [ SPR *olist*,
+				   COMPS < >,
+				   SPEC < anti_synsem_min > ] ],
+		       CONT.HOOK.INDEX #argind,
+		       CONJ #conj ],
+	       NONLOC #nonloc,
+	       PUNCT [ LPUNCT lparen_or_dq_or_no_punct,
+		       RPUNCT hyphen_or_comma_or_pair_or_clause ] ] ] >,
    ORTH [ FROM #from, TO #to ],
    C-CONT [ HOOK [ LTOP #ltop,
                    INDEX #index ],
@@ -7874,6 +7908,10 @@ filler_head_rule_wh_nr_inf := binary_rule_left_to_right &
 ;; filler-head-relative rules into two rules, one for NP fillers, where the 
 ;; SLASH..XARG is identified with MOD..XARG, and one for PP fillers, where 
 ;; this identification is not made.
+;; DPF 2016-10-22 - Re 2014-10-20: Alas, this ppair constraint prevents
+;; |cat which, though happy, jumped| because the rule requires the filler to
+;; have a non-robust comma (if any).  So let's drop the ppair trick, and happily
+;; |cat, which, arose| no longer parses anyway.
 ;;
 filler_head_rel_rule := binary_rule_left_to_right & rel_cl & 
 			basic_head_filler_phrase & 
@@ -7898,8 +7936,7 @@ filler_head_rel_rule := binary_rule_left_to_right & rel_cl &
                                    [ LIST < [ LTOP #rhand,
                                               INDEX #ind,
 					      XARG #xarg ] > ] ],
-                      PUNCT [ RPUNCT rparen_or_comma_or_no_punct,
-			      PNCTPR ppair ] ] ],
+                      PUNCT.RPUNCT rparen_or_comma_or_no_punct ] ],
 	   [ INFLECTD +,
              SYNSEM [ LOCAL [ CAT [ HEAD verbal & [ VFORM #vform & fin_or_inf,
                                                     TAM #tam,
@@ -8324,6 +8361,9 @@ v_onecomp_coord_fin_mid_ig_phr := v_coord_fin_mid_ig_phr & x_onecomp_coord_phr.
 ; For two coordinated VPs with no conjunction
 ; DPF 10-sept-07 - Added NORM no_rel to block these as conjuncts in ordinary
 ; VP coordination, to avoid spurious parse for e.g. "Kim arose, sang, and left"
+;; DPF 2016-10-27 - Constraint of non_conj_event on LCONJ-DTR..INDEX is wrong,
+;; since we want to allow right-node-raised VPs, as in 
+;; |we chased and caught cats, took naps|.  So remove, and monitor (FIX?).
 ;;
 basic_v_coord_top_noconj_phr := basic_v_coord_phr & xp_coord_phr &
 				binary_rule_right_to_left & 
@@ -8345,7 +8385,7 @@ basic_v_coord_top_noconj_phr := basic_v_coord_phr & xp_coord_phr &
                                      VAL [ SUBJ < synsem >,
                                            COMPS < > ] ],
                                CONT.HOOK [ LTOP #lltop,
-                                           INDEX #lind & non_conj_event ],
+                                           INDEX #lind ],
                                CONJ cnil ],
                        PUNCT [ LPUNCT #lpunct,
                                RPUNCT comma_or_semicol,
@@ -8455,6 +8495,8 @@ s_coord_phr := verbal_coord_phr &
 ;; |Kim is performing in Paris|, and hence were not getting 
 ;; |the city in which Kim is performing and we are visiting exists.|
 ;; So change to identify the non-AUX attributes on left dtr and mother.
+;; DPF 2016-10-16 - Allow semicolon with LCONJ..RPUNCT for interrogatives,
+;; but still exclude for non-interrogatives.
 ;;
 basic_s_coord_top_phr := s_coord_phr & basic_top_coord_event_rule &
   [ SYNSEM.LOCAL.CAT.HEAD [ MINORS #min,
@@ -8468,8 +8510,7 @@ basic_s_coord_top_phr := s_coord_phr & basic_top_coord_event_rule &
 					INV #inv,
 					TAM #tam,
 					VFORM #vform,
-					CASE #case ],
-		       PUNCT.RPUNCT comma_or_pair_or_no_punct ],
+					CASE #case ] ],
     RCONJ-DTR.SYNSEM.LOCAL.CONT [ HOOK [ LTOP #conjltop,
                                          INDEX #ind ] ],
     C-CONT [ HOOK [ LTOP #conjltop,
@@ -8477,7 +8518,8 @@ basic_s_coord_top_phr := s_coord_phr & basic_top_coord_event_rule &
              RELS <! !> ] ].
 
 s_coord_top_phr := basic_s_coord_top_phr &
-  [ LCONJ-DTR.SYNSEM.LOCAL.CONT.HOOK.INDEX.SF prop-or-comm ].
+  [ LCONJ-DTR.SYNSEM [ LOCAL.CONT.HOOK.INDEX.SF prop-or-comm,
+		       PUNCT.RPUNCT comma_or_pair_or_no_punct ] ].
     
 ; This variant requires that if the first conjunct is a question,
 ; the second must be as well.  Needed to avoid leaving the first
@@ -8592,6 +8634,12 @@ p_coord_top_phr := prep_coord_top_phr & x_onecomp_coord_phr.
 ;; since semantic composition is like for NP coordination, not event coord.
 ;; Also, need to require the MIN values of the two conjuncts to be the same,
 ;; to avoid |Kim was hired both by Abrams and of Browne|
+;; DPF 2016-10-21 - Strangely, this type included an identification of
+;; C-CONT.HOOK.XARG with RCONJ-DTR..LTOP, but this conflicts with the current
+;; treatment of possessive NPs as in |we rely on your cat and on you|, since
+;; (for possessive idioms) we make the XARG of a possessed NP be the index of
+;; the possessor, so it can't be a handle.  Keep an eye on this to see what
+;; that identity with LTOP was doing.
 ;;
 pp_sel_coord_top_phr := prep_coord_phr & basic_top_coord_rule & xp_coord_phr &
   [ LCONJ-DTR.SYNSEM.LOCAL [ CAT.HEAD.MINORS.MIN selected_rel & #min,
@@ -8601,8 +8649,7 @@ pp_sel_coord_top_phr := prep_coord_phr & basic_top_coord_rule & xp_coord_phr &
 					 INDEX #ind ],
 			     CONJ.CREL basic_conj_relation & [ L-INDEX #lind ]],
     ORTH [ FROM #from, TO #to ],
-    C-CONT [ HOOK.XARG #rtop,
-             RELS <! [ PRED udef_q_rel,
+    C-CONT [ RELS <! [ PRED udef_q_rel,
 		       ARG0 #ind,
 		       RSTR #harg,
 		       CFROM #from, CTO #to ] !>,
@@ -9515,6 +9562,8 @@ nbar_coord_mid_ig_rule := nbar_coord_mid_rule & mid_coord_infgen_rule.
 ; DPF 09-apr-09 - Block mid-coord right dtr, since that conjunction will
 ; always be plural, and thus falsely permit e.g. "Abrams, cat and dog" as
 ; a plural NP.
+;; DPF 2016-10-21 - Also for singular-count + singular-mass, as in 
+;; |my cat and rice|, so change PN 3p to DIV +.
 
 nbar_coord_asym_rule := nbar_coord_rule &
   [ INFLECTD +,
@@ -9526,7 +9575,7 @@ nbar_coord_asym_rule := nbar_coord_rule &
 							   DIV - ] ] > ] ],
     RCONJ-DTR [ INFLECTD +,
                 SYNSEM.LOCAL [ CAT [ HEAD noun,
-				     VAL.SPR < [ LOCAL.AGR.PNG.PN 3p ] > ],
+				     VAL.SPR < [ LOCAL.AGR.DIV + ] > ],
 			       CONJ lex-conj ] ] ].
 
 nbar_coord_asym_2_rule := nbar_coord_rule &
@@ -9877,7 +9926,7 @@ npnum_s_rule := np_s_phrase &
 						   ALTMIN number_q_rel ] ],
 				   VAL.SPR *olist* ],
 			     CONJ cnil_or_lexconj ],
-		     PUNCT.RPUNCT hyphen_or_comma_or_clause & 
+		     PUNCT.RPUNCT hyphen_or_comma_or_rparen_or_clause & 
 			          [ PSF prop ],
 		     MODIFD notmod,
 		     PHON.DIGIT + ] ],
