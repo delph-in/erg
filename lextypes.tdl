@@ -2762,15 +2762,19 @@ prep_intrans_event_verb := twoarg_verb_synsem & prep_intrans_subst &
 ;; verbs of motion
 ;; DPF 2016-10-24 - The constraint [COMPS..MOD..HEAD noun] excludes desired
 ;; analysis for |he ran off| since |off| is not (normally) a noun modifier|.
-;; So let's generalize to `subst' and see if and when we overgenerate.  FIX?
+;; So let's generalize to `subst' and see if and when we overgenerate...  Well,
+;; the trouble is the spurious ambiguity when we have dual lexial entries for
+;; preps such as "to", one a noun modifier and the other not.  So let's try
+;; restricting to `v_or_a_or_p'.
 
 prep_intrans_dir_verb := twoarg_verb_synsem & basic_prep_intrans_subst &
                          prep_intrans_lt &
   [ LOCAL.CAT.VAL.COMPS < [ --MIN dir_or_unsp_loc_rel,
                             LOCAL.CAT [ HEAD prep_or_modnp &
                                              [ MOD < synsem &
-                                                     [ LOCAL.CAT.HEAD subst ]>],
-                                        VAL [ SPR *olist*,
+                                                     [ LOCAL.CAT.HEAD 
+							     v_or_a_or_p ] > ],
+					VAL [ SPR *olist*,
                                               COMPS < > ],
                                         MC na ] ] > ].
 
@@ -3356,6 +3360,10 @@ cp_ques_fin_inf_intrans_verb := basic_cp_ques_fin_inf_intrans_verb &
   [ LOCAL.CAT.VAL.COMPS < [ LOCAL.CAT.VAL.SUBJ < >,
 			    NONLOC.SLASH 0-dlist ] > ].
 
+;; `ask' as in |Kim asked, why is the sky blue?||
+cp_ques_fin_inf_mc_verb := basic_cp_ques_fin_inf_intrans_verb &
+  [ LOCAL.CAT.VAL.COMPS.FIRST.LOCAL.CAT.HEAD.INV + ].
+
 cp_intrans_passivable_verb := cp_intrans_verb & cp_passivable_verb &
 			      cp_comp_verb.
 
@@ -3851,12 +3859,17 @@ np_adv_verb := verb_synsem & np_adv_subst & trans_lt &
 ;; modification of the inverted phrase, as in |we arrived, said Kim yesterday|
 ;; DPF 2015-03-12 - And changed SUBJ from *anti_list*, so we can also get
 ;; |we arrived, said Kim happily|.  
+;; DPF 2016-10-31 - Re 2011-jan-07: But this runs afoul of the constraint
+;; added on 26-aug-07 to head_adj_int_phrase, to block attachment to
+;; attributive adjectives, apparently.  Instead of rethinking that hack,
+;; we constrain the MOD value to be HEAD no_head, preventing these from
+;; undergoing the relative clause rule.
 ;;
 quoting_verb_inv_synsem := basic_two_arg &
   [ LOCAL [ CAT [ HEAD verb & 
                        [ VFORM fin,
-                         TAM #tam ],
-		  POSTHD -,
+                         TAM #tam,
+			 MOD.FIRST.LOCAL.CAT.HEAD no_head ],
                   VAL [ SUBJ *anti_list*,
 			SPR *anti_list* ] ],
             CONT [ HOOK [ LTOP #ltop,
@@ -13906,7 +13919,7 @@ p_no_nmod_lexent := prep_word &
 p_np_i-nnm_lexent := p_no_nmod_lexent &
   [ SYNSEM.LOCAL.CAT [ HEAD.CASE obliq,
 		       VAL.SPR < [ LEX + ] > ] ].
-;
+
 ; 'into'
 ; <type val="p_np_i-nnm_le">
 ; <description>Prep, NP, no noun mod            
@@ -13915,6 +13928,7 @@ p_np_i-nnm_lexent := p_no_nmod_lexent &
 ; <todo>
 ; </type>
 p_np_i-nnm_le := p_np_i-nnm_lexent.
+
 
 ; <type val="p_np_i-nnm-mal_le">
 ; <description>Prep, NP, no noun mod, robust
@@ -14014,10 +14028,12 @@ basic_pp_word := noncqrs-hm-nab &
                      HCONS <! !>,
 		     ICONS <! !> ] ] ] ].
 
+;; DPF 2016-11-01 - Generalized MOD..HEAD to subst, since we also want to get
+;; |before, we were beside Kim|
+
 pp_word := basic_pp_word &
   [ SYNSEM [ LOCAL.CAT.HEAD prep & [ PRD +,
-				     MOD < [ LOCAL.CAT.HEAD n_or_v_or_a ] > ]]].
-		    
+				     MOD < [ LOCAL.CAT.HEAD subst ] > ]]].
 
 ; 'astray'
 ; <type val="pp_-_i_le">
@@ -14125,10 +14141,19 @@ pp_-_i-nm-tm_le := pp_word &
 	     LKEYS.KEYREL.PRED timezone_p_rel ] ].
 
 ; below, down, ...
+;; DPF 2016-11-01 -  Since we have a pp_-_i-dir-nom_le type which constraints
+;; the MOD to be a noun, remove the MOD constraint on the more general type
+;; here, so we can get e.g. |He came forth| now that we have directional-PP
+;; verbs requiring the PP to be MOD verb (to avoid spurious ambig).
+;;
+#|
 pp_dir_lexent := pp_word &
   [ SYNSEM.LOCAL.CAT.HEAD [ MOD < [ --MIN nom_nbar_rel,
                                     LOCAL.CAT.HEAD noun ] >,
                             MINORS.MIN dir_rel ] ].
+|#
+pp_dir_lexent := pp_word &
+  [ SYNSEM.LOCAL.CAT.HEAD [ MINORS.MIN dir_rel ] ].
 
 ; <type val="pp_-_i-dir_le">
 ; <description>PP, directional                  
@@ -14141,6 +14166,12 @@ pp_-_i-dir_le := pp_dir_lexent.
 ; DPF 14-nov-05 - To avoid rampant ambiguity for now, make variant for "in"
 ; which restricts modification to nouns with SORT place - a hack. FIX.
 ; Also FIX name, since -nnm elsewhere signifies no-nmod.
+;; DPF 2016-11-01 - This type is too hard to sustain, and currently runs afoul
+;; of making v_pp_dir_le require its complement to be willing to modify verbs.
+;; Let's see if we can live with the extra ambiguity from treating the two
+;; instances (`in' and `by') as regular pp_-_i-dir_le.
+
+#|
 ; <type val="pp_-_i-dir-nnm_le">
 ; <description>PP, directional, no noun mod     
 ; <ex>B flew by.
@@ -14153,6 +14184,8 @@ pp_-_i-dir-nnm_le := basic_pp_word &
 				      LOCAL [ CAT.HEAD noun,
 					      CONT.HOOK.INDEX.SORT place ] ] >,
 			      MINORS.MIN dir_rel ] ] ].
+|#
+
 ; 'after'
 ; <type val="pp_-_i-nm-tmp_le">
 ; <description>PP, temporal noun mod            
@@ -14223,6 +14256,13 @@ pp_-_i-po_le := pp_-_i-po_lexent.
 
 ; DPF 10-sept-07 - Restrict MOD to RPERIPH - to avoid attaching after 
 ; depictives as in "things we are concerned about"
+;; DPF 2016-11-01 - Finally generalized the last two preps in this class
+;; (`off' and `on'), since we now have directional-PP verbs take ones that
+;; modify verbs, but off/on also need to be complements of subj_prd_verb,
+;; which takes both adj and prep complements, so off/on have to be compatible
+;; with noun mod.  Hence retiring this type.
+
+#|
 ; <type val="pp_-_i-nnm_le">
 ; <description>PP, no noun mod                  
 ; <ex>B ran on.
@@ -14232,6 +14272,8 @@ pp_-_i-po_le := pp_-_i-po_lexent.
 pp_-_i-nnm_le := pp_word &
   [ SYNSEM.LOCAL.CAT.HEAD.MOD < [ LOCAL.CAT.HEAD v_or_a_or_p,
                                   MODIFD.RPERIPH - ] > ].
+|#
+
 ; 'and older'
 ; <type val="pp_-_i-num_le">
 ; <description>PP, mod named numbers
@@ -15776,13 +15818,13 @@ av_-_s-cp-nsp-po_le := norm_adv_word &
 				      LOCAL.CAT.MC bool ] > ] ] ].
 
 ; <type val="av_-_s-cp-mc-po_le">
-; <description>Scop, S main cls (mc), post-hd   
+; <description>Scop, S main cls (mc), post-hd: reserve for robust only
 ; <ex>B won, and ...
 ; <nex>
 ; <todo>
 ; </type>
 av_-_s-cp-mc-po_le := norm_adv_word &
-  [ GENRE spoken,
+  [ GENRE robust,
     SYNSEM basic_scopal_s_adverb_nospec_synsem &
 	   [ LOCAL.CAT [ HEAD.MOD < [ LOCAL.CAT.MC +,
 				      NONLOC.SLASH 0-dlist ] >,

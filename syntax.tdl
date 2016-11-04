@@ -1041,7 +1041,7 @@ inf_non_wh_subj_rel_cl := basic_inf_non_wh_rel_cl &
              RELS <! arg1_relation &
                      [ LBL #ltop,
                        PRED eventuality_rel,
-                       ARG0 #event,
+                       ARG0 #event & non_conj_event,
                        ARG1 #vpltop,
 		       CFROM #from, CTO #to ] !> ] ].
 
@@ -1895,6 +1895,9 @@ head_marker_phrase_e_phr := head_marker_phrase_event &
 ;; DPF 2015-03-13 - Removed ARGS < word_or_lexrule, ...> since we also want
 ;; |we arise and yet we arrive| where |and yet| is neither word nor lexrule.
 ;; Instead, constrain first dtr's CONJ to be lex-conj.
+;; DPF 2016-11-01 - Removed identity of dtr's HEAD.TAM and ARGS..INDEX.E
+;; because these are not always the same, e.g. in |and we have, I believe, won|.
+;; The INDEX.E should always be constrained without this, anyway.
 ;;
 head_marker_phrase_s_phr := head_marker_phrase_event &
   [ SYNSEM.LOCAL.CAT.MC #mc,
@@ -1908,8 +1911,7 @@ head_marker_phrase_s_phr := head_marker_phrase_event &
 				  MC #mc,
 				  POSTHD + ],
 			    AGR.PNG.PN #pn,
-			    CONT.HOOK [ LTOP #rtop,
-					INDEX.E #tam ] ] ] >,
+			    CONT.HOOK [ LTOP #rtop ] ] ] >,
     C-CONT [ HCONS <! qeq & [ HARG #rhndl, LARG #rtop ] !>,
 	     ICONS <! !> ] ].
 
@@ -2172,8 +2174,19 @@ extracted_arg_phrase := head_nexus_phrase & head_only &
 ;; presumably to avoid spurious ambiguity somehow with coordination and 
 ;; extraction.  But this blocked extraction of a conjoined NP complement of
 ;; an empty prep, as in |Kim and Browne, we rely on|, since the index of the
-;; PP/NP would be the index of the conjoined NP.  Removing this constraint now
-;; seems to leave no ill effects, but monitor and if necessary, FIX?
+;; PP/NP would be the index of the conjoined NP.
+;; One reason for the constraint was to prevent spurious application of the
+;; right-node-raising rule, which requires its dtr to be INDEX conj_ind, so
+;; we blocked an RNR analysis of |is to arise|.  But in face we should be
+;; requiring |to arise| to constrain its own INDEX to be non_conj_event, which
+;; then blocks the RNR rule anyway. Similarly, we want to get 
+;; |how happy and wise is Kim?| where the xcmp phrase's index is the conjoined
+;; event of the filler.
+;; Still, we get a spurious parse for |kim is happy and wise| because the 
+;; complement's index is conj_event, which is all the RNR rule wants. So take
+;; advantage of the fact that extracted_arg_phrase stamps TPC + on the mother's
+;; index, but this is not propagated through coordination, so the RNR rule can
+;; require its dtr's head to be INDEX.--TPC -.
 ;;
 extracted_comp_phrase := extracted_arg_phrase & head_compositional &
   [ SYNSEM canonical_synsem &
@@ -2871,10 +2884,13 @@ head_adj_scop_prpnct_nmc := head_adj_scop_prpnct &
 ; Non-paired variant - propagate comma or clause-punct onward
 ; DPF 10-sept-07 - Added RPERIPH + to mother to enable blocking of stacked
 ; depictives as in "Kim arrived happy sad."
+;; DPF 2016-11-01 - Re 10-sept-07: But stacked depictives are possible, as in
+;; |I lay awake worrying|, and even |I lay awake, unhappy.|  So generalize
+;; to na_or_+.
 ;
 head_adj_scop_nopair := head_adj_scop_phrase &
   [ SYNSEM [ PUNCT.PNCTPR #ppair,
-             MODIFD.RPERIPH + ],
+             MODIFD.RPERIPH na_or_+ ],
     HD-DTR.SYNSEM.PUNCT.RPUNCT pair_or_no_punct,
     NH-DTR.SYNSEM.PUNCT [ RPUNCT comma_or_clause_or_pair_or_no_punct,
                           PNCTPR #ppair ] ].
@@ -4250,7 +4266,8 @@ bare_vger_phrase := head_only & head_valence_phrase & phrasal &
 ;; Also can't use the hack of stamping OPT - on the mother's SUBJ, which could
 ;; work since ordinary transitive verbs require their complement to be SUBJ 
 ;; *olist*, and the NP-coord rule does not propagate SUBJ from each of the dtrs.
-;; But prepositions also demand SUBJ *olist*, 
+;; But prepositions also demand SUBJ *olist*, and so do predicative adjectives,
+;; which would block |who won is clear| or |who won is in doubt|.
 ;;
 np_cp_wh_phrase := unary_phrase & phrasal &
   [ SYNSEM [ LOCAL [ CAT [ HEAD noun & 
@@ -4258,7 +4275,7 @@ np_cp_wh_phrase := unary_phrase & phrasal &
                                   MINORS [ MIN nominalize_rel,
                                            ALTMIN udef_q_rel,
 					   NORM no_rel ] ],
-                           VAL [ SUBJ < anti_synsem_min & [ OPT - ] >,
+                           VAL [ SUBJ < anti_synsem_min >,
                                  SPR < >,
                                  COMPS < >,
                                  SPEC < anti_synsem_min > ],
@@ -5356,8 +5373,10 @@ basic_appos_np_phr := norm_appos_phr &
              HCONS <! !>,
 	     ICONS <! !> ] ].
 
+;; DPF 2016-11-02 - Generalized NH-DTR..NORM from norm_rel to norm_non_num_rel
+;; to also allow deictics, as in |my book, that which we admired|
 appos_np_phr := basic_appos_np_phr &
-  [ NH-DTR.SYNSEM [ LOCAL.CAT [ HEAD.MINORS.NORM norm_rel,
+  [ NH-DTR.SYNSEM [ LOCAL.CAT [ HEAD.MINORS.NORM norm_non_num_rel,
 				VAL.SUBJ < > ],
 		    PUNCT.LPUNCT dq_or_no_punct ] ].
 
@@ -6805,6 +6824,8 @@ partitive_np_phrase := norm_unary_phrase & phrasal &
 ;; DPF 2015-03-13 - Pushed MOD..SUBJ *olist* down to the pre-head variant, so
 ;; we can get |we know, Kim, that you arrived|.
 ;; DPF 2015-05-04 - Added NORM no_rel to block year and month naems.
+;; DPF 2016-11-02 - Added MIN reg_nom_rel to dtr to block np_cp_wh phrases
+;; such as |in which we arise|
 ;;
 vocative_np_phrase := norm_unary_phrase & phrasal &
  [ INFLECTD +,
@@ -6823,7 +6844,8 @@ vocative_np_phrase := norm_unary_phrase & phrasal &
    ARGS < [ INFLECTD +,
             SYNSEM 
 	     [ LOCAL [ CAT [ HEAD noun & 
-			     [ MINORS [ ALTMIN def_poss_or_barepl_or_prop_q_rel,
+			     [ MINORS [ MIN reg_nom_rel,
+					ALTMIN def_poss_or_barepl_or_prop_q_rel,
 					NORM no_rel ] ],
 			     VAL [ SPR *olist*,
 				   COMPS < >,
@@ -8711,6 +8733,11 @@ p_coord_mid_ig_phr := prep_coord_mid_ig_phr & x_onecomp_coord_phr.
 ;; DPF 2014-10-13 - Re 23-aug-04: Let's try adding deg-spec to mother, to 
 ;; remind ourselves what goes wrong, maybe, and to admit "so big and 
 ;; tall that S".
+;; DPF 2016-11-04 - Re 23-aug-04: Try identifying the mother's QUE with its
+;; SPR's, so we can get |how tall and wide is it|.  To do this, also change
+;; dtrs' SPRs to not say *olist* (since this makes the list `unexpressed'
+;; which constrains NONLOC to nonlocal_none).
+
 ;;
 adj_coord_phr := gen_coord_phr &
   [ SYNSEM [ LOCAL [ CAT 
@@ -8727,7 +8754,8 @@ adj_coord_phr := gen_coord_phr &
 					 MC na ],
 				       CONT.HOOK [ LTOP #ctop,
 						   XARG #arg0  ] ],
-				     NONLOC.SLASH 0-dlist,
+				     NONLOC [ SLASH 0-dlist,
+					      QUE #que ],
 				     OPT + ], 
 				   anti_synsem_min >,
 			     COMPS < >,
@@ -8739,20 +8767,25 @@ adj_coord_phr := gen_coord_phr &
 				 XARG #xarg ] ],
 	     MODIFD [ LPERIPH #lperiph,
 		      RPERIPH #rperiph ],
-	     NONLOC [ QUE 0-dlist ] ],
+	     NONLOC [ QUE #que ] ],
     LCONJ-DTR.SYNSEM [ LOCAL [ CAT [ HEAD adj_or_intadj & #head &
 					  [ MOD #mod, PRD #prd, MINORS #min, 
 					    TAM #tam ],
 				     VAL [ COMPS < >,
-					   SPR *olist* & 
-						 [ FIRST.--MIN #sprmin ] ],
+					   SPR.FIRST 
+					       [ --MIN #sprmin,
+						 OPT +,
+						 LOCAL.CAT.VAL.SPCMPS < > ] ],
 				     POSTHD #ph ],
                                CONT.HOOK [ LTOP #ltop,
 					   XARG #xarg ] ],
 		       MODIFD.LPERIPH #lperiph ],
     RCONJ-DTR.SYNSEM [ LOCAL [ CAT [ HEAD adj_or_intadj & [ TAM #tam ],
 				     VAL [ COMPS < >,
-					   SPR *olist* ],
+					   SPR .FIRST 
+					       [ --MIN #sprmin,
+						 OPT +,
+						 LOCAL.CAT.VAL.SPCMPS < > ] ],
 				     POSTHD #ph ],
                                CONT.HOOK.XARG #xarg,
 			       CONJ complex-conj &
@@ -9866,11 +9899,13 @@ basic_run_on_np_rule := basic_run_on_rule & non_headed_phrase &
    GENRE nonformal ].
 
 ;; Comma marked sentence, followed by NP
+;; DPF 2016-11-02 - Generalized second dtr's LPERIPH from - to na_or_- to allow
+;; appositive NPs.
 ;;
 run_on_np_rule := basic_run_on_np_rule &
  [ SYNSEM.PUNCT.RCLSTR #rclstr,
    ARGS < [ SYNSEM.PUNCT.RPUNCT comma_or_clause_or_pair_punct ], 
-	  [ SYNSEM [ MODIFD.LPERIPH -,
+	  [ SYNSEM [ MODIFD.LPERIPH na_or_-,
 		     PUNCT.RCLSTR #rclstr ] ] > ].
 
 run_on_np_paren_rule := basic_run_on_np_rule &
@@ -10114,9 +10149,10 @@ frag_nom_rule := basic_unary_frag_rule &
 
 frag_np_rule := frag_nom_rule &
   [ SYNSEM.LOCAL.CAT.VAL.SPR *olist*,
-    ARGS < [ SYNSEM.LOCAL [ CAT.HEAD 
-			      [ CASE acc,
-				MINORS.NORM quantity_or_norm_or_no_rel ],
+    ARGS < [ SYNSEM.LOCAL [ CAT [ HEAD 
+				  [ CASE acc,
+				    MINORS.NORM quantity_or_norm_or_no_rel ],
+				  VAL.SUBJ *synlist* ],
 			    CONT.HOOK.LTOP #ltop,
 			    CONJ cnil ] ] >,
     C-CONT [ RELS <! [ LBL #ltop ] !>,
@@ -10230,13 +10266,14 @@ frag_adv_rule := basic_unary_frag_rule &
              HCONS <! !>,
 	     ICONS <! !> ] ].
 
+;; DPF 2016-11-01 - Removed MOD..OPT + since this was preventing lexical
+;; adverbs, such as "happily"
 frag_int_adv_rule := unary_frag_rule &
-  [ ARGS < [ SYNSEM.LOCAL.CAT [ HEAD adv &
+  [ ARGS < [ SYNSEM.LOCAL.CAT [ HEAD basic_adv &
                                 [ MOD < synsem &
                                         [ LOCAL intersective_mod &
                                           [ CAT.HEAD adverbee,
-                                            CONT.HOOK.LTOP #klbl ],
-					  OPT + ] >,
+                                            CONT.HOOK.LTOP #klbl ] ] >,
 				  MINORS.MIN norm_rel ] ] ] >,
     C-CONT [ RELS.LIST.FIRST.LBL #klbl,
              HCONS <! !>,
@@ -10546,10 +10583,12 @@ frag_r_mod_ap_rule := binary_right_frag_rule &
 
 ; DPF 21-aug-04 - Added nonempty SYNSEM..ALTMIN to prevent these from 
 ; appearing in run_on_s rule.
-
+;; DPF 2016-11-02 - Re 21-aug-04: But this prevents VP fragments in fronted
+;; quoted construction, as in |"Done yet?" asked Kim|.  And anyway, the run-on
+;; rule now excludes fragments.
+;;
 basic_frag_verbal_rule := basic_frag_rule & unary_phrase &
-  [ SYNSEM [ LOCAL [ CAT [ HEAD frag & 
-				[ MINORS.ALTMIN no_rel ],
+  [ SYNSEM [ LOCAL [ CAT [ HEAD frag,
 			   VAL.SPR < > ],
 		     CONT.HOOK #hook ],
              PUNCT.RPUNCT.PSF #sf ],
@@ -10899,7 +10938,8 @@ right_node_raise_phrase := head_initial_infl & phrasal &
 					SPR #spr,
 					SPEC #spec ],
                               CONT.HOOK [ LTOP #ltop,
-					  INDEX #index & conj-ind,
+					  INDEX #index & conj-ind &
+					       [ --TPC - ],
 					  XARG #xarg,
 					  --SLTOP #sltop ] ],
 		      NONLOC [ SLASH 1-dlist &
