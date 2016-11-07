@@ -236,19 +236,26 @@ est_super_adj := local &
 ;;; everything else requires inflected forms
 ;;; ND-AFF ('needs affix') is used to determine whether a rule has an overt
 ;;; suffix which triggers the spelling-change rules.
+;; DPF 2016-11-07 - Preserve chart-dependency identities for --+COMPKEY and
+;; --+OCOMPKEY through lexical rules, so that derived entries do not allow
+;; leakage.  For example, |put together| was allowing other |put| verb-particle
+;; entries in via attr_verb_part lexical rules, which had lost the --+COMPKEY
+;; constraint.
 
 basic_lex_rule_supermost := word_or_lexrule &
   [ ND-AFF bool,
     DTR sign & [ IDIOM #idiom,
                  DIALECT #dialect,
 		 ALTS #alts,
-                 SYNSEM.LOCAL local & 
-                              [ CONT [ RELS [ LIST #rfirst,
-                                              LAST #rmiddle ],
-                                       HCONS [ LIST #hcfirst,
-                                               LAST #hcmiddle ],
-				       ICONS [ LIST #icfirst,
-                                               LAST #icmiddle ] ] ] ],
+                 SYNSEM [ LOCAL local & 
+				[ CONT [ RELS [ LIST #rfirst,
+						LAST #rmiddle ],
+					 HCONS [ LIST #hcfirst,
+						 LAST #hcmiddle ],
+					 ICONS [ LIST #icfirst,
+						 LAST #icmiddle ] ] ],
+			  LKEYS [ --+COMPKEY #ckey,
+				  --+OCOMPKEY #ockey ] ] ],
     IDIOM #idiom,
     DIALECT #dialect,
     ALTS #alts,
@@ -259,7 +266,9 @@ basic_lex_rule_supermost := word_or_lexrule &
                             HCONS [ LIST #hcfirst,
                                     LAST #hclast ],
 			    ICONS [ LIST #icfirst,
-                                    LAST #iclast ] ] ] ],
+                                    LAST #iclast ] ] ],
+	     LKEYS [ --+COMPKEY #ckey,
+		     --+OCOMPKEY #ockey ] ],
     ORTH [ TO #to,
 	   CLASS #class,
 	   FORM #form ],
@@ -881,14 +890,17 @@ ptcl_prep_passive_verb_lr := basic_passive_verb_lr &
   [ DTR.SYNSEM [ LOCAL.CAT.VAL [ SUBJ < [ --SIND #sind, 
 					  NONLOC #snonloc ] >,
 				 COMPS [ FIRST abstr_lex_synsem &
-					     [ --MIN #min1 & selected_rel ],
+					     [ --MIN #min1 & selected_rel,
+					       LOCAL.CAT.HEAD prep,
+					       OPT - ],
 					 REST [ FIRST phr_synsem &
 					        [ --MIN #min2 & selected_rel,
 						  LOCAL [ CAT [ HEAD prep,
 								VAL.COMPS < > ],
 							  CONT #objcont ],
 						  NONLOC #ononloc,
-						  --SIND #objind ],
+						  --SIND #objind,
+						  OPT - ],
 						REST #comps ] ] ],
 		 LKEYS.KEYREL #keyrel ],
    SYNSEM ptcl_prep_passive_synsem &
@@ -939,10 +951,14 @@ prep_passive_trans_verb_lr := basic_prep_passive_trans_verb_lr &
    SYNSEM.LOCAL.CONT.HOOK.XARG #objind ].
 
 ;; For |the answer could be looked up|
+;; DPF 2016-11-07 - The dtr's second complement (the particle) was wrongly
+;; constrained to have a non-empty COMPS, blocking |the kit was put together|.
+;; So instead constrain type to abstr_lex_synsem.
+;;
 prep_passive_ptcl_verb_lr := basic_prep_passive_trans_verb_lr &
  [ DTR.SYNSEM.LOCAL.CAT.VAL.COMPS [ FIRST [ OPT -,
 					    LOCAL.CONT.HOOK.INDEX #objind ],
-				    REST.FIRST.LOCAL.CAT.VAL.COMPS *cons* ],
+				    REST.FIRST abstr_lex_synsem ],
    SYNSEM.LOCAL.CONT.HOOK.XARG #objind ].
 
 ;; This has the same problem as the passive lexical rule.  Since we derive the
@@ -2175,7 +2191,8 @@ inverted_quote_lr := lex_rule_basic &
 					   ADDPN #pn ] ],
                           VAL [ COMPS < #subj . #comps >,
                                 KCMP #keycomp &
-                                      [ LOCAL.CAT.HEAD verb ] ],
+                                      [ LOCAL.CAT.HEAD verb ],
+				SPCMPS < > ],
                           HC-LEX #hclex ],
                     CONT.HOOK #hook,
                     AGR #agr & [ PNG.PN #pn ],
@@ -2267,7 +2284,8 @@ foreign_lr := lex_rule_supermost & word_or_nonpunct_rule &
 				[ MOD < >,
 				  MINORS [ MIN norm_nom_rel,
 					   ALTMIN proper_q_rel ] ],
-			   VAL.SPR < anti_synsem_min > ],
+			   VAL [ SPR < anti_synsem_min >,
+				 SPCMPS < > ] ],
 		     CONT nom-obj &
 			 [ HOOK.INDEX #index ],
 		     CONJ cnil,
