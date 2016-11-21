@@ -1784,16 +1784,20 @@ head_comp_phrase := basic_head_comp_phrase & head_comp_or_marker_phrase.
 ;; DPF 2012-10-20 - Tried restricting NH-DTR..HEAD from verbal_or_a_or_p to 
 ;; a_or_p to also exclude VPs and clauses, but this would also block obj_equi
 ;; passives, as in |Kim was urged to arise by Abrams|. So undo.
+;; DPF 2016-11-20 - Re 2012-03-23: Remove nonlex_synsem, since we want
+;; |the water was made salty by the rock|, but constrain to COMPS *olist*
+;; so we avoid spurious analysis for |Kim looked up the consultant|
 ;;
 head_second_comp_phrase := basic_head_comp_phrase &
   [ SYNSEM.LOCAL.CAT.VAL.COMPS < #comp1 & phr_synsem & canonical_synsem &
 				 [ LEX - ] . #comps >,
     HD-DTR.SYNSEM.LOCAL.CAT [ HEAD.INV -,
 			      VAL.COMPS < #comp1 . < #comp2 . #comps > > ],
-    NH-DTR.SYNSEM #comp2 & nonlex_synsem &
-			   [ LOCAL.CAT [ HEAD verbal_or_a_or_p & 
-					      [ MOD *olist* ],
-					 VAL.SUBJ *synlist* ],
+    NH-DTR.SYNSEM #comp2 & [ LOCAL.CAT [ HEAD verbal_or_a_or_p & 
+					      [ MOD *olist*,
+						MINORS.ALTMIN non_ellipt_rel ],
+					 VAL [ SUBJ *synlist*,
+					       COMPS *olist* ] ],
 			     NONLOC.SLASH 0-dlist ] ].
 
 ; DPF 18-jun-04 - For now, stipulate propagation of PUNCT, since this type
@@ -2181,7 +2185,7 @@ extracted_arg_phrase := head_nexus_phrase & head_only &
 ;; PP/NP would be the index of the conjoined NP.
 ;; One reason for the constraint was to prevent spurious application of the
 ;; right-node-raising rule, which requires its dtr to be INDEX conj_ind, so
-;; we blocked an RNR analysis of |is to arise|.  But in face we should be
+;; we blocked an RNR analysis of |is to arise|.  But in fact we should be
 ;; requiring |to arise| to constrain its own INDEX to be non_conj_event, which
 ;; then blocks the RNR rule anyway. Similarly, we want to get 
 ;; |how happy and wise is Kim?| where the xcmp phrase's index is the conjoined
@@ -2191,6 +2195,11 @@ extracted_arg_phrase := head_nexus_phrase & head_only &
 ;; advantage of the fact that extracted_arg_phrase stamps TPC + on the mother's
 ;; index, but this is not propagated through coordination, so the RNR rule can
 ;; require its dtr's head to be INDEX.--TPC -.
+;; Alas, not quite right: since the index is shared for dtr and mother, the
+;; resulting phrase is also --TPC -, but this means we can't later extract an
+;; adjunct, as in |today we hired and fired him|, because the adj-extraction
+;; rule also stamps --TPC + on the head.  So we need a different solution:
+;; we'll use AUX - on the dtr of the RNR rule; see note there.
 ;;
 extracted_comp_phrase := extracted_arg_phrase & head_compositional &
   [ SYNSEM canonical_synsem &
@@ -5455,13 +5464,17 @@ appos_phr_nonprop_prpnct := appos_phr_prpnct &
 ;  [ HD-DTR.SYNSEM.LOCAL.CAT.HEAD.MINORS.ALTMIN non_pronoun_q_rel,
 ;    NH-DTR.SYNSEM [ LOCAL.CAT.HEAD.MINORS.ALTMIN number_q_rel ] ].
 
+;; DPF 2016-11-20 - Since we removed the RPUNCT comma_punct from the nh-dtr,
+;; perhaps we can now constrain the next rule to exclude numbers, to avoid the
+;; spurious ambig for |the number five|
+;;
 appos_phr_num_prpnct := appos_np_phr &
   [ HD-DTR.SYNSEM.LOCAL.CAT.HEAD.MINORS.ALTMIN non_pronoun_q_rel,
     NH-DTR.SYNSEM [ LOCAL.CAT.HEAD.MINORS.ALTMIN number_q_rel ] ].
 
 appos_phr_prop_prpnct := appos_phr_prpnct &
   [ HD-DTR.SYNSEM.LOCAL.CAT.HEAD.MINORS.ALTMIN indef_or_def_or_meas_rel,
-    NH-DTR.SYNSEM.LOCAL.CAT.HEAD.MINORS.ALTMIN num_or_proper_q_rel ].
+    NH-DTR.SYNSEM.LOCAL.CAT.HEAD.MINORS.ALTMIN proper_q_rel ].
 
 ; DPF 18-jun-07 - This is a patch to enable us to get comma-marked appositives
 ; as right conjuncts, while our comma constraints on conjuncts currently block
@@ -5469,6 +5482,8 @@ appos_phr_prop_prpnct := appos_phr_prpnct &
 ; DPF 13-may-09 - Re 18-jun-07: Leads to a lot of spurious ambiguity.  Let's
 ; instead try not propagating the PAIRED value from hd-dtr to mother in 
 ; the appos_phr_prpnct rule.
+;; DPF 2016-11-12 - Let's try two more specific rules for missing comma for
+;; |Kim, my doctor arrived| and |my doctor, Kim arrived|
 #|
 appos_phr_rbc := appos_np_phr &
   [ HD-DTR.SYNSEM [ LOCAL.CAT.HEAD.MINORS.ALTMIN explicit_or_proper_q_rel,
@@ -5476,6 +5491,20 @@ appos_phr_rbc := appos_np_phr &
     NH-DTR.SYNSEM [ LOCAL.CAT.HEAD.MINORS.ALTMIN def_or_proper_q_rel,
                     PUNCT.RPUNCT rbcomma_punct ] ].
 |#
+appos_phr_rbc := appos_np_phr &
+  [ HD-DTR.SYNSEM [ LOCAL.CAT.HEAD.MINORS.ALTMIN non_pronoun_q_rel,
+		    PUNCT.RPUNCT rbcomma_punct ],
+    NH-DTR.SYNSEM [ LOCAL.CAT.HEAD.MINORS.ALTMIN def_or_meas_noproper_rel,
+		    PUNCT.RPUNCT no_punct ],
+    GENRE nonformal ].
+
+appos_phr_prop_rbc := appos_np_phr &
+  [ HD-DTR.SYNSEM [ LOCAL.CAT.HEAD.MINORS.ALTMIN indef_or_def_or_meas_rel,
+		    PUNCT.RPUNCT rbcomma_punct ],
+    NH-DTR.SYNSEM [ LOCAL.CAT.HEAD.MINORS.ALTMIN num_or_proper_q_rel,
+		    PUNCT.RPUNCT no_punct ],
+    GENRE nonformal ].
+
 
 ;; DPF 2016-10-11 - Constraining HD-DTR..HEAD to basic_noun excludes analysis
 ;; of e.g. |machine learning, a branch of science, ...|.  So let's try
@@ -7462,6 +7491,16 @@ subjh_rule_decl := subjh_rule_basic & decl_phrase &
 ;; for "Kim wondered, who arose?"
 ;; DPF 2010-sept-10 - Since all filler-head rules require MC na_or_- for
 ;; the hd-dtr, we can constrain this rule to be SLASH 0-dlist.
+;; DPF 2016-11-18 - Re 2015-03-17 above, and 2015-09-09 for head_adj_scop_prpnct
+;; -- we want to get |we arrived, so arise.| with imperative in dependent 
+;; clause.  But the main clause variant of the hd-aj rule needs to unify the
+;; RPUNCT.PSF of the adjunct with that of the mother's index, at least for
+;; questions, and arguably that is also right for commands, so that the desired
+;; SF value of |we arrived, so arise.| is comm, not prop.  But this means we
+;; can't restrict SF on the subjh_mc_rule to exclude comm.  So if we don't want
+;; a subj-head analysis of |everybody be quiet, we'll have to find another way
+;; to block it.  Maybe just accept it, since we presumably want |nobody move| as
+;; an imperative admitted via this rule.
 ;;
 subjh_mc_rule := subjh_rule_decl & head_subj_phrase & clause &
   [ SYNSEM [ LOCAL [ CAT [ HEAD verbal &
@@ -7469,7 +7508,7 @@ subjh_mc_rule := subjh_rule_decl & head_subj_phrase & clause &
                                   TAM indic_tam ],
 			   VAL.SPR *olist*,
                            MC + ],
-                     CONT.HOOK [ INDEX.SF #pred & prop-or-like-or-pol-ques,
+                     CONT.HOOK [ INDEX.SF #pred,
 				 LTOP #ltop,
 				 --SLTOP #ltop ] ],
 	     NONLOC.SLASH 0-dlist,
@@ -7650,7 +7689,8 @@ appos_prpnct_pnr_rule := binary_rule_right_to_left & appos_phr_prop_prpnct.
 appos_prpnct_num_rule := binary_rule_right_to_left & appos_phr_num_prpnct.
 appos_nopair_rule := binary_rule_right_to_left & appos_phr_nonprop_nopair.
 appos_nopair_pnr_rule := binary_rule_right_to_left & appos_phr_prop_nopair.
-;appos_rbc_rule := binary_rule_right_to_left & appos_phr_rbc.
+appos_rbc_rule := binary_rule_right_to_left & appos_phr_rbc.
+appos_prop_rbc_rule := binary_rule_right_to_left & appos_phr_prop_rbc.
 appos_indef_rule := binary_rule_right_to_left & appos_indef_phr.
 appos_indef_paren_rule := binary_rule_right_to_left & appos_indef_paren_phr.
 appos_nbar_rule := binary_rule_right_to_left & appos_nbar_phr.
@@ -8772,7 +8812,9 @@ p_coord_mid_ig_phr := prep_coord_mid_ig_phr & x_onecomp_coord_phr.
 ;; SPR's, so we can get |how tall and wide is it|.  To do this, also change
 ;; dtrs' SPRs to not say *olist* (since this makes the list `unexpressed'
 ;; which constrains NONLOC to nonlocal_none).
-
+;; DPF 2016-11-19 - Can't require the MIN values of the dtrs' sprs to be the
+;; same, since we want |tall but older|, where the two differ.  So let's
+;; propagate the one from the left dtr, arbitrarily.
 ;;
 adj_coord_phr := gen_coord_phr &
   [ SYNSEM [ LOCAL [ CAT 
@@ -8818,8 +8860,7 @@ adj_coord_phr := gen_coord_phr &
     RCONJ-DTR.SYNSEM [ LOCAL [ CAT [ HEAD adj_or_intadj & [ TAM #tam ],
 				     VAL [ COMPS < >,
 					   SPR .FIRST 
-					       [ --MIN #sprmin,
-						 OPT +,
+					       [ OPT +,
 						 LOCAL.CAT.VAL.SPCMPS < > ] ],
 				     POSTHD #ph ],
                                CONT.HOOK.XARG #xarg,
@@ -10184,12 +10225,18 @@ frag_nom_rule := basic_unary_frag_rule &
              RELS.LIST.FIRST [ LBL #ulbl,
                                ARG #ind ] ] ].
 
+;; DPF 2016-11-10 - Removed constraint on dtr for SUBJ *synlist* since this
+;; now blocks NP coord, which has SUBJ *anti_list*.
+;; DPF 2016-11-20 - But we want to block nominalized WH-clauses, to avoid
+;; ambiguity for matrix WH-questions such as |who hired browne|, so restrict
+;; SUBJ to empty list.
+;; 
 frag_np_rule := frag_nom_rule &
   [ SYNSEM.LOCAL.CAT.VAL.SPR *olist*,
     ARGS < [ SYNSEM.LOCAL [ CAT [ HEAD 
 				  [ CASE acc,
 				    MINORS.NORM quantity_or_norm_or_no_rel ],
-				  VAL.SUBJ *synlist* ],
+				  VAL.SUBJ < > ],
 			    CONT.HOOK.LTOP #ltop,
 			    CONJ cnil ] ] >,
     C-CONT [ RELS <! [ LBL #ltop ] !>,
@@ -10240,6 +10287,38 @@ frag_nbar_rule := frag_nom_rule &
              HCONS <! qeq & [ HARG #rhand,
                               LARG #nhand ] !>,
 	     ICONS <! !> ] ].
+
+;; |road to the hut, small hotel|
+#|
+frag_nbar_conj_rule := norm_frag_rule & norm_unary_phrase &
+  [ SYNSEM.LOCAL [ CAT.VAL.SPR < unexpressed &
+                                 [ LOCAL.CAT.HEAD det & 
+                                                  [ MINORS.ALTMIN no_rel ],
+                                   OPT - ] >,
+		   CONJ cnil,
+                   AGR.DIV - ],
+    ARGS < [ INFLECTD +,
+             SYNSEM [ LOCAL [ CAT [ HEAD.MINORS [ MIN nbar_or_dofm_rel,
+						  NORM no_rel ],
+				    VAL.SPR < synsem &
+				            [ LOCAL.CAT.HEAD.MINORS.MIN #min &
+			                                    implicit_q_rel,
+					      --MIN #min ] > ],
+			      CONT.HOOK [ LTOP #nhand,
+					  INDEX #index & [ DIV - ] ],
+			      CONJ phr-conj ],
+		      --BRDG na_or_- ] ] >,
+    ORTH [ FROM #from, TO #to ],
+    C-CONT [ HOOK.INDEX.SF prop-or-ques,
+	     RELS <! [ ARG #index ], 
+		     [ PRED udef_q_rel,
+		       ARG0 #index,
+		       RSTR #rhand,
+		       CFROM #from, CTO #to ] !>,
+             HCONS <! qeq & [ HARG #rhand,
+                              LARG #nhand ] !>,
+	     ICONS <! !> ] ].
+|#
 
 ; DPF 28-aug-07 - Added ALTMIN no_rel to prevent these from appearing as
 ; right-hand dtr in cl-cl_runon_c rule, e.g. "Kim arrived yesterday, in Paris."
@@ -10618,6 +10697,55 @@ frag_r_mod_ap_rule := binary_right_frag_rule &
              HCONS <! !>,
 	     ICONS <! !> ] ].
 
+frag_nbar_nbar_rule := binary_frag_rule &
+  [ ARGS < [ INFLECTD +,
+	     SYNSEM [ LOCAL [ CAT [ HEAD noun &
+                                       [ CASE acc,
+                                         MINORS.ALTMIN non_freerel_q_rel ],
+                                    VAL.SPR < [ OPT - ] > ],
+                              AGR [ PNG.PN 3s,
+                                    DIV - ],
+                              CONT.HOOK [ LTOP #lltop,
+                                          INDEX #lind ] ],
+		      PUNCT.RPUNCT comma_or_semicol ],
+	     ORTH [ FROM #from1, TO #to1 ] ],
+           [ INFLECTD +,
+	     SYNSEM [ LOCAL [ CAT [ HEAD noun &
+                                       [ CASE acc,
+                                         MINORS.ALTMIN non_freerel_q_rel ],
+                                    VAL.SPR < [ OPT - ] > ],
+                              AGR [ PNG.PN 3s,
+                                    DIV - ],
+                              CONT.HOOK [ LTOP #rltop,
+                                          INDEX #rind ] ] ],
+	     ORTH [ FROM #from2, TO #to2 ] ] >,
+    C-CONT [ RELS <! [ ARG #cind ], 
+                     [ PRED udef_q_rel,
+                       ARG0 #lind,
+                       RSTR #lrstr,
+		       CFROM #from1, CTO #to1 ],
+		     [ PRED udef_q_rel,
+                       ARG0 #rind,
+                       RSTR #rrstr,
+		       CFROM #from2, CTO #to2 ],
+		     [ PRED udef_q_rel,
+                       ARG0 #cind,
+                       RSTR #crstr,
+		       CFROM #from1, CTO #to2 ],
+		     [ PRED implicit_conj_rel,
+		       LBL #cltop,
+		       ARG0 #cind,
+		       L-INDEX #lind,
+		       R-INDEX #rind,
+		       CFROM #from1, CTO #to2 ] !>,
+	     HCONS <! qeq & [ HARG #crstr,
+                              LARG #cltop ],
+		      qeq & [ HARG #lrstr,
+                              LARG #lltop ],
+		      qeq & [ HARG #rrstr,
+                              LARG #rltop ] !>,
+	     ICONS <! !> ] ].
+
 ; DPF 21-aug-04 - Added nonempty SYNSEM..ALTMIN to prevent these from 
 ; appearing in run_on_s rule.
 ;; DPF 2016-11-02 - Re 21-aug-04: But this prevents VP fragments in fronted
@@ -10904,8 +11032,8 @@ paren_dash_float_s_rule := paren_dash_float_rule &
 paren_float_s_rule := paren_dash_float_s_rule & paren_float_rule.
 
 dash_float_s_rule := paren_dash_float_s_rule &
-  [ HD-DTR.SYNSEM.PUNCT.RPUNCT hyphen_sgl_or_dbl,
-    NH-DTR.SYNSEM.PUNCT.RPUNCT hyphen_sgl_or_dbl ].
+  [ HD-DTR.SYNSEM.PUNCT.RPUNCT hyphen_dbl_or_sdash,
+    NH-DTR.SYNSEM.PUNCT.RPUNCT hyphen_dbl_or_sdash ].
 
 ; "We visited Turlidfossen (waterfall)."
 ; DPF 09-aug-07 - Block named entities, to avoid spurious ambiguity for e.g.
@@ -10976,8 +11104,7 @@ right_node_raise_phrase := head_initial_infl & phrasal &
 					SPR #spr,
 					SPEC #spec ],
                               CONT.HOOK [ LTOP #ltop,
-					  INDEX #index & conj-ind &
-					       [ --TPC - ],
+					  INDEX #index & conj-ind,
 					  XARG #xarg,
 					  --SLTOP #sltop ] ],
 		      NONLOC [ SLASH 1-dlist &
@@ -11003,6 +11130,10 @@ right_node_raise_phrase := head_initial_infl & phrasal &
 	     HCONS <! !>,
 	     ICONS <! !> ] ].
 
+;; DPF 2016-11-09 - Constrain the dtr to be AUX - to avoid spurious analysis of
+;; |is sad and wise| where the lexical copula undergoes comp-extraction; note 
+;; that the AUX feature is not propagated through VP coord.
+;;
 right_node_raise_vp_phrase := right_node_raise_phrase &
   [ SYNSEM [ LOCAL.CAT [ HEAD verb,
 			 VAL.SUBJ < synsem &
@@ -11017,16 +11148,17 @@ right_node_raise_vp_phrase := right_node_raise_phrase &
 				      --SIND #sind ] > ],
 	     MODIFD #modif,
 	     NONLOC #nonloc ],
-    ARGS.FIRST.SYNSEM [ LOCAL.CAT.VAL.SUBJ < synsem &
-					     [ LOCAL #loc,
-					       NONLOC [ SLASH 0-dlist,
-							REL #rel,
-							QUE #que ],
-					       LEX #lex,
-					       MODIFD #mod,
-					       PUNCT #punct,
-					       --MIN #min,
-					       --SIND #sind ] >,
+    ARGS.FIRST.SYNSEM [ LOCAL.CAT [ HEAD.AUX -,
+				    VAL.SUBJ < synsem &
+					       [ LOCAL #loc,
+						 NONLOC [ SLASH 0-dlist,
+							  REL #rel,
+							  QUE #que ],
+						 LEX #lex,
+						 MODIFD #mod,
+						 PUNCT #punct,
+						 --MIN #min,
+						 --SIND #sind ] > ],
 			MODIFD #modif ] ].
 
 ;; Exclude subordinate clauses with constraint on MOD
