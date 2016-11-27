@@ -2438,12 +2438,10 @@ head_spec_phrase := basic_head_spec_phrase &
                            COMPS #spcmps,
 			   SPCMPS < > ],
     HD-DTR [ INFLECTD +,
-             SYNSEM.LOCAL [ CAT [ HEAD.PRD #bool,
-				  VAL [ COMPS < >,
+             SYNSEM.LOCAL [ CAT [ VAL [ COMPS < >,
 					SPEC #spec ] ],
 			    CONT.HOOK.INDEX overt_non_expl-ind,
-			    AGR #agr ],
-	     INFLECTD #bool ],
+			    AGR #agr ] ],
     NH-DTR [ INFLECTD +,
              SYNSEM.LOCAL 
                      [ CAT [ HEAD det & [ MOD < > ],
@@ -3117,12 +3115,16 @@ adj_head_rel_phrase := adj_head_phrase & head_mod_phrase_simple &
 ;; because the freerel-det has a non-empty slash, and slash-amalgamation then
 ;; fails to unify |whatever| with |cats in Paris|.  So remove, and let's see
 ;; if something goes amiss (FIX?).
+;; DPF 2016-11-20 - Re 2016-08-26: What gets lost is modication of the rel
+;; pronoun |that|, which is marked INFLECTD na, so we lose |the cat that on 
+;; Tuesday disappeared|. So instead, we identify the INFLECTD value on hd-dtr
+;; and mother.
 ;
 n_adj_int_phrase := basic_head_adj_phrase &
-  [ INFLECTD +,
+  [ INFLECTD #infl,
     SYNSEM [ LOCAL.CAT.NEGPOL #negpol,
 	     NONLOC.QUE #que ],
-    HD-DTR [ INFLECTD +,
+    HD-DTR [ INFLECTD na_or_+ & #infl,
 	     SYNSEM [ LOCAL.CAT [ HEAD supnoun,
 				  VAL [ COMPS < >,
 					SPR.FIRST synsem_min ],
@@ -4753,13 +4755,15 @@ np_name_cmpnd_phr := norm_np_name_cmpnd_phr &
 ;; DPF 2015-09-20 - Sometime since 1214 the mother's LPERIPH got constrained
 ;; to na_or_-, but no record of why, and it blocks |the Mt Olympus cat|, so
 ;; remove, and let's see if we can notice why the constraint was added.
+;; Generalized hd-dtr's MIN from abstr_named_np_rel to also allow
+;; |phone 555 12 12|
 ;;
 basic_np_title_cmpnd_phr := basic_np_name_cmpnd_phr &
   [ INFLECTD +,
     SYNSEM [ PUNCT.PNCTPR #ppair,
 	     MODIFD hasmod ],
     HD-DTR [ INFLECTD +,
-	     SYNSEM [ LOCAL [ CAT.HEAD.MINORS.MIN abstr_named_np_rel,
+	     SYNSEM [ LOCAL [ CAT.HEAD.MINORS.MIN numseq_or_named_rel,
 			      CONT.HOOK.LTOP #nhand,
 			      AGR.PNG.PN #pn ],
 		      PUNCT.PNCTPR #ppair,
@@ -5454,9 +5458,23 @@ appos_phr_prop_nopair := appos_phr_nopair &
 				 [ MINORS.ALTMIN def_or_meas_or_num_rel ],
     NH-DTR.SYNSEM.LOCAL.CAT.HEAD.MINORS.ALTMIN num_or_proper_q_rel ].
 
+;; Tried replaciing NH-DTR..ALTMIN def_or_meas_noproper_rel with
+;; udef_or_def_or_meas_rel to get |Bygdin 1:50000| (also adding PRD - to exclude
+;; detless NPs), but it's too expensive to allow all udef NPs, especially 
+;; single word NPs as in |the Bergen area|. So instead, add yet another
+;; separate rule just for meas-NP right dtrs.
+;;
 appos_phr_nonprop_prpnct := appos_phr_prpnct &
   [ HD-DTR.SYNSEM.LOCAL.CAT.HEAD.MINORS.ALTMIN non_pronoun_q_rel,
-    NH-DTR.SYNSEM.LOCAL.CAT.HEAD.MINORS.ALTMIN def_or_meas_noproper_rel ].
+    NH-DTR.SYNSEM.LOCAL.CAT [ HEAD.MINORS.ALTMIN def_or_meas_noproper_rel,
+			      VAL.SPEC *cons* ] ].
+
+appos_phr_meas_prpnct := appos_phr_prpnct &
+  [ HD-DTR.SYNSEM.LOCAL.CAT.HEAD.MINORS.ALTMIN non_pronoun_q_rel,
+    NH-DTR.SYNSEM.LOCAL.CAT [ HEAD.MINORS [ MIN meas_nom_rel,
+					    ALTMIN udef_q_rel,
+					    NORM quantity_rel ],
+			      VAL.SPEC *cons* ] ].
 
 ;; DPF 2012-07-22 - Added for |Kim, 22, arose| but still blocking appos for 
 ;; |Kim 22 arose|
@@ -7695,6 +7713,7 @@ appos_indef_rule := binary_rule_right_to_left & appos_indef_phr.
 appos_indef_paren_rule := binary_rule_right_to_left & appos_indef_paren_phr.
 appos_nbar_rule := binary_rule_right_to_left & appos_nbar_phr.
 appos_reverse_rule := binary_rule_left_to_right & appos_np_reverse_phr.
+appos_measnp_rule := binary_rule_right_to_left & appos_phr_meas_prpnct.
 npadv_mod_rule := rule & npadv_mod_phrase.
 ;;npadv_yofc_rule := rule & npadv_yofc_phrase.
 npadv_measnp_rule := rule & npadv_measnp_phrase.
@@ -10265,14 +10284,17 @@ frag_np_conj_rule := frag_nom_rule &
                               LARG #nhand ] !>,
 	     ICONS <! !> ] ].
 
+;; DPF 2016-11-23 - Removed dtr's NORM no_rel constraint, since we mark all
+;; non-sortally restricted nouns like "idea" or "alternative" as NORM norm_rel,
+;; and we still want nbar fragments for e.g. |strong alternative|.
+;; 
 frag_nbar_rule := frag_nom_rule &
   [ SYNSEM.LOCAL [ CAT.VAL.SPR < unexpressed &
                                  [ LOCAL.CAT.HEAD det & 
                                                   [ MINORS.ALTMIN no_rel ],
                                    OPT - ] >,
                    AGR.DIV - ],
-    ARGS < [ SYNSEM.LOCAL [ CAT [ HEAD.MINORS [ MIN nbar_or_dofm_rel,
-						NORM no_rel ],
+    ARGS < [ SYNSEM.LOCAL [ CAT [ HEAD.MINORS [ MIN nbar_or_dofm_rel ],
 				  VAL.SPR < synsem &
 				            [ LOCAL.CAT.HEAD.MINORS.MIN #min &
 			                                    implicit_q_rel,
@@ -10443,6 +10465,8 @@ frag_sent_conj_rule := basic_frag_rule & norm_unary_phrase &
 ; DPF 23-aug-04 - Added DTRA..NORM norm_rel to enable blocking of phrases
 ; that cannot be fragments, such as the derived subconj_prdp 'hiking' as in
 ; 'hiking in Aurland'
+;; DPF 2016-11-23 - Re 23-aug-04: Generalized NORM value from norm_rel to
+;; quantity_or_norm_rel, so we can admit e.g. |tour T16 ten miles|
 
 binary_frag_rule := norm_frag_rule & binary_punct_phrase &
   [ SYNSEM.LOCAL [ CAT.VAL.SPR < >,
@@ -10454,7 +10478,7 @@ binary_frag_rule := norm_frag_rule & binary_punct_phrase &
                                                        [ LTOP #ulbl,
                                                          INDEX #uind ] ] >,
                                          MINORS [ MIN independent_rel,
-                                                  NORM norm_rel ] ],
+                                                  NORM quantity_or_norm_rel ] ],
                                   VAL [ SUBJ *olist*,
                                         COMPS < > ] ],
                             CONT [ HOOK [ INDEX.SF #pred ] ],
