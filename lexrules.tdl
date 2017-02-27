@@ -655,6 +655,9 @@ adv_add_neg_ellipt := basic_adv_addition &
 ;; But it's hard to find good examples in S-final position:
 ;; ... |? The files would have left, had we.|
 ;; And there is spurious ambiguity for e.g. |Who did we know were programmers?|
+;; DPF 2016-12-02 - Try changing dtr's COMPS.FIRST from canonical_or_unexpressed
+;; to just unexpressed, so that we can prevent robust auxiliaries such as
+;; has_aux_finc_rbst from also undergoing ellipsis.
 
 vp_ellipsis := lex_rule &
   [ ORTH #orth,
@@ -675,7 +678,7 @@ vp_ellipsis := lex_rule &
                  POSTHD #ph,
                  VAL [ SUBJ #subj,
                        SPR #spr,
-                       COMPS < canonical_or_unexpressed &
+                       COMPS < unexpressed &
 			       [ LOCAL [ CAT.HEAD subst,
                                          CONT.HOOK 
                                                   [ LTOP #chand,
@@ -1029,13 +1032,18 @@ prep_passive_ptcl_verb_lr := basic_prep_passive_trans_verb_lr &
 ;; unmarked for INFLECTD so it can appear as the left member of n-n-cmpnds.
 ;; DPF 13-jul-06 - Added DIV + to SPR, to avoid spurious ambiguity with
 ;; nbar_coord_asym_rule.
-
+;; DPF 2017-02-20 - Re 24-Jun-01: Since nominal and verbal gerunds are distinct,
+;; we can now let nominal ones with a complement preserve the REL value of that
+;; complement, to admit |Rome, the founding of which was important, flourished|,
+;; and since relative |which| and |that| are now distinguished, we still don't
+;; get unwanted |*Rome, the founding of that was important, flourished|.
+;;
 nominal_gerund := lex_rule_basic &
   [ ORTH #orth & [ FROM #from, TO #to ],
     DTR word_or_lexrule & #dtr &
         [ ORTH #orth,
           INFLECTD +,
-	  SYNSEM verb_synsem &
+	  SYNSEM basic_verb_synsem &
 	       [ LOCAL local &
                        [ CAT [ HEAD verb &
                                     [ VFORM prp,
@@ -1051,7 +1059,7 @@ nominal_gerund := lex_rule_basic &
                                          ASPECT.PRF - ],
                          --COMPKEY #cmin,
                          --OCOMPKEY #ocmin ],
-		 NONLOC #nonloc ] ],
+		 NONLOC [ QUE #que ] ] ],
     SYNSEM nonpro_nomod_synsem &
 	   [ LOCAL local &
 	     [ AGR #ind,
@@ -1085,7 +1093,8 @@ nominal_gerund := lex_rule_basic &
 				CFROM #from, CTO #to ],
 		     --COMPKEY #cmin,
                      --OCOMPKEY #ocmin ],
-	     NONLOC #nonloc & [ SLASH 0-dlist ],
+	     NONLOC [ SLASH 0-dlist,
+		      QUE #que ],
              MODIFD notmod ],
     C-CONT [ RELS <! #keyrel !>,
              HCONS <! !>,
@@ -1100,7 +1109,8 @@ intrans_nominal_gerund := nominal_gerund &
   [ DTR.SYNSEM abstr_lex_synsem &
 	       [ LOCAL.CAT.VAL [ SUBJ < synsem_min >,
 				 COMPS #comps & < > ] ],
-    SYNSEM.LOCAL.CAT.VAL.COMPS #comps ].
+    SYNSEM [ LOCAL.CAT.VAL.COMPS #comps,
+	     NONLOC.REL 0-dlist ] ].
 
 ; DPF 23-may-07 - Since virtually all PP complements of nouns are optional,
 ; remove the OPT value from the dtr's specification of the PP.
@@ -1118,17 +1128,20 @@ intrans_pp_nominal_gerund := nominal_gerund &
 	       [ LOCAL.CAT.VAL.COMPS < phr_synsem &
                                        [ LOCAL #local & 
                                                [ CAT.HEAD prep ],
-                                         NONLOC #nonloc,
                                          MODIFD #modif,
                                          PUNCT #punct,
                                          OPT #opt,
 					 --MIN #min ] . #comps > ],
-    SYNSEM.LOCAL.CAT.VAL.COMPS < [ LOCAL #local,
-                                   NONLOC #nonloc,
-                                   MODIFD #modif,
-                                   PUNCT #punct,
-                                   OPT #opt,
-				   --MIN #min ] . #comps > ].
+    SYNSEM [ LOCAL.CAT.VAL.COMPS < [ LOCAL #local,
+                                     NONLOC [ SLASH 0-dlist,
+                                              REL #rel,
+				  	      QUE #que ],
+                                     MODIFD #modif,
+                                     PUNCT #punct,
+                                     OPT #opt,
+				     --MIN #min ] . #comps >,
+             NONLOC [ REL #rel,
+		      QUE #que ] ] ].
 
 ;; This is too restrictive.  It only forms nominal gerunds from strictly
 ;; transitive verbs.  So, it doesn't give you "Kim's putting of food on the
@@ -1174,17 +1187,20 @@ trans_nominal_gerund := nominal_gerund &
 	       [ LOCAL.CAT.VAL [ COMPS < synsem & 
 					 [ LOCAL [ CAT nomp_cat_acc_min,
 						   CONJ cnil ],
-					   --SIND #index,
-					   NONLOC #nonloc ] . *olist* >,
+					   --SIND #index ] . *olist* >,
 				 SUBJ < synsem_min > ],
                  LKEYS.--COMPKEY independent_rel ] ],
-    SYNSEM.LOCAL [ CAT.VAL.COMPS < [ --MIN _of_p_sel_rel,
-                                     LOCAL [ CAT basic_pp_cat,
-                                             CONT.HOOK [ LTOP #ltop,
-                                                         INDEX #index ],
-                                             CONJ cnil ],
-                                     NONLOC #nonloc ] >,
-                   CONT.HOOK.LTOP #ltop ] ].
+    SYNSEM [ LOCAL [ CAT.VAL.COMPS < [ --MIN _of_p_sel_rel,
+                                       LOCAL [ CAT basic_pp_cat,
+                                               CONT.HOOK [ LTOP #ltop,
+                                                           INDEX #index ],
+                                               CONJ cnil ],
+                                       NONLOC [ SLASH 0-dlist,
+                                                REL #rel,
+						QUE #que ] ] >,
+                     CONT.HOOK.LTOP #ltop ],
+	     NONLOC [ REL #rel,
+		      QUE #que ] ] ].
 
 ; DPF 13-Oct-02 - Added COMPS < > to SPEC..SYNSEM, to avoid spurious ambiguity
 ; for e.g. "Friday evening"
@@ -2268,6 +2284,9 @@ cp_frag_lr := lex_rule_basic &
 ;; norm_rel on mother, which has the added benefit of allowing in particular
 ;; |We speak two languages, the other being Spanish| where special adj |other|
 ;; is [NORM no_rel].
+;; DPF 2017-02-13 - Preserve RPUNCT from dtr to mother, instead of stamping
+;; clause_or_no_punct on mother, so we can avoid run-on analysis for
+;; |''glump'' arose|.
 ;;
 foreign_lr := lex_rule_supermost & word_or_nonpunct_rule &
   [ INFLECTD +,
@@ -2281,28 +2300,37 @@ foreign_lr := lex_rule_supermost & word_or_nonpunct_rule &
 				     INDEX #index1 ],
 		   NONLOC #nonloc,
                    PUNCT [ LPUNCT dq_or_sq_or_lital_punct,
-			   RPUNCT dq_or_sq_or_rital_punct ],
+			   RPUNCT #rpunct,
+			   RCLSTR.RITAL + ],
                    LKEYS #lkeys,
 		   PHON.ONSET #onset ],
           KEY-ARG #keyarg,
           GENRE #genre ],
     SYNSEM lex_phr_synsem &
-	   [ LOCAL [ CAT nomp_cat &
+	   [ LOCAL [ CAT basic_nbar_cat &
 			 [ HEAD noun & 
 				[ MOD < >,
-				  MINORS [ MIN norm_nom_rel,
-					   ALTMIN proper_q_rel ] ],
-			   VAL [ SPR < anti_synsem_min >,
+				  MINORS [ MIN named_np_rel,
+					   ALTMIN #spmin,
+					   NORM quantity_or_norm_rel ] ],
+			   VAL [ SPR < synsem &
+				       [ --MIN quant_rel & #spmin,
+					 LOCAL.CAT [ HEAD det,
+						     VAL [ SUBJ < >,
+							   SPR *olist* ] ],
+					 LEX +,
+					 OPT - ] >,
 				 SPCMPS < > ] ],
 		     CONT nom-obj &
 			 [ HOOK.INDEX #index ],
 		     CONJ cnil,
-		     AGR #index & [ PNG.PN 3s ] ],
+		     AGR #index & [ PNG.PN 3s, DIV - ] ],
+	     MODIFD notmod,
 	     NONLOC #nonloc & non-local_none,
 	     LEX +,
 	     LKEYS #lkeys & [ KEYREL [ CFROM #from, CTO #to ] ],
              PUNCT [ LPUNCT no_punct,
-		     RPUNCT clause_or_no_punct,
+		     RPUNCT #rpunct & clause_or_no_punct,
 		     PNCTPR ppair ],
 	     PHON.ONSET #onset ],
     GENRE #genre,
@@ -2316,7 +2344,6 @@ foreign_lr := lex_rule_supermost & word_or_nonpunct_rule &
 	     HCONS <! !>,
 	     ICONS <! !> ],
     ARGS < #stem > ].
-
 
 ;; Punctuation rules
 ;
@@ -2339,7 +2366,7 @@ basic_punctuation_rule := lex_rule_supermost & word_or_punct_rule &
                       MODIFD #mod,
                       --SIND #sind,
                       PHON #phon,
-                      PUNCT [ LPUNCT pair_or_no_punct,
+                      PUNCT [ LPUNCT lital_or_pair_or_no_punct,
 			      RPUNCT.PSF #psf ],
 		      LKEYS #lkeys,
 		      --BRDG #brdg ] ] >,
@@ -2455,13 +2482,18 @@ punctuation_dqright_rule := basic_punctuation_rule &
   [ INFLECTD #infl,
     SYNSEM.PUNCT [ LPUNCT #lpunct & no_punct,
                    RPUNCT dq_punct & [ PSF #pred ],
-		   RCLSTR #rclstr,
+		   RCLSTR [ RPAREN #rp,
+			    RFP #rfp,
+			    IGNOREQ #iq,
+			    RITAL + ],
 		   PAIRED #paired,
 		   PNCTPR #pnctpr ],
     ARGS < [ INFLECTD #infl,
              SYNSEM.PUNCT [ LPUNCT #lpunct,
                             RPUNCT.PSF #pred,
-			    RCLSTR #rclstr,
+			    RCLSTR [ RPAREN #rp,
+				     RFP #rfp,
+				     IGNOREQ #iq ],
 			    PAIRED #paired,
 			    PNCTPR #pnctpr ],
              GENRE #genre ] >,
@@ -2475,7 +2507,8 @@ punctuation_dqleft_rule := basic_punctuation_rule &
 		   PAIRED #paired,
 		   PNCTPR #pnctpr ],
     ARGS < [ INFLECTD #infl,
-             SYNSEM.PUNCT [ RPUNCT #rpunct &
+             SYNSEM.PUNCT [ LPUNCT pair_or_no_punct,
+			    RPUNCT #rpunct &
 	     		           comma_or_rbc_or_clause_or_pair_or_no_punct,
                             RCLSTR #rclstr,
 			    PAIRED #paired,
@@ -2487,12 +2520,17 @@ punctuation_sqright_rule := basic_punctuation_rule &
   [ INFLECTD #infl,
     SYNSEM.PUNCT [ LPUNCT #lpunct,
                    RPUNCT sq_punct & [ PSF #pred ],
-                   RCLSTR #rclstr ],
+                   RCLSTR [ RPAREN #rp,
+			    RFP #rfp,
+			    IGNOREQ #iq,
+			    RITAL + ] ],
     ARGS < [ INFLECTD #infl,
              SYNSEM.PUNCT [ LPUNCT #lpunct & no_punct,
                             RPUNCT comma_or_clause_or_no_punct &
                                    [ PSF #pred ],
-                            RCLSTR #rclstr ],
+                            RCLSTR [ RPAREN #rp,
+				     RFP #rfp,
+				     IGNOREQ #iq ] ],
              GENRE #genre ] >,
     GENRE #genre ].
     
@@ -2565,10 +2603,11 @@ punctuation_clmark_qmark_rule := punctuation_rule &
                    RPUNCT clause_punct &
                           [ PSF punct-ques ] ],
     ARGS < [ SYNSEM.PUNCT [ LPUNCT #lpunct & no_punct,
-                            RPUNCT clause_punct ] ] > ].
+                            RPUNCT pair_or_no_punct ] ] > ].
     
 w_qqmark_rule := punctuation_clmark_qmark_rule.
 w_qmark-bang_rule := punctuation_clmark_qmark_rule.
+w_qmark-period_rule := punctuation_clmark_qmark_rule.
 
 punctuation_italleft_rule := basic_punctuation_rule &
   [ INFLECTD na,
@@ -2579,10 +2618,12 @@ punctuation_italleft_rule := basic_punctuation_rule &
 	   [ INFLECTD +,
 	     SYNSEM [ PUNCT [ RPUNCT #rpunct & 
 				     comma_or_rbc_or_clause_or_no_punct,
-			      RCLSTR #rclstr ] ],
+			      RCLSTR #rclstr ],
+		      PHON.ONSET unk_onset ],
              GENRE #genre ] >,
     GENRE #genre ].
     
+#|
 punctuation_italright_rule := basic_punctuation_rule &
   [ INFLECTD na,
     SYNSEM.PUNCT [ LPUNCT #lpunct & dq_or_sq_or_lital_or_no_punct,
@@ -2595,6 +2636,35 @@ punctuation_italright_rule := basic_punctuation_rule &
 			      RCLSTR.RPAREN #rparen ] ],
              GENRE #genre ] >,
     GENRE #genre ].
+|#
+#|
+punctuation_italright_rule := basic_punctuation_rule &
+  [ INFLECTD na,
+    SYNSEM.PUNCT [ LPUNCT #lpunct & lital_or_no_punct,
+                   RPUNCT dq_or_sq_or_rital_punct & [ PSF #psf ],
+		   RCLSTR [ RPAREN #rparen,
+			    RFP + ] ],
+    ARGS < [ INFLECTD na_or_+,
+	     SYNSEM [ PUNCT [ LPUNCT #lpunct,
+			      RPUNCT clause_or_no_punct & [ PSF #psf ],
+			      RCLSTR.RPAREN #rparen ] ],
+             GENRE #genre ] >,
+    GENRE #genre ].
+|#
+punctuation_italright_rule := basic_punctuation_rule &
+  [ INFLECTD na,
+    SYNSEM.PUNCT [ LPUNCT #lpunct & lital_or_no_punct,
+                   RPUNCT #rpunct,
+		   RCLSTR [ RPAREN #rparen,
+			    RFP +,
+			    RITAL + ] ],
+    ARGS < [ INFLECTD na_or_+,
+	     SYNSEM [ PUNCT [ LPUNCT #lpunct,
+			      RPUNCT clause_or_no_punct & #rpunct,
+			      RCLSTR.RPAREN #rparen ],
+		      PHON.ONSET unk_onset ],
+             GENRE #genre ] >,
+    GENRE #genre ].
     
 ;; DPF 29-mar-10 - Don't remember why dtr was constrained to word_or_infl_rule,
 ;; but it blocks e.g. |``(For| so remove it and see what happens. 
@@ -2605,7 +2675,7 @@ punctuation_italright_rule := basic_punctuation_rule &
 ;; So for now, we'll sacrifice the tokens like |``(For|, until a better
 ;; solution emerges to control the interaction of these two rules.
 ;; DPF 2016-09-18 - Now that we've added IGNOREQ + on right-drop rule's mother
-;; (needed separately for handling foreigh-word sequences), let's use it to
+;; (needed separately for handling foreign-word sequences), let's use it to
 ;; enforce left-before-right dropping rules to avoid spurious ambiguity.
 ;; DPF 2016-10-12 - Re 2016-09-18: And hence let's drop the constraint on
 ;; dtr being word_or_infl_or_punct_rule, since it was also blocking the attrib
@@ -2629,7 +2699,8 @@ punct_drop_italright_rule := basic_punctuation_rule &
                    RPUNCT #rpunct,
 		   RCLSTR [ RPAREN #rparen,
 			    RFP -,
-			    IGNOREQ + ] ],
+			    IGNOREQ +,
+			    RITAL - ] ],
     ARGS < [ INFLECTD #infl,
 	     SYNSEM [ PHON.ONSET con_or_voc,
 		      PUNCT [ LPUNCT #lpunct & no_punct,
