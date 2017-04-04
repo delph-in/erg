@@ -469,11 +469,13 @@ non_rel_clause := basic_non_rel_clause & clause.
 ; of inverted and non-inverted sentences.  Worry that this swap has been made
 ; before, but next time we'll know why.
 ; DPF 28-Nov-02 - HOOK comes only from C-CONT
+;; DPF 2017-17-04 - Moved PRD - constraint down to subtype, in order to allow
+;; non-matric subj-head to have PRD + for verbal gerunds, as in 
+;; |me arriving surprised him|.
 
-decl_phrase := basic_non_rel_clause & phrasal &
+basic_decl_phrase := basic_non_rel_clause & phrasal &
   [ SYNSEM.LOCAL.CAT [ HEAD basic_verb_or_frag &
-                            [ INV -,
-                              PRD - ],
+                            [ INV - ],
                        MC bool ],
     HD-DTR.SYNSEM.LOCAL.CONT.HOOK [ LTOP #hdtop,
                                     INDEX #hdind ],
@@ -482,6 +484,9 @@ decl_phrase := basic_non_rel_clause & phrasal &
              RELS <! !>,
              HCONS <! !>,
 	     ICONS <! !> ] ].
+
+decl_phrase := basic_decl_phrase &
+  [ SYNSEM.LOCAL.CAT.HEAD.PRD - ].
 
 ; Added [SYNSEM..SPR < >] on imp to preserve intended constraints on modifiers
 ; which only attach to VP and N-bar.
@@ -2007,7 +2012,7 @@ head_marker_phrase_nbar := basic_head_marker_phrase_nom &
              SYNSEM.LOCAL [ CAT [ HEAD noun_or_nomger &
                                        [ MINORS.MIN gen_nom_nbar_rel ],
                                   VAL.SPR.FIRST synsem & 
-				                [ --MIN quant_or_wh_rel,
+				                [ --MIN abstract_q_rel,
 						  LOCAL.CAT.HEAD det ] ],
                             CONT.HOOK [ LTOP #ltop,
                                         INDEX #ind ] ] ] >,
@@ -2117,7 +2122,7 @@ head_opt_comp_phrase := basic_head_opt_comp_phrase &
                               CONT.HOOK.INDEX event ],
                       LEX #lex ] ] ].
 
-; DPF 21-Mar-01 - Removed SPR..MIN quant_or_wh_rel since this blocked pumping
+; DPF 21-Mar-01 - Removed SPR..MIN abstract_q_rel since this blocked pumping
 ; for partitives, as in "very little arrived"
 ; Changed HEAD from noun to n_or_p for "worth"
 ; DPF 3-Jun-02 - Constraint of lex_synsem on dtr prevents noun-noun-cmpnds
@@ -6728,7 +6733,7 @@ partitive_intadj_phrase := basic_partitive_num_phrase &
 partitive_intadj_nocomp_phrase := partitive_intadj_phrase &
                                   basic_partitive_num_nocomp_phrase &
   [ SYNSEM.LOCAL [ CAT.HEAD.MINORS [ MIN part_nc_rel,
-				     ALTMIN quant_or_wh_rel ],
+				     ALTMIN abstract_q_rel ],
 		   CONT.HOOK.INDEX.SORT basic-entity-or-event ],
     ARGS < [ SYNSEM.LOCAL.CAT.HEAD intadj ] > ].
 
@@ -6742,7 +6747,7 @@ partitive_intadj_nocomp_phrase := partitive_intadj_phrase &
 partitive_adj_nocomp_phrase := partitive_intadj_phrase &
 			       basic_partitive_num_nocomp_phrase &
   [ SYNSEM.LOCAL.CAT [ HEAD.MINORS [ MIN part_nc_rel,
-				     ALTMIN quant_or_wh_rel ],
+				     ALTMIN abstract_q_rel ],
 		       VAL.SPR < expressed_synsem &
 				 [ --MIN def_or_demon_q_rel ] > ],
     ARGS < [ SYNSEM.LOCAL.CAT.HEAD basic_adj ] > ].
@@ -7196,6 +7201,8 @@ fw_sequence_right_phrase := basic_binary_phrase &
 ;; XARG of the possessive which presents the pronoun's index that we want.
 ;; DPF 2013-09-26 - Removed PRD - since this prevented both |my hiring Kim|
 ;; and |me hiring Kim|.  We'll see what work it was doing.
+;; DPF 2017-04-02 - Rextrict dtr to MC na_or_- to enable blocking of spurious
+;; analysis with robust rule that analyzes |the seat sleeping| as an (MC +) S.
 ;
 vgerund_phrase := unary_phrase & phrasal &
   [ SYNSEM [ LOCAL [ CAT [ HEAD gerund &
@@ -7236,7 +7243,8 @@ vgerund_phrase := unary_phrase & phrasal &
 			       VAL [ SUBJ < [ --SIND #subjind,
                                               LOCAL.CAT.HEAD noun,
                                               NONLOC #snonloc ] >,
-                                     COMPS < > ] ],
+                                     COMPS < > ],
+			       MC na_or_- ],
 			 CONT.HOOK [ LTOP #vhand,
                                      INDEX [ E.TENSE no_tense,
 					     SF prop ] ],
@@ -7621,7 +7629,7 @@ subjh_rule_basic := binary_rule_right_to_left & basic_binary_headed_phrase &
     NH-DTR.SYNSEM [ LOCAL.CAT.HEAD.POSS -,
                     NONLOC.QUE 0-dlist ] ].
 
-subjh_rule_decl := subjh_rule_basic & decl_phrase &
+subjh_rule_decl := subjh_rule_basic & basic_decl_phrase &
   [ SYNSEM.LOCAL.CAT [ MC bool,
 		       POSTHD + ],
     HD-DTR.SYNSEM.NONLOC.QUE 0-dlist,
@@ -7646,7 +7654,8 @@ subjh_rule_decl := subjh_rule_basic & decl_phrase &
 subjh_mc_rule := subjh_rule_decl & head_subj_phrase & clause &
   [ SYNSEM [ LOCAL [ CAT [ HEAD verbal &
 				[ VFORM fin,
-                                  TAM indic_tam ],
+                                  TAM indic_tam,
+				  PRD - ],
 			   VAL.SPR *olist*,
                            MC + ],
                      CONT.HOOK [ INDEX.SF #pred,
@@ -7670,9 +7679,11 @@ subjh_mc_rule := subjh_rule_decl & head_subj_phrase & clause &
 ;; DPF 2014-04-01 - Re first comment above, we do actually want to allow
 ;; locative inversion in embedded clauses, such as verbs of saying:
 ;; "Kim said, here we are." So remove constraint.
-
+;; DPF 2017-04-03 - Generalized VFORM from fin_or_bse to fin_or_bse_or_prp
+;; to allow verbal gerunds.
+;;
 subjh_nonmc_rule := subjh_rule_decl & head_subj_phrase &
-  [ SYNSEM.LOCAL.CAT [ HEAD.VFORM fin_or_bse,
+  [ SYNSEM.LOCAL.CAT [ HEAD.VFORM fin_or_bse_or_prp,
 		       MC - ] ].
 
 subjh_rule_wh_insitu := binary_rule_right_to_left & head_subj_phrase & 
