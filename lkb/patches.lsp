@@ -44,17 +44,18 @@
 (in-package :lkb)
 (defun idiom-rel-p (rel)
   ;;; FIX
-  ;;; relation name ends with _i_rel - this won't quite do because
+  ;;; relation name ends with _i or -i -- this won't quite do because
   ;;; we want to allow for different senses and anyway this should use the
   ;;; standard pred parsing code
+  (setf myrel rel)
   (let* ((relpred (mrs::rel-pred rel))
          (relname (when (and relpred 
                              (or (symbolp relpred) (stringp relpred)))
                     (string-downcase relpred))))
     (and relname
          (or 
-          (equal "_i_rel" (subseq relname (- (length relname) 6)))
-          (equal "-i_rel" (subseq relname (- (length relname) 6)))))))
+          (equal "_i" (subseq relname (- (length relname) 2)))
+          (equal "-i" (subseq relname (- (length relname) 2)))))))
 
 
 ; In lkb/src/lexdb/headers.lsp
@@ -187,3 +188,6 @@
 	       (return))
 	      (t (push (read-char istream) comment-res)))))
     (coerce (nreverse comment-res) 'string)))
+
+;; Now using modern SEM-I construction machinery, so set this flag accordingly:
+(setf mrs::*normalize-predicates-p* t)
