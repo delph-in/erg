@@ -50,11 +50,10 @@
   (let* ((relpred (mrs::rel-pred rel))
          (relname (when (and relpred 
                              (or (symbolp relpred) (stringp relpred)))
-                    (string-downcase relpred))))
-    (and relname
-         (or 
-          (equal "_i_rel" (subseq relname (- (length relname) 6)))
-          (equal "-i_rel" (subseq relname (- (length relname) 6)))))))
+                    (string-downcase relpred)))
+         (n (- (length relname) 6))
+         (relname (and (>= n 0) (subseq relname n))))
+    (and relname (or (equal "_i_rel" relname) (equal "-i_rel" relname)))))
 
 
 ; In lkb/src/lexdb/headers.lsp
