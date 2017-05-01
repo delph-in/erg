@@ -5012,12 +5012,16 @@ basic_noun_n_cmpnd_phr := n_n_cmpnd_phr &
 
 ;; Ordinary compound nouns do not allow interleaved adjectives
 ;; DPF 20-apr-09 - Block left paren on head dtr
+;; DPF 2017-04-26 - Constrain NH-DTR to be nonconj_ref-ind, to avoid spurious
+;; ambiguity for e.g. |dog and cat collars| since the plural-compound rule
+;; necessarily provides one analysis for these.
 ;;
 noun_n_cmpnd_phr := basic_noun_n_cmpnd_phr &
   [ HD-DTR.SYNSEM [ MODIFD notmod_or_lmod & [ LPERIPH na ],
 		    PUNCT.LPUNCT dq_or_no_punct ],
     NH-DTR [ INFLECTD na_or_-,
-	     SYNSEM.PUNCT.RPUNCT hyphen_or_pair_or_no_punct ] ].
+	     SYNSEM [ LOCAL.CONT.HOOK.INDEX nonconj_ref-ind,
+		      PUNCT.RPUNCT hyphen_or_pair_or_no_punct ] ] ].
 
 ; But for more robust parsing, we'll let them in
 ;; DPF 2017-02-22 - Changed nh-dtr's RPUNCT from no_punct to comma_or_no_punct,
@@ -5033,6 +5037,11 @@ noun_adjn_cmpnd_phr := basic_noun_n_cmpnd_phr &
 ;; DPF 2016-02-16 - Exclude conjoined non-head to avoid ambig.
 ;; DPF 2016-11-07 - Removed [LPERIPH na] so we can also get
 ;; |securities mutual fund|.  Monitor for over-generation and FIX?
+;; DPF 2017-04-26 - Re 2016-02-16: But we need to use this rule for
+;; |sales and marketing arm| since the coord-nbar has to be INFLECTD + because
+;; of |sales| being inflected for plural.  So relocate the nonconj_ref-ind
+;; constraint to the normal n-n-compound rule, since this rule will give us
+;; an analysis for |dog and cat collars|
 ;;
 noun_n_cmpnd_pl_phr := basic_noun_n_cmpnd_phr &
   [ HD-DTR.SYNSEM [ MODIFD notmod_or_lmod,
@@ -5041,7 +5050,7 @@ noun_n_cmpnd_pl_phr := basic_noun_n_cmpnd_phr &
 	     SYNSEM [ LOCAL [ AGR.PNG.PN 3p,
 			      CAT [ HEAD.--BARE -,
 				    VAL.SPR.FIRST.LOCAL.CAT.HEAD det ],
-			      CONT.HOOK.INDEX nonconj_ref-ind &
+			      CONT.HOOK.INDEX ref-ind &
 					      [ PNG.PN 3p ] ],
 		      MODIFD notmod_or_lmod,
 		      PUNCT.RPUNCT hyphen_or_pair_or_no_punct ] ] ].
@@ -8714,7 +8723,7 @@ v_onecomp_coord_nonfin_mid_ig_phr := v_coord_nonfin_mid_ig_phr &
 ;; type now stamps [CASE non_nom] on mother, while |that| (already) imposes
 ;; [CASE nom].
 ;;
-s_coord_phr := verbal_coord_phr &
+basic_s_coord_phr := basic_verbal_coord_phr &
   [ SYNSEM [ LOCAL [ CAT [ HEAD [ VFORM fin_or_inf_or_imp,
 				  CASE #case ],
                            VAL [ SUBJ #subj & *olist*,
@@ -8727,17 +8736,19 @@ s_coord_phr := verbal_coord_phr &
 					    CASE #case ],
 				     VAL [ SUBJ #subj,
 					   COMPS < > ] ],
-			       CONT.HOOK.LTOP #ltop,
 			       CONJ cnil_or_atomconj ],
 		       NONLOC.SLASH.LIST *arglist* ],
-    RCONJ-DTR.SYNSEM [ LOCAL [ CAT [ HEAD.TAM.MOOD ind_or_modal_subj,
-				     VAL [ SUBJ *olist*,
-					   SPR #spr,
-					   COMPS < > ] ],
-			       CONJ.CREL.L-HNDL #lhndl ],
+    RCONJ-DTR.SYNSEM [ LOCAL.CAT [ HEAD.TAM.MOOD ind_or_modal_subj,
+				   VAL [ SUBJ *olist*,
+					 SPR #spr,
+					 COMPS < > ] ],
 		       NONLOC.SLASH.LIST *arglist* ],
-    C-CONT [ HCONS <! qeq & [ HARG #lhndl, LARG #ltop ] !>,
-	     ICONS <! !> ] ].
+    C-CONT.ICONS <! !> ].
+
+s_coord_phr := basic_s_coord_phr & verbal_coord_phr &
+  [ LCONJ-DTR.SYNSEM.LOCAL.CONT.HOOK.LTOP #ltop,
+    RCONJ-DTR.SYNSEM.LOCAL.CONJ.CREL.L-HNDL #lhndl,
+    C-CONT.HCONS <! qeq & [ HARG #lhndl, LARG #ltop ] !> ].
 
 ; Exclude S-coord from NP-CP rule unless complementizer present.
 ;; DPF 2015-04-17 - We were identifying this rule's HEAD value with
@@ -8790,6 +8801,48 @@ s_coord_int_top_phr := basic_s_coord_top_phr &
 
 s_coord_mid_eg_phr := s_coord_phr & mid_coord_event_edgen_rule.
 s_coord_mid_ig_phr := s_coord_phr & mid_coord_event_infgen_rule.
+
+;; |we learned that Abrams arrived, that Browne won|
+;; DPF 2017-04-26 - This type is largely copied from the v-v noconj type
+;; basic_v_coord_top_noconj_phr, and hence some better use of inheritance is 
+;; in order.  FIX someday.
+;;
+s_coord_top_noconj_phr := basic_s_coord_phr & binary_rule_right_to_left & 
+  [ SYNSEM [ LOCAL [ CAT.HEAD #head,
+		     CONT.HOOK.INDEX conj_event & #cind & [ E #tam ],
+                     CONJ cnil ],
+	     NONLOC.SLASH 0-dlist,
+             PUNCT [ LPUNCT #lpunct,
+                     PAIRED #rpnctpr,
+                     RPUNCT #rpunct ] ],
+    LCONJ-DTR.SYNSEM [ LOCAL [ CAT.HEAD comp,
+			       CONT.HOOK [ LTOP #lltop,
+                                           INDEX #lind ],
+                               CONJ cnil ],
+                       PUNCT [ LPUNCT #lpunct,
+                               RPUNCT comma_or_semicol,
+                               PNCTPR #pnctpr ] ],
+    RCONJ-DTR.SYNSEM [ LOCAL [ CAT.HEAD #head & comp,
+			       CONT.HOOK [ LTOP #rltop,
+					   INDEX #rind & [ E #tam ] ],
+			       CONJ cnil ],
+                       PUNCT [ RPUNCT #rpunct,
+                               PAIRED #pnctpr,
+                               PNCTPR #rpnctpr ] ],
+    ORTH [ FROM #from, TO #to ],
+    C-CONT [ HOOK [ LTOP #ltop,
+                    INDEX #cind & conj-ind ],
+             RELS <! [ LBL #ltop,
+                       PRED implicit_conj_rel,
+                       ARG0 #cind & non_expl,
+                       L-HNDL #lltop,
+                       L-INDEX #lind,
+                       R-HNDL #rltop,
+                       R-INDEX #rind,
+		       CFROM #from, CTO #to ] !>,
+             HCONS <! !>,
+	     ICONS <! !> ],
+    GENRE nonformal ].
 
 ;; DPF 2017-02-22 - Generalized VFORM from fin to fin_or_inf, to allow
 ;; coord of infinitival relatives, as in |people to admire and to emulate|
