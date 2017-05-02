@@ -2078,11 +2078,13 @@ basic_head_opt_comp_phrase := head_valence_phrase & norm_unary_phrase &
 	   [ LOCAL [ CAT [ VAL [ SUBJ #subj,
 				 SPR #spr,
                                  SPEC #spec,
-                                 SPCMPS #spcmps ],
+                                 SPCMPS #spcmps,
+				 COMPS #comps ],
 			   MC #mc,
                            POSTHD #ph,
                            HS-LEX #hslex ],
                      CONJ cnil ],
+	     LEX #lex,
 	     OPT #opt,
              MODIFD #mod ],
     HD-DTR #head & 
@@ -2090,10 +2092,12 @@ basic_head_opt_comp_phrase := head_valence_phrase & norm_unary_phrase &
              SYNSEM [ LOCAL [ CAT [ VAL [ SUBJ #subj,
 					  SPR #spr,
                                           SPEC #spec,
-                                          SPCMPS #spcmps ],
+                                          SPCMPS #spcmps,
+					  COMPS.REST #comps ],
                                     MC #mc,
                                     POSTHD #ph,
                                     HS-LEX #hslex ] ],
+		      LEX #lex,
 		      OPT #opt,
                       MODIFD #mod,
                       PUNCT.LPUNCT pair_or_no_punct ] ],
@@ -2112,15 +2116,12 @@ basic_head_opt_comp_phrase := head_valence_phrase & norm_unary_phrase &
 ; conjoined VP in CP-phrase, since the complementizer shares its INDEX with
 ; the VP.
 head_opt_comp_phrase := basic_head_opt_comp_phrase &
-  [ SYNSEM nonlex_synsem &
-           [ LOCAL.CAT [ VAL.COMPS #comps ],
-             LEX #lex ],
+  [ SYNSEM nonlex_synsem,
     HD-DTR [ INFLECTD +,
-             SYNSEM [ LOCAL [ CAT [ HEAD.MINORS.MIN event_rel,
-                                    VAL.COMPS 
-                                    < unexpressed_reg & [ OPT + ] . #comps > ],
-                              CONT.HOOK.INDEX event ],
-                      LEX #lex ] ] ].
+             SYNSEM.LOCAL [ CAT [ HEAD.MINORS.MIN event_rel,
+				  VAL.COMPS.FIRST unexpressed_reg & 
+						  [ OPT + ] ],
+			    CONT.HOOK.INDEX event ] ] ].
 
 ; DPF 21-Mar-01 - Removed SPR..MIN abstract_q_rel since this blocked pumping
 ; for partitives, as in "very little arrived"
@@ -2136,22 +2137,16 @@ head_opt_comp_phrase := basic_head_opt_comp_phrase &
 ; eleven pm meeting".
 
 noun_opt_comp_phrase := basic_head_opt_comp_phrase &
-  [ SYNSEM basic_lex_synsem &
-           [ LOCAL.CAT.VAL.COMPS #comps,
-             LEX #lex ],
+  [ SYNSEM basic_lex_synsem,
     ORTH #orth,
     HD-DTR [ ORTH #orth,
 	     SYNSEM lex_or_nonlex_synsem &
-                  [ LOCAL.CAT 
-                          [ HEAD supnoun,
-                            VAL.COMPS 
-                                 < unexpressed_reg & 
-				   [ OPT +,
-                                     NONLOC 
-                                         [ SLASH 0-dlist,
-                                           QUE 0-dlist,
-                                           REL 0-dlist ] ] . #comps > ],
-                    LEX #lex ] ] ].
+		    [ LOCAL.CAT [ HEAD supnoun,
+				  VAL.COMPS.FIRST unexpressed_reg & 
+				       [ OPT +,
+					 NONLOC [ SLASH 0-dlist,
+						  QUE 0-dlist,
+						  REL 0-dlist ] ] ] ] ] ].
 
 ; ERB (19-01-98) If to_c_prop can undergo subject extraction (see notes
 ; near non_wh_rel) then this can't require HEAD v_or_p.  That constraint
@@ -7729,6 +7724,17 @@ h2comp_rule := binary_rule_left_to_right & head_second_comp_phrase.
 hoptcomp_rule := rule & head_opt_comp_phrase.
 noptcomp_rule := rule & noun_opt_comp_phrase.
 
+;; To allow robust processing where normally obligatory transitive verbs
+;; omit the direct object, as in dictionary definitions: |to devour|
+hoptcomp_rbst_rule := rule & basic_head_opt_comp_phrase &
+  [ SYNSEM nonlex_synsem,
+    HD-DTR [ INFLECTD +,
+             SYNSEM [ LOCAL.CAT [ HEAD verb,
+				  VAL.COMPS < [ OPT -,
+						LOCAL.CAT.HEAD noun ] > ],
+	              LEX + ] ],
+    GENRE robust ].
+
 hmark_e_phr_rule := binary_rule_left_to_right & head_marker_phrase_e_phr.
 hmark_s_phr_rule := binary_rule_left_to_right & head_marker_phrase_s_phr.
 hmark_a_lex_rule := binary_rule_left_to_right & head_marker_phrase_a_lex.
@@ -9451,6 +9457,9 @@ np_coord_mid_ig_rule := np_coord_mid_rule & mid_coord_infgen_rule.
 ; Restrict right conjunct to be nonprominal
 ;; DPF 2016-02-01 - Removed constraints on each dtr to be nonconj_ref-ind,
 ;; since we want e.g. |Kim (or Browne), Abrams (or Chiang)| via this rule.
+;; DPF 2017-05-02 - Constrain the right dtr to not already be a coord phrase,
+;; to avoid spurious analyses for |butter and salt| in 
+;; |combine flour, milk, butter and salt|
 ;;
 nom_coord_mid_noconj_rule := binary_rule_right_to_left & basic_nom_coord_rule &
   [ SYNSEM [ LOCAL [ CAT.HEAD.CASE non_obliq,
@@ -9472,7 +9481,7 @@ nom_coord_mid_noconj_rule := binary_rule_right_to_left & basic_nom_coord_rule &
                 INFLECTD + ], 
     RCONJ-DTR [ SYNSEM [ LOCAL [ CAT.HEAD [ CASE non_obliq,
 					    MINORS.MIN nonpro_rel ],
-                                 CONT.HOOK.INDEX #rind,
+                                 CONT.HOOK.INDEX #rind & nonconj_ref-ind,
 				 AGR.DIV #div,
                                  CONJ cnil ],
                          PUNCT [ LPUNCT no_punct,
@@ -10940,6 +10949,10 @@ frag_r_mod_ap_rule := binary_right_frag_rule &
              HCONS <! !>,
 	     ICONS <! !> ] ].
 
+;; DPF 2017-05-02 - This rule is largely redundant with other, better analyses,
+;; so disable.
+;;
+#|
 frag_nbar_nbar_rule := binary_frag_rule &
   [ ARGS < [ INFLECTD +,
 	     SYNSEM [ LOCAL [ CAT [ HEAD noun &
@@ -10988,6 +11001,7 @@ frag_nbar_nbar_rule := binary_frag_rule &
 		      qeq & [ HARG #rrstr,
                               LARG #rltop ] !>,
 	     ICONS <! !> ] ].
+|#
 
 ; DPF 21-aug-04 - Added nonempty SYNSEM..ALTMIN to prevent these from 
 ; appearing in run_on_s rule.
