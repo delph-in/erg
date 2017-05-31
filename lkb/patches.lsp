@@ -191,3 +191,16 @@
 
 ;; Now using modern SEM-I construction machinery, so set this flag accordingly:
 (setf mrs::*normalize-predicates-p* t)
+
+;; For LexDB, when dumping the database to lexdb.rev file, the final command
+;; pq:endcopy now apparently returns "1" for okay, where it used to return "0"
+;; (or perhaps something is actually going wrong with pq:endcopy but does not
+;; cause any visible bad effects).  So just add "1" as a possible okay output:
+;; In psql-database.lsp
+
+(defun endcopy (conn)
+  (unless (or (= 0 (pq:endcopy conn))
+	      (= 1 (pq:endcopy conn)))
+    ;;fix_me
+    ;;(format t "~%PSQL ~a" error-message)
+    (throw :sql-error (cons :putline "endcopy failed"))))
