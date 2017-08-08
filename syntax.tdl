@@ -5078,7 +5078,7 @@ noun_n_cmpnd_pl_phr := basic_noun_n_cmpnd_phr &
 			      CONT.HOOK.INDEX ref-ind &
 					      [ PNG.PN 3p ] ],
 		      MODIFD notmod_or_lmod,
-		      PUNCT.RPUNCT hyphen_or_pair_or_no_punct ] ] ].
+		      PUNCT.RPUNCT rbc_or_hyphen_or_pair_or_no_punct ] ] ].
 
 ; n-adj phrases: "wide-eyed" "pea-sized", "sky blue"
 ; DPF 30-oct-06 - Stopped passing up of ALTMIN from dtr to mother, since
@@ -5550,8 +5550,12 @@ appos_phr_nonprop_prpnct := appos_phr_prpnct &
     NH-DTR.SYNSEM.LOCAL.CAT [ HEAD.MINORS.ALTMIN def_or_meas_noproper_rel,
 			      VAL.SPEC *cons* ] ].
 
+;; DPF 2017-07-10 - Further constrained this new rule to exclude number NPs
+;; as heads, to avoid spurious analysis for |3.2 shares|
+;;
 appos_phr_meas_prpnct := appos_phr_prpnct &
-  [ HD-DTR.SYNSEM.LOCAL.CAT.HEAD.MINORS.ALTMIN non_pronoun_q_rel,
+  [ HD-DTR.SYNSEM.LOCAL.CAT.HEAD.MINORS [ MIN basic_non_temp_nonpro_rel,
+					  ALTMIN non_pronoun_q_rel ],
     NH-DTR.SYNSEM.LOCAL.CAT [ HEAD.MINORS [ MIN meas_nom_rel,
 					    ALTMIN udef_q_rel,
 					    NORM quantity_rel ],
@@ -5631,9 +5635,12 @@ appos_indef_phr := norm_appos_indef_phr &
 			  PNCTPR #ppair,
 			  PAIRED #paired ] ].
 
+;; DPF 2017-07-10 - Let's try restricting the NH-DTR to phrases, to avoid
+;; some spurious ambiguity, as in |... 23, cats ...|
 appos_indef_rbc_phr := norm_appos_indef_phr &
   [ HD-DTR.SYNSEM.PUNCT.RPUNCT rbcomma_punct,
-    NH-DTR.SYNSEM.PUNCT.RPUNCT no_punct ].
+    NH-DTR.SYNSEM [ PUNCT.RPUNCT no_punct,
+		    LEX na_or_- ] ].
 
 ;; DPF 2014-05-16 - Let's use the RPAREN attribute, and generalize this to
 ;; all parenthesized NPs for right dtr.
@@ -5971,6 +5978,9 @@ npadv_yofc_phrase := basic_npadv_mod_phrase &
 ;; DPF 2017-06-24 - Re 21-oct-09: But this prevents coordination of these
 ;; NPadv phrases with other PPs, as in |wait two hours or until the afternoon|.
 ;; So removed PRD -; let's see how it goes.  FIX?
+;; DPF 2017-07-17 - Changed dtr's SPR from synsem to synsem_min since we want
+;; the rule to apply for |prices rose a modest 3%| where the measure-NP has an
+;; *anti-list* for its SPR.
 ;;
 npadv_measnp_phrase := basic_npadv_mod_phrase &
   [ SYNSEM [ LOCAL.CAT [ HEAD [ MINORS [ MIN miscprep_rel,
@@ -5989,7 +5999,7 @@ npadv_measnp_phrase := basic_npadv_mod_phrase &
     C-CONT.HOOK.LTOP #ltop,
     ARGS < [ SYNSEM [ LOCAL.CAT [ HEAD [ MINORS.MIN num_or_meas_rel,
 					 CASE no_case ],
-				  VAL.SPR < synsem &
+				  VAL.SPR < synsem_min &
 					    [ LOCAL.CAT.HEAD adv ] > ] ] ] > ].
 
 ; DPF 5-Feb-01 - Restrict mother's SPEC..HEAD value to adj for now, to block
@@ -6137,10 +6147,13 @@ bare_measure_np_phrase := norm_unary_phrase & basic_measure_np_phrase &
 ;; DPF 2012-09-28 - But LPERIPH + also blocks N-N compounds where the meas-NP
 ;; is in the head-dtr, as in |benchmark 10% rate|, and anyway the npadv_mnp
 ;; rule does not mind its dtr with MODIFD notmod, so we go back to notmod.
+;; DPF 2017-07-06 - We can't propagate CASE from noun dtr to mother, since
+;; we're using [CASE no_case] on some meas nouns to prevent them as bare NP
+;; modifiers as in |*the market rose dollars|.  We'll see what that identity
+;; was intended to do.  FIX??
 ;;
 binary_measure_np_phrase := binary_punct_phrase & basic_measure_np_phrase &
-  [ SYNSEM [ LOCAL [ CAT [ HEAD.CASE #case,
-			   VAL [ SPR < synsem & 
+  [ SYNSEM [ LOCAL [ CAT [ VAL [ SPR < synsem & 
 				   [ --MIN quant_rel,
 				     LOCAL.CAT [ HEAD det,
 						 VAL [ SUBJ < >,
@@ -6590,6 +6603,9 @@ free_rel_phrase := head_initial_infl & head_compositional &
 ; |this many arose|.  Okay since already using NORM attribute to block |a/an|
 ; while allowing |one| here.
 ;; DPF 2014-06-01 - Identified SLASH of mother and dtr (formerly unconstrained)
+;; DPF 2017-07-14 - Further restricted C-CONT..INDEX from overt_non_expl-ind
+;; to nonconj_overt-ind, in order to avoid spurious ambig with the possessive
+;; |'s| for conjoined NPs.
 ;;
 basic_partitive_num_phrase := unary_phrase & phrasal &
   [ SYNSEM [ LOCAL [ CAT [ HEAD partn &
@@ -6625,8 +6641,8 @@ basic_partitive_num_phrase := unary_phrase & phrasal &
 		NONLOC.SLASH #slash ] ] >,
     ORTH [ FROM #from, TO #to ],
     C-CONT [ HOOK [ LTOP #nhand,
-                    INDEX #index & overt_non_expl-ind &
-			           [ PNG #png,
+                    INDEX #index & nonconj_overt-ind &
+			           [ PNG #png & png-reg,
 				     DIV #div ] ],
 	     RELS.LIST < [ LBL #nhand,
                            ARG0 #index,
@@ -6670,18 +6686,22 @@ partitive_np_num_phrase := basic_partitive_num_phrase &
 
 ; DPF 03-may-04 - Changed generic_entity_rel to num_nocmpnd_rel to prevent
 ; these in N-N-cmpnds or appositives
+;;
 basic_partitive_num_nocomp_phrase := basic_partitive_num_phrase &
   [ SYNSEM [ LOCAL.CAT.VAL.COMPS < >,
              NONLOC [ SLASH #slash,
                       REL 0-dlist ] ],
     ARGS < [ SYNSEM [ NONLOC [ SLASH #slash,
                                REL 0-dlist ],
-                      PUNCT.RPUNCT comma_or_clause_or_pair_or_no_punct ] ] >,
+                  PUNCT.RPUNCT comma_or_rbc_or_clause_or_pair_or_no_punct ] ] >,
     C-CONT.RELS.LIST.FIRST.PRED generic_entity_rel ].
 
 ; DPF 03-oct-06 - Removed following constraint: blocked "many of the cats"
 ; ARGS < [ SYNSEM.LOCAL.CAT.VAL.SPR *anti_list* ] >,
-
+;; DPF 2017-07-18 - For some reason, the reentrancy of COMPS..INDEX with
+;; RELS.FIRST.ARG1 was dropped, but this is wrong at least some of the time,
+;l as in |three of the cats|.  So put it back, and check for possible FIX?
+;;
 basic_partitive_num_ppof_phrase := basic_partitive_num_phrase &
   [ SYNSEM [ LOCAL.CAT [ HEAD.MINORS.MIN part_of_rel,
                          VAL.COMPS < synsem &
@@ -6702,7 +6722,7 @@ basic_partitive_num_ppof_phrase := basic_partitive_num_phrase &
     C-CONT [ HOOK [ INDEX.SORT #sort,
 		    XARG #xarg ],
 	     RELS.LIST.FIRST [ PRED part_of_rel,
-			       ARG1 #arg & overt_non_expl-ind &
+			       ARG1 overt_non_expl-ind & #arg &
 				    [ SORT #sort ] ] ] ].
 
 ;; DPF 2012-05-12 - Added INDEX nonconj_ref-ind to prevent these from being
@@ -8147,7 +8167,7 @@ filler_head_rule_wh_nr_fin := binary_rule_left_to_right &
 		       MC - ],
     HD-DTR.SYNSEM.LOCAL [ CAT.MC -,
                           CONT.HOOK.LTOP #hdtop ],
-    NH-DTR.SYNSEM [ PUNCT.RPUNCT comma_or_pair_or_no_punct ],
+    NH-DTR.SYNSEM [ PUNCT.RPUNCT comma_or_rbc_or_pair_or_no_punct ],
     C-CONT [ HOOK.LTOP #hdtop,
              RELS <! !>,
              HCONS <! !>,
@@ -9089,14 +9109,19 @@ p_coord_mid_ig_phr := prep_coord_mid_ig_phr & x_onecomp_coord_phr.
 ;; DPF 2016-11-19 - Can't require the MIN values of the dtrs' sprs to be the
 ;; same, since we want |tall but older|, where the two differ.  So let's
 ;; propagate the one from the left dtr, arbitrarily.
+;; DPF 2017-07-11 - Removed the requirement that the dtr SPR values be non-empty
+;; lists, since we want to admit coord of specified number phrases, as in
+;; |ten thousand or twenty thousand people|, and these have empty SPRs.  Instead
+;; require dtrs to have SPR *olist*.  Note that we are still sadly admitting
+;; |the [very [heavy and angrier]] cat| since we don't have a good way to
+;; ensure that the sprs' --MIN values match appropriately.  FIX someday?
 ;;
 adj_coord_phr := gen_coord_phr &
   [ SYNSEM [ LOCAL [ CAT 
 		     [ HEAD #head &
 			    [ MOD #mod, PRD #prd, MINORS #min, TAM #tam ],
 		       VAL [ SPR < synsem_min &
-				   [ --MIN #sprmin,
-				     LOCAL 
+				   [ LOCAL 
 				     [ CAT 
 				       [ HEAD adv,
 					 VAL 
@@ -9123,19 +9148,14 @@ adj_coord_phr := gen_coord_phr &
 					  [ MOD #mod, PRD #prd, MINORS #min, 
 					    TAM #tam ],
 				     VAL [ COMPS < >,
-					   SPR.FIRST 
-					       [ --MIN #sprmin,
-						 OPT +,
-						 LOCAL.CAT.VAL.SPCMPS < > ] ],
+					   SPR *olist* ],
 				     POSTHD #ph ],
                                CONT.HOOK [ LTOP #ltop,
 					   XARG #xarg ] ],
 		       MODIFD.LPERIPH #lperiph ],
     RCONJ-DTR.SYNSEM [ LOCAL [ CAT [ HEAD adj_or_intadj & [ TAM #tam ],
 				     VAL [ COMPS < >,
-					   SPR .FIRST 
-					       [ OPT +,
-						 LOCAL.CAT.VAL.SPCMPS < > ] ],
+					   SPR *olist* ],
 				     POSTHD #ph ],
                                CONT.HOOK.XARG #xarg,
 			       CONJ complex-conj &
@@ -11354,6 +11374,9 @@ dash_float_s_rule := paren_dash_float_s_rule &
 ; "Abrams (Browne) arrived"
 ; DPF 02-oct-08 - Re 09-aug-07: But this also blocks post-nominal modification
 ; after an acronym, as in "the computers (IBM) in Paris are black".  So remove.
+;; DPF 2017-07-03 - Restricting NH-DTR's SPR to a singleton list excludes
+;; measure-phrases, as in |10 pence (16 cents)|. So only constrain first
+;; element.
 ;
 paren_float_nbar_rule := paren_float_rule & head_initial &
   [ SYNSEM [ PUNCT.RPUNCT #rpunct,
@@ -11364,7 +11387,7 @@ paren_float_nbar_rule := paren_float_rule & head_initial &
     NH-DTR [ SYNSEM [ LOCAL [ CAT nbar_cat &
                               [ HEAD [ --BARE -,
 				       CASE non_nom ],
-                                VAL [ SPR < [ OPT - ] >,
+                                VAL [ SPR.FIRST.OPT -,
 				      SPEC *anti_list* ] ],
 			      CONT.HOOK [ LTOP #nhtop,
 					  INDEX #nhind ] ],
