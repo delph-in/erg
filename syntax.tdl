@@ -469,7 +469,7 @@ non_rel_clause := basic_non_rel_clause & clause.
 ; of inverted and non-inverted sentences.  Worry that this swap has been made
 ; before, but next time we'll know why.
 ; DPF 28-Nov-02 - HOOK comes only from C-CONT
-;; DPF 2017-17-04 - Moved PRD - constraint down to subtype, in order to allow
+;; DPF 2017-09-04 - Moved PRD - constraint down to subtype, in order to allow
 ;; non-matric subj-head to have PRD + for verbal gerunds, as in 
 ;; |me arriving surprised him|.
 
@@ -1444,7 +1444,7 @@ subconj_prdp_ellip_phr := subconj_prdp_phr &
 ;; DPF 2016-01-25 - The RPUNCT on the mother's MOD value can't just be
 ;; comma_or_clause because the modifier phrase might be a parenthetical, as
 ;; in |we arose (Kim arriving)|.  We have no good way to say with one rule
-;; that either the modified phrase is puncuation marked or the modified
+;; that either the modified phrase is puncuation marked or the modifyier
 ;; phrase is parenthesized.  Maybe split into two rules?  FIX.
 ;; DPF 2016-02-03 - Added NORM no_rel to first dtr, to prevent foreign words
 ;; (output of lexical rule) from appearing here, to avoid spurious analyses
@@ -1464,6 +1464,10 @@ subconj_prdp_ellip_phr := subconj_prdp_phr &
 ;; the second dtr's MOD to be HEAD n_or_v.
 ;; DPF 2016-12-16 - Changed mother's MOD..RPERIPH from - to na_or_-, since we
 ;; want to admit |we arrive to arise, the cat being our friend|.
+;; DPF 2017-09-05 - Constrained left dtr to be SORT norm-entity-or-event in 
+;; order to block WH-clauses there, as in |who are fifteen to twenty feet tall|
+;; DPF 2017-09-06 - Re 2016-01-25: Okay, did the split into two rules, to avoid
+;; spurious analyis for |Jerome has fifty dollars he saved.|
 ;;
 np_pred_phr := non_headed_phrase & binary_phrase &
   [ SYNSEM basic_subconj_synsem &
@@ -1493,7 +1497,8 @@ np_pred_phr := non_headed_phrase & binary_phrase &
 					   --BARE - ],
 				    VAL [ SPR *olist*,
 					  COMPS *olist* ] ],
-			      CONT.HOOK.INDEX #modind,
+			      CONT.HOOK.INDEX #modind &
+				              [ SORT norm-entity-or-event ],
 			      CONJ cnil ],
 		      NONLOC non-local_none,
 		      PUNCT.RPUNCT no_punct ] ],
@@ -1679,12 +1684,11 @@ basic_head_subj_phrase := head_nexus_rel_phrase & head_final_infl & phrasal &
         	   NONLOC [ SLASH 0-dlist,
                             REL 0-dlist ],
                    PUNCT [ LPUNCT pair_or_no_punct,
-                           RPUNCT comma_or_rbc_or_pair_or_no_punct,
-                           PNCTPR ppair ] ] ].
+                           RPUNCT comma_or_rbc_or_pair_or_no_punct ] ] ].
 
 head_subj_phrase := basic_head_subj_phrase &
   [ HD-DTR.SYNSEM.LOCAL.CAT.VAL.SUBJ < #synsem >,
-    NH-DTR.SYNSEM #synsem ].
+    NH-DTR.SYNSEM #synsem & [ PUNCT.PNCTPR ppair ] ].
 
 ; A head/comps phrase is a phrase that combines a head with something selected
 ; for by the COMPS feature.  Head/comps phrases come in two denominations:
@@ -3912,6 +3916,9 @@ extracted_adj_coord_s_phrase := extracted_adj_int_phrase &
 ;; its MOD value to have an explicit quantifier, but we want the mother to be
 ;; ALTMIN implicit_q_rel.  So remove the identity here, and push down to the
 ;; other subtypes.
+;; DPF 2017-09-05 - Moved identity of PNG on mother and dtr down to subtypes,
+;; so the rule for bare predicatives (|Kim is president|) can override the
+;; idiosyncratic AGR.PNG 3p constraint on its dtr.
 
 generic_bare_np_phrase := norm_unary_phrase &
   [ INFLECTD #infl,
@@ -3928,8 +3935,7 @@ generic_bare_np_phrase := norm_unary_phrase &
 				 SPCMPS < > ],
                            MC na,
 			   NEGPOL - ],
-                     AGR ref-ind &
-                         [ PNG #png ],
+                     AGR ref-ind,
                      CONJ #conj ],
              NONLOC #nonloc,
 	     LEX #lex,
@@ -3945,7 +3951,6 @@ generic_bare_np_phrase := norm_unary_phrase &
 					       NONLOC [ SLASH 0-dlist,
 							REL 0-dlist,
 							QUE 0-dlist ] ] ] ],
-		       AGR.PNG #png,
                        CONJ #conj & cnil,
                        CONT [ HOOK [ LTOP #nhand,
                                      INDEX #index ] ] ],
@@ -4012,10 +4017,11 @@ reg_bare_np_phrase := norm_bare_np_phrase &
 ;  [ ARGS < [ SYNSEM nonlex_synsem & [ LOCAL.CAT.HEAD nomger ] ] > ].
 
 bare_np_phrase := reg_bare_np_phrase &
-  [ SYNSEM.LOCAL.AGR.DIV +,
-    ARGS < [ SYNSEM.LOCAL.CAT [ HEAD noun_or_nomger,
-				VAL.SPR [ FIRST.OPT -,
-					  REST *olist* ] ] ] > ].
+  [ SYNSEM.LOCAL.AGR #agr & [ DIV + ],
+    ARGS < [ SYNSEM.LOCAL [ CAT [ HEAD noun_or_nomger,
+				  VAL.SPR [ FIRST.OPT -,
+					    REST *olist* ] ],
+			    AGR #agr ] ] > ].
 
 ;; DPF 2012-11-14 - Added INDEX.DIV - to mother to prevent `group' nouns
 ;; (which are underspecified for AGR) from spuriously using this rule.
@@ -4023,7 +4029,8 @@ bare_np_phrase := reg_bare_np_phrase &
 bare_np_prd_phrase := reg_bare_np_phrase &
   [ SYNSEM.LOCAL [ CAT.HEAD.PRD +,
 		   CONT.HOOK.INDEX.DIV -,
-		   AGR.DIV - ],
+		   AGR [ PNG.PN 3s,
+			 DIV - ] ],
     ARGS < [ SYNSEM.LOCAL [ CAT [ HEAD noun & [ CASE nom ],
 				  VAL.SPR.FIRST unexpressed_reg ],
 			    CONT.HOOK.INDEX nonconj_ref-ind & [ PNG #png ],
@@ -4237,16 +4244,18 @@ bare_npq_phrase := norm_unary_phrase &
 
 detlesspp_np_phrase := generic_bare_np_phrase &
   [ INFLECTD +,
-    SYNSEM.LOCAL.CAT [ HEAD noun_nonmob &
+    SYNSEM.LOCAL [ CAT [ HEAD noun_nonmob &
 			    [ MINORS [ MIN #min & bare_nom_rel,
 				       ALTMIN implicit_q_rel ],
 			      MOD < >,
 			      --BARE + ],
-		       VAL.SPEC < anti_synsem_min > ],
+		   	          VAL.SPEC < anti_synsem_min > ],
+			    AGR #agr ],
     ARGS < [ INFLECTD +,
-             SYNSEM.LOCAL.CAT [ HEAD noun_nonmob &
+             SYNSEM.LOCAL [ CAT [ HEAD noun_nonmob &
 				     [ MINORS.MIN #min ],
-				VAL.SPR < [ OPT - ] > ] ] >,
+				  VAL.SPR < [ OPT - ] > ],
+			    AGR #agr ] ] >,
     C-CONT.RELS <! [ PRED idiom_q_i_rel ] !> ].
 
 ; 'at eye level'
@@ -5640,7 +5649,7 @@ appos_phr_prop_rbc := appos_np_phr &
 ;; of e.g. |machine learning, a branch of science, ...|.  So let's try
 ;; generalizing to noun_or_nomger, and see if the increased ambiguity is still
 ;; tolerable (FIX?).
-
+;;
 norm_appos_indef_phr := reg_appos_phr &
   [ HD-DTR.SYNSEM [ LOCAL.CAT.HEAD noun_or_nomger &
 				   [ CASE #case,
@@ -7908,7 +7917,12 @@ subconj_prdp_ellip_rule := rule & subconj_prdp_ellip_phr.
 subconj_prdp_a_init_rule := rule & subconj_prdp_a_init_phr.
 subconj_prdp_v_init_lex_rule := rule & subconj_prdp_v_init_lex.
 subconj_prdp_v_init_rule := rule & subconj_prdp_v_init_phr.
-np_pred_rule := binary_rule_right_to_left & np_pred_phr.
+np_pred_rule := binary_rule_right_to_left & np_pred_phr &
+  [ SYNSEM [ PUNCT.LPUNCT no_punct,
+	     LOCAL.CAT.HEAD.MOD.FIRST.PUNCT.RPUNCT comma_or_clause ] ].
+np_pred_paren_rule := binary_rule_right_to_left & np_pred_phr &
+  [ SYNSEM [ PUNCT.LPUNCT lparen_punct,
+	     LOCAL.CAT.HEAD.MOD.FIRST.PUNCT.RPUNCT pair_or_no_punct ] ].
 
 ; ERB (19-01-98) The single non_wh_rel_rule dream didn't come true.
 ; non_wh_rel_rule := rule & non_wh_rel_cl.

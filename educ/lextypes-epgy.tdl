@@ -9,9 +9,15 @@ norm_n_proper_lexent := reg_n_proper_lexent &
     INFLECTD - ].
 
 ;; Assign default neut gender to avoid spurious paraphrases
+;; DPF 2017-09-05 - But this prevents relative clauses with "who" for lots of
+;; nouns, so comment out, and let's find a better way to avoid generating
+;; unwanted paraphrases wrt gender.
+;;
+#|
 n_-_c_le := n_intr_lex_entry &
   [ SYNSEM.LOCAL.CONT.HOOK.INDEX [ PNG.GEN neut,
                                    SORT nonhuman ] ].
+|#
 
 n_-_c-fem_le := n_intr_lex_entry &
   [ SYNSEM.LOCAL.CONT.HOOK.INDEX.PNG.GEN fem ].
@@ -338,10 +344,11 @@ be_nv := be_verb &
     GENRE robust ].
 |#
 
-; Add feature for blocking mal-3sg and mal-n3sg
+; Add feature for blocking mal-3sg and mal-n3sg, and also mal-past
 ;
 vc_add :+ [ --MAL3SG bool,
-            --MALN3SG bool ].
+            --MALN3SG bool,
+	    --MALPAST bool ].
 
 ; Change CASE from obliq to non_obliq to block "to home"
 n_-_ad-pl-nomod_le := norm_np_adv_lexent &
@@ -520,13 +527,17 @@ av_-_i-vp-pr_le_rbst := int_vp_adverb_word &
 
 ; Allow robust post-VP adverbs: "He sang bad"
 ;
-av_-_i-vp-po_le_rbst := int_vp_adverb_word & 
+av_-_i-vp-po_rbst_lexent := int_vp_adverb_word & 
   [ SYNSEM [ LOCAL.CAT [ HEAD adv & [ MINORS.MIN adv_rel,
                                       MOD < [ LOCAL.CAT.HEAD v_or_g_or_a,
                                               MODIFD.RPERIPH na_or_- ] > ],
                          POSTHD + ],
              MODIFD hasmod ],
     GENRE robust ].
+
+;; For |good/bad|, which need special handling
+av_-_i-vp-po_le_mal := av_-_i-vp-po_rbst_lexent.
+av_-_i-vp-po_le_rbst := av_-_i-vp-po_rbst_lexent.
 
 ; restrict to only VP mods
 av_-_i-vp-po-nmb_le := int_vp_adverb_word & 
@@ -1057,6 +1068,13 @@ subjh_mc_rule := subjh_rule_decl & head_subj_phrase & clause &
                      CONT.HOOK.INDEX.SF #pred & prop-or-like ],
              PUNCT.RPUNCT.PSF #pred ] ].
 
+subjh_mc_ques_rule := subjh_rule_decl & head_subj_phrase & clause &
+  [ SYNSEM [ LOCAL [ CAT [ HEAD [ VFORM fin,
+                                  TAM indic_tam ],
+                           MC + ],
+                     CONT.HOOK.INDEX.SF #pred & ques ],
+             PUNCT.RPUNCT clause_punct & [ PSF #pred ] ] ].
+
 #|
 mal_bare_np_sg_phrase := generic_bare_np_phrase &
   [ SYNSEM [ LOCAL [ AGR [ DIV -,
@@ -1278,6 +1296,7 @@ noun_n_cmpnd_pl_mal := binary_rule_right_to_left & basic_noun_n_cmpnd_phr &
              SYNSEM lex_synsem &
 	            [ LOCAL [ CAT cat_infl_suff &
 				  [ HEAD.--BARE - ],
+		              CONT.HOOK.INDEX.PNG.PN 3p,
 			      AGR.PNG.PN 3p ] ] ],
     GENRE robust ].
 
@@ -1474,13 +1493,18 @@ v_np_its-mal_le := be_is_mal_lex_entry &
 			    PRED _be_v_id_rel ] ] ].
 
 ;; For |have went ...|
-;; FIX: block this for ordinary -ed past participles
+;; FIX: block this for ordinary -ed past participles, presumably by splitting
+;; the infl rule similarly to the split for reg and irreg plurals.
+;; DPF 2017-09-06 - Added COMPS..--MALPAST - to enable preventing
+;; unwanted double-robust analysis for |she had eaten|
+;;
 psp_aux_verb_mal_ssr := basic_have_aux_verb_synsem &
   [ LOCAL.CAT.VAL.COMPS < synsem &
 			  [ LOCAL [ CAT vp_cat &
 					[ HEAD verb &
 					       [ VFORM fin,
-						 TAM.TENSE past ],
+						 TAM.TENSE past,
+						 --MALPAST - ],
 					  VAL.SUBJ < [ LOCAL.CAT.HEAD noun ] >],
 				    CONJ cnil ],
 			    OPT - ] > ].
@@ -1609,6 +1633,11 @@ v_np-pp_e_le_rbst := main_verb &
                      --+OCOMPKEY #ocmin ] ],
     GENRE robust ].
 
+;; Wrong prep marker for adjectives: |*He was bored of it|
+aj_pp_i_le_rbst := adj_trans_lexent &
+  [ SYNSEM.LOCAL.CAT.HEAD.MINORS.MIN norm_adj_rel,
+    GENRE robust ].
+
 
 ; DPF 04-aug-10 - Block free relatives via NH-DTR..HEAD value
 ;; DPF 2017-04-03 - Restrict to MC + to avoid use in e.g.
@@ -1668,7 +1697,8 @@ subjh_robust_rule := subjh_rule_decl & basic_head_subj_phrase & clause &
                     LEX #lex,
                     MODIFD #modifd,
                     PHON #phon,
-                    PUNCT #punct & [ RPUNCT pair_or_no_punct ] ],
+                    PUNCT #punct & [ PNCTPR ppair,
+ 		                     RPUNCT pair_or_no_punct ] ],
     GENRE robust ].
                           
 subjh_robust_3s_v_rule := subjh_robust_rule &
@@ -1680,6 +1710,26 @@ subjh_robust_n3s_v_rule := subjh_robust_rule &
   [ SYNSEM.LOCAL.AGR.PNG.PN -3s,
     HD-DTR.SYNSEM.LOCAL.CAT.VAL.SUBJ < [ LOCAL.AGR.PNG.PN -3s ] >,
     NH-DTR.SYNSEM.LOCAL.AGR.PNG.PN 3s ].
+
+;; DPF 2017-09-06 - Robust rule with comma-marked subject
+;;
+subjh_mc_cma_rule := subjh_rule_decl & basic_head_subj_phrase & clause &
+  [ SYNSEM [ LOCAL [ CAT [ HEAD verbal &
+				[ VFORM fin,
+                                  TAM indic_tam,
+				  PRD - ],
+			   VAL.SPR *olist*,
+                           MC + ],
+                     CONT.HOOK [ INDEX.SF #pred,
+				 LTOP #ltop,
+				 --SLTOP #ltop ] ],
+	     NONLOC.SLASH 0-dlist,
+             PUNCT.RPUNCT.PSF #pred ],
+   HD-DTR.SYNSEM.LOCAL.CAT.VAL.SUBJ < #synsem >,
+   NH-DTR.SYNSEM #synsem & [ PUNCT [ PNCTPR no_ppair,
+                      	 	      RPUNCT comma_punct ] ],
+   GENRE robust ].
+
 
 ;; Relax GENRE constraint so we can generate sentence-initial PPs without
 ;; commas.
