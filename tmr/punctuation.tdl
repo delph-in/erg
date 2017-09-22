@@ -186,14 +186,42 @@ ditch_apostrophe_tmr := token_mapping_rule &
   +OUTPUT < >,
   +CONTEXT < > ].
 
+
 ;; DPF 2016-11-23 - See comment in pos.tdl for tnt_ditch_punctuation_tmr.
 ;; But apparently can't just drop this rule, since it then leaves all
 ;; sentence-final periods as separate tokens, and confuses the parse chart.
+;; DPF 2017-09-16 - For punctuation that can't get attached to a neighboring
+;; token, as with sentence-final opening double quotes ini |like “|, ACE
+;; reasonably enough complains about a "post reduction gap" since we leave an
+;; empty cell with nothing spanning it.  So let's try replacing such a stranded
+;; token with a token giving rise to a generic lexical entry for punctuation,
+;; where we check for stranded ones by seeing for the prefix puncts whether
+;; any other token has the same start position +FROM (indicating that there 
+;; was a successful application of the prefix-punct rule), and similarly with 
+;; the end position +TO for suffix puncts.
+;; Unfortunately, this does not quite work yet, since the ACE treebanker 
+;; somehow still treats the opening double quote as distinct in e.g. 
+;; wsj03c:20351065 |"We were oversold| even though interactively all seems well.
+;; So leave as before for now, and live with `post reduction gap' error
+;; for e.g. wlb03:121002340050 |questions like “| where the opening
+;; double quote is sentence-final (presumably from wrong sentence-splitting)
+;; and thus stranded.
 ;;
 ditch_punctuation_tmr := token_mapping_rule &
-[ +INPUT < [ +FORM ^[[({“‘"]|[])}”",⸴;.!?]+’?$ ] >,
+[ +INPUT < [ +FORM ^([[({“‘"]|[])}”",⸴;.!?]+’?)$ ] >,
   +OUTPUT < >,
   +CONTEXT < > ].
+#|
+ditch_prefix_punctuation_tmr := token_mapping_rule &
+[ +INPUT < [ +FORM ^([[({“‘"]+)$, +FROM #from ] >,
+  +OUTPUT < >,
+  +CONTEXT < [ +FROM #from ] > ].
+
+ditch_suffix_punctuation_tmr := token_mapping_rule &
+[ +INPUT < [ +FORM ^([)}”",⸴;.!?]+’?)$, +TO #to ] >,
+  +OUTPUT < >,
+  +CONTEXT < [ +TO #to ] > ].
+|#
 
 ;;
 ;; two similar rules, converting (some) directional GML tokens into affixes
