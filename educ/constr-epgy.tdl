@@ -40,9 +40,11 @@ aj-hdn_norm_c := adj_n_rule &
 	   [ ] >,
     RNAME mhn ].
 
-; Unwanted comma on adjective
+; Unwanted comma on adjective, but not for intadj, to avoid spurious use for
+; |Second, cats sleep.|
 aj-hdn_c_rbst := adj_n_rule &
-  [ ARGS < [ SYNSEM.PUNCT.RPUNCT comma_punct ],
+  [ ARGS < [ SYNSEM [ LOCAL.CAT.HEAD basic_adj,
+		      PUNCT.RPUNCT comma_punct ] ],
 	   [ ] >,
     RNAME mhn,
     GENRE robust ].
@@ -70,13 +72,15 @@ hdn-aj_redrel_c := hadj_i_redrel_npr_rule &
   [ RNAME hmpn,
     HD-DTR.SYNSEM.LOCAL.CAT.HEAD.MINORS.MIN basic_nonpro_rel ].
 
+;; DPF 2017-10-04 - Added NH-DTR..SPR *synlist* to exclude colon-PPs
 vmod_i_rbst := v_mod_int_rule &
   [ RNAME vlmr,
     SYNSEM.LOCAL.CAT [ HEAD verb & [ AUX - ],
 		       VAL.COMPS.FIRST [ LEX -,
 					 LOCAL.CAT.HEAD basic_noun ] ],
     HD-DTR.SYNSEM.LEX +,
-    NH-DTR.SYNSEM nonlex_synsem & [ LOCAL.CAT.HEAD prep ],
+    NH-DTR.SYNSEM nonlex_synsem & [ LOCAL.CAT [ HEAD prep,
+						VAL.SPR *synlist* ]],
     GENRE robust ].
 
 cl_rc-inf-nwh-sb_c := inf_non_wh_subj_rel_rule &
@@ -89,7 +93,8 @@ vp_sbrd-prd-pas_c := subconj_prdp_pas_rule &
 
 vp_sbrd-prd-aj_c := subconj_prdp_adj_rule &
   [ RNAME scpa,
-    ARGS < [ SYNSEM.LEX - ] > ].
+    ARGS < [ SYNSEM [ LEX -,
+                      LOCAL.CAT.HEAD.--SBRD + ] ] > ].
 
 ;; DPF 2017-04-05 - Removed ARGS..ALTMIN no_rel since this blocked adjectives
 ;; such as "slow" as in |We arrived slow|.  Let's track what that constraint
@@ -99,6 +104,9 @@ vp_sbrd-prd-aj_c := subconj_prdp_adj_rule &
 ;; DPF 2017-09-12 - Also block from modifying PPs and aux verbs, to avoid 
 ;; spurious robust analysis for
 ;; |the students are between five feet and six feet tall|
+;; DPF 2017-09-29 - Abuse the ALTS attribute here to allow blocking of certain
+;; adjectives to avoid spurious use of this rule, as in
+;; |There are five fifth graders between fifteen and twenty feet tall.|
 ;;
 vp_sbrd-prd-aj_rbst := subconj_prdp_adj_rule &
   [ RNAME scpa,
@@ -106,7 +114,8 @@ vp_sbrd-prd-aj_rbst := subconj_prdp_adj_rule &
                                                [ MINORS.ALTMIN non_ellipt_rel,
 					         AUX - ],
 				  NONLOC.SLASH 0-dlist ] >,
-    ARGS < [ SYNSEM [ LEX + ] ] >,
+    ARGS < [ SYNSEM [ LEX +,
+		      LOCAL.CAT.HEAD.--SBRD + ] ] >,
     GENRE robust ].
 
 ;; Limit to -ing form, and restrict main clause to INV - to avoid
@@ -117,6 +126,11 @@ vp_sbrd-pre-lx_c := subconj_prdp_v_init_lex_rule &
     SYNSEM [ LOCAL.CAT.HEAD.MOD.FIRST.LOCAL.CAT.HEAD.INV -,
 	     PUNCT.RPUNCT comma_punct ],
     RNAME scvl ].
+
+;; DPF 2017-10-02 - Exclude |I happy|
+np-prdp_vpmod_c := np_pred_rule &
+  [ RNAME nppd,
+    ARGS.FIRST.SYNSEM.LOCAL.AGR.PNG.PN -1s ].
 
 ;; DPF 13-03-14 - Having --BARE - on mother blocks bare-sg NPs such as
 ;; |RFID chip|.  So try without.
@@ -134,7 +148,8 @@ n-hdn_cpd_c := noun_n_cmpnd_rule &
   [ NH-DTR.SYNSEM.LOCAL.CAT.HEAD.--BARE -,
     RNAME nnc ].
 
-n-hdn_cpd-pl_rbst := noun_n_cmpnd_pl_mal.
+n-hdn_cpd-pl_rbst := noun_n_cmpnd_pl_mal &
+  [ RNAME nncpr ].
 
 hdn-np_app-pr_c := appos_prpnct_rule &
   [ RNAME app,
@@ -186,16 +201,26 @@ hdn_np-num_c := num_noun_rule &
   [ RNAME numn,
     SYNSEM.LOCAL.CAT [ HEAD.CASE non_nom ] ].
 
+;; DPF 2017-10-04 - Constraint of unexpressed spr blocks |a cool blue|, so try
+;; removing.
+;;
+#|
+|#
 hdn_color_c := color_noun_rule &
   [ RNAME ncol,
-    SYNSEM.LOCAL.CAT [ HEAD.--BARE -,
-		       VAL.SPR < unexpressed > ] ].
+    SYNSEM.LOCAL.CAT.HEAD.--BARE - ].
 
+#|
 flr-hd_nwh_c := filler_head_rule_non_wh_edgen &
   [ RNAME fhne,
     HD-DTR.SYNSEM.LOCAL.CONT.HOOK.INDEX.SF prop-or-pol-ques,
     NH-DTR.SYNSEM.LOCAL.CAT.HEAD p_or_v_or_adv & 
 	                         [ MINORS.MIN independent_rel ] ].
+|#
+flr-hd_nwh_c := filler_head_rule_non_wh_edgen &
+  [ RNAME fhne,
+    HD-DTR.SYNSEM.LOCAL.CONT.HOOK.INDEX.SF prop-or-pol-ques,
+    NH-DTR.SYNSEM.LOCAL.CAT.HEAD.MINORS.MIN independent_rel ].
 
 flr-hd_nwh-nc_c := filler_head_rule_non_wh_infgen &
   [ RNAME fhni,
@@ -216,9 +241,9 @@ flr-hd_nwh-nc-pp_c := filler_head_rule_non_wh_infgen &
 
 cl-cl_crd-t_c := s_coord_top_phr &
   [ RNAME cts,
-    ARGS < [ SYNSEM [ LOCAL.CONT.HOOK.INDEX.SF basic-prop,
-		      MODIFD notmod_or_rmod ] ],
-	   [ SYNSEM.LOCAL.CONT.HOOK.INDEX.SF basic-prop ] > ].
+    ARGS < [ SYNSEM.LOCAL.CONT.HOOK.INDEX.SF basic-prop ],
+	   [ SYNSEM [ LOCAL.CONT.HOOK.INDEX.SF basic-prop,
+		      MODIFD notmod_or_rmod ] ] > ].
 
 cl-cl_crd-im_c_rbst := s_coord_mid_ig_phr &
   [ RNAME cmsi,
@@ -236,7 +261,7 @@ np-np_crd-t_c := np_coord_top_eg_rule &
 ;;
 np-np_crd-im_c_rbst := np_coord_mid_ig_rule &
   [ RNAME cmni,
-    SYNSEM.LOCAL.CONJ.CREL.ARG1.SORT basic_entity,
+    SYNSEM.LOCAL.CONJ.CREL.ARG1.SORT entity,
     GENRE robust ].
 
 hd_imp_c := imperative_mc_rule &
@@ -276,17 +301,29 @@ cl-cl_runon_c := run_on_coord_rule &
 	   [ SYNSEM [ LOCAL.CAT.HEAD verb,
 		      LEX - ] ] >,
     RNAME sns ].
-
 ;; To avoid misanalysis of |we arrived, so Kim left|, constrain right dtr to
 ;; be MODIFD notmod_or_rmod
+;; DPF 2017-09-28 - Constrain second dtr to be non-conjoined, to avoid spurious
+;; use of this rule for |we arrived, we ate, and we left.|
 ;;
 cl-cl_runon-cma_c_rbst := run_on_coord_comma_rule &
   [ ARGS < [ SYNSEM.LEX - ], 
 	   [ SYNSEM [ LEX -,
 		      MODIFD notmod_or_rmod,
-		      LOCAL.CONT.HOOK.INDEX.SF prop ] ] >,
+		      LOCAL.CONT.HOOK.INDEX non_conj_event & [ SF prop ] ] ] >,
     RNAME snsc,
     GENRE robust ].
+
+;; Block |First, no school!|
+cl-np_runon_c := run_on_np_rule &
+  [ ARGS.FIRST.SYNSEM.LOCAL.CAT.HEAD verbal,
+    RNAME frsn ].
+
+cl-np_runon_c_rbst := run_on_np_rule &
+  [ ARGS.FIRST.SYNSEM.LOCAL.CAT.HEAD frag,
+    RNAME frsn,
+    GENRE robust ].
+
 
 ;; DPF 2017-04-05 - These rules to manage correct hyphen use in N-V or N-J
 ;; compounds are too prone to over-use, as in
@@ -348,7 +385,9 @@ hdn_bnp_c_rbst := bare_np_sg_phrase_robust &
 ; Also block deictics, to avoid spurious parse for |that tree is|
 ; Also restrict to comma-marked filler, to avoid spurious analysis for
 ; |my friend Jordan and I told scary stories|
-;
+;; DPF 2017-10-04 - Let's stop treating fronting as robust, but keep the comma
+;; on the non-head to avoid spurious ambiguity.
+#|
 np_fillhead_non_wh_rbst := filler_head_rule_non_wh &
   [ RNAME fhnx,
     SYNSEM.LOCAL.CAT.MC +,
@@ -361,6 +400,7 @@ np_fillhead_non_wh_rbst := filler_head_rule_non_wh &
 				      SPR *olist* ] ],
 		    PUNCT.RPUNCT comma_punct ],
     GENRE robust ].
+|#
 
 ; Also allow fronted directional PPs, but also deprecated
 pp_fillhead_non_wh_rbst := filler_head_rule_non_wh_infgen &
@@ -425,7 +465,8 @@ aj-hd_int-inv_c := never_unify_rule.
 hdn-aj_rc-propr_c := never_unify_rule.
 hd-aj_vmod_c := never_unify_rule.
 hd-aj_vmod-s_c := never_unify_rule.
-hd-aj_cmod_c := never_unify_rule.
+;; Let's try reenabling this one, to get |we spend hours or sometimes all day|
+;hd-aj_cmod_c := never_unify_rule.
 hd-aj_cmod-s_c := never_unify_rule.
 vp_sbrd-prd-ell_c := never_unify_rule.
 np-hdn_cpd-pr_c := never_unify_rule.
@@ -465,3 +506,5 @@ w-w_fw-seq-t_c := never_unify_rule.
 ;; DPF 2017-09-22 - Restored this rule, to get
 ;; |I was happy and proud and so was the team|
 ;;hd_inv-nwh_c := never_unify_rule.
+;; Avoid |[the king, John] Hancock|
+hdn-np_app-pnr-rbc_c := never_unify_rule.
