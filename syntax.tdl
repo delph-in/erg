@@ -3919,7 +3919,6 @@ extracted_adj_coord_s_phrase := extracted_adj_int_phrase &
 ; incorrectly claims all bare NPs are [LEX +]), make mother's MIN nonpro_rel.
 ; Then make LEX value propagate from dtr to mother.
 ; DPF 25-Sep-01 - From 17-Mar: Having broken link for AGR of dtr and mother,
-
 ; DPF 20-Nov-01 - Moved identification of MODIFD down to the non-proper-name
 ; subtypes, in order to allow "My friend Mister Abrams" as an appositive.
 ; DPF 25-Nov-01 - Changed dtr's HEAD from noun to noun_or_nomger to allow e.g.
@@ -4054,11 +4053,20 @@ reg_bare_np_phrase := norm_bare_np_phrase &
 ;
 ;bare_nomger_phrase := reg_bare_np_phrase &
 ;  [ ARGS < [ SYNSEM nonlex_synsem & [ LOCAL.CAT.HEAD nomger ] ] > ].
-
+;;
+;; DPF 2017-10-07 - If this rule only constrains AGR.DIV, we can't block
+;; group or classifier nouns such as |pair of shoes|, which have a mismatch of
+;; AGR and INDEX features.  So it's tempting to also require INDEX.DIV + on dtr,
+;; but we want to use this rule for measure NPs such as |a dollar| as well, and
+;; this phrase is INDEX.DIV - because of the lexical semantics of singular `dollar'.
+;; So instead require SPR..DIV +, compatible with measure NPs and |pairs of shoes|
+;; but not |pair of shoes|.
+;;
 bare_np_phrase := reg_bare_np_phrase &
   [ SYNSEM.LOCAL.AGR #agr & [ DIV + ],
     ARGS < [ SYNSEM.LOCAL [ CAT [ HEAD noun_or_nomger,
-				  VAL.SPR [ FIRST.OPT -,
+				  VAL.SPR [ FIRST [ OPT -,
+						    LOCAL.AGR.DIV + ],
 					    REST *olist* ] ],
 			    AGR #agr ] ] > ].
 
@@ -4085,24 +4093,29 @@ bare_np_prd_phrase := reg_bare_np_phrase &
 ; DPF 19-sept-07 - Replaced dtr's MIN non_temp_nbar_rel with MIN nom_nbar_rel
 ; so we get measure nouns like "meter" to go through this rule.  To avoid
 ; partitives (at least), the SPR..--MIN constraint should suffice.
+;; DPF 2017-10-06 - Removed ALTMIN udef_q_rel since this prevents robust treatment
+;; where nominal dtr wants missing explicit quant.
 ;
-bare_np_sg_phrase_robust := generic_bare_np_phrase &
+basic_bare_np_sg_phrase_robust := generic_bare_np_phrase &
   [ SYNSEM [ LOCAL [ AGR [ DIV -,
 			   PNG.PN 3s ],
-		     CAT.HEAD #head & [ MINORS.ALTMIN udef_q_rel,
-					--BARE + ] ],
+		     CAT.HEAD #head & [ --BARE + ] ],
              MODIFD #modif ],
     ARGS < [ SYNSEM 
 	     [ LOCAL [ AGR [ DIV -,
 			     PNG.PN 3s ],
-		       CAT [ VAL.SPR < [ OPT -,
-		                         LOCAL.CAT.HEAD.POSS - ]>,
+		       CAT [ VAL.SPR < synsem &
+				       [ OPT -,
+		                         LOCAL.CAT.HEAD.POSS - ] >,
 			     HEAD #head &
 				  [ MINORS.MIN non_temp_or_nonday_nbar_rel ] ]],
 	       MODIFD #modif & [ LPERIPH na_or_- ] ],
 	     INFLECTD + ] >,
     C-CONT.RELS <! [ PRED implicit_q_rel ] !>,
     GENRE robust ].
+
+bare_np_sg_phrase_robust := basic_bare_np_sg_phrase_robust &
+  [ SYNSEM.LOCAL.CAT.HEAD.MINORS.ALTMIN udef_q_rel ].
 
 ; DPF 8-Mar-01 - Removed [MODIFD notmod_or_lmod] from head-dtr, since it
 ; prevented "Tuesday at five" as an NP.
@@ -5645,6 +5658,17 @@ appos_phr_nonprop_prpnct := appos_phr_prpnct &
     NH-DTR.SYNSEM.LOCAL.CAT [ HEAD.MINORS.ALTMIN def_or_meas_noproper_rel,
 			      VAL.SPEC *cons* ] ].
 
+;; DPF 2017-10-08 - Since we stopped treating deictics with appos_phr_nonprop_prpnct
+;; (to avoid spurious analyses as for |[the cat that] arrived.|), we add a separate
+;; type just for deictic phrases: |one door, that for pets, stayed open|
+;;
+appos_phr_deictic_prpnct := appos_phr_prpnct &
+  [ HD-DTR.SYNSEM.LOCAL.CAT.HEAD.MINORS.ALTMIN non_pronoun_q_rel,
+    NH-DTR.SYNSEM phr_synsem &
+   	          [ LOCAL.CAT [ HEAD.MINORS.ALTMIN demonstrative_q_rel,
+				VAL.SPEC *cons* ],
+		    PUNCT.RPUNCT comma_or_clause ] ].
+
 ;; DPF 2017-07-10 - Further constrained this new rule to exclude number NPs
 ;; as heads, to avoid spurious analysis for |3.2 shares|
 ;;
@@ -6476,7 +6500,7 @@ num_or_color_noun_phrase := norm_unary_phrase &
 		      QUE #que,
 		      REL #rel ],
              LEX #lex,
-             MODIFD notmod & [ LPERIPH #lperiph ] ],
+             MODIFD [ LPERIPH #lperiph ] ],
     ARGS < [ SYNSEM [ LOCAL [ CAT [ HEAD adj_or_intadj &
 					 [ MINORS.MIN integer_or_color_rel,
 					   PRD - ],
@@ -6503,7 +6527,7 @@ num_or_color_noun_phrase := norm_unary_phrase &
 ;; blocks "six hundred" as in "six hundred is a large number".  Let's try
 ;; removing it, and see if we can reconstruct why it was there.
 ;
-num_noun_phrase := num_or_color_noun_phrase &
+basic_num_noun_phrase := num_or_color_noun_phrase &
   [ INFLECTD +,
     SYNSEM [ LOCAL [ CAT.HEAD [ MINORS.MIN #altmin & named_num_or_fract_rel,
 				CASE #case ],
@@ -6517,11 +6541,15 @@ num_noun_phrase := num_or_color_noun_phrase &
 				  VAL [ SPR *anti_list* ] ],
 		      PHON #phon ] ] > ].
 
+num_noun_phrase := basic_num_noun_phrase &
+  [ SYNSEM.MODIFD notmod ].
+
 color_noun_phrase := num_or_color_noun_phrase &
   [ INFLECTD bool,
-    SYNSEM.LOCAL [ CAT.HEAD.MINORS [ MIN norm_nom_rel,
-				     NORM norm_rel ],
-		   CONT.HOOK.INDEX.SORT entity ],
+    SYNSEM [ LOCAL [ CAT.HEAD.MINORS [ MIN norm_nom_rel,
+				       NORM norm_rel ],
+		     CONT.HOOK.INDEX.SORT entity ],
+	     MODIFD notmod ],
     ARGS < [ SYNSEM.LOCAL.CAT.HEAD.MINORS.MIN color_rel ] > ].
 
 ; DPF 19-Oct-02 - Restricted dtrs to be LEX + to avoid spurious ambiguity
@@ -6724,7 +6752,8 @@ free_rel_phrase := head_initial_infl & head_compositional &
 basic_partitive_num_phrase := unary_phrase & phrasal &
   [ SYNSEM [ LOCAL [ CAT [ HEAD partn &
                                 [ MOD < >,
-                                  POSS - ],
+                                  POSS -,
+				  --BARE - ],
                            VAL [ SUBJ < >,
                                  SPR < synsem &
                                        [ LOCAL [ CAT.VAL [ SPR  *olist*,
@@ -6778,7 +6807,7 @@ basic_partitive_num_phrase := unary_phrase & phrasal &
 ;;
 partitive_np_num_phrase := basic_partitive_num_phrase &
   [ SYNSEM [ LOCAL.CAT [ HEAD.MINORS.ALTMIN def_implicit_q_rel,
-                         VAL.SPR < [ --MIN just_only_deg_rel,
+			 VAL.SPR < [ --MIN just_only_deg_rel,
 				     LOCAL [ CAT.HEAD adv,
 					     CONT.HOOK.LTOP #hand ],
 				     NONLOC.QUE 0-dlist ],
@@ -7510,17 +7539,22 @@ min_coord_phr := basic_binary_phrase & non_headed_phrase &
 ;; to coord_phr, so that we can admit coord NPs which contain comma-marked 
 ;; modifiers, as in
 ;; |Both Kim, in Paris, and Browne, in Rome, arose|
+;; DPF 2017-10-07 - Add NOCONJ - to left dtr, to avoid spurious analysis of
+;; |[dog, cat, horse] and cow|
 ;;
 basic_coord_phr := min_coord_phr &
   [ INFLECTD #infl,
+    SYNSEM.LOCAL.CONJ.NOCONJ #nc,
     LCONJ-DTR sign & #left &
            [ INFLECTD #infl,
-             SYNSEM [ LOCAL [ CONT.HOOK [ INDEX individual ] ],
+             SYNSEM [ LOCAL [ CONT.HOOK.INDEX individual,
+			      CONJ.NOCONJ - ],
 		      LEX #lex ] ],
     RCONJ-DTR #right &
            [ INFLECTD #infl,
              SYNSEM [ LOCAL [ CONT.HOOK.INDEX individual,
-			      CONJ.CLEX #lex ],
+			      CONJ [ CLEX #lex,
+				     NOCONJ #nc ] ],
                       LEX bool ] ],
     ARGS < #left, #right > ].
 
@@ -8025,7 +8059,6 @@ num_np_rule := rule & num_np_noconj.
 bare_npq_rule := rule & bare_npq_phrase.
 
 bare_np_sg_rule_robust := rule & bare_np_sg_phrase_robust.
-
 detlesspp_np_nmod_rule := rule & detlesspp_np_nmod_phrase.
 detlesspp_np_jmod_rule := rule & detlesspp_np_jmod_phrase.
 detlesspp_np_nomod_rule := rule & detlesspp_np_nomod_phrase.
@@ -8064,6 +8097,7 @@ appos_indef_rbc_rule := binary_rule_right_to_left & appos_indef_rbc_phr.
 appos_nbar_rule := binary_rule_right_to_left & appos_nbar_phr.
 appos_reverse_rule := binary_rule_left_to_right & appos_np_reverse_phr.
 appos_measnp_rule := binary_rule_right_to_left & appos_phr_meas_prpnct.
+appos_deictic_rule := binary_rule_right_to_left & appos_phr_deictic_prpnct.
 npadv_mod_rule := rule & npadv_mod_phrase.
 ;;npadv_yofc_rule := rule & npadv_yofc_phrase.
 npadv_measnp_rule := rule & npadv_measnp_phrase.
@@ -9520,22 +9554,19 @@ basic_nom_coord_rule := basic_coord_phr &
   [ SYNSEM synsem &
            [ LOCAL [ CAT [ HEAD noun & [ MOD *anti_list*,
                                          MINORS #mins,
-                                         PRD #prd,
-					 --BARE - ],
+                                         PRD #prd ],
                            VAL [ SUBJ #subj,
 				 COMPS < >,
 				 SPCMPS < > ] ],
 		     CONT [ HOOK.INDEX conj-ind ] ] ],
     LCONJ-DTR.SYNSEM.LOCAL [ CAT [ HEAD supnoun & [ CASE #case,
                                                     MINORS #mins,
-                                                    PRD #prd,
-						    --BARE #bare ],
+                                                    PRD #prd ],
                                    VAL [ SUBJ #subj & *anti_list*,
                                          COMPS < > ] ],
                              CONT.HOOK.INDEX non_expl_or_conj-ind ],
     RCONJ-DTR.SYNSEM.LOCAL [ CAT [ HEAD supnoun & [ CASE #case,
-                                                    PRD #prd,
-						    --BARE #bare ],
+                                                    PRD #prd ],
                                    VAL [ SUBJ *anti_list*,
 					 COMPS < > ] ],
                              CONT.HOOK.INDEX non_expl_or_conj-ind ] ].
@@ -9561,13 +9592,14 @@ nom_coord_rule := basic_nom_coord_rule & coord_phr &
 ;; title-compound |writers Abrams and Browne| 
 ;
 np_coord_rule := nom_coord_rule &
-  [ SYNSEM [ LOCAL [ CAT.VAL [ SPR < synsem_min &
+  [ SYNSEM [ LOCAL [ CAT [ VAL [ SPR < synsem_min &
 				     [ --MIN just_only_deg_rel,
 				       LOCAL [ CAT [ HEAD adv,
 						     VAL.SPR *unexplist* ],
 					       CONT.HOOK.LTOP #splbl ],
 				       OPT + ] >,
-			       SPCMPS < > ],
+				 SPCMPS < > ],
+			   HEAD.--BARE - ],
                      CONT.HOOK.INDEX conj_ref-ind &
 			             [ PNG #png,
 				       SORT #sort ],
@@ -9672,7 +9704,8 @@ nom_coord_mid_noconj_rule := binary_rule_right_to_left & basic_nom_coord_rule &
 		     CONT.HOOK.INDEX conj_ref-ind,
 		     AGR.DIV #div,
                      CONJ phr-conj & [ CHEAD cnil,
-                                       CREL #rel ] ],
+                                       CREL #rel,
+				       NOCONJ + ] ],
              PUNCT [ LPUNCT no_punct,
                      PAIRED no_ppair,
                      RPUNCT #rpunct,
@@ -9781,7 +9814,8 @@ nbar_coord_mid_noconj_rule := nom_coord_mid_noconj_rule &
 ;
 np_coord_top_noconj_rule := binary_rule_right_to_left & basic_nom_coord_rule &
   [ INFLECTD +,
-    SYNSEM [ LOCAL [ CAT [ HEAD.CASE non_obliq,
+    SYNSEM [ LOCAL [ CAT [ HEAD [ CASE non_obliq,
+				  --BARE - ],
 			   VAL.SPR < > ],
 		     CONT.HOOK.INDEX conj_ref-ind,
                      CONJ cnil ],
@@ -9956,12 +9990,24 @@ nbar_coord_top_1_rule := top_coord_rule & nbar_coord_symmet_rule &
 ;; DPF 2016-02-16 - Also need to split the div rule to preserve the LEX value,
 ;; to avoid non-head coord nbar where one of the conjuncts is nonlex, as in 
 ;; |the [[[knowledge of cats] and ignorance] debate]|
+;; DPF 2017-10-07 - Re 2015-09-06: Well, but this also allows 
+;; |*the dogs and cats sleeps|. So it looks like we instead need to add a special
+;; rule for the singular coord of mass nouns.  Not a perfect solution yet, since
+;; we can still use the normal div-coord rule to get an extra parse for
+;; |sand and gravel|, but excluding it would be a hassle, so maybe FIX someday.
 ;;
-
 nbar_coord_top_1_div_rule := nbar_coord_top_1_rule &
-  [ SYNSEM.LOCAL.AGR.PNG.PN 3,
+  [ SYNSEM.LOCAL.AGR.PNG.PN #pn,
     LCONJ-DTR.SYNSEM.LOCAL.AGR.DIV +,
-    RCONJ-DTR.SYNSEM.LOCAL.AGR.DIV + ].
+    RCONJ-DTR.SYNSEM.LOCAL [ AGR.DIV +,
+			     CONJ.CPNG.PN #pn ] ].
+
+nbar_coord_top_1_mass_rule := nbar_coord_top_1_rule &
+  [ SYNSEM.LOCAL.AGR.PNG.PN 3,
+    LCONJ-DTR.SYNSEM.LOCAL.AGR [ DIV +,
+				 IND - ],
+    RCONJ-DTR.SYNSEM.LOCAL.AGR [ DIV +,
+				 IND - ] ].
 
 nbar_coord_top_1_div_samelex_rule := nbar_coord_top_1_div_rule &
   [ LCONJ-DTR.SYNSEM.LEX #lex,

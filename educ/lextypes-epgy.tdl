@@ -436,6 +436,11 @@ v_cp_le_rbst := main_verb &
 				       NONLOC.SLASH 0-dlist ] > ] ],
     GENRE robust ].
 
+; e.g. `know': |*we know where is the restaurant|
+v_cp_fin-inf-q-mc_le_rbst := main_verb & 
+  [ SYNSEM cp_ques_fin_inf_mc_verb,
+    GENRE robust ].
+
 ; e.g. 'tell him borrow her book'
 v_np-vp_bse_le_rbst := main_verb_mliszt & 
   [ SYNSEM obj_equi_bse_verb,
@@ -497,11 +502,12 @@ v_np-np*_nodat_le := main_verb &
 
 ; `like' - block bare-sg objects:
 ; |I didn't like tadpole hunting|
+;;
 v_np-prd_oeq-ntr-x_le := main_verb_mliszt & 
   [ SYNSEM obj_equi_non_trans_prd_verb &
-	   [ LOCAL.CAT [ VAL.COMPS.FIRST.LOCAL.CAT.HEAD.--BARE - ],
+	   [ LOCAL.CAT.VAL.COMPS.FIRST.LOCAL.CAT.HEAD.--BARE -,
 	     LKEYS [ --OCOMPKEY #ocmin,
-                     --+OCOMPKEY #ocmin ] ] ].
+		     --+OCOMPKEY #ocmin ] ] ].
 
 ; Restrict dtrs to --MAL3SG - to avoid robust intranstives as conjuncts.
 ;; DPF 13-03-14 - But this blocks flagging of subj-verb agrmt errors as in 
@@ -562,10 +568,11 @@ av_-_i-vp-pr_le_rbst := int_vp_adverb_word &
 ; Allow robust post-VP adverbs: "He sang bad"
 ;
 av_-_i-vp-po_rbst_lexent := int_vp_adverb_word & 
-  [ SYNSEM [ LOCAL.CAT [ HEAD adv & [ MINORS.MIN adv_rel,
-                                      MOD < [ LOCAL.CAT.HEAD v_or_g_or_a,
-                                              MODIFD.RPERIPH na_or_- ] > ],
-                         POSTHD + ],
+  [ SYNSEM [ LOCAL.CAT [ HEAD adv_nonmob & 
+                              [ MINORS.MIN adv_rel,
+				MOD < [ LOCAL.CAT.HEAD v_or_g_or_a,
+					MODIFD.RPERIPH na_or_- ] > ],
+			 POSTHD + ],
              MODIFD hasmod ],
     GENRE robust ].
 
@@ -706,8 +713,11 @@ n_-_pr-fr_le := n_freerel_pro_lexent &
 n_-_pr-wh_le := n_wh_pro_lexent &
   [ SYNSEM.LOCAL.AGR.PNG.PN 3s ].
 
-p_np_ptcl-of_le := p_prtcl_lexent &
-  [ SYNSEM.LOCAL.CAT.VAL.COMPS < [ LOCAL.CAT.HEAD.--BARE - ] > ].
+;; DPF 2017-10-07 - Don't see what this change was for, but it lost constraint
+;; on the complement NP being saturated, which meant losing non-local constraints.
+;;
+;p_np_ptcl-of_le := p_prtcl_lexent &
+;  [ SYNSEM.LOCAL.CAT.VAL.COMPS < [ LOCAL.CAT.HEAD.--BARE - ] > ].
 
 ; Prevent analysis for "with her cousins"
 p_np-np_s-ncop_le := noncqrs-nab &
@@ -1258,6 +1268,12 @@ mal_bare_np_sg_phrase := generic_bare_np_phrase &
 mal_bare_np_sg_rule := rule & mal_bare_np_sg_phrase.
 |#
 
+;; DPF 2017-10-06 - Replaced ALTMIN udef_q_rel with quant_rel, so we can also get
+;; robust |we admire old one|
+bare_np_sg_phrase_robust := basic_bare_np_sg_phrase_robust &
+  [ SYNSEM.LOCAL.CAT.HEAD.MINORS.ALTMIN quant_rel ].
+
+
 #|
 ;; Enrich this rule to propagate dtr's MOD..--BARE value to SPEC, in order to
 ;; constrain robust "all" as in "all pizza"
@@ -1353,13 +1369,18 @@ aj_-_i-sup_le := compar_superl_adj_word &
                     VAL.SPR.FIRST.--MIN ord_or_very_rel ],
               CONT.RELS <! relation, relation !> ],
       LKEYS.ALTKEYREL.PRED superl_rel ] ].
-|#
+
 aj_-_i-sup_le := compar_superl_adj_word &
   [ SYNSEM adj_unsp_ind_onearg_synsem &
     [ LOCAL [ CAT [ HEAD superl_adj & [ MINORS.ALTMIN superl_rel ],
                     VAL.SPR.FIRST.--MIN ord_or_very_rel ],
               CONT.RELS <! relation, relation !> ],
       LKEYS.ALTKEYREL.PRED superl_rel ] ].
+|#
+
+;; Prevent non-robust |admire best one|
+num_noun_phrase := basic_num_noun_phrase &
+  [ SYNSEM.MODIFD lmod & [ LPERIPH + ] ].
 
 ;; Allow robust |dentists office|
 aj_-_i-cmpd_le_rbst := aj_-_i-cmpd_lexent &
@@ -1470,7 +1491,8 @@ n_-_c-pl-def_le :+ [ SYNSEM.LOCAL.CAT cat_infl_nosuff ].
 ;; For |the gardens dog|
 ;; Block this rule for |his cats cat toys| via INFLECTD on hd-dtr.
 ;; And block for |he makes his children breakfast| via LOCAL sing_or_plur_noun
-;; so we can also get robust |the cousins brothers|
+;; so we can also get robust |the cousins brothers|. But this prevents |cats food|,
+;; so instead mark |breakfast| with LPERIPH to block here.
 ;; DPF 2017-10-03 - Generalize HD-DTR..RPERIPH from na to na_or_+ to allow
 ;; robust analysis of |Kids brains develop|
 ;; DPF 2017-10-03 - Constrain hd-dtr HEAD basic_noun to exclude |cars honking|
@@ -1482,8 +1504,7 @@ noun_n_cmpnd_pl_mal := binary_rule_right_to_left & basic_noun_n_cmpnd_phr &
   [ SYNSEM.MODIFD.LPERIPH na,
     HD-DTR [ INFLECTD +,
 	     SYNSEM basic_lex_synsem &
-		    [ LOCAL sing_or_plur_noun &
-	                    [ CAT.HEAD basic_noun &
+		    [ LOCAL [ CAT.HEAD basic_noun &
 			               [ MINORS.MIN non_temp_nom_rel ] ],
 		      MODIFD notmod & [ LPERIPH -,
 					RPERIPH na_or_+ ],
@@ -1760,23 +1781,24 @@ v_np_wre-n_le_rbst := v_np_wre-n_lexent &
   [ GENRE robust ].
 
 ; For e.g. "went the store"
-; Add COMPS..CASE acc to block v_mod rule for e.g. "went to visit her house"
+; Add NORM no_rel to block v_mod rule for e.g. "went to visit her house"
 v_np_pp_le_rbst := main_verb & 
   [ SYNSEM np_trans_verb &
-     [ LOCAL.CAT [ VAL.COMPS < canonical_synsem &
+     [ LOCAL.CAT [ HEAD.MINORS.NORM no_rel,
+		   VAL.COMPS < canonical_synsem &
 			       [ OPT -,
 				 LOCAL.CAT.HEAD noun &
-				     [ --BARE -,
-				       CASE acc ],
+				     [ --BARE - ],
 				 PUNCT.RPUNCT comma_or_clause_or_no_punct ] >]],
     GENRE robust ].
 
 ;; Constrain to singular unknown names, to avoid spurious for e.g. |Pistorius|
 n_-_pn-gen_le := basic_n_proper_lexent & generic_ne_lex_entry &
   [ INFLECTD -,
-    SYNSEM [ LOCAL [ CAT.HEAD.MINORS.MIN named_np_rel,
+    SYNSEM [ LOCAL [ CAT [ HEAD.MINORS.MIN named_np_rel,
+			   VAL.SPR < [ --MIN _the_q_prop_rel ] > ],
 		     AGR.PNG.PN 3s ],
-	     MODIFD.LPERIPH +,
+	     MODIFD.LPERIPH na_or_+,
 	     LKEYS.KEYREL [ PRED named_rel ] ] ].
 
 ;; Constrain to not capitalized, to avoid spurious entry for e.g. |Mom|
@@ -2227,6 +2249,7 @@ adj :+ [ --SBRD bool ].
 v_coord_phr :+
   [ ARGS.FIRST.SYNSEM.LOCAL.CAT.HEAD.--MAL3SG - ].
 
+;; |Morning is the best time of the day|
 n_-_m-nocnh-nspr_le :+
   [ ALTS.PLMASS - ].
 
@@ -2256,5 +2279,20 @@ n_pp_c-dir_le :+
   [ SYNSEM.LOCAL.CAT.HEAD.--BARE - ].
 
 ;; |my favorite was the lions|
-partn :+
-  [ --BARE - ].
+;; This is too strong, since it prevents robust analysis of |we admired old one|.
+;;
+;partn :+
+;  [ --BARE - ].
+
+;; Enable blocking of |with my friends fun|
+subconj_with_synsem :+
+  [ LOCAL.CAT.VAL.COMPS < [ ], [ LOCAL.CAT.HEAD.MOD.FIRST.OPT + ] > ].
+
+;; Needed for robust `neither' as in |neither brothers|
+;;
+_neither_q-agr_rel := explicit_quant_agr_q_rel & universal_q_rel.
+
+;; Misspelled adj
+aj_-_i_le_rbst := reg_intrans_adj &
+  [ SYNSEM.LOCAL.CAT.HEAD.MINORS.MIN norm_adj_rel,
+    GENRE robust ].
