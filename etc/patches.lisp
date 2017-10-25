@@ -68,7 +68,10 @@
    semi :stream "~/erg/etc/surface.smi"
    :format :compact :filter "^_"))
 
+;; For trunk
+#+:null
 (setf mrs::*normalize-predicates-p* t)
+#+:null
 (progn
   (setf semi
     (construct-semi       
@@ -87,5 +90,4 @@
   (print-semi
    semi :stream "~/erg/etc/surface.smi"
    :format :compact :filter "^_"))
-
 

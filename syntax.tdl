@@ -1481,6 +1481,9 @@ subconj_prdp_ellip_phr := subconj_prdp_phr &
 ;; order to block WH-clauses there, as in |who are fifteen to twenty feet tall|
 ;; DPF 2017-09-06 - Re 2016-01-25: Okay, did the split into two rules, to avoid
 ;; spurious analyis for |Jerome has fifty dollars he saved.|
+;; DPF 2017-10-09 - Re 2017-09-05: But this blocks |the idea being that we win|,
+;; so remove, since anyway we do want to allow (nominalizations of) WH-clauses as
+;; first argument, as in |we cheered, who won being the source of our joy|.
 ;;
 np_pred_phr := non_headed_phrase & binary_phrase &
   [ SYNSEM basic_subconj_synsem &
@@ -1510,8 +1513,7 @@ np_pred_phr := non_headed_phrase & binary_phrase &
 					   --BARE - ],
 				    VAL [ SPR *olist*,
 					  COMPS *olist* ] ],
-			      CONT.HOOK.INDEX #modind &
-				              [ SORT norm-entity-or-event ],
+			      CONT.HOOK.INDEX #modind,
 			      CONJ cnil ],
 		      NONLOC non-local_none,
 		      PUNCT.RPUNCT no_punct ] ],
@@ -5172,6 +5174,9 @@ noun_adjn_cmpnd_phr := basic_noun_n_cmpnd_phr &
 ;; of |sales| being inflected for plural.  So relocate the nonconj_ref-ind
 ;; constraint to the normal n-n-compound rule, since this rule will give us
 ;; an analysis for |dog and cat collars|
+;; DPF 2017-10-23 - Constrain nh-dtr to CASE non-nom, to avoid spurious ambig
+;; for e.g. |the sand and gravel truck| where we could admit |sand and gravel|
+;; either via div-coord rule or mass-coord-singular rule.
 ;;
 noun_n_cmpnd_pl_phr := basic_noun_n_cmpnd_phr &
   [ HD-DTR.SYNSEM [ MODIFD notmod_or_lmod,
@@ -5179,7 +5184,8 @@ noun_n_cmpnd_pl_phr := basic_noun_n_cmpnd_phr &
     NH-DTR [ INFLECTD +,
 	     SYNSEM [ LOCAL [ AGR [ PNG.PN 3p,
 				    DIV + ],
-			      CAT [ HEAD.--BARE -,
+			      CAT [ HEAD [ CASE non_nom,
+					   --BARE - ],
 				    VAL.SPR.FIRST.LOCAL.CAT.HEAD det ],
 			      CONT.HOOK.INDEX ref-ind &
 					      [ PNG.PN 3p ] ],
@@ -5379,10 +5385,17 @@ n_v-or-adj_cmpnd_phr := basic_n_v-or-adj_cmpnd_phr &
 		      MODIFD.LPERIPH - ] ] >,
     C-CONT.RELS <! [ PRED compound_rel ], [ ] !> ].
 
+;; DPF 2017-10-13 - It seems like we want to constrain the verb's first comp
+;; to be [OPT -] in order to avoid |the cat-related mice| using v_np-pp entry.
+;; Could alternatively also require --OCOMPKEY to be independent_rel.
+;; Well, we can't say first comp is OPT - since we need passive verbs here,
+;; where the comp is optional.  So let's try the --OCOMPKEY route.
+;;
 n_v_cmpnd_phr := n_v-or-adj_cmpnd_phr &
   [ ARGS < [ ],
            [ SYNSEM [ LOCAL.CAT.HEAD verb,
-		      LKEYS.--COMPKEY independent_rel ] ] > ].
+		      LKEYS [ --COMPKEY independent_rel,
+			      --OCOMPKEY independent_rel ] ] ] > ].
 
 n_adj_cmpnd_phr := n_v-or-adj_cmpnd_phr &
   [ ARGS < [ ],
@@ -9991,10 +10004,11 @@ nbar_coord_top_1_rule := top_coord_rule & nbar_coord_symmet_rule &
 ;; to avoid non-head coord nbar where one of the conjuncts is nonlex, as in 
 ;; |the [[[knowledge of cats] and ignorance] debate]|
 ;; DPF 2017-10-07 - Re 2015-09-06: Well, but this also allows 
-;; |*the dogs and cats sleeps|. So it looks like we instead need to add a special
-;; rule for the singular coord of mass nouns.  Not a perfect solution yet, since
-;; we can still use the normal div-coord rule to get an extra parse for
-;; |sand and gravel|, but excluding it would be a hassle, so maybe FIX someday.
+;; |*the dogs and cats sleeps|. So it looks like we instead need to add a 
+;; special rule for the singular coord of mass nouns.  Not a perfect solution 
+;; yet, since we can still use the normal div-coord rule to get an extra parse 
+;; for |sand and gravel|, but excluding it would be a hassle, so maybe FIX 
+;; someday.
 ;;
 nbar_coord_top_1_div_rule := nbar_coord_top_1_rule &
   [ SYNSEM.LOCAL.AGR.PNG.PN #pn,
@@ -10002,8 +10016,13 @@ nbar_coord_top_1_div_rule := nbar_coord_top_1_rule &
     RCONJ-DTR.SYNSEM.LOCAL [ AGR.DIV +,
 			     CONJ.CPNG.PN #pn ] ].
 
+;; DPF 2017-10-23 - Let's at least constrain this rule to only be used where
+;; subj-verb agreement occurs, namely when inflected and nominative case.
+;;
 nbar_coord_top_1_mass_rule := nbar_coord_top_1_rule &
-  [ SYNSEM.LOCAL.AGR.PNG.PN 3,
+  [ INFLECTD +,
+    SYNSEM.LOCAL [ AGR.PNG.PN 3,
+		   CAT.HEAD.CASE nom ],
     LCONJ-DTR.SYNSEM.LOCAL.AGR [ DIV +,
 				 IND - ],
     RCONJ-DTR.SYNSEM.LOCAL.AGR [ DIV +,

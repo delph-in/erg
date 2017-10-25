@@ -204,3 +204,66 @@
     ;;fix_me
     ;;(format t "~%PSQL ~a" error-message)
     (throw :sql-error (cons :putline "endcopy failed"))))
+
+;; Added support to LKB for reading in MRSs with ICONS:
+
+(in-package :mrs)
+;; Added line for read-mrs-icons
+(defun read-mrs (istream)
+  (let ((*readtable* (make-mrs-break-table)))
+;;;  MRS -> [ LTOP INDEX LISZT HCONS ]
+;;; or
+;;; MRS -> [ INDEX LISZT ]
+    (setf *already-read-vars* nil)
+    ;;
+    ;; first of all, skip over any initial line-oriented (`;') comments ...
+    ;;
+    (loop
+        for c = (peek-char t istream nil nil)
+        while (and c (char= c #\;)) do (read-line istream))
+    (mrs-check-for #\[ istream)
+    (let* ((ltop (if *rel-handel-path* (read-mrs-ltop istream)))
+           (index (read-mrs-index istream))
+           (liszt (read-mrs-liszt istream))
+           (hcons (if *rel-handel-path* (read-mrs-hcons istream)))
+           (icons (if *rel-handel-path* (read-mrs-icons istream)))
+           (vcs (ignore-errors (read-mrs-vcs istream)))
+           (psoa
+            (make-psoa :top-h ltop
+                       :index index
+                       :liszt liszt
+                       :h-cons hcons
+                       :vcs vcs)))
+      (mrs-check-for #\] istream)
+      psoa)))
+
+;; Definition for reading icons
+(defun read-mrs-icons (istream)
+  ;; ICONS -> icons: < icon >
+  (let ((cons nil))
+    (mrs-check-for #\i istream)
+    (mrs-check-for #\c istream)
+    (mrs-check-for #\o istream)
+    (mrs-check-for #\n istream)
+    (mrs-check-for #\s istream)
+    (mrs-check-for #\: istream)
+    (mrs-check-for #\< istream)
+    (loop 
+      (let ((next-char (peek-char t istream nil 'eof)))
+        (when (eql next-char 'eof) (error "Unexpected eof"))
+        (when (eql next-char #\>) (return))
+        (push (read-mrs-icon istream)
+              cons)))
+    (mrs-check-for #\> istream)
+    cons))
+
+(defun read-mrs-icon (istream)
+  ;; ICON -> VARNAME RELNNAME VARNAME
+  (let* ((var1 (read-mrs-simple-var istream))
+         (reln (read-mrs-atom istream))
+         (var2 (read-mrs-simple-var istream)))
+    (make-icons :relation reln
+                :iarg1 var1
+                :iarg2 var2)))    
+
+(in-package :lkb)
