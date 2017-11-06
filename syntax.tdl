@@ -518,11 +518,13 @@ decl_phrase := basic_decl_phrase &
 ;; raising, and in |admire and hire Kim!|, where there is no alternative
 ;; aaalysis.  So have to live with the extra ambiguity for imperatives with
 ;; normal VP coord.
-
+;; DPF 2017-11-01 - Identify VFORM on mother and dtr, so the VP can be sensitive
+;; to modifiers that don't want imperatives, such as "last night".
+;;
 imp_phrase := basic_non_rel_clause & head_valence_phrase & head_only &
   [ SYNSEM [ LOCAL [ CAT [ HEAD verb &
                                 [ INV -,
-                                  VFORM imp_vform,
+                                  VFORM #vform & imp_vform,
                                   TAM [ TENSE present,
                                         ASPECT no_aspect,
                                         MOOD indicative ] ],
@@ -533,7 +535,7 @@ imp_phrase := basic_non_rel_clause & head_valence_phrase & head_only &
                      CONT.HOOK.INDEX.SF basic-comm ],
 	     NONLOC.SLASH.LIST *modlist*,
              LEX #lex ],
-    HD-DTR.SYNSEM [ LOCAL [ CAT [ HEAD verb,
+    HD-DTR.SYNSEM [ LOCAL [ CAT [ HEAD verb & [ VFORM #vform ],
                                   MC na,
                                   VAL [ SUBJ < unexpressed_reg &
                                               [ --SIND #inst & ref-ind & 
@@ -735,11 +737,11 @@ basic_rel_cl := sign &
                  TAM.MOOD indicative,
                  MOD < synsem &
                        [ LOCAL intersective_mod &
-                         [ CAT basic_nbar_cat &
-                               [ HEAD noun_or_nomger,
-				 VAL.SPR.FIRST synsem_min & 
-					       [ --MIN quant_or_deg_rel ] ] ],
-                         PUNCT.RPUNCT comma_or_rbc_or_pair_or_no_punct,
+			       [ CAT [ HEAD noun_or_nomger,
+				       VAL [ SPR.FIRST synsem_min & 
+						       [ --MIN quant_or_deg_rel ] ],
+				       MC na ] ],
+			 PUNCT.RPUNCT comma_or_rbc_or_pair_or_no_punct,
 			 OPT - ] >],
 	  VAL.SPCMPS < >,
           POSTHD +,
@@ -3179,6 +3181,13 @@ adj_head_rel_phrase := adj_head_phrase & head_mod_phrase_simple &
 ;; pronoun |that|, which is marked INFLECTD na, so we lose |the cat that on 
 ;; Tuesday disappeared|. So instead, we identify the INFLECTD value on hd-dtr
 ;; and mother.
+;; DPF 2017-11-04 - In order to allow interposed relative clause between a noun and its
+;; complement, as in |the claim we rejected that he arrived|, we push the COMPS < >
+;; constraint on head-dtr down to the reduced-relative subtype (since there is already
+;; a hd-aj_vmod_c rule that admits non-clausal noun modifiers before complements, as in
+;; |the claim yesterday that he arrived|.  But constrain COMPS here to be *obllist*, to
+;; avoid spurious ambig when attaching rel clause to a noun with an optional complement,
+;; discharging the opt comp either before or after attaching the rel clause.
 ;
 n_adj_int_phrase := basic_head_adj_phrase &
   [ INFLECTD #infl,
@@ -3186,8 +3195,8 @@ n_adj_int_phrase := basic_head_adj_phrase &
 	     NONLOC.QUE #que ],
     HD-DTR [ INFLECTD na_or_+ & #infl,
 	     SYNSEM [ LOCAL.CAT [ HEAD supnoun,
-				  VAL [ COMPS < >,
-					SPR.FIRST synsem_min ],
+				  VAL [ SPR.FIRST synsem_min,
+					COMPS *obllist* ],
 				  NEGPOL #negpol ],
 		      NONLOC.QUE #que,
 		      PUNCT [ LPUNCT pair_or_no_punct,
@@ -3345,7 +3354,8 @@ n_adj_relcl_proper_phr := n_adj_relcl_phrase &
 ;;
 basic_n_adj_redrel_phrase := n_adj_int_phrase & head_compositional &
   [ SYNSEM.NONLOC.REL [ LIST #first, LAST #last ],
-    HD-DTR.SYNSEM [ LOCAL [ CAT [ HEAD.MINORS.ALTMIN norm_non_conj_rel ],
+    HD-DTR.SYNSEM [ LOCAL [ CAT [ HEAD.MINORS.ALTMIN norm_non_conj_rel,
+				  VAL.COMPS < > ],
 			    CONT.HOOK.LTOP #hand ],
 		    NONLOC.REL [ LIST #first, LAST #middle ] ],
     NH-DTR.SYNSEM 
@@ -5686,7 +5696,7 @@ appos_phr_deictic_prpnct := appos_phr_prpnct &
 ;; as heads, to avoid spurious analysis for |3.2 shares|
 ;;
 appos_phr_meas_prpnct := appos_phr_prpnct &
-  [ HD-DTR.SYNSEM.LOCAL.CAT.HEAD.MINORS [ MIN basic_non_temp_nonpro_rel,
+  [ HD-DTR.SYNSEM.LOCAL.CAT.HEAD.MINORS [ MIN basic_basic_non_temp_nonpro_rel,
 					  ALTMIN non_pronoun_q_rel ],
     NH-DTR.SYNSEM.LOCAL.CAT [ HEAD.MINORS [ MIN meas_nom_rel,
 					    ALTMIN udef_q_rel,
@@ -7175,6 +7185,8 @@ partitive_np_phrase := norm_unary_phrase & phrasal &
 ;; DPF 2015-05-04 - Added NORM no_rel to block year and month naems.
 ;; DPF 2016-11-02 - Added MIN reg_nom_rel to dtr to block np_cp_wh phrases
 ;; such as |in which we arise|
+;; DPF 2017-11-02 - Let's try constraining this to LEX +, to cut down on the
+;; spurious edges introduced in the parse chart.
 ;;
 vocative_np_phrase := norm_unary_phrase & phrasal &
  [ INFLECTD +,
@@ -7202,6 +7214,7 @@ vocative_np_phrase := norm_unary_phrase & phrasal &
 		       CONT.HOOK.INDEX #argind,
 		       CONJ #conj ],
 	       NONLOC #nonloc,
+	       LEX +,
 	       PUNCT [ LPUNCT lparen_or_dq_or_no_punct,
 		       RPUNCT hyphen_or_comma_or_pair_or_clause ] ] ] >,
    ORTH [ FROM #from, TO #to ],
@@ -7227,9 +7240,13 @@ vocative_np_phrase := norm_unary_phrase & phrasal &
 ;; just no_punct, to exclude pair_punct, since this was allowing us to zoom 
 ;; past the end of an italicized sequence without terminating.  Likewise
 ;; for right dtr's RPUNCT.
-;; DPF 2017-10-29 - Changed INFLECTD na to na_or_+ on left dtr, since this one can be 
-;; either a word or a fw-sequence.
+;; DPF 2017-10-29 - Changed INFLECTD na to na_or_+ on left dtr, since this one 
+;; can be either a word or a fw-sequence.
+;; DPF 2017-11-02 - Made right dtr be INFLECTD na, since this can now only be
+;; the generic_quoted entry introduced by token mapping (foreign_token_tmr)
+;; for each cell in the chart.
 ;;
+#|
 fw_sequence_left_phrase := binary_punct_phrase & word_or_bracketed_phrase &
  [ INFLECTD na,
    SYNSEM [ LOCAL [ CAT [ HEAD fw & [ MINORS.ALTMIN def_implicit_q_rel ],
@@ -7263,9 +7280,98 @@ fw_sequence_left_phrase := binary_punct_phrase & word_or_bracketed_phrase &
                                          INDEX #index2 & non_conj_sement ] ],
                      NONLOC #nonlocal,
                      PUNCT [ LPUNCT no_punct,
-                             RPUNCT no_punct,
-			     RCLSTR [ RFP -,
+		             RPUNCT no_punct,
+                             RCLSTR [ RFP -,
 				      IGNOREQ - ] ],
+		     LEX + ] ] >,
+   ORTH [ FROM #from, TO #to ],
+   C-CONT [ RELS <! [ LBL #hand,
+		      PRED fw_seq_rel,
+		      ARG0 #index,
+		      ARG1 #index1,
+		      ARG2 #index2,
+		      CFROM #from, CTO #to ] !>,
+	    HCONS <! !>,
+	    ICONS <! !> ] ].
+
+fw_sequence_left_phrase := binary_punct_phrase & word_or_bracketed_phrase &
+ [ INFLECTD na,
+   SYNSEM [ LOCAL [ CAT [ HEAD fw & [ MINORS.ALTMIN def_implicit_q_rel ],
+                          VAL [ SPR < >,
+                                SUBJ < >,
+                                COMPS < >,
+                                SPEC < >,
+				SPCMPS < > ] ],
+                    CONT nom-obj &
+                        [ HOOK [ LTOP #hand,
+                                 INDEX #index ] ],
+                    CONJ cnil ],
+            NONLOC #nonlocal & non-local_none,
+            LEX + ],
+   ARGS < [ INFLECTD na_or_+,
+	    DERIVED -,
+	    SYNSEM basic_lex_synsem &
+		   [ LOCAL [ CONJ cnil,
+                             CONT.HOOK [ LTOP #hand,
+                                         INDEX #index1 & non_conj_sement ] ],
+                     NONLOC #nonlocal,
+                     PUNCT.LPUNCT dq_or_sq_or_lital_punct,
+		     PHON.ONSET unk_onset,
+                     LEX + ] ],
+	  word_or_infl_or_punct_rule &
+          [ INFLECTD na,
+	    DERIVED -,
+	    SYNSEM [ LOCAL [ CAT.HEAD fw,
+			     CONJ cnil,
+                             CONT.HOOK [ LTOP #hand,
+                                         INDEX #index2 & non_conj_sement ] ],
+                     NONLOC #nonlocal,
+		     PHON.ONSET unk_onset,
+                     LEX + ] ] >,
+   ORTH [ FROM #from, TO #to ],
+   C-CONT [ RELS <! [ LBL #hand,
+		      PRED fw_seq_rel,
+		      ARG0 #index,
+		      ARG1 #index1,
+		      ARG2 #index2,
+		      CFROM #from, CTO #to ] !>,
+	    HCONS <! !>,
+	    ICONS <! !> ] ].
+|#
+fw_sequence_left_phrase := binary_punct_phrase & word_or_bracketed_phrase &
+ [ INFLECTD na,
+   SYNSEM [ LOCAL [ CAT [ HEAD fw & [ MINORS.ALTMIN def_implicit_q_rel ],
+                          VAL [ SPR < >,
+                                SUBJ < >,
+                                COMPS < >,
+                                SPEC < >,
+				SPCMPS < > ] ],
+                    CONT nom-obj &
+                        [ HOOK [ LTOP #hand,
+                                 INDEX #index ] ],
+                    CONJ cnil ],
+            NONLOC #nonlocal & non-local_none,
+            LEX + ],
+   ARGS < [ INFLECTD na_or_+,
+	    DERIVED -,
+	    SYNSEM basic_lex_synsem &
+		   [ LOCAL [ CAT.HEAD fw,
+			     CONJ cnil,
+                             CONT.HOOK [ LTOP #hand,
+                                         INDEX #index1 & non_conj_sement ] ],
+                     NONLOC #nonlocal,
+		     PUNCT.LPUNCT dq_or_sq_or_lital_punct,
+		     PHON.ONSET unk_onset,
+                     LEX + ] ],
+	  word_or_infl_or_punct_rule &
+          [ INFLECTD na,
+	    DERIVED -,
+	    SYNSEM [ LOCAL [ CAT.HEAD fw,
+			     CONJ cnil,
+                             CONT.HOOK [ LTOP #hand,
+                                         INDEX #index2 & non_conj_sement ] ],
+                     NONLOC #nonlocal,
+		     PHON.ONSET unk_onset,
                      LEX + ] ] >,
    ORTH [ FROM #from, TO #to ],
    C-CONT [ RELS <! [ LBL #hand,
@@ -7381,7 +7487,7 @@ fw_sequence_right_phrase := basic_binary_phrase &
 		    PAIRED #paired,
 		    RCLSTR [ RPAREN #rparen,
 			     RITAL - ] ] ],
-   ARGS < [ SYNSEM [ LOCAL [ CAT [ MC na_or_- ],
+   ARGS < [ SYNSEM [ LOCAL [ CAT.HEAD fw,
                              CONJ cnil,
                              CONT.HOOK [ LTOP #hand,
                                          INDEX #index1 & non_conj_sement ] ],
@@ -7395,8 +7501,7 @@ fw_sequence_right_phrase := basic_binary_phrase &
 	    INFLECTD na_or_+ ],
           word_or_punct_rule &
           [ SYNSEM basic_lex_synsem &
-		   [ LOCAL [ CAT [ HEAD subst_or_func,
-				   MC na_or_- ],
+		   [ LOCAL [ CAT.HEAD fw,
                              CONJ cnil,
                              CONT.HOOK [ LTOP #hand,
                                          INDEX #index2 & non_conj_sement ] ],
@@ -7409,7 +7514,7 @@ fw_sequence_right_phrase := basic_binary_phrase &
 				      RITAl + ] ],
                      LEX + ],
 	    DERIVED -,
-	    INFLECTD na_or_+ ] >,
+	    INFLECTD na ] >,
    ORTH [ FROM #from, TO #to ],
    C-CONT [ RELS <! [ LBL #hand,
 		      PRED fw_seq_rel,
@@ -10918,7 +11023,8 @@ frag_int_adv_rule := unary_frag_rule &
                                         [ LOCAL intersective_mod &
                                           [ CAT.HEAD adverbee,
                                             CONT.HOOK.LTOP #klbl ] ] >,
-				  MINORS.MIN norm_rel ] ] ] >,
+				  MINORS [ MIN norm_rel,
+					   ALTMIN norm_rel ] ] ] ] >,
     C-CONT [ RELS.LIST.FIRST.LBL #klbl,
              HCONS <! !>,
 	     ICONS <! !> ] ].
