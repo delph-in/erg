@@ -4319,6 +4319,12 @@ generic_modal_verb_synsem := generic_modal_verb_super_synsem &
 generic_modal_verb_word := generic_modal_verb_word_super &
   [ SYNSEM generic_modal_verb_synsem ].
 
+;; DPF 2017-11-08 - Constraining modals' subject to be an NP here means we can't get
+;; locative inversion as in |in the corner might be a broom|, unless we also have a
+;; lexical rule to create loc-inv modals.  It seems like we should instead be identifying
+;; the controlled complement's subject's CAT with the modal's subject's CAT, in addition 
+;; to the already controlled semantic index.  FIX in one of these two ways.
+;;
 fin_modal_verb_synsem := generic_modal_verb_synsem &
   [ LOCAL [ CAT [ HEAD [ PRD -,
 			 VFORM fin,
@@ -4712,18 +4718,20 @@ loc_inv_verb_word := nonc-hm &
 
 ;; DPF 2017-10-06 - Prevent subject gap, to avoid spurious analysis of
 ;; |*we know where is the restaurant is|
+;; DPF 2017-11-08 - But this blocks relative clauses like |prominent among which is Paris|
+;; so instead constrain SF to prop, to allow relative clauses but not questions.
+;;
 loc_inv_be_synsem := twoarg_verb_synsem &
   [ LOCAL [ CAT [ HEAD [ PRD -,
 			 TAM.MOOD indicative ],
 		  VAL [ SUBJ < [ LOCAL.CONT.HOOK [ LTOP #ltop,
 						   INDEX #ind &
 							[ E.TENSE tense ],
-						   XARG #xarg ],
-				 NONLOC.SLASH 0-dlist ] >,
+						   XARG #xarg ] ] >,
 			COMPS < [ --SIND #xarg ] > ],
 		  POSTHD - ],
 	    CONT [ HOOK [ LTOP #ltop,
-			  INDEX #ind & non_conj_event & [ SF prop-or-ques ],
+			  INDEX #ind & non_conj_event & [ SF prop ],
 			  XARG #xarg ],
 		   RELS <! !> ] ],
     LKEYS.KEYREL.PRED no_rel ].
@@ -10722,8 +10730,9 @@ norm_adj_lex_synsem := basic_adj_synsem & lex_synsem &
 ;; so the partitive rule cannot apply (as should have been done in the first
 ;; place).
 ;;
-derived_adj_synsem := norm_adj_lex_synsem &
-  [ LOCAL.CAT.HEAD adj ].
+derived_adj_synsem := norm_adj_lex_synsem & adj_synsem_lex_or_phrase &
+  [ LOCAL [ CAT.HEAD adj & [ TAM #tam ],
+	    CONT.HOOK.INDEX.E #tam ] ].
 
 ;; We assume for now, counterfactually, that all modifying adjectives are
 ;; intersective.
@@ -20856,10 +20865,13 @@ av_-_s-not-vp_le := adv_neg_lexent &
 ; complementizers, needed in particular to avoid treating complementizers as 
 ; particles, which are selected by MIN value.
 ; DPF 25-oct-03 - Change SPR from *olist* to < > to block PP modification.
-
+;; DPF 2017-11-13 - Re 25-oct-03: But this prevents |it's easy for Kim just to sleep| and
+;; |we want him merely to jog|.  So push down to subtypes, excluding |to|, which is already
+;; prevented from post-modification due to being AUX +.
+;;
 complementizer_word := noncr-h-nab &
   [ SYNSEM.LOCAL [ CAT [ HEAD.INV -,
-                         VAL.SPR < > ],
+                         VAL.SPR *olist* ],
 		   AGR.PNG.PN 3s,
 		   CONT.HOOK.INDEX non_expl ] ].
 
@@ -20895,6 +20907,7 @@ basic_two_place_compl_word := complementizer_word &
         CAT [ HEAD [ VFORM #vform,
 		     MOD < anti_synsem_min > ],
               VAL [ COMPS #comps,
+		    SPR < >,
 		    KCMP canonical_synsem &
 			 [ --MIN #cmin,
                            LOCAL [ CAT [ HEAD verbal &
@@ -21313,7 +21326,8 @@ cm_-_to_le := noncqr-h-nab &
 ; ERB (14-12-97) See notes at complementizer_word.
 
 whether_compl_word := complementizer_word &
-  [ SYNSEM [ LOCAL [ CAT.HEAD.MOD < anti_synsem_min >,
+  [ SYNSEM [ LOCAL [ CAT [ HEAD.MOD < anti_synsem_min >,
+			   VAL.SPR < > ],
 		     CONT.HOOK.INDEX.SF ques ],
              NONLOC.SLASH 0-dlist ] ].
 
@@ -25679,13 +25693,15 @@ n_-_gq_le := generic_n_intr_lex_entry & norm_unknown_word &
 n_-_gq_le := norm_unknown_word &
   [ INFLECTD na_or_+,
     SYNSEM [ LOCAL [ CAT [ HEAD fw & [ MOD < >,
-				       PRD - ],
+				       PRD -,
+				       MINORS.MIN no_rel ],
 			   VAL [ SPR < >,
 				 SUBJ < >,
 				 COMPS < >,
 				 SPCMPS < >,
 				 SPEC < > ] ],
-                     CONT.HOOK.LTOP #ltop ],
+                     CONT.HOOK [ LTOP #ltop,
+				 INDEX basic_non_expl-ind ] ],
              LKEYS.KEYREL [ PRED "quoted_rel",
 			    LBL #ltop,
 			    CARG #carg ],
