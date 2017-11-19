@@ -30,6 +30,10 @@
 ;; We have been treating these proper-name compounds pretty much like other
 ;; nominal compound phrases, all of which have the right dtr as the head.
 ;; FIX, one way or the other.
+;; DPF 2017-11-17: And note that we currently don't treat titles as heads in
+;; |Mr. Browne|, but for |Mr. and Mrs. Browne| we want the NP to have plural
+;; number, so if this generalization about headed phrases is right, then the
+;; title will have to be the head of the NP.
 
 headed_phrase := phrase & 
   [ SYNSEM.LOCAL [ CAT [ HEAD head & #head,
@@ -4928,16 +4932,14 @@ basic_np_title_cmpnd_phr := basic_np_name_cmpnd_phr & binary_punct_phrase &
 	     MODIFD hasmod ],
     HD-DTR [ INFLECTD +,
 	     SYNSEM [ LOCAL [ CAT.HEAD.MINORS.MIN numseq_or_named_rel,
-			      CONT.HOOK.LTOP #nhand,
-			      AGR.PNG.PN #pn ],
+			      CONT.HOOK.LTOP #nhand ],
 		      PUNCT.PNCTPR #ppair,
 		      MODIFD.LPERIPH + ] ],
     NH-DTR [ SYNSEM [ LOCAL [ CAT [ HEAD.MINORS [ MIN gen_nom_nbar_rel,
 						  NORM quantity_or_norm_rel ],
 				    VAL.SPR.FIRST unexpressed & [ OPT - ] ],
 			      CONT.HOOK [ LTOP #nhltop,
-					  INDEX #nhind ],
-			      AGR.PNG.PN #pn ],
+					  INDEX #nhind ] ],
 		      MODIFD notmod_or_lmod,
                       LEX +,
 		      PUNCT [ LPUNCT dq_or_sq_or_no_punct,
@@ -4955,18 +4957,28 @@ basic_np_title_cmpnd_phr := basic_np_name_cmpnd_phr & binary_punct_phrase &
 
 np_title_cmpnd_phr := basic_np_title_cmpnd_phr &
   [ HD-DTR.SYNSEM.LOCAL [ CAT.VAL.SPR < [ OPT - ] >,
-			  CONT.HOOK.LTOP #lbl ],
-    NH-DTR.INFLECTD na_or_-,
+			  CONT.HOOK.LTOP #lbl,
+			  AGR.PNG.PN #pn ],
+    NH-DTR [ INFLECTD na_or_-,
+	     SYNSEM.LOCAL.AGR.PNG.PN #pn ],
     C-CONT.RELS.LIST.FIRST.LBL #lbl ].
 
 ;; DPF 2012-10-01 - Special case for plural NPs as in |Mssrs. Abrams and Browne|
 ;; needed because we exclude nbar-coord of proper names (to avoid spurious
 ;; ambiguity), and yet we want ordinary title-noun constructions to have nbar
 ;; heads, in order to allow e.g. |your Mr. Browne|
+;; DPF 2017-11-17 - It seems that we also need to allow the other variant, as
+;; in |Mr. and Mrs. Jones|, where the nh-dtr is necessarily INFLECTD + (since
+;; noun-coord insists on it to avoid spurious ambig), but the hd-dtr is
+;; singular.  Hence tried leaving the hd-dtr unmarked for number, and pushed
+;; down the supertype's constraint identifying PN on the two dtrs.  But alas,
+;; note that all headed phrases identify AGR of mother and hd-dtr, so we would
+;; have to make a more radical change here to treat titles as heads, in order
+;; to predict the plural number on |Mr. and Mrs. Jones|.  FIX, so we can
+;; get subj-verb agreement right here.
 ;;
 np_title_cmpnd_pl_phr := basic_np_title_cmpnd_phr &
   [ HD-DTR.SYNSEM.LOCAL [ CAT.VAL.SPR *olist*,
-			  AGR.PNG.PN 3p,
 			  CONT.HOOK.XARG #lbl ],
     NH-DTR [ INFLECTD +,
 	     SYNSEM.LOCAL.AGR.PNG.PN 3p ],
@@ -6079,26 +6091,6 @@ npadv_mod_phrase := basic_npadv_mod_phrase &
 				       CASE real_case ],
 		      MODIFD hasmod & [ LPERIPH + ] ] ] > ].
 
-; Special construction for n_year_le as in 'July 14, 1984'
-;; DPF 2015-05-06 - No longer used, once we realized that to get
-;; |the December 4, 2005 event| as an NP-N compound, the year has to be an
-;; optional complement of the dofm (and similarly for mofy).
-;;
-#|
-npadv_yofc_phrase := basic_npadv_mod_phrase &
-  [ SYNSEM.LOCAL 
-            [ CAT [ HEAD [ MINORS.MIN loc_nonsp_rel,
-			   MOD < [ --MIN dofm_or_mofy_rel,
-				   LOCAL [ CAT [ HEAD basic_noun,
-						 VAL.SPR.FIRST synsem &
-						      [ OPT - ] ],
-					   CONT.HOOK.XARG #ltop ] ] > ],
-		    VAL.SPR < anti_synsem_min > ],
-              CONT.HOOK.LTOP #ltop ],
-    ARGS < [ SYNSEM [ LOCAL.CAT.HEAD.MINORS.MIN yofc_rel,
-                      MODIFD notmod ] ] > ].
-|#
-
 ; For "Kim fell three meters."
 ; DPF 31-dec-08 - Added NORM norm_rel to prevent these from appearing in
 ; v_mod construction, as in "Kim has 46 cats"
@@ -6129,6 +6121,11 @@ npadv_yofc_phrase := basic_npadv_mod_phrase &
 ;; DPF 2017-07-17 - Changed dtr's SPR from synsem to synsem_min since we want
 ;; the rule to apply for |prices rose a modest 3%| where the measure-NP has an
 ;; *anti-list* for its SPR.
+;; DPF 2017-11-17 - The [CASE no_case] on the dtr, intended to block bare
+;; measure NPs as input here, as in |the fence was inches taller|, seems wrong
+;; since these are probably good, and anyway it blocked the intended analysis
+;; of |the price rose [$10 a share]|, so consider removing it later. 
+;; FIX post-2017.
 ;;
 npadv_measnp_phrase := basic_npadv_mod_phrase &
   [ SYNSEM [ LOCAL.CAT [ HEAD [ MINORS [ MIN miscprep_rel,
@@ -6378,10 +6375,13 @@ measure_np_phrase := binary_measure_np_phrase &
 ;; `are invested', so maybe FIX someday.
 ;; Also added CASE real_case to mother, to avoid these as input to the
 ;; bare meas-NP rule.
+;; DPF 2017-11-18 - But the CASE constraint blocks |prices rose $10|, so
+;; instead let's constrain the mother synsem here to be lex_phr_synsem,
+;; incompatible with the dtr in bare_measure_np_phrase.
 ;;
 measure_np_symbol_phrase := binary_measure_np_phrase & 
-  [ SYNSEM [ LOCAL.CAT.HEAD.CASE real_case,
-	     PUNCT.PNCTPR #ppair ],
+  [ SYNSEM lex_phr_synsem &
+	   [ PUNCT.PNCTPR #ppair ],
     DTR1 #dtr1 & [ INFLECTD +,
 		   SYNSEM [ LOCAL.CAT [ HEAD.MINORS [ MIN mnp_symb_rel,
 						      NORM norm_rel ],
@@ -9095,9 +9095,12 @@ v_onecomp_coord_nonfin_mid_ig_phr := v_coord_nonfin_mid_ig_phr &
 ;; input to the frag_sbar rule).  (And we don't propagate the HEAD type to
 ;; the mother from either dtr.)  So let's try making CASE on the mother always
 ;; be non_nom instead of propagating from the left dtr.
+;; DPF 2017-11-17 - But this CASE constraint has to be on the normal subtype, 
+;; since we want to still coordinate that-S phrases lacking a conjunct via the
+;; s_coord_top_noconj_phr type, with the complementizer "that" being CASE nom.
+;;
 basic_s_coord_phr := basic_verbal_coord_phr &
-  [ SYNSEM [ LOCAL [ CAT [ HEAD [ VFORM fin_or_inf_or_imp,
-				  CASE non_nom ],
+  [ SYNSEM [ LOCAL [ CAT [ HEAD.VFORM fin_or_inf_or_imp,
                            VAL [ SUBJ #subj & *olist*,
                                  COMPS < >,
 				 SPR #spr,
@@ -9118,7 +9121,8 @@ basic_s_coord_phr := basic_verbal_coord_phr &
 
 
 s_coord_phr := basic_s_coord_phr & verbal_coord_phr &
-  [ LCONJ-DTR.SYNSEM.LOCAL.CONT.HOOK.LTOP #ltop,
+  [ SYNSEM.lOCAL.CAT.HEAD.CASE non_nom,
+    LCONJ-DTR.SYNSEM.LOCAL.CONT.HOOK.LTOP #ltop,
     RCONJ-DTR.SYNSEM.LOCAL.CONJ.CREL.ARG1 #lhndl,
     C-CONT.HCONS <! qeq & [ HARG #lhndl, LARG #ltop ] !> ].
 
@@ -10454,6 +10458,11 @@ noun_adj_coord_rule := basic_adj_noun_coord_rule &
 ;; DPF 2012-12-21 - Moved MC + down to subtypes, but not on npindef_s_rule,
 ;; to allow embedded clauses of the form 
 ;; |Kim said "a famous doctor, Abrams cured thousands"|
+;; DPF 2017-11-18 - Removed right dtr's SUBJ *anti_list* constraint since it
+;; is already on the two relevant subtypes, and we don't want it on run-on NP
+;; where the NP can have a *synlist* constraint on its SUBJ (namely when the 
+;; head noun has undergone so-called v-mod rule, as in |the claim yesterday 
+;; that he arrived|
 ;;
 basic_run_on_rule := binary_rule_right_to_left & basic_binary_phrase &
   [ INFLECTD +,
@@ -10476,8 +10485,7 @@ basic_run_on_rule := binary_rule_right_to_left & basic_binary_phrase &
                       PUNCT [ LPUNCT #lpunct ] ] ],
            [ INFLECTD +,
              SYNSEM [ LOCAL local & 
-                            [ CAT [ VAL [ SUBJ *anti_list*,
-                                          COMPS < > ] ],
+                            [ CAT.VAL.COMPS < >,
                               AGR.PNG #png,
                               CONJ cnil_or_lexconj & [ CHEAD cnil ] ],
                       NONLOC.SLASH 0-dlist & [ LIST < > ],
