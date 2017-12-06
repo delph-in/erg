@@ -173,15 +173,18 @@ basic_binary_phrase := phrase & non_unary-rule &
     DIALECT #dialect,
     GENRE #genre ].
 
-binary_punct_phrase := basic_binary_phrase &
+norm_binary_punct_phrase := basic_binary_phrase &
   [ SYNSEM.PUNCT [ LPUNCT #lpunct,
-                   RPUNCT #rpunct,
                    PAIRED #paired,
                    RCLSTR #rclstr ],
     ARGS < [ SYNSEM.PUNCT.LPUNCT #lpunct ],
-           [ SYNSEM.PUNCT [ RPUNCT #rpunct,
-                            PAIRED #paired,
+           [ SYNSEM.PUNCT [ PAIRED #paired,
                             RCLSTR #rclstr ] ] > ].
+
+binary_punct_phrase := norm_binary_punct_phrase &
+  [ SYNSEM.PUNCT.RPUNCT #rpunct,
+    ARGS < [ ],
+           [ SYNSEM.PUNCT.RPUNCT #rpunct ] > ].
 
 binary_phrase := binary_punct_phrase &
   [ INFLECTD +,
@@ -2667,7 +2670,7 @@ head_mod_phrase := headed_phrase &
 ; head-dtr.
 
 basic_head_mod_phrase_simple := head_mod_phrase & basic_binary_headed_phrase &
-                                binary_punct_phrase &
+                                norm_binary_punct_phrase &
   [ SYNSEM.LOCAL.CAT.MC #mc,
     HD-DTR.SYNSEM [ LOCAL [ CAT [ HEAD #head,
                                   VAL #val,
@@ -2715,7 +2718,7 @@ head_mod_phrase_simple := basic_head_mod_phrase_simple &
 ;; COMPS value to be truly the empty list, not just *olist*.
 
 adj_head_phrase := basic_head_mod_phrase_simple & head_final &
-		   head_nexus_rel_phrase &
+		   head_nexus_rel_phrase & binary_punct_phrase &
   [ SYNSEM [ LOCAL.CAT.POSTHD #ph,
 	     NONLOC [ SLASH #slash,
                       QUE *diff-list* &
@@ -2812,12 +2815,10 @@ basic_head_adj_phrase := basic_head_mod_phrase_simple & head_initial & phrasal &
                                    [ LIST #first,
                                      LAST #middle ] ] ] ].
 
-head_adj_phrase := basic_head_adj_phrase &
+head_adj_phrase := basic_head_adj_phrase & binary_punct_phrase &
   [ SYNSEM [ MODIFD rmod,
 	     NONLOC.QUE #que ],
     NH-DTR.SYNSEM.NONLOC.QUE #que ].
-			
-
 
 ; DPF (07-17-98) Split head_adj_phrase and adj_head_phrase into two each,
 ; one for intersective modifiers and one for scopal modifiers, in order to
@@ -3259,7 +3260,8 @@ n_adj_int_phrase := basic_head_adj_phrase &
 ;; split this type for finite/nonfinite, and add [REL 0-dlist] to the head dtr
 ;; of the finite one, if that's the right generalization   FIX someday?
 ;;
-n_adj_relcl_phrase := n_adj_int_phrase & isect_mod_phrase &
+n_adj_relcl_phrase := n_adj_int_phrase & isect_mod_phrase & 
+		      binary_punct_phrase &
   [ SYNSEM [ MODIFD #modif & rmod & [ RPERIPH na_or_+ ],
              NONLOC.REL [ LIST #first, LAST #last ] ],
     NH-DTR.SYNSEM [ LOCAL [ CAT [ HEAD verbal & 
@@ -3372,29 +3374,42 @@ n_adj_redrel_phrase := basic_n_adj_redrel_phrase &
 ; The paired variant, where both daughters match in right punctuation
 ;; DPF 2016-09-27 - Removed RPAREN + on hd-dtr, since it blocks e.g.
 ;; |algorithms (called schemes), such as these.|
+;; DPF 2017-12-04 - Made the mother's RPUNCT allow for no_punct, since we want 
+;; to analyze a sequence of two (or more) post-head modifiers such as in 
+;; |transfers, conditional or otherwise, of property were made|, where the 
+;; first is marked with a paired comma, but the second is not.  Still keep
+;; PSF value from right dtr, in case this phrase is clause-final.
+;;
 n_adj_redrel_prpnct := n_adj_redrel_phrase &
-  [ SYNSEM.PUNCT.PAIRED #paired,
+  [ SYNSEM.PUNCT [ PAIRED #paired,
+		   RPUNCT comma_or_clause_or_pair_or_no_punct & [ PSF #psf ] ],
     HD-DTR.SYNSEM.PUNCT [ PNCTPR #pnctpr,
                           PAIRED #paired,
                           RPUNCT comma_or_pair_punct ],
     NH-DTR.SYNSEM.PUNCT [ PAIRED #pnctpr,
-                          PNCTPR #paired ] ].
+                          PNCTPR #paired,
+			  RPUNCT.PSF #psf ] ].
 
 ; The non-paired variant with comma
+;;
 n_adj_redrel_nopair := n_adj_redrel_phrase &
-  [ SYNSEM.PUNCT.PNCTPR #ppair,
+  [ SYNSEM.PUNCT [ PNCTPR #ppair,
+		   RPUNCT #rpunct ],
     HD-DTR.SYNSEM.PUNCT.RPUNCT pair_or_no_punct,
-    NH-DTR.SYNSEM.PUNCT.PNCTPR #ppair ].
+    NH-DTR.SYNSEM.PUNCT [ PNCTPR #ppair,
+			  RPUNCT #rpunct ] ].
 
 ;; |Ellis island|
 ;; DPF 2017-02-27 - Generalized hd-dtr's RPUNCT to comma_or_pair_or_no_punct
 ;; in order to admit |Netscape Communications, Inc. succeeded|
 
 n_adj_title_phrase := basic_n_adj_redrel_phrase &
-  [ SYNSEM.PUNCT.PNCTPR #ppair,
+  [ SYNSEM.PUNCT [ PNCTPR #ppair,
+		   RPUNCT #rpunct ],
     HD-DTR.SYNSEM.PUNCT.RPUNCT comma_or_pair_or_no_punct,
     NH-DTR.SYNSEM [ LOCAL.CAT.HEAD ttl,
-		    PUNCT.PNCTPR #ppair ] ].
+		    PUNCT [ PNCTPR #ppair,
+			    RPUNCT #rpunct ] ] ].
 
 ; For generator, distinguish constructions where adjunct contains a gap from
 ; those where it does not.
