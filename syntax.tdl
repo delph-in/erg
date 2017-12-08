@@ -5182,6 +5182,9 @@ noun_adjn_cmpnd_phr := basic_noun_n_cmpnd_phr &
 ;; DPF 2017-10-23 - Constrain nh-dtr to CASE non-nom, to avoid spurious ambig
 ;; for e.g. |the sand and gravel truck| where we could admit |sand and gravel|
 ;; either via div-coord rule or mass-coord-singular rule.
+;; DPF 2017-12-08 - Should split this rule into two, as done for adj-N and
+;; adj-adj-N, so we can block |systems, analyst| while allowing 
+;; |$10 million, three-year contract|.  FIX someday.
 ;;
 noun_n_cmpnd_pl_phr := basic_noun_n_cmpnd_phr &
   [ HD-DTR.SYNSEM [ MODIFD notmod_or_lmod,
@@ -5196,6 +5199,7 @@ noun_n_cmpnd_pl_phr := basic_noun_n_cmpnd_phr &
 					      [ PNG.PN 3p ] ],
 		      MODIFD notmod_or_lmod,
 		      PUNCT.RPUNCT rbc_or_hyphen_or_pair_or_no_punct ] ] ].
+
 
 ; n-adj phrases: "wide-eyed" "pea-sized", "sky blue"
 ; DPF 30-oct-06 - Stopped passing up of ALTMIN from dtr to mother, since
@@ -6497,6 +6501,7 @@ num_or_color_noun_phrase := norm_unary_phrase &
                               CONT.HOOK [ LTOP #nhand,
                                           INDEX #index & nonconj_indiv ] ],
                       LEX #lex,
+		      NONLOC.SLASH 0-dlist,
                       MODIFD notmod & [ LPERIPH #lperiph ] ] ] >,
     C-CONT [ RELS <! !>,
 	     HCONS <! !>,
@@ -8033,7 +8038,12 @@ np_num_cmpnd_rule := binary_rule_right_to_left & np_num_cmpnd_phr.
 np_city_state_rule := binary_rule_right_to_left & np_city_state_phr.
 noun_n_cmpnd_rule := binary_rule_right_to_left & noun_n_cmpnd_phr.
 noun_adjn_cmpnd_rule := binary_rule_right_to_left & noun_adjn_cmpnd_phr.
-noun_n_cmpnd_pl_rule := binary_rule_right_to_left & noun_n_cmpnd_pl_phr.
+noun_n_cmpnd_pl_rule := binary_rule_right_to_left & noun_n_cmpnd_pl_phr &
+  [ HD-DTR.SYNSEM basic_lex_synsem,
+    NH-DTR.SYNSEM.PUNCT.RPUNCT hyphen_or_pair_or_no_punct ].
+noun_n_cmpnd_pl_nonlex_rule := binary_rule_right_to_left & noun_n_cmpnd_pl_phr &
+  [ HD-DTR.SYNSEM nonlex_or_lex_phr_synsem ].
+
 ;n_v-or-adj_cmpnd_eg_rule := binary_rule_right_to_left & 
 ;			    n_v-or-adj_cmpnd_eg_phr.
 ;n_v-or-adj_cmpnd_ig_rule := binary_rule_right_to_left & 
@@ -10992,6 +11002,9 @@ binary_right_frag_rule := binary_frag_rule &
 		  INDEX #index ],
     ARGS < #dtr2, #dtr1 > ].
 
+;; DPF 2017-12-08 - Constrain right dtr to be CONJ cnil, to avoid spurious
+;; analysis for e.g. |dogs, cats, etc| with |etc| as the `modifier'.
+;;
 basic_frag_r_mod_np_rule := binary_right_frag_rule &
   [ ARGS < [ SYNSEM [ LOCAL [ CAT [ HEAD noun &
                                        [ CASE acc,
@@ -11002,7 +11015,8 @@ basic_frag_r_mod_np_rule := binary_right_frag_rule &
 					    INDEX #ind ] ] ],
                       PUNCT.RPUNCT #rpunct ] ],
            sign & [ SYNSEM.LOCAL 
-                            [ CAT.HEAD.MOD < [ PUNCT.RPUNCT #rpunct ] > ] ] >,
+                            [ CAT.HEAD.MOD < [ PUNCT.RPUNCT #rpunct ] >,
+			      CONJ cnil ] ] >,
     C-CONT [ RELS <! [ LBL #lbl,
 		       ARG #ind ] !>,
              HCONS <! !>,
@@ -11207,6 +11221,16 @@ frag_vp_slash_rule := basic_frag_verbal_rule &
   [ ARGS < [ SYNSEM [ LOCAL.CAT [ HEAD [ MINORS.MIN norm_rel,
                                          VFORM non_fin ],
                                   VAL.SUBJ < nongappro > ],
+                      NONLOC.SLASH 1-dlist & 
+                                <! [ CAT.HEAD noun & 
+                                         [ MINORS.MIN reg_nom_rel,
+                                           MOD < > ] ] !> ] ] > ].
+
+; |The signal means and includes ___|
+frag_s_slash_rule := basic_frag_verbal_rule &
+  [ ARGS < [ SYNSEM [ LOCAL.CAT [ HEAD [ MINORS.MIN norm_rel,
+                                         VFORM fin ],
+                                  VAL.SUBJ *anti_list* ],
                       NONLOC.SLASH 1-dlist & 
                                 <! [ CAT.HEAD noun & 
                                          [ MINORS.MIN reg_nom_rel,
