@@ -3487,11 +3487,14 @@ adj_n_int_phrase := adj_head_int_phrase &
 ; so allow hyphen for adj-n case.
 ;; DPF 2012-08-29 - Added INFLECTD bool on HD-DTR to block |true that| with
 ;; relative pron `that'.
-
+;; DPF 2017-12-16 - Removed rbc from NH-DTR.s RPUNCT, to block |the tall, cat|
+;; now that we treat N-N compounds as left-modified, so we can use the
+;; adj_adjn rule for those, allowing a comma as in |the tall, ten-foot wall|.
+;;
 adj_n_phrase := adj_n_int_phrase &
   [ HD-DTR [ SYNSEM.MODIFD notmod_or_rmod,
 	     INFLECTD bool ],
-    NH-DTR.SYNSEM.PUNCT.RPUNCT rbc_or_hyphen_or_pair_or_no_punct ].
+    NH-DTR.SYNSEM.PUNCT.RPUNCT hyphen_or_pair_or_no_punct ].
 
 ; DPF 17-aug-06 - Added NORM to block n-ed phrases like "wide-eyed" from 
 ; being recursively modified.  But this wrongly also blocks recursive
@@ -4052,17 +4055,17 @@ reg_bare_np_phrase := norm_bare_np_phrase &
 ;; group or classifier nouns such as |pair of shoes|, which have a mismatch of
 ;; AGR and INDEX features.  So it's tempting to also require INDEX.DIV + on dtr,
 ;; but we want to use this rule for measure NPs such as |a dollar| as well, and
-;; this phrase is INDEX.DIV - because of the lexical semantics of singular `dollar'.
-;; So instead require SPR..DIV +, compatible with measure NPs and |pairs of shoes|
-;; but not |pair of shoes|.
+;; this phrase is INDEX.DIV - because of the lexical semantics of singular 
+;; `dollar'.  So instead require SPR..DIV +, compatible with measure NPs and 
+;; |pairs of shoes| but not |pair of shoes|.
 ;;
 bare_np_phrase := reg_bare_np_phrase &
   [ SYNSEM.LOCAL.AGR #agr & [ DIV + ],
-    ARGS < [ SYNSEM.LOCAL [ CAT [ HEAD noun_or_nomger,
-				  VAL.SPR [ FIRST [ OPT -,
-						    LOCAL.AGR.DIV + ],
-					    REST *olist* ] ],
-			    AGR #agr ] ] > ].
+    ARGS < [ SYNSEM [ LOCAL [ CAT [ HEAD noun_or_nomger,
+				    VAL.SPR [ FIRST [ OPT -,
+						      LOCAL.AGR.DIV + ],
+					      REST *olist* ] ],
+			      AGR #agr ] ] ] > ].
 
 ;; DPF 2012-11-14 - Added INDEX.DIV - to mother to prevent `group' nouns
 ;; (which are underspecified for AGR) from spuriously using this rule.
@@ -4191,7 +4194,8 @@ proper_np_phrase := norm_bare_np_phrase &
 ; makes it not possible in prescriptive mode to require that it be
 ; unexpressed, so move this constraint to constructions.tdl for now.  But
 ; should understand it better - FIX.
-;; DPF 2017-12-09 - Chagned ARGS..LPERIPH from na_or_+ to na_or_-
+;; DPF 2017-12-09 - Changed ARGS..LPERIPH from na_or_+ to na_or_-
+;;
 num_np_phrase := generic_bare_np_phrase &
   [ INFLECTD #infl,
     SYNSEM [ LOCAL [ CAT [ HEAD #head & [ MINORS.ALTMIN number_q_rel ],
@@ -4356,6 +4360,9 @@ detlesspp_np_nomod_phrase := detlesspp_np_phrase &
 ;; DPF 2017-11-19 - Re 2015-03-17: Constrain hd-dtr's ALTMIN to prevent this
 ;; rule from spuriously applying when the gerund has picked up a specifier
 ;; instead of a subject.
+;; DPF 2017-12-16 - Added PUNCT norm_punctuation to prevent single lexical
+;; participles (since we already get nominal gerund analysis), even if they
+;; have undergone the optcomp rule.
 ;;
 bare_vger_phrase := head_only & head_valence_phrase & phrasal &
   [ SYNSEM.LOCAL [ CAT [ VAL [ SUBJ < >,
@@ -4374,7 +4381,8 @@ bare_vger_phrase := head_only & head_valence_phrase & phrasal &
                            MC na_or_- ],
 		     CONJ cnil,
 		     CONT.HOOK [ LTOP #hand,
-                                 INDEX #index & [ DIV + ] ] ] ] ],
+                                 INDEX #index & [ DIV + ] ] ],
+	     PUNCT norm_punctuation ] ],
     ORTH [ FROM #from, TO #to ],
     C-CONT [ HOOK [ INDEX #index & ref-ind,
                     XARG #hand ],
@@ -4670,13 +4678,17 @@ basic_n_n_cmpnd_phr := head_final & head_compositional &
 ; conjoin with phrasal nbars.  Not clear what effects ...
 ; DPF 28-aug-07 - Changed NH-DTR..RPUNCT to exclude comma, since we don't
 ; want "the IBM, product code".
-
+;; DPF 2017-12-16 - Let's try changing MODIFD from notmod to lmod on some
+;; subtypes, so we can allow |the tall, ten-foot wall| with a comma, while 
+;; blocking |the tall, wall| where the latter is via the adj_n_phrase which 
+;; blocks comma on nh-dtr, while the former will use adj_adjn_phrase which 
+;; allows a comma.
+;;
 n_n_cmpnd_phr := basic_n_n_cmpnd_phr &  binary_punct_phrase &
   [ INFLECTD #infl,
     SYNSEM lex_phr_synsem &
 	   [ LOCAL.CAT.HEAD.MOD *anti_list*,
              LEX bool,
-             MODIFD notmod,
              PUNCT.PNCTPR #ppair ],
     HD-DTR [ INFLECTD #infl,
 	     SYNSEM [ LOCAL [ CAT [ HEAD  basic_nom_or_ttl &
@@ -4754,7 +4766,8 @@ n_n_cmpnd_phr := basic_n_n_cmpnd_phr &  binary_punct_phrase &
 ;; And changed NH-DTR..LPERIPH from + to bool
 ;;
 basic_np_n_cmpnd_phr := n_n_cmpnd_phr &
-  [ HD-DTR.SYNSEM abstr_lex_synsem &
+  [ SYNSEM.MODIFD notmod,
+    HD-DTR.SYNSEM abstr_lex_synsem &
                       [ LEX +,
                         LOCAL.CAT.HEAD.MINORS.MIN nbar_or_nger_rel,
                         MODIFD.LPERIPH na_or_- ],
@@ -4916,7 +4929,7 @@ basic_np_title_cmpnd_phr := basic_np_name_cmpnd_phr & binary_punct_phrase &
 	     SYNSEM [ LOCAL [ CAT.HEAD.MINORS.MIN numseq_or_named_rel,
 			      CONT.HOOK.LTOP #nhand ],
 		      PUNCT.PNCTPR #ppair,
-		      MODIFD.LPERIPH + ] ],
+		      MODIFD.LPERIPH na_or_+ ] ],
     NH-DTR [ SYNSEM [ LOCAL [ CAT [ HEAD.MINORS [ MIN gen_nom_nbar_rel,
 						  NORM quantity_or_norm_rel ],
 				    VAL.SPR.FIRST unexpressed & [ OPT - ] ],
@@ -4938,9 +4951,10 @@ basic_np_title_cmpnd_phr := basic_np_name_cmpnd_phr & binary_punct_phrase &
 	     ICONS <! !> ] ].
 
 np_title_cmpnd_phr := basic_np_title_cmpnd_phr &
-  [ HD-DTR.SYNSEM.LOCAL [ CAT.VAL.SPR < [ OPT - ] >,
-			  CONT.HOOK.LTOP #lbl,
-			  AGR.PNG.PN #pn ],
+  [ HD-DTR.SYNSEM [ LOCAL [ CAT.VAL.SPR < [ OPT - ] >,
+			    CONT.HOOK.LTOP #lbl,
+			    AGR.PNG.PN #pn ],
+		    MODIFD.LPERIPH + ],
     NH-DTR [ INFLECTD na_or_-,
 	     SYNSEM.LOCAL.AGR.PNG.PN #pn ],
     C-CONT.RELS.LIST.FIRST.LBL #lbl ].
@@ -4990,6 +5004,8 @@ np_title_cmpnd_pl_phr := basic_np_title_cmpnd_phr &
 ;; "NP to NP" interval phrase as right member, as in |October twenty to thirty|.
 ;; DPF 2014-04-03 - But this prevents "chapter 1", and anyway, we're not getting
 ;; that spurious reading at present, so removed constraint.
+;; DPF 2017-12-17 - Changed NH-DTR..MODIFD from notmod to notmod_or_lmod, since
+;; N-N compounds are now lmod, and we want this rule used for |[order #] 5|
 ;;
 np_num_cmpnd_phr := basic_np_name_cmpnd_phr & binary_punct_phrase &
   [ SYNSEM [ PUNCT.PNCTPR #ppair,
@@ -5009,7 +5025,7 @@ np_num_cmpnd_phr := basic_np_name_cmpnd_phr & binary_punct_phrase &
 				    VAL.SPR < [ LOCAL.CAT.HEAD det ] > ],
 			      CONT.HOOK [ LTOP #nhltop,
 					  INDEX #nhind & [ IND + ] ] ],
-		      MODIFD notmod,
+		      MODIFD notmod_or_lmod,
                       LEX +,
 		      PUNCT [ LPUNCT dq_or_sq_or_no_punct,
 			      RPUNCT quote_or_hyphen_or_no_punct ] ],
@@ -5116,15 +5132,15 @@ np_city_state_phr := norm_np_name_cmpnd_phr &
 ;; DPF 2014-10-20 - Can't make NH-DTR's SPR be *unexplist* as hoped, since it
 ;; blocks |the ten car garage|.  Let's remind ourselves of why this constraint
 ;; got added recently...
-
+;;
 basic_noun_n_cmpnd_phr := n_n_cmpnd_phr &
-  [ SYNSEM.MODIFD [ LPERIPH #lperiph,
+  [ SYNSEM.MODIFD lmod &
+		  [ LPERIPH #lperiph,
 		    RPERIPH #rperiph ],
-    HD-DTR.SYNSEM abstr_lex_synsem & 
-                    [ LOCAL.CAT.HEAD noun_or_nomger_or_nadj & 
-				     [ MINORS.MIN nbar_or_nger_rel ],
-		      MODIFD.RPERIPH #rperiph,
-                      LEX + ],
+    HD-DTR.SYNSEM [ LOCAL.CAT.HEAD noun_or_nomger_or_nadj & 
+				   [ MINORS.MIN nbar_or_nger_rel ],
+		    MODIFD.RPERIPH #rperiph,
+		    LEX + ],
     NH-DTR 
        [ SYNSEM [ LOCAL [ CAT [ HEAD noun_or_nomger &
 				     [ PRD -,
@@ -5156,19 +5172,26 @@ basic_noun_n_cmpnd_phr := n_n_cmpnd_phr &
 ;; while still excluding |*two year and three-years notes|. So let's try
 ;; removing the nonconj constraint here, and constraining the plural cmpd rule
 ;; to require its nonhd dtr to be DIV +, since |dog and cat| is DIV -.
+;; DPF 2017-12-16 - Re 2017-09-15 - Too much spurious ambiguity as for
+;; |sand and gravel trucks| with this rule (and the desired plural variant),
+;; so let's try again.  Restore nonconj_ref-ind on NH-DTR, and add separate
+;; plural-compound rule for measure NP non-hds.
 ;;
 noun_n_cmpnd_phr := basic_noun_n_cmpnd_phr &
-  [ HD-DTR.SYNSEM [ MODIFD notmod_or_lmod & [ LPERIPH na ],
+  [ HD-DTR.SYNSEM abstr_lex_synsem & 
+		  [ MODIFD notmod_or_lmod & [ LPERIPH na ],
 		    PUNCT.LPUNCT dq_or_no_punct ],
     NH-DTR [ INFLECTD na_or_-,
-	     SYNSEM [ PUNCT.RPUNCT hyphen_or_pair_or_no_punct ] ] ].
+	     SYNSEM [ LOCAL.CONT.HOOK.INDEX nonconj_ref-ind,
+		      PUNCT.RPUNCT hyphen_or_pair_or_no_punct ] ] ].
 
 ; But for more robust parsing, we'll let them in
 ;; DPF 2017-02-22 - Changed nh-dtr's RPUNCT from no_punct to comma_or_no_punct,
 ;; in order to get |the open access, integrated ontology|
 
 noun_adjn_cmpnd_phr := basic_noun_n_cmpnd_phr &
-  [ HD-DTR.SYNSEM.MODIFD lmod & [ LPERIPH - ],
+  [ HD-DTR.SYNSEM nonlex_synsem &
+		  [ MODIFD lmod & [ LPERIPH - ] ],
     NH-DTR [ INFLECTD na_or_-,
 	     SYNSEM abstr_lex_synsem &
 		      [ PUNCT.RPUNCT comma_or_no_punct ] ],
@@ -5188,21 +5211,35 @@ noun_adjn_cmpnd_phr := basic_noun_n_cmpnd_phr &
 ;; DPF 2017-12-08 - Split this rule into two, as done for adj-N and adj-adj-N, 
 ;; so we can block |systems, analyst| while allowing 
 ;; |$10 million, three-year contract|.
+;; DPF 2017-12-16 - Add CASE no_case to NH-DTR, to block spurious analysis with
+;; mass N-N coord rule for |sand and gravel truck|.
 ;;
 noun_n_cmpnd_pl_phr := basic_noun_n_cmpnd_phr &
-  [ HD-DTR.SYNSEM [ MODIFD notmod_or_lmod,
+  [ HD-DTR.SYNSEM abstr_lex_synsem & 
+		  [ MODIFD notmod_or_lmod,
 		    PUNCT.LPUNCT dq_or_no_punct ],
     NH-DTR [ INFLECTD +,
-	     SYNSEM [ LOCAL [ AGR [ PNG.PN 3p,
-				    DIV + ],
-			      CAT [ HEAD [ CASE non_nom,
-					   --BARE - ],
+	     SYNSEM [ LOCAL [ AGR.PNG.PN 3p,
+			      CAT [ HEAD [ --BARE -,
+					   CASE no_case ],
 				    VAL.SPR.FIRST.LOCAL.CAT.HEAD det ],
 			      CONT.HOOK.INDEX ref-ind &
 					      [ PNG.PN 3p ] ],
 		      MODIFD notmod_or_lmod,
 		      PUNCT.RPUNCT rbc_or_hyphen_or_pair_or_no_punct ] ] ].
 
+;; DPF 2917-12-16 - Added yet another variant just for coordinated measure NPs,
+;; which are not inflected.
+;;
+noun_n_cmpnd_pl_mnp_phr := basic_noun_n_cmpnd_phr &
+  [ HD-DTR.SYNSEM abstr_lex_synsem & 
+		  [ MODIFD notmod_or_lmod,
+		    PUNCT.LPUNCT dq_or_no_punct ],
+    NH-DTR [ INFLECTD -,
+	     SYNSEM [ LOCAL [ CAT.HEAD.MINORS.MIN meas_nom_rel,
+			      CONT.HOOK.INDEX conj_ref-ind ],
+		      MODIFD notmod_or_lmod,
+		      PUNCT.RPUNCT rbc_or_hyphen_or_pair_or_no_punct ] ] ].
 
 ; n-adj phrases: "wide-eyed" "pea-sized", "sky blue"
 ; DPF 30-oct-06 - Stopped passing up of ALTMIN from dtr to mother, since
@@ -7377,7 +7414,9 @@ fw_sequence_right_phrase := basic_binary_phrase &
 ;; DPF 2017-11-19 - Removed OPT - from the second element of SPR list, since
 ;; this blocked |his admiring the snow surprised us|.  Instead, have the
 ;; head-subj rule impose this on the spr.
-;; 
+;; DPF 2017-12-10 - Constrained dtr to nonlex_synsem to avoid spurious ambig
+;; for unadorned intransitives, which can also be nominal gerunds.
+; 
 vgerund_phrase := unary_phrase & phrasal &
   [ SYNSEM [ LOCAL [ CAT [ HEAD gerund &
 				[ MOD < >,
@@ -8046,6 +8085,7 @@ noun_n_cmpnd_pl_rule := binary_rule_right_to_left & noun_n_cmpnd_pl_phr &
     NH-DTR.SYNSEM.PUNCT.RPUNCT hyphen_or_pair_or_no_punct ].
 noun_n_cmpnd_pl_nonlex_rule := binary_rule_right_to_left & noun_n_cmpnd_pl_phr &
   [ HD-DTR.SYNSEM nonlex_or_lex_phr_synsem ].
+noun_n_cmpnd_pl_mnp_rule := binary_rule_right_to_left & noun_n_cmpnd_pl_mnp_phr.
 
 ;n_v-or-adj_cmpnd_eg_rule := binary_rule_right_to_left & 
 ;			    n_v-or-adj_cmpnd_eg_phr.
@@ -9974,7 +10014,7 @@ nbar_coord_top_1_rule := top_coord_rule & nbar_coord_symmet_rule &
 ;; DPF 2017-10-07 - Re 2015-09-06: Well, but this also allows 
 ;; |*the dogs and cats sleeps|. So it looks like we instead need to add a 
 ;; special rule for the singular coord of mass nouns.  Not a perfect solution 
-;; yet, since we can still use the normal div-coord rule to get an extra parse 
+;; yet, since we can still use the normal div-coord rule to get a parse 
 ;; for |sand and gravel|, but excluding it would be a hassle, so maybe FIX 
 ;; someday.
 ;;
@@ -9986,13 +10026,14 @@ nbar_coord_top_1_div_rule := nbar_coord_top_1_rule &
 
 ;; DPF 2017-10-23 - Let's at least constrain this rule to only be used where
 ;; subj-verb agreement occurs, namely when inflected and nominative case.
-;; DPF 2017-11-08 - But this means we can't get |how much sand and gravel did you find|
-;; since divis is incompatible with "how much".  So remove CASE constraint, and live with
-;; the unlovely ambiguity everywhere of mass vs div.
+;; DPF 2017-11-08 - But this means we can't get |how much sand and gravel did 
+;; you find| since divis is incompatible with "how much".  So remove CASE 
+;; constraint, and live with the unlovely ambiguity everywhere of mass vs div.
 ;;
 nbar_coord_top_1_mass_rule := nbar_coord_top_1_rule &
   [ INFLECTD +,
-    SYNSEM.LOCAL [ AGR.PNG.PN 3 ],
+    SYNSEM.LOCAL [ AGR.PNG.PN 3,
+		   CAT.HEAD.CASE real_case ],
     LCONJ-DTR.SYNSEM.LOCAL.AGR [ DIV +,
 				 IND - ],
     RCONJ-DTR.SYNSEM.LOCAL.AGR [ DIV +,
@@ -10070,11 +10111,12 @@ nbar_coord_top_3_rule := top_coord_rule & nbar_coord_symmet_rule &
 
 
 nbar_coord_mid_rule := mid_coord_rule & nbar_coord_symmet_rule &
-  [ SYNSEM.LOCAL.CONJ [ CREL #rel,
+  [ SYNSEM.LOCAL.CONJ [ CREL #rel & [ ARG2 #rind ],
 			CPNG.PN #pn ],
     LCONJ-DTR.SYNSEM [ LOCAL.CAT.HEAD.MINORS.ALTMIN impl_or_expl_q_rel,
                        LEX #lex ],
     RCONJ-DTR [ SYNSEM [ LOCAL [ CAT.HEAD.MINORS.ALTMIN impl_or_expl_q_rel,
+				 CONT.HOOK.INDEX #rind,
 				 CONJ [ CREL [ LBL #lbl,
 					       ARG0 #arg0 ],
 					CPNG.PN #pn ] ],

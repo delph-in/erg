@@ -30,6 +30,7 @@
 ; Original, for 1214 release
 #+:null
 (progn
+  (in-package :mt)
   (setf semi
     (construct-semi       
      :ids t :rules t :descendp t :embedp t
