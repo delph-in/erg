@@ -204,9 +204,11 @@ adj_vp_bse_mal_lr := lex_rule &
     GENRE robust ].
 
 ;; Block noun-noun compounds such as |movie five times|
+;; DPF 2017-12-22 - But we want |the other five times|, and the adj-adjn rule
+;; needs the head to be LPERIPH na, so allow |movie five times| for now.
 ;;
-adj_bare_unspecified_card_lexent := basic_adj_bare_unspecified_card_lexent &
-  [ SYNSEM.MODIFD.LPERIPH bool ].
+;adj_bare_unspecified_card_lexent := basic_adj_bare_unspecified_card_lexent &
+;  [ SYNSEM.MODIFD.LPERIPH bool ].
 
 ; Remove COMPS..--BARE - since we want to flag "She is good student"
 ;; DPF 2015-04-22 - Add unif of PNG.PN for subj and comp, to block spurious
@@ -355,10 +357,13 @@ basic_appos_np_phr := norm_appos_phr &
 ;; clause-taking verbs to trigger tense mismatch in clauses.
 ;; DPF 2017-09-28 - Also added IRR-TENSE so we can trigger robust |we had went|
 ;; but not for |we had arrived|.
+;; DPF 2017-12-20 - Added SAME-PAST for verbs such as "cut, hit", so we can
+;; avoid triggering mismatched tense with modifiers such as "yesterday".
 ;;
 tam :+
  [ UNSP-TENSE bool,
-   IRR-TENSE bool ].
+   IRR-TENSE bool,
+   SAME-PAST bool ].
 
 ;; DPF 2017-09-27 - Mark these as unmarked for tense, so the robust past tense
 ;; verbs taking nonpast-tense-CPs don't spuriously combine with these, as in
@@ -1169,7 +1174,14 @@ frag_vp_fin_aux_rule := frag_vp_fin_rule &
   [ ARGS < [ SYNSEM.LOCAL.CAT.HEAD.AUX + ] > ].
 
 
+;; DPF 2017-12-23 - Enable blocking of frag analysis for |how happy he is|
+;;
+frag_adj_rule :+
+  [ ARGS < [ SYNSEM [ LOCAL.CAT.HEAD.MINORS.NORM norm_rel,
+		      NONLOC non-local_none ] ] >  ].
 
+frag_pp_ind_rule :+
+  [ ARGS < [ SYNSEM.NONLOC non-local_none ] >  ].
 
 ;; Block the application of this rule, to avoid spurious analyses for e.g.
 ;; |the pie-eating contest|
@@ -1320,6 +1332,7 @@ double_det_rule := head_valence_phrase & head_final & rule &
 ; "One books"
 mal_num_det_rule_1 := num_det_phrase & rule &
   [ SYNSEM.LOCAL.CAT.VAL.SPEC < [ LOCAL [ AGR.PNG.PN 3p,
+					  CONT.HOOK.INDEX.PNG.PN 3p,
     			      	          CAT.HEAD.MINORS.NORM 
 					                 norm_or_no_rel ] ] >,
     ARGS < [ SYNSEM.LOCAL.CAT.HEAD [ MOD < [ LOCAL.AGR.PNG.PN 3s ] >,
@@ -1327,8 +1340,11 @@ mal_num_det_rule_1 := num_det_phrase & rule &
     GENRE robust ].
 
 ; "Twenty book"
+;; DPF 2017-12-22 - Changed from SPEC..AGR..PN to SPEC..INDEX..PN, in order to
+;; also catch |two third of the cats|
+;;
 mal_num_det_rule_2 := num_det_phrase & rule &
-  [ SYNSEM.LOCAL.CAT.VAL.SPEC < [ LOCAL [ AGR.PNG.PN 3s,
+  [ SYNSEM.LOCAL.CAT.VAL.SPEC < [ LOCAL [ CONT.HOOK.INDEX.PNG.PN 3s,
 					  CAT.HEAD [ --BARE +,
 						     MINORS.NORM 
 					                 norm_or_no_rel ] ] ] >,
@@ -1487,6 +1503,10 @@ cat_infl_nosuff := cat &
 n_-_c-pl_le :+ [ SYNSEM.LOCAL.CAT cat_infl_nosuff ].
 n_-_c-pl-def_le :+ [ SYNSEM.LOCAL.CAT cat_infl_nosuff ].
 
+;; mal-entry for |they arrived in 1920s|
+n_-_c-pl-gen_le_mal := n_-_c-pl-gen_lexent &
+  [ SYNSEM.LOCAL.CAT.VAL.SPR.FIRST unexpressed,
+    GENRE robust ].
 
 ;; For |the gardens dog|
 ;; Block this rule for |his cats cat toys| via INFLECTD on hd-dtr.
@@ -1599,8 +1619,9 @@ pro_wcomps_plur_synsem := pers_pro_synsem &
 				  CONT.HOOK.INDEX #cind & nonconj_ref-ind,
 				  AGR [ PNG.PN 3,
 					IND + ] ],
-                           OPT - ] > ],
-            CONT [ HOOK.INDEX #ind,
+			  NONLOC non-local_none,
+			  OPT - ] > ],
+            CONT [ HOOK.INDEX #ind & [ IND + ],
                    RELS <! [ LBL #lbl ], relation & #altkeyrel,
 			   #alt2keyrel & [ LBL #lbl,
 					   PRED appos_rel,
@@ -1677,10 +1698,10 @@ be_is_mal_lex_entry := nonc-h &
 			 HEAD [ VFORM fin,
 				PRD -,
 				INV -,
-				TAM indic_tam &
+				TAM tam &
 				      [ TENSE present,
 					ASPECT.PRF -,
-					MOOD indicative ] ],
+					MOOD subjunctive ] ],
 			 POSTHD + ],
 		   AGR.PNG png & [ PN 3s ],
 		   CONT psoa &
@@ -1728,8 +1749,9 @@ psp_aux_verb_mal_ssr := basic_have_aux_verb_synsem &
 			  [ LOCAL [ CAT vp_cat &
 					[ HEAD verb &
 					       [ VFORM fin,
-						 TAM [ TENSE past,
-						       IRR-TENSE + ],
+						 TAM #tam & [ TENSE past,
+							      IRR-TENSE + ],
+						 --ADDIN.ADDTAM #tam,
 						 --MALPAST - ],
 					  VAL.SUBJ < [ LOCAL.CAT.HEAD noun ] >],
 				    CONJ cnil ],
@@ -2278,6 +2300,9 @@ grad_n := partn_mobile & [ CASE acc ].
 ;; Avoid |I arrived, [[then I arose] ...]|
 av_-_dc-like-po_le :+
   [ SYNSEM.LOCAL.CAT.HEAD.MOD.FIRST.MODIFD notmod_or_rmod ].
+
+av_-_dg-jo_le :+
+  [ SYNSEM.LOCAL.CAT.VAL.SPEC.FIRST.LOCAL.CAT.HEAD.--BARE - ].
 
 n_pp_c-dir_le :+
   [ SYNSEM.LOCAL.CAT.HEAD.--BARE - ].

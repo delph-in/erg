@@ -603,14 +603,16 @@ interrog := head_nexus_rel_phrase & clause & phrasal &
 ; DPF 23-nov-09 - Don't recall what work [SF basic-wh-ques] is doing, so
 ; returning to simply [SF ques], in order to allow embedded inverted Qs as
 ; in "Kim asks me, where is abrams?"
-
+;; DPF 2017-12-23 - The constraint NH-DTR..PNCTPR ppair prevents analysis of
+;; e.g. |[why, in Paris,] did we dance?|, so let's remove it, and remind
+;; ourselves of why it was here.
+;;
 wh_interrog := interrog & binary_headed_phrase &
   [ SYNSEM.LOCAL [ CAT.HEAD verbal &
                           [ TAM.MOOD indicative ],
                    CONT.HOOK.INDEX.SF ques ],
     NH-DTR.SYNSEM [ NONLOC.QUE 1-dlist,
-                    PUNCT [ RPUNCT comma_or_rbc_or_pair_or_no_punct,
-                            PNCTPR ppair ] ] ].
+                    PUNCT [ RPUNCT comma_or_rbc_or_pair_or_no_punct ] ] ].
 
 ; This type has subtypes for filler_head.  If we assumed only
 ; finite subj_head phrases, and explicitly made the relevant filler_head
@@ -1690,8 +1692,7 @@ basic_head_subj_phrase := head_nexus_rel_phrase & head_final_infl & phrasal &
 				       COMPS < >,
 				       SPR *olist* ] ],
 			   CONJ.LCHEAD #lch ],
-        	   NONLOC [ SLASH 0-dlist,
-                            REL 0-dlist ],
+        	   NONLOC [ REL 0-dlist ],
                    PUNCT [ LPUNCT pair_or_no_punct,
                            RPUNCT comma_or_rbc_or_pair_or_no_punct ] ] ].
 
@@ -2419,6 +2420,9 @@ extracted_subj_phrase_fin := extracted_subj_phrase & decl_phrase &
 ;; really want INFLECTD to be a SYNSEM feature so lexical heads can constrain 
 ;; it on sprs and comps.  Cf. the various places where we currently use the
 ;; constraint [LOCAL noninfl_noun_local].
+;; DPF 2018-01-07 - Tempted to add SLASH 0-dlist to nonhd-dtr, presuming we 
+;; never want to extract from a specifier, but in fact free relative determiner
+;; "whatever" has a non-empty SLASH, so we can't do this in the phrase type.
 ;;
 basic_head_spec_phrase := head_valence_phrase & head_final & 
                           binary_punct_phrase &
@@ -2498,15 +2502,14 @@ head_spec_phrase := basic_head_spec_phrase &
 			    CONT.HOOK.INDEX overt_non_expl-ind,
 			    AGR #agr ] ],
     NH-DTR [ INFLECTD +,
-             SYNSEM.LOCAL 
-                     [ CAT [ HEAD det & [ MOD < > ],
-                             VAL [ SPR *olist*,
-				   SPEC < synsem &
-					  [ LOCAL [ CAT.HEAD supnoun,
-						    AGR #agr ] ] >,
-				   SPCMPS #spcmps ],
-			     MC na ],                                   
-                       CONT.HOOK #hook & [ INDEX individual_min ] ] ],
+             SYNSEM.LOCAL [ CAT [ HEAD det & [ MOD < > ],
+				  VAL [ SPR *olist*,
+					SPEC < synsem &
+					       [ LOCAL [ CAT.HEAD supnoun,
+							 AGR #agr ] ] >,
+					SPCMPS #spcmps ],
+				  MC na ],                                   
+			    CONT.HOOK #hook & [ INDEX individual_min ] ] ],
     C-CONT.HOOK #hook ].
 
 ; For numbers and degree specifiers, and also for x_to_y adjectives, as in
@@ -2815,10 +2818,18 @@ basic_head_adj_phrase := basic_head_mod_phrase_simple & head_initial & phrasal &
                                    [ LIST #first,
                                      LAST #middle ] ] ] ].
 
+;; DPF 2017-12-23 - Mysteriously, we were not constraining the WH value of the
+;; head-dtr, so a WH-marked head-dtr would have the WH value just disappear.
+;; Instead, append the two, since can expect WH from either dtr.
+;;
 head_adj_phrase := basic_head_adj_phrase & binary_punct_phrase &
   [ SYNSEM [ MODIFD rmod,
-	     NONLOC.QUE #que ],
-    NH-DTR.SYNSEM.NONLOC.QUE #que ].
+	     NONLOC.QUE [ LIST #first,
+			  LAST #last ] ],
+    HD-DTR.SYNSEM.NONLOC.QUE [ LIST #first,
+			       LAST #middle ],
+    NH-DTR.SYNSEM.NONLOC.QUE [ LIST #middle,
+			       LAST #last ] ].
 
 ; DPF (07-17-98) Split head_adj_phrase and adj_head_phrase into two each,
 ; one for intersective modifiers and one for scopal modifiers, in order to
@@ -7068,7 +7079,8 @@ num_det_phrase := unary_phrase &
   [ SYNSEM basic_det_synsem &
            [ LOCAL [ CAT [ HEAD.MINORS [ MIN num_q_rel,
                                          ALTMIN dofw_or_poss_q_rel ],
-                           VAL [ SPEC < [ LOCAL.CONT.HOOK.LTOP #nhand,
+                           VAL [ SPEC < synsem &
+					[ LOCAL.CONT.HOOK.LTOP #nhand,
 					  MODIFD.LPERIPH -,
 					  --MIN nonpart_nom_rel,
 					  PHON #phon ] >,
@@ -7438,7 +7450,8 @@ vgerund_phrase := unary_phrase & phrasal &
 				    [ LOCAL [ CAT nomp_cat_acc_min &
                                                   [ HEAD basic_noun ],
 					      CONJ cnil ],
-                                      --SIND #subjind & non_expl-ind ] >,
+				      NONLOC.SLASH 0-dlist,
+				      --SIND #subjind & non_expl-ind ] >,
                                  SPR < [ LOCAL local &
 					   [ CAT [ HEAD det & 
 						    [ POSS + ],
@@ -8096,6 +8109,11 @@ noun_adjn_cmpnd_rule := binary_rule_right_to_left & noun_adjn_cmpnd_phr.
 noun_n_cmpnd_pl_rule := binary_rule_right_to_left & noun_n_cmpnd_pl_phr &
   [ HD-DTR.SYNSEM basic_lex_synsem,
     NH-DTR.SYNSEM.PUNCT.RPUNCT hyphen_or_pair_or_no_punct ].
+;; DPF 2018-01-07 - Removed recently added ND.DTR..COMPS *nogapnull* since ti
+;; prevents such compounds with any relational noun, as ini
+;; |the $55 million cash-and-stock acquisition of IBM|
+;; Check to see what ambigutty this constraint was avoiding and FIX?
+;;
 noun_n_cmpnd_pl_nonlex_rule := binary_rule_right_to_left & noun_n_cmpnd_pl_phr &
   [ HD-DTR.SYNSEM nonlex_or_lex_phr_synsem ].
 noun_n_cmpnd_pl_mnp_rule := binary_rule_right_to_left & noun_n_cmpnd_pl_mnp_phr.
@@ -9920,7 +9938,9 @@ np_coord_top_noconj_rule := binary_rule_right_to_left & basic_nom_coord_rule &
 ; DPF 13-mar-10 - Constrain the conjoined phrase to have same spr's MIN
 ; value, to block e.g. [[every cat] and dog] where adj `every' requires 
 ; explicit determiner.
-
+;; DPF 2018-01-07 - Removed identity of SPR..NONLOC for mother and two dtrs,
+;; since all coord phrases already identify #nonloc of mother and both dtrs.
+;;
 nbar_coord_rule := nom_coord_rule &
   [ INFLECTD #infl,
     SYNSEM [ LOCAL [ CAT [ HEAD [ MINORS.NORM #norm,
@@ -9931,7 +9951,6 @@ nbar_coord_rule := nom_coord_rule &
                                                      VAL [ SUBJ < >,
                                                            SPR *olist* ] ],
                                                AGR #agr ],
-                                       NONLOC #nonloc,
                                        LEX +,
                                        OPT - ] >,
 			   HS-LEX #hslex ],
@@ -9945,23 +9964,22 @@ nbar_coord_rule := nom_coord_rule &
                                        VAL.SPR.FIRST expressed_synsem & 
                                                  [ --MIN #sprmin,
                                                    OPT -,
-                                                   LOCAL.CAT.HEAD det,
-                                                   NONLOC #nonloc ],
+                                                   LOCAL.CAT.HEAD det ],
 				       HS-LEX #hslex ],
                                  CONT.HOOK [ LTOP #lhndl,
                                              INDEX #lind ] ],
                          MODIFD #modif ],
 		ORTH [ FROM #from, TO #to ] ],
     RCONJ-DTR [ INFLECTD #infl,
-                SYNSEM [ LOCAL [ CAT [ HEAD noun_or_nomger_or_nadj & 
-                                          [ MINORS.NORM #norm,
+                SYNSEM [ LOCAL.CAT [ HEAD noun_or_nomger_or_nadj & 
+					  [ MINORS.NORM #norm,
 					    CASE #case ],
-                                       VAL.SPR.FIRST expressed_synsem & 
+				     VAL.SPR.FIRST expressed_synsem & 
                                                  [ --MIN #sprmin,
-                                                   OPT -,
+						   OPT -,
                                                    LOCAL.CAT.HEAD det,
-                                                   NONLOC #nonloc ] ] ],
-                         LEX #lex ] ],
+						   NONLOC.SLASH 0-dlist ] ],
+			 LEX #lex ] ],
     C-CONT [ RELS.LIST.FIRST [ PRED udef_q_rel,
                                ARG0 #lind,
                                RSTR #lrstr,
@@ -10492,8 +10510,8 @@ np_s_phrase := basic_run_on_rule & non_headed_phrase &
 	    NONLOC #nonloc,
 	    MODIFD.LPERIPH +,
 	    PUNCT.RCLSTR #rclstr ],
-   ARGS < [ SYNSEM [ LOCAL [ CAT.VAL [ SPR *olist*,
-				       SUBJ < > ],
+   ARGS < [ SYNSEM [ LOCAL [ CAT.VAL [ SUBJ *anti_list*,
+				       SPR *olist* ],
 			     CONT.HOOK.INDEX #lind ],
 		     NONLOC #nonloc ] ],
 	  [ SYNSEM [ LOCAL [ CAT [ HEAD verb_or_frag & [ MINORS.MIN norm_rel ],
@@ -10529,7 +10547,8 @@ npnum_s_rule := np_s_phrase &
    ARGS < [ SYNSEM [ LOCAL [ CAT [ HEAD noun & 
 					[ MINORS [ MIN named_num_rel,
 						   ALTMIN number_q_rel ] ],
-				   VAL.SPR *olist* ],
+				   VAL [ SPR *olist*,
+					 SUBJ < > ] ],
 			     CONJ cnil_or_lexconj ],
 		     PUNCT.RPUNCT hyphen_or_comma_or_rparen_or_clause & 
 			          [ PSF prop ],
@@ -10542,8 +10561,9 @@ npnum_s_rule := np_s_phrase &
 ;;
 npindef_s_rule := np_s_phrase &
  [ SYNSEM.LOCAL.CAT.MC bool,
-   ARGS < [ SYNSEM [ LOCAL [ CAT.HEAD noun & [ MINORS [ MIN norm_nom_rel,
-							ALTMIN _a_q_rel ] ],
+   ARGS < [ SYNSEM [ LOCAL [ CAT.HEAD basic_noun & 
+				      [ MINORS [ MIN norm_nom_rel,
+						 ALTMIN a_or_freerel_q_rel ] ],
 			     CONJ cnil ],
 		     PUNCT.RPUNCT comma_punct ] ],
 	  [ SYNSEM.LOCAL.CAT.HEAD verb ] > ].
@@ -10664,6 +10684,7 @@ vocative_np_lmod_rule := vocative_np_phrase & rule &
 ;
 num_det_rule := num_det_phrase & rule &
   [ SYNSEM.LOCAL.CAT.VAL.SPEC < [ LOCAL [ CAT.HEAD.--BARE #bare,
+					  CONT.HOOK.INDEX.PNG.PN #pn,
 					  AGR.PNG.PN #pn ] ] >,
     ARGS < [ SYNSEM.LOCAL.CAT.HEAD.MOD < [ LOCAL [ CAT.HEAD.--BARE #bare,
 						   AGR.PNG.PN #pn ] ] > ] > ].
@@ -10734,6 +10755,9 @@ frag_nom_rule := basic_unary_frag_rule &
 ;; DPF 2016-12-10 - Re 2016-11-20: But this prevents free relative NP fragments,
 ;; so drop SUBJ < >, and instead constrain dtr's SORT to norm-entity-or-event
 ;; which excludes nominalized questions but includes free rels.
+;; DPF 2018-01-06 - Re 2016-12-10: We also want to admit questions as fragments
+;; when they are non-finite, as in |how to use it|, but we apparently need to 
+;; add a separate rule to do this.  Sigh.
 ;; 
 frag_np_rule := frag_nom_rule &
   [ SYNSEM.LOCAL.CAT.VAL.SPR *olist*,
@@ -10772,6 +10796,9 @@ frag_np_conj_rule := frag_nom_rule &
 ;; DPF 2016-11-23 - Removed dtr's NORM no_rel constraint, since we mark all
 ;; non-sortally restricted nouns like "idea" or "alternative" as NORM norm_rel,
 ;; and we still want nbar fragments for e.g. |strong alternative|.
+;; DPF 2018-01-07 - Removed DIV - from dtr, even though this leads to ambiguity
+;; for most plural nouns, so we can get ones missing an oblig specifier, such as
+;; |1980's: a long decade|
 ;; 
 frag_nbar_rule := frag_nom_rule &
   [ SYNSEM.LOCAL [ CAT.VAL.SPR < unexpressed &
@@ -10833,8 +10860,8 @@ frag_pp_ind_rule := unary_frag_rule &
 
 frag_adj_rule := unary_frag_rule &
   [ ARGS < [ SYNSEM.LOCAL [ CAT [ HEAD adj & [ MINORS.MIN norm_rel ],
-                                  VAL.COMPS < > ],
-                            CONT.HOOK [ LTOP #lbl,
+				  VAL.COMPS < > ],
+			    CONT.HOOK [ LTOP #lbl,
 					XARG #ind ] ] ] >,
     C-CONT [ HOOK.LTOP #lbl,
              RELS.LIST.FIRST [ LBL #lbl,
@@ -11199,7 +11226,7 @@ basic_frag_verbal_rule := basic_frag_rule & unary_phrase &
 			      CONT.HOOK #hook,
                               CONJ cnil_or_lexconj ],
                       NONLOC [ REL 0-dlist,
-                               QUE 0-dlist ] ] ] >,
+			       QUE 0-dlist ] ] ] >,
     C-CONT.HOOK.INDEX.SF prop-or-ques & #sf ].
 
 frag_verbal_rule := basic_frag_verbal_rule &
@@ -11311,6 +11338,14 @@ frag_pp_slash_rule := basic_unary_frag_rule &
              HCONS <! !>,
 	     ICONS <! !> ] ].
 
+;; |how to use it|
+;;
+frag_s_wh_nonfin_rule := basic_frag_verbal_rule &
+  [ ARGS < [ SYNSEM [ LOCAL [ CAT [ HEAD [ MINORS.MIN norm_rel,
+					   VFORM inf ],
+				    VAL.SUBJ *anti_list* ],
+			      CONT.HOOK.INDEX.SF ques ],
+                      NONLOC.SLASH 0-dlist ] ] > ].
 
 frag_dadv_rule := norm_frag_rule & norm_unary_phrase &
   [ SYNSEM [ LOCAL.CAT [ HEAD frag,
@@ -11630,7 +11665,7 @@ right_node_raise_nbar_phrase := right_node_raise_phrase &
     ARGS.FIRST.SYNSEM [ LOCAL.CAT [ HEAD basic_noun,
 				    VAL.SPR < synsem & 
 					      [ NONLOC.SLASH 0-dlist ] > ],
-			PUNCT.RPUNCT comma_or_no_punct  ] ].
+		      PUNCT.RPUNCT comma_or_no_punct  ] ].
 
 right_node_raise_vp_rule := right_node_raise_vp_phrase & rule.
 right_node_raise_nonvp_rule := right_node_raise_nonvp_phrase & rule.
