@@ -1,0 +1,220 @@
+;;; files to load
+
+grammar-top               := "../dict.tdl".
+variable-property-mapping := "../semi.vpm".
+maxent-model              := "../redwoods.mem".
+preprocessor              := "../rpp/tokenizer.rpp".
+preprocessor-modules      := ../rpp/xml.rpp ../rpp/ascii.rpp ../rpp/quotes.rpp ../rpp/wiki.rpp ../rpp/gml.rpp ../rpp/html.rpp.
+generation-ignore-lexemes := "../lkb/nogen-lex.set".
+generation-ignore-rules   := "../lkb/nogen-rules.set".
+parse-node-labels         := "../parse-nodes.tdl".
+generation-trigger-rules  := "../trigger.mtr".
+version                   := "../Version.lsp".
+
+semantic-interface-2016   := "../etc/erg.smi".
+semantic-interface-top-type := top.
+
+idiom-rules               := "../idioms.mtr".
+non-idiom-root            := root_non_idiom.
+
+irregular-forms 	  := ../irregs.tab.
+
+quickcheck-code           := "../ace/ace-erg-qc.txt".
+
+post-model-path           := "english-postagger.hmm".
+
+;;; grammar internal properties
+orth-path                 := ORTH.
+semantics-path            := SYNSEM LOCAL CONT.
+lex-rels-path             := SYNSEM LOCAL CONT RELS.
+lex-carg-path             := SYNSEM LKEYS KEYREL CARG.
+lex-pred-path             := SYNSEM LKEYS KEYREL PRED.
+rule-rels-path            := C-CONT RELS.
+
+; parsing-roots := root_informal root_frag.
+; good:
+parsing-roots := root_strict root_informal root_frag root_inffrag root_robust.
+; demo:
+;parsing-roots := root_strict root_informal.
+;parsing-roots := root_strict root_informal root_frag root_inffrag root_bridge.
+
+;generation-roots          := root_strict root_frag.
+generation-roots        := root_strict.
+
+semarg-type               := semarg.
+list-type                 := *list*.
+cons-type                 := *cons*.
+null-type                 := *null*.
+diff-list-type            := *diff-list*.
+
+chart-dependencies :=
+  "SYNSEM LKEYS --+COMPKEY" "SYNSEM LOCAL CAT HEAD MINORS MIN"
+  "SYNSEM LKEYS --+OCOMPKEY" "SYNSEM LOCAL CAT HEAD MINORS MIN"
+  "SYNSEM LKEYS --+ARGIND" "SYNSEM LOCAL CONT HOOK INDEX"
+.
+
+;; Consider restricting this in ERG...
+;; (e.g. the completive 'up' as in |I should remind myself up of that idea| :)
+process-chart-dependencies-before-lexical-parsing := no.
+
+deleted-daughters := 
+  ARGS HD-DTR NH-DTR LCONJ-DTR RCONJ-DTR DTR DTR1 DTR2 DTRA DTRB.
+
+parsing-packing-restrictor := RELS HCONS ICONS RNAME +TI +LL +TG.
+; parsing-packing-restrictor := HCONS RELS RNAME ORTH RCLSTR ONSET LTOP --SLTOP GENRE NEGPOL ARG-S TO KEY-ARG --TL FROM IDIOM FORM LKEYS ARG0 +STAG L-HNDL LBL DATIVE +ID IND KEYREL E DIALECT ARG3 HS-LEX GEN LARG CPNG +PRB +TAG +CASE PROG C-CONT TENSE CPUNCT PSF ND-AFF ASPECT INSTLOC CTX CFROM +INIIAL DTR2 HD-DTR CTO RCONJ-DTR DTR1 IFORM ALT2KEYREL SQPNCT --TPC ADVNGADD DTR CLEX ARG1 BODY RSTR PERF KCMP LNAME LCONJ-DTR PRF POSS L-INDEX RPAREN RFP ADVADD TOKENS +LAST META-PREFIX PASSIVE DTRA R-HNDL.
+
+generation-packing-restrictor := 
+  ORTH RELS HCONS RNAME.
+
+generic-les-for-semantic-index := generic_proper_ne generic_card_ne generic_ord_ne generic_dom_card_ne generic_dom_ord_ne generic_year_ne generic_date_ne generic_pl_noun_ne.
+
+generic-les-by-part-of-speech := "generic_adj a" "generic_adverb a" "gen_generic_noun n" "gen_generic_verb v".
+
+mrs-deleted-roles := 
+  IDIOMP LNK CFROM CTO --PSV
+;; starting here, mrs deleted roles left over from old ACE config file
+  WLINK PARAMS.
+
+spanning-only-rules := 
+  aj-r_frg_c np-aj_frg_c np-aj_rorp-frg_c cl_rel-frg_c  aj-np_int-frg_c
+  ;; nb_nbc-frg_c
+  pp-aj_frg_c j-aj_frg_c np_nb-frg_c np-cl_numitem_c cl-cl_runon-cma_c  
+  cl-np_runon_c cl-np_runon-prn_c cl_cp-frg_c.
+; also vp_sl-frg_c if used
+
+;fragment-only-rules := 
+;  frag_np frag_nbar frag_pp_i
+;  frag_adj frag_int_adv frag_cl_adv frag_vp
+;  frag_l_mod_np frag_l_mod_pp frag_l_mod_adv frag_r_mod_np 
+;  frag_r_mod_s_pp frag_r_mod_ap.
+
+; heuristic:
+; a rule should be hyperactive if the expected cost of processing
+; with it as ordinary exceeds the expected cost of processing with it as hyperactive
+; alternately, for each rule there is a maximum number of times we should
+; be willing to build it before copying
+;
+; cost(reconstructing N times when our max unifies is K)
+;  = K * unify + copy     if N >= K
+;  = N * unify            if N < K
+;
+; say we know P(need dag n times)
+; then E(cost) = sum_n P(n) cost(n)
+;
+; we don't know P(n), but we do know E(n) per rule
+; maxent principle: assume poisson distribution of recombinations
+; based on that assumption, can compute "correct" K given E(n)
+; never copy: E(cost) = E(unify * n) = unify * E(n)
+; always copy: E(cost) = unify + copy
+; when is unify * E(n) > unify + copy?
+; answer: when unify (E(n)-1) > copy
+;   E(n) > 1 + copy/unify
+; i.e. when E(recombinations) > copy / unify
+; answer, based on unify = 4.4us and copy = 9.8us:
+;   if E(recomb) < 2.227, then K = \infty
+;   else K = 1 (i.e. disable hyperactivity for this rule)
+; calculations show that (at least in this range), K=\infty is always better than K>1
+
+hyper-active-rules :=
+	aj-hd_int-rel_c hdn-np_app-idf-p_c hdn-n_prnth_c n-n_num-seq_c
+	vppr-vppr_crd-m_c vp-vp_crd-nfin-m_c j-n_crd-t_c np-hdn_cty-cpd_c
+	hdn-aj_rc-pr_c jpr-jpr_crd-m_c n-j_crd-t_c v-v_crd-fin-ncj_c
+	np-np_crd-i-t_c np-np_crd-nc-t_c cl-cl_runon_c pp-pp_crd-m_c
+	np-hdn_nme-cpd_c np-aj_j-frg_c ppr-ppr_crd-m_c n-n_crd-nc-m_c
+	hdn-aj_redrel-pr_c hdn-np_app-nbr_c np-aj_frg_c cl-np_runon_c
+	hd-aj_vmod-s_c sp-hd_hc_c jpr-vpr_crd-m_c np-hdn_ttl-cpd_c
+	cl-cl_runon-cma_c hdn-np_app-idf_c n-hdn_cpd_c
+	aj-np_frg_c n-j_j-t-cpd_c n-n_crd-m_c np-np_crd-nc-m_c
+	n-hdn_j-n-cpd_c n-j_j-cpd_c aj-pp_frg_c aj-r_frg_c
+	j-j_crd-prd-m_c flr-hd_nwh_c aj-hd_int-inv_c hd-hd_rnr-nv_c
+	ppr-ppr_crd-im_c np-hdn_cpd_c ppr-ppr_crd-t_c aj-np_int-frg_c
+	jpr-vpr_crd-im_c pp-aj_frg_c hd-aj_vmod_c np-hdn_num-cpd_c
+	j-j_crd-prd-im_c n-n_crd-3-t_c jpr-jpr_crd-im_c nb-aj_frg_c
+	jpr-jpr_crd-t_c vp-vp_crd-nfin-im_c pp-pp_crd-t_c jpr-vpr_crd-t_c
+	pp-pp_crd-im_c j-j_crd-prd-t_c np-np_crd-m_c vp-vp_crd-nfin-t_c
+	np-np_crd-i3-t_c flr-hd_wh-nmc-inf_c n-n_crd-t_c np-aj_rorp-frg_c
+	j-aj_frg_c sp-hd_n_c n-v_j-cpd_c aj-hdn_adjn_c
+	hd-aj_scp-pr_c n-n_crd-im_c n-n_crd-asym2-t_c
+	j-j_crd-att-t_c hdn-aj_rc_c flr-hd_nwh-nc_c aj-hdn_norm_c
+	flr-hd_wh-nmc-fin_c num-n_mnp_c hdn-aj_redrel_c cl-cl_crd-m_c
+	np-np_crd-i2-t_c hd-hd_rnr_c vppr-vppr_crd-im_c vppr-vppr_crd-t_c
+	mrk-nh_n_c flr-hd_wh-mc_c hdn-np_app-pr_c hdn-np_app_c
+	sb-hd_q_c vp-vp_crd-fin-im_c hdn-cl_dsh_c vp-vp_crd-fin-m_c
+	cl-cl_crd-im_c sb-hd_mc_c np-prdp_vpmod_c cl-cl_crd-rc-t_c
+	sb-hd_nmc_c n-n_crd-asym-t_c flr-hd_wh-mc-sb_c hd-cmp_u_c
+	flr-hd_rel-fin_c cl-cl_crd-int-t_c vp-vp_crd-fin-t_c cl-np_runon-prn_c
+	hd-cl_fr-rel_c np-np_crd-im_c cl-cl_crd-t_c.
+
+old-hyper-active-rules := 
+  adv_coord_mid num_seq np_city_state adv_coord_top
+  measure_np hspechc fillhead_wh_nr_i adj_pred_coord_top adj_pred_coord_mid
+  fillhead_wh_r np_n_cmpnd frag_r_mod_np adj_attr_coord_top
+  frag_l_mod_adv frag_l_mod_pp frag_r_mod_s_pp frag_l_mod_np np_name_cmpnd
+  hspec hmarkatom noun_n_cmpnd meas_np_symb
+  fillhead_rel n_ttl_cmpnd nadj_rc_pr nadj_rc fillhead_wh_nr_f 
+  v_coord_nonfin_top p_coord_top appos_npr
+  frag_r_mod_ap v_coord_nonfin_mid adj_adjn p_coord_mid fillhead_non_wh.
+
+
+;; reduce storage requirements for the compiled lexicon when possible
+simplify-lexicon := enabled.
+
+;; faster generation
+index-accessibility-filtering := enabled.
+
+;; keep an extra copy of *ocons* and a couple other types around,
+;; so we don't have to copy it when we use it as a glb constraint (1st time anyway).
+extra-erg-dag-stash := enabled.
+
+;; part of speech tagging
+english-pos-tagger := enabled.
+
+;; ERG peculiarity: after generating a passive edge, set its top-level type to 'sign' during forest creation.  this results in improved packing at comparatively little cost in unpacking failures.
+generalize-edge-top-types := enabled.
+
+;; token settings
+token-mapping := enabled.
+
+lexicon-tokens-path := TOKENS +LIST.
+lexicon-last-token-path := TOKENS +LAST.
+token-type			:= token.
+token-form-path     := +FORM.       ; [required] string for lexical lookup
+token-id-path       := +ID.         ; [optional] list of external ids
+token-from-path     := +FROM.       ; [optional] surface start position
+token-to-path       := +TO.         ; [optional] surface end position
+token-postags-path  := +TNT +TAGS.  ; [optional] list of POS tags
+token-posprobs-path := +TNT +PRBS.  ; [optional] list of POS probabilities
+
+;; lattice mapping settings
+lattice-mapping-input-path := +INPUT.
+lattice-mapping-output-path := +OUTPUT.
+lattice-mapping-context-path := +CONTEXT.
+lattice-mapping-position-path := +POSITION.
+
+
+; below here are not technically settings, but types that ACE needs to import that PET (owner of english.tdl) doesn't need.
+
+:begin :type.
+:include "../mtr".
+:end :type.
+
+; icons
+enable-icons := yes.
+mrs-icons-list := ICONS LIST.
+icons-left := IARG1.
+icons-right := IARG2.
+
+;; Standard model
+;übertag-emission-path := "../ut/nanc_wsj_redwoods_noaffix.ex.gz".
+;übertag-transition-path := "../ut/nanc_wsj_redwoods_noaffix.tx.gz".
+;; Model trained on just trunk Redwoods
+;übertag-emission-path := "../ut/redwoods-train.ex.gz".
+;übertag-transition-path := "../ut/redwoods-train.tx.gz".
+;; Model trained on trunk Redwoods (gold) and NANC (not gold)
+;übertag-emission-path := "../ut/nanc-redwoods-train.ex.gz".
+;übertag-transition-path := "../ut/nanc-redwoods-train.tx.gz".
+
+;übertag-generic-map-path := "../ut/generics.cfg".
+;übertag-whitelist-path := "../ut/whitelist.cfg".
+
+freezer-megabytes := 512.
