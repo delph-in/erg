@@ -2671,7 +2671,10 @@ head_mod_phrase := headed_phrase &
 ; still don't want to identify XARG of two dtrs in intersective modification 
 ; rules, since the modifier's XARG can be identified with the INDEX of the
 ; head-dtr.
-
+;; DPF 2018-02-12 - Constrained NH-DTR..MOD.FIRST to be expressed_synsem,
+;; so we can exclude e.g. PP+PP copredication phrase which is only used in
+;; non-modification structures including the copula and locative inversion.
+;;
 basic_head_mod_phrase_simple := head_mod_phrase & basic_binary_headed_phrase &
                                 norm_binary_punct_phrase &
   [ SYNSEM.LOCAL.CAT.MC #mc,
@@ -2690,7 +2693,7 @@ basic_head_mod_phrase_simple := head_mod_phrase & basic_binary_headed_phrase &
                     LEX #lex,
                     PUNCT.RPUNCT #rpunct ],
     NH-DTR.SYNSEM.LOCAL [ CAT [ HEAD head & 
-                                     [ MOD < synsem &
+                                     [ MOD < expressed_synsem &
                                              [ LOCAL local & 
                                                      [ CAT [ HEAD #head,
                                                              VAL #val,
@@ -3729,6 +3732,53 @@ conj_mod_scop_phrase := conj_mod_phrase &
     HD-DTR.SYNSEM.LOCAL.CONT.HOOK.LTOP #ltop,
     C-CONT.HOOK #hook ].
 
+;; DPF 2018-02-12 - It is now clear that we want one semantics of PP+PP to be
+;; different from ordinary modification, since for |on the mountain near the 
+;; top stood a tall tree|, we want both PPs to take the same external argument,
+;; instead of having the second PP take the index of the first as its argument.
+;; But we still have to have the ordinary modification analysis of PP+PP
+;; because in |we were in Paris on Tuesday| the |on Tuesday| does not take
+;; |we| as external argument, but rather the state of being in Paris.  So we 
+;; end up with a systematic ambiguity for |NP was PP PP|, with one reading 
+;; where the semantic index of the subject NP is the external argument of each 
+;; of the PPs (|we were in Paris near the Louvre|), and one where the semantic 
+;; index of the first PP is the external argument of the second (|we were in 
+;; Paris on Tuesday|). 
+;; Note that for extraction as in |On Tuesday we were in Paris|, we want the 
+;; extracted modification analysis which gives the right semantics, and which 
+;; we would not get via this new rule.  Note further that for locative inversion
+;; alongside |on the mountain near the top stood a tall tree|, we also want the
+;; ordinary modification reading (where the second PP takes the index of the
+;; first PP as argument), for e.g. |In Paris on Tuesday were two ambadassors 
+;; from Asia|, where we still don't want the ambassadors to be on Tuesday.
+;; Thus we're forced to have both analyses for PP+PP, unless we can find
+;; sortal restrictions (e.g. time vs place?) that would exclude one or the other
+;; of the two analyses.  The extra ambiguity will be unwelcome for examples such
+;; as |The race will be in Paris on Tuesday| where we now have to choose
+;; between the race being on Tuesday vs the locative state being on Tuesday.
+;; We at least constrain this PP+PP phrase so that it won't appear as a modifier
+;; but only in argument positions including complement of copula and subject in
+;; locative inverson.
+;; 
+prep_mod_prep_phrase := head_mod_phrase & binary_headed_phrase & head_initial &
+			head_nexus_phrase &
+  [ SYNSEM [ LOCAL.CAT.VAL #val,
+	     NONLOC #nonloc ],
+    HD-DTR.SYNSEM [ LOCAL [ CAT [ HEAD prep_or_modnp & [ MOD *unexpcons* ],
+				  VAL #val & [ COMPS < > ] ],
+			    CONT.HOOK #hook & [ LTOP #ltop,
+						XARG #xarg ] ],
+		    NONLOC #nonloc ],
+    NH-DTR.SYNSEM [ LOCAL [ CAT [ HEAD prep_or_modnp & [ MOD *cons* ],
+				  VAL.COMPS < > ],
+			    CONT.HOOK [ LTOP #ltop,
+					XARG #xarg ] ],
+		    NONLOC non-local_none ],
+    C-CONT [ HOOK #hook,
+	     RELS <! !>,
+	     HCONS <! !>,
+	     ICONS <! !> ] ].
+
 ; For now, restrict adjunct extraction to posthead modifiers of VPs (and the
 ; special case of inverted auxiliary-headed Ss, which still have a non-empty 
 ; but never realized SUBJ - see discussion of sai_synsem in lextypes.tdl). 
@@ -4131,7 +4181,7 @@ basic_bare_np_sg_phrase_robust := generic_bare_np_phrase &
 				  [ MINORS.MIN non_temp_or_nonday_nbar_rel ] ]],
 	       MODIFD #modif & [ LPERIPH na_or_- ] ],
 	     INFLECTD + ] >,
-    C-CONT.RELS <! [ PRED implicit_q_rel ] !>,
+    C-CONT.RELS <! [ PRED def_udef_a_q_rel ] !>,
     GENRE robust ].
 
 bare_np_sg_phrase_robust := basic_bare_np_sg_phrase_robust &
@@ -8043,6 +8093,8 @@ v_mod_scop_rule := binary_rule_left_to_right & v_mod_scop_phrase.
 
 conj_mod_int_rule := binary_rule_left_to_right & conj_mod_int_phrase.
 conj_mod_scop_rule := binary_rule_left_to_right & conj_mod_scop_phrase.
+
+prep_mod_prep_rule := binary_rule_left_to_right & prep_mod_prep_phrase.
 
 extradj_i_vp_rule := rule & extracted_adj_int_vp_phrase.
 extradj_i_s_rule := rule & extracted_adj_int_s_phrase.

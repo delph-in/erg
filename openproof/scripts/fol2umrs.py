@@ -6,14 +6,14 @@ backof(f,a) | smaller(f,a)
 
  [ LTOP: h1
    INDEX: e3
-   RELS: < [ _or_c_rel LBL: h2 ARG0: e3 L-INDEX: e4 R-INDEX: e5 ]
+   RELS: < [ _or_c_rel LBL: h2 ARG0: e3 ARG1: e4 ARG2: e5 ]
            [ named_rel LBL: h8 ARG0: x6 CARG: "F" ]
            [ named_rel LBL: h9 ARG0: x7 CARG: "A" ]
            [ "backof" LBL: h3 ARG0: e4 ARG1: x6 ARG2: x7 ]
            [ "smaller" LBL: h12 ARG0: e5 ARG1: x6 ARG2: x7 ] >
    ]
 
-[ _or_c_rel LBL: h1 ARG0: e1 L-INDEX: e2 R-INDEX: e3 ]
+[ _or_c_rel LBL: h1 ARG0: e1 ARG1: e2 ARG2: e3 ]
 [ named_rel LBL: h2 ARG0: x1 CARG: "F" ]
 [ named_rel LBL: h3 ARG0: x2 CARG: "A" ]
 [ "backof" LBL: h4 ARG0: e2 ARG1: x1 ARG2: x2 ]
@@ -53,10 +53,6 @@ def strForMPred(mPred):
 	if 'CARG' in mPred:
 		# named_rel
 		res += 'CARG: "' + mPred['CARG'] + '"'
-	elif 'L-INDEX' in mPred:
-		# connective
-		res += 'L-INDEX: ' + mPred['L-INDEX'] + ' R-INDEX: ' + mPred['R-INDEX']
-		
 	elif mPred['_rel'] == 'not':
 		# negation - the unary connective
 		res += 'ARG1: ' + mPred['ARG1']
@@ -114,7 +110,7 @@ def fTup2mPred(fTup): # add mPreds to set and return reference to the current ob
 			return ref
 		elif len(fTup) == 3: # binary
 			conn = fTup[0]
-			# [ _or_c_rel LBL: h1 ARG0: e1 L-INDEX: e2 R-INDEX: e3 ]
+			# [ _or_c_rel LBL: h1 ARG0: e1 ARG1: h2 ARG2: h3 ]
 			ref = 'e' + str(eCounter)
 			label = 'h' + str(hCounter)
 			eCounter += 1
@@ -122,7 +118,7 @@ def fTup2mPred(fTup): # add mPreds to set and return reference to the current ob
 			l_ref = fTup2mPred(fTup[1])
 			r_ref = fTup2mPred(fTup[2])
 			#                                                                               vvvvv            vvvvv
-			mPreds.append({'_rel':connectives[fTup[0]], 'LBL':label, 'ARG0':ref, 'L-INDEX':l_ref, 'R-INDEX':r_ref})
+			mPreds.append({'_rel':connectives[fTup[0]], 'LBL':label, 'ARG0':ref, 'ARG1':l_ref, 'ARG2':r_ref})
 			"""
 			if conn in ('if', '$'):
 				return r_ref
@@ -171,9 +167,9 @@ def index(mpred):
 	global indexedMPreds
 	conn = mpred['_rel']
 	if conn == "if":
-		return index(indexedMPreds[mpred['R-INDEX']])
+		return index(indexedMPreds[mpred['ARG2']])
 	elif conn == "iff":
-		return index(indexedMPreds[mpred['L-INDEX']])
+		return index(indexedMPreds[mpred['ARG1']])
 	elif conn == "not":
 		return index(indexedMPreds[mpred['ARG1']])
 	else: # and, or, $pred
