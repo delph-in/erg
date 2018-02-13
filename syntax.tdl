@@ -751,7 +751,7 @@ basic_rel_cl := sign &
 						       [ --MIN quant_or_deg_rel ] ],
 				       MC na ] ],
 			 PUNCT.RPUNCT comma_or_rbc_or_pair_or_no_punct,
-			 OPT - ] >],
+			 OPT - ] > ],
 	  VAL.SPCMPS < >,
           POSTHD +,
           MC na ],
@@ -1093,10 +1093,13 @@ inf_non_wh_subj_rel_cl := basic_inf_non_wh_rel_cl &
 ; construction.
 ; DPF 8-jun-04 - Added ARGS..MIN nonaux_event_rel to exclude elided "to", as
 ; in "the tenth to the eleventh"
+;; DPF 2018-02-13 - Added ALTMIN no_rel to prevent these from being dtrs in
+;; subconj_prdp_ellip rule.
 
 instr_inf_non_wh_rel_cl := basic_non_wh_rel_cl &
   [ SYNSEM [ LOCAL.CAT.HEAD [ PRD -,
-                              MOD < [ --SIND #index & ref-ind ] > ] ],
+                              MOD < [ --SIND #index & ref-ind ] >,
+			      MINORS.ALTMIN no_rel ] ],
     ARGS < [ SYNSEM phr_synsem &
                     [ LOCAL [ CAT [ HEAD comp & 
 					 [ VFORM inf,
@@ -3617,6 +3620,8 @@ adj_h_int_phrase := basic_adj_h_int_phrase.
 ;; to avoid spurious analysis of |we were separate from [and related] to Kim|.
 ;; DPF 2016-12-03 - Removed hd-dtr's MODiFD notmod since we want to use this
 ;; rule for |[taller tree on the street] than that one|
+;; DPF 2018-02-13 - Made NH-DTR..MOD.FIRST be expressed_synsem, to exclude
+;; newer PP-PP copred analysis here.
 ;;
 v_mod_phrase := head_initial & binary_punct_phrase &
                 head_valence_phrase &
@@ -3635,7 +3640,7 @@ v_mod_phrase := head_initial & binary_punct_phrase &
        [ SYNSEM [ LOCAL [ CAT [ HEAD p_or_basic_adv &
                                    [ MINORS [ MIN independent_rel,
 					      ALTMIN norm_rel ],
-				     MOD < synsem &
+				     MOD < expressed_synsem &
 					   [ LOCAL [ CAT [ HEAD verb,
 							   VAL.SUBJ <[OPT -]>],
 						     CONT.HOOK.INDEX #ind ],
@@ -3764,14 +3769,20 @@ prep_mod_prep_phrase := head_mod_phrase & binary_headed_phrase & head_initial &
 			head_nexus_phrase &
   [ SYNSEM [ LOCAL.CAT.VAL #val,
 	     NONLOC #nonloc ],
-    HD-DTR.SYNSEM [ LOCAL [ CAT [ HEAD prep_or_modnp & [ MOD *unexpcons* ],
+    HD-DTR.SYNSEM [ LOCAL [ CAT [ HEAD prep_or_modnp & 
+				       [ MOD *unexpcons* &
+					     [ FIRST.LOCAL int_mod_local ] ],
 				  VAL #val & [ COMPS < > ] ],
 			    CONT.HOOK #hook & [ LTOP #ltop,
 						XARG #xarg ] ],
 		    NONLOC #nonloc ],
-    NH-DTR.SYNSEM [ LOCAL [ CAT [ HEAD prep_or_modnp & [ MOD *cons* ],
-				  VAL.COMPS < > ],
+    NH-DTR.SYNSEM [ LOCAL [ CAT [ HEAD prep_or_modnp & 
+				       [ MOD *cons* &
+					     [ FIRST.LOCAL int_mod_local ] ],
+				  VAL.COMPS < >,
+				  POSTHD + ],
 			    CONT.HOOK [ LTOP #ltop,
+					INDEX.E.TENSE tense,
 					XARG #xarg ] ],
 		    NONLOC non-local_none ],
     C-CONT [ HOOK #hook,
@@ -5539,6 +5550,49 @@ n_adj_intr_cmpnd_phr := basic_n_v-or-adj_cmpnd_phr &
 				VAL [ SPR *ocons*,
 				      COMPS < > ] ] ] >,
     C-CONT.RELS <! [ PRED compound_rel ], [ ] !> ].
+
+;; DPF 2018-02-13 - Similar to N-V adjective compounds, we also get Adj-V ones
+;; such as |tough-sounding| and |angry-looking|
+adj_v_cmpnd_phr := binary_punct_phrase &
+  [ INFLECTD +,
+    SYNSEM basic_adj_synsem_constr &
+	     [ LOCAL [ CAT [ HEAD.MOD.FIRST.LOCAL.CONT.HOOK.LTOP #ltop,
+			     VAL.COMPS < > ],
+		       CONT.HOOK #hook,
+		       CONJ #conj  ],
+	       NONLOC #nonloc,
+	       LEX +,
+	       MODIFD notmod,
+	       PUNCT.PNCTPR #ppair ],
+    ARGS < 
+     [ INFLECTD +,
+       SYNSEM abstr_lex_synsem &
+	   [ LOCAL [ CAT [ HEAD adj & #adjhead,
+			   VAL.COMPS *olist* ],
+		     CONT.HOOK #adjhook,
+		     CONJ cnil ],
+	     NONLOC [ SLASH 0-dlist & [ LIST < > ],
+                      QUE 0-dlist,
+                      REL 0-dlist ],
+	     PUNCT.RPUNCT hyphen_or_pair_or_no_punct ] ],
+     [ INFLECTD +,
+       SYNSEM basic_lex_synsem & 
+	   [ LOCAL [ CAT [ HEAD verb & [ PRD +,
+					 MINORS.NORM no_rel ],
+			   VAL [ SPR *olist* &
+				     [ FIRST.--MIN more_deg_rel ],
+				 COMPS.FIRST.LOCAL [ CAT.HEAD #adjhead,
+						     CONT.HOOK #adjhook ] ] ],
+		     CONT.HOOK #hook & [ LTOP #ltop ],
+                     CONJ cnil & #conj ],
+	     NONLOC #nonloc & non-local_none,
+	     LEX +,
+	     MODIFD notmod,
+             PUNCT [ LPUNCT dq_or_no_punct,
+                     PNCTPR #ppair ] ] ] >,
+    C-CONT [ RELS <! !>,
+	     HCONS <! !>,
+	     ICONS <! !> ] ].
 
 ;; Appositives
 ;; For now, restrict this to temporal nouns and proper names, since it's an 
@@ -8178,6 +8232,7 @@ n_v_cmpnd_rule := binary_rule_right_to_left & n_v_cmpnd_phr.
 n_adj_cmpnd_rule := binary_rule_right_to_left & n_adj_cmpnd_phr.
 n_adj_intr_cmpnd_rule := binary_rule_right_to_left & n_adj_intr_cmpnd_phr.
 n-adj_rule := rule & n-adj_phrase.
+adj_v_cmpnd_rule := binary_rule_right_to_left & adj_v_cmpnd_phr.
 ;appos_prpnct_rule := binary_rule_right_to_left & appos_phr_prpnct.
 appos_prpnct_rule := binary_rule_right_to_left & appos_phr_nonprop_prpnct.
 appos_prpnct_pnr_rule := binary_rule_right_to_left & appos_phr_prop_prpnct.
@@ -9990,8 +10045,9 @@ np_coord_top_noconj_rule := binary_rule_right_to_left & basic_nom_coord_rule &
 ; DPF 13-mar-10 - Constrain the conjoined phrase to have same spr's MIN
 ; value, to block e.g. [[every cat] and dog] where adj `every' requires 
 ; explicit determiner.
-;; DPF 2018-01-07 - Removed identity of SPR..NONLOC for mother and two dtrs,
-;; since all coord phrases already identify #nonloc of mother and both dtrs.
+;; DPF 2018-02-13 - We can't require the SPRs on the dtrs to be SLASH 0-dlist
+;; since free relative "whatever" has SLASH non-empty, as in |whatever cats
+;; and dogs we admire|
 ;;
 nbar_coord_rule := nom_coord_rule &
   [ INFLECTD #infl,
@@ -10003,6 +10059,7 @@ nbar_coord_rule := nom_coord_rule &
                                                      VAL [ SUBJ < >,
                                                            SPR *olist* ] ],
                                                AGR #agr ],
+				       NONLOC #nonloc,
                                        LEX +,
                                        OPT - ] >,
 			   HS-LEX #hslex ],
@@ -10016,7 +10073,8 @@ nbar_coord_rule := nom_coord_rule &
                                        VAL.SPR.FIRST expressed_synsem & 
                                                  [ --MIN #sprmin,
                                                    OPT -,
-                                                   LOCAL.CAT.HEAD det ],
+                                                   LOCAL.CAT.HEAD det,
+						   NONLOC #nonloc ],
 				       HS-LEX #hslex ],
                                  CONT.HOOK [ LTOP #lhndl,
                                              INDEX #lind ] ],
@@ -10030,7 +10088,7 @@ nbar_coord_rule := nom_coord_rule &
                                                  [ --MIN #sprmin,
 						   OPT -,
                                                    LOCAL.CAT.HEAD det,
-						   NONLOC.SLASH 0-dlist ] ],
+						   NONLOC #nonloc ] ],
 			 LEX #lex ] ],
     C-CONT [ RELS.LIST.FIRST [ PRED udef_q_rel,
                                ARG0 #lind,
@@ -11073,7 +11131,8 @@ frag_l_mod_s_np_rule := frag_l_mod_np_rule &
 ;; so undo.
 frag_l_mod_i_np_rule := frag_l_mod_np_rule &
   [ ARGS < sign & 
-           [ SYNSEM [ LOCAL.CAT.HEAD.MOD < [ LOCAL intersective_mod &
+           [ SYNSEM [ LOCAL.CAT.HEAD.MOD < expressed_synsem &
+					   [ LOCAL intersective_mod &
 						   [ CONT.HOOK.LTOP #ltop ],
 					   --SIND event ] > ] ],
            sign >,
