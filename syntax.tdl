@@ -3771,14 +3771,16 @@ prep_mod_prep_phrase := head_mod_phrase & binary_headed_phrase & head_initial &
 	     NONLOC #nonloc ],
     HD-DTR.SYNSEM [ LOCAL [ CAT [ HEAD prep_or_modnp & 
 				       [ MOD *unexpcons* &
-					     [ FIRST.LOCAL int_mod_local ] ],
+					     [ FIRST.LOCAL int_mod_local &
+							   [ CAT.HEAD #hd ] ] ],
 				  VAL #val & [ COMPS < > ] ],
 			    CONT.HOOK #hook & [ LTOP #ltop,
 						XARG #xarg ] ],
 		    NONLOC #nonloc ],
     NH-DTR.SYNSEM [ LOCAL [ CAT [ HEAD prep_or_modnp & 
 				       [ MOD *cons* &
-					     [ FIRST.LOCAL int_mod_local ] ],
+					     [ FIRST.LOCAL int_mod_local &
+							   [ CAT.HEAD #hd ] ] ],
 				  VAL.COMPS < >,
 				  POSTHD + ],
 			    CONT.HOOK [ LTOP #ltop,
@@ -4174,13 +4176,19 @@ bare_np_prd_phrase := reg_bare_np_phrase &
 ; DPF 19-sept-07 - Replaced dtr's MIN non_temp_nbar_rel with MIN nom_nbar_rel
 ; so we get measure nouns like "meter" to go through this rule.  To avoid
 ; partitives (at least), the SPR..--MIN constraint should suffice.
-;; DPF 2017-10-06 - Removed ALTMIN udef_q_rel since this prevents robust treatment
-;; where nominal dtr wants missing explicit quant.
+;; DPF 2017-10-06 - Removed ALTMIN udef_q_rel since this prevents robust 
+;; treatment where nominal dtr wants missing explicit quant.
+;; DPF 2018-02-16 - The feature --BARE constrains whether a head can undergo
+;; this rule, and --BARED records on the mother that the rule applied.  Needed
+;; for example in NP coordination, where we don't want a spurious ambiguity for
+;; |the dogs and cats|, so make right conjunct --BARED -.
 ;
 basic_bare_np_sg_phrase_robust := generic_bare_np_phrase &
   [ SYNSEM [ LOCAL [ AGR [ DIV -,
 			   PNG.PN 3s ],
-		     CAT.HEAD #head & [ --BARE + ] ],
+		     CAT.HEAD #head & [ MINORS.ALTMIN implicit_q_rel,
+					--BARE +,
+					--BARED + ] ],
              MODIFD #modif ],
     ARGS < [ SYNSEM 
 	     [ LOCAL [ AGR [ DIV -,
@@ -9719,14 +9727,12 @@ basic_nom_coord_rule := basic_coord_phr &
 				 COMPS < >,
 				 SPCMPS < > ] ],
 		     CONT [ HOOK.INDEX conj-ind ] ] ],
-    LCONJ-DTR.SYNSEM.LOCAL [ CAT [ HEAD supnoun & [ CASE #case,
-                                                    MINORS #mins,
+    LCONJ-DTR.SYNSEM.LOCAL [ CAT [ HEAD supnoun & [ MINORS #mins,
                                                     PRD #prd ],
                                    VAL [ SUBJ #subj & *anti_list*,
                                          COMPS < > ] ],
                              CONT.HOOK.INDEX non_expl_or_conj-ind ],
-    RCONJ-DTR.SYNSEM.LOCAL [ CAT [ HEAD supnoun & [ CASE #case,
-                                                    PRD #prd ],
+    RCONJ-DTR.SYNSEM.LOCAL [ CAT [ HEAD supnoun & [ PRD #prd ],
                                    VAL [ SUBJ *anti_list*,
 					 COMPS < > ] ],
                              CONT.HOOK.INDEX non_expl_or_conj-ind ] ].
@@ -9800,10 +9806,14 @@ np_coord_rule := nom_coord_rule &
 ; table by the window, and the stool by the door are new."
 ; We'll leave the strong constraint on nbar-coord until forced to give it up.
 
-np_coord_top_rule := basic_top_coord_rule & np_coord_rule &
+basic_np_coord_top_rule := basic_top_coord_rule & np_coord_rule &
   [ LCONJ-DTR.SYNSEM.MODIFD.RPERIPH bool,
     C-CONT [ HOOK.INDEX #ind,
              RELS <! relation & [ ARG0 #ind ] !> ] ].
+
+np_coord_top_rule := basic_np_coord_top_rule &
+  [ LCONJ-DTR.SYNSEM.LOCAL.CAT.HEAD.CASE #case,
+    RCONJ-DTR.SYNSEM.LOCAL.CAT.HEAD.CASE #case ].
 
 np_coord_top_eg_rule := np_coord_top_rule &
   [ SYNSEM.LOCAL.CAT.HEAD.CASE #case,
@@ -9841,7 +9851,8 @@ np_coord_mid_rule := basic_mid_coord_rule & np_coord_rule &
 		   CONJ.CREL #rel & [ ARG2 #rind ] ],
     LCONJ-DTR.SYNSEM [ LOCAL.CAT.HEAD.CASE #case,
 		       MODIFD.RPERIPH bool ],
-    RCONJ-DTR.SYNSEM.LOCAL.CONT.HOOK.INDEX #rind,
+    RCONJ-DTR.SYNSEM.LOCAL [ CAT.HEAD.CASE #case,
+			     CONT.HOOK.INDEX #rind ],
     ORTH [ FROM #from, TO #to ],
     C-CONT [ HOOK.INDEX #ind,
              RELS <! relation, #rel & [ ARG0 #ind,
@@ -9871,14 +9882,14 @@ nom_coord_mid_noconj_rule := binary_rule_right_to_left & basic_nom_coord_rule &
                      RPUNCT #rpunct,
 		     RCLSTR #rclstr ],
              MODIFD.RPERIPH na ],
-    LCONJ-DTR [ SYNSEM [ LOCAL [ CAT.HEAD.CASE non_obliq,
+    LCONJ-DTR [ SYNSEM [ LOCAL [ CAT.HEAD.CASE non_obliq & #case,
                                  CONT.HOOK.INDEX #lind,
                                  CONJ cnil ],
                          PUNCT [ LPUNCT no_punct,
                                  RPUNCT comma_or_semicol ],
                          MODIFD.RPERIPH bool ],
                 INFLECTD + ], 
-    RCONJ-DTR [ SYNSEM [ LOCAL [ CAT.HEAD [ CASE non_obliq,
+    RCONJ-DTR [ SYNSEM [ LOCAL [ CAT.HEAD [ CASE #case,
 					    MINORS.MIN nonpro_rel ],
                                  CONT.HOOK.INDEX #rind & nonconj_ref-ind,
 				 AGR.DIV #div,
@@ -9982,7 +9993,7 @@ np_coord_top_noconj_rule := binary_rule_right_to_left & basic_nom_coord_rule &
              PUNCT [ LPUNCT lparen_punct,
                      PAIRED no_ppair,
                      RPUNCT #rpunct ] ],
-    LCONJ-DTR [ SYNSEM [ LOCAL [ CAT [ HEAD [ CASE non_obliq,
+    LCONJ-DTR [ SYNSEM [ LOCAL [ CAT [ HEAD [ CASE non_obliq & #case,
 					      MINORS.NORM quantity_or_norm_rel],
 				       VAL.SPR *olist* ],
                                  CONT.HOOK.INDEX #lind & nonconj_ref-ind,
@@ -9991,7 +10002,7 @@ np_coord_top_noconj_rule := binary_rule_right_to_left & basic_nom_coord_rule &
                                  RPUNCT comma_or_semicol ] ],
                 INFLECTD + ], 
     RCONJ-DTR [ SYNSEM [ LOCAL 
-			 [ CAT [ HEAD [ CASE non_obliq,
+			 [ CAT [ HEAD [ CASE #case,
 					MINORS [ MIN nonpro_rel,
 						 NORM quantity_or_norm_rel ] ],
 				 VAL.SPR *olist* ],
@@ -10063,6 +10074,8 @@ nbar_coord_rule := nom_coord_rule &
                                        LEX +,
                                        OPT - ] >,
 			   HS-LEX #hslex ],
+		     CONJ [ LPERNUM #lpn,
+			    RPERNUM #rpn ],
                      AGR #agr ],
              MODIFD #modif,
              LEX #lex ],
@@ -10073,7 +10086,8 @@ nbar_coord_rule := nom_coord_rule &
                                        VAL.SPR.FIRST expressed_synsem & 
                                                  [ --MIN #sprmin,
                                                    OPT -,
-                                                   LOCAL.CAT.HEAD det,
+                                                   LOCAL [ CAT.HEAD det,
+							   AGR.PNG.PN #lpn ],
 						   NONLOC #nonloc ],
 				       HS-LEX #hslex ],
                                  CONT.HOOK [ LTOP #lhndl,
@@ -10087,7 +10101,8 @@ nbar_coord_rule := nom_coord_rule &
 				     VAL.SPR.FIRST expressed_synsem & 
                                                  [ --MIN #sprmin,
 						   OPT -,
-                                                   LOCAL.CAT.HEAD det,
+                                                   LOCAL [ CAT.HEAD det,
+							   AGR.PNG.PN #rpn ],
 						   NONLOC #nonloc ] ],
 			 LEX #lex ] ],
     C-CONT [ RELS.LIST.FIRST [ PRED udef_q_rel,

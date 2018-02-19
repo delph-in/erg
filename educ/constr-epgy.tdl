@@ -64,7 +64,8 @@ adjh_i_inv_rbst := adjh_i_inv_rule &
 
 hdn-aj_rc_c := hadj_i_relcl_npr_rule &
   [ RNAME hmrn,
-    HD-DTR.SYNSEM.PUNCT.RPUNCT no_punct ].
+    HD-DTR.SYNSEM [ LOCAL.CAT.HEAD.MINORS.MIN non_proper_rel,
+		    PUNCT.RPUNCT no_punct ] ].
 
 ;; Block modification of relative pronouns, to avoid overgeneration of 
 ;; |flowers which, which are blue, disappeared, arrived|
@@ -106,7 +107,7 @@ vp_sbrd-prd-pas_c := subconj_prdp_pas_rule &
 vp_sbrd-prd-aj_c := subconj_prdp_adj_rule &
   [ RNAME scpa,
     ARGS < [ SYNSEM [ LEX -,
-                      LOCAL.CAT.HEAD.--SBRD + ] ] > ].
+                      LOCAL.CAT.HEAD.--SBRD na_or_+ ] ] > ].
 
 ;; DPF 2017-04-05 - Removed ARGS..ALTMIN no_rel since this blocked adjectives
 ;; such as "slow" as in |We arrived slow|.  Let's track what that constraint
@@ -129,6 +130,18 @@ vp_sbrd-prd-aj_rbst := subconj_prdp_adj_rule &
     ARGS < [ SYNSEM [ LEX +,
 		      LOCAL.CAT.HEAD.--SBRD + ] ] >,
     GENRE robust ].
+
+;; DPF 2018-02-15 - For adjectives such as |sick| or |drunk| which are readily
+;; usable as depictives.
+;;
+vp_sbrd-prd-aj-lx_c := subconj_prdp_adj_rule &
+  [ RNAME scpa,
+    SYNSEM.LOCAL.CAT.HEAD.MOD < [ LOCAL.CAT.HEAD v_or_a &
+                                               [ MINORS.ALTMIN non_ellipt_rel,
+					         AUX - ],
+				  NONLOC.SLASH 0-dlist ] >,
+    ARGS < [ SYNSEM [ LEX +,
+		      LOCAL.CAT.HEAD.--SBRD na ] ] > ].
 
 ;; Limit to -ing form, and restrict main clause to INV - to avoid
 ;; |reading is her favorite.|
@@ -252,6 +265,10 @@ flr-hd_nwh-nc-pp_c := filler_head_rule_non_wh_infgen &
     HD-DTR.SYNSEM.LOCAL.CONT.HOOK.INDEX.SF prop-or-pol-ques,
     NH-DTR.SYNSEM.LOCAL.CAT.HEAD prep_or_modnp &
 	                         [ MINORS.MIN misc_or_state_loc_rel ] ].
+;; DPF 2018-02-15 - Block verb |cool| in |is relaxing and cool|
+vp-vp_crd-fin-t_c := vp_coord_fin_top_phr &
+  [ ARGS < [ ], [ SYNSEM.LOCAL.CAT.HEAD.--MAL3SG - ] >,
+    RNAME ctvpf ].
 
 cl-cl_crd-t_c := s_coord_top_phr &
   [ RNAME cts,
@@ -264,16 +281,85 @@ cl-cl_crd-im_c_rbst := s_coord_mid_ig_phr &
     ARGS.FIRST.SYNSEM.MODIFD notmod_or_rmod,
     GENRE robust ].
 
-;; Block robust-sg on dtrs to avoid spurious ambig for |the cat and dog|
 np-np_crd-t_c := np_coord_top_eg_rule &
-  [ ARGS < [ SYNSEM.LOCAL.CAT.HEAD.--BARE - ], 
+  [ ARGS < [ SYNSEM.LOCAL [ AGR.PNG.PN -1s ] ], 
+	   [ SYNSEM.LOCAL.CAT.HEAD.--BARED - ] >,
+    RNAME ctnp ].
+
+;; DPF 2018-02-14 - |I and Kim arrived| => |Kim and I arrived|
+;;
+np-np_crd-i-and_c_rbst := np_coord_top_eg_rule &
+  [ ARGS < [ SYNSEM.LOCAL [ CAT.HEAD [ MINORS [ MIN pron_rel,
+						NORM norm_rel ],
+				       CASE nom ],
+			    AGR.PNG.PN 1s ] ], 
+	   [ SYNSEM.LOCAL.CAT.HEAD.--BARE - ] >,
+    RNAME ctnp,
+    GENRE robust ].
+
+;; DPF 2018-02-14 - |They saw I and Kim| => |They saw Kim and me|
+;;
+np-np_crd-i-me-and_c_rbst := basic_np_coord_top_rule &
+  [ SYNSEM.LOCAL.CAT.HEAD.CASE non_nom & #case,
+    ARGS < [ SYNSEM.LOCAL [ CAT.HEAD [ MINORS [ MIN pron_rel,
+						NORM no_rel ],
+				       CASE no_case ],
+			    AGR.PNG.PN 1s ] ], 
+	   [ SYNSEM.LOCAL.CAT.HEAD [ CASE #case,
+				     --BARE - ] ] >,
+    RNAME ctnp,
+    GENRE robust ].
+
+np-np_crd-and-i-me_c_rbst := basic_np_coord_top_rule &
+  [ SYNSEM [ LOCAL.CAT.HEAD.CASE non_nom & #case,
+	     MODIFD.RPERIPH #rper ],
+    ARGS < [ SYNSEM.LOCAL.CAT.HEAD [ CASE #case,
+				     --BARE - ] ],
+	   [ SYNSEM [ LOCAL [ CAT.HEAD [ MINORS [ MIN pron_rel,
+						  NORM no_rel ],
+					 CASE no_case ],
+			      CONJ.CREL.ARG2.PNG.PN 1s ],
+		      MODIFD.RPERIPH #rper ] ] >,
+    RNAME ctnp,
+    GENRE robust ].
+
+;; DPF 2018-02-14 - |me and Kim| => |Kim and me|
+;; Not sure we want to insist on this reversal for object NPs, so leave as
+;; not robust for now.
+;;
+#|
+np-np_crd-me-and_c_rbst := np_coord_top_eg_rule &
+  [ ARGS < [ SYNSEM.LOCAL [ CAT.HEAD [ MINORS [ MIN pron_rel,
+						NORM norm_rel ],
+				       CASE acc ],
+			    AGR.PNG.PN 1s ] ], 
+	   [ SYNSEM.LOCAL.CAT.HEAD.--BARE - ] >,
+    RNAME ctnp,
+    GENRE robust ].
+|#
+np-np_crd-me-and_c := np_coord_top_eg_rule &
+  [ ARGS < [ SYNSEM.LOCAL [ CAT.HEAD [ MINORS.NORM norm_rel,
+				       CASE acc ],
+			    AGR.PNG.PN 1s ] ], 
 	   [ SYNSEM.LOCAL.CAT.HEAD.--BARE - ] >,
     RNAME ctnp ].
 
+
+;; DPF 2018-02-14 - |me and Kim| => |Kim and I|
+;;
+np-np_crd-me-i-and_c_rbst := np_coord_top_eg_rule &
+  [ ARGS < [ SYNSEM.LOCAL [ CAT.HEAD [ MINORS [ MIN pron_rel,
+						NORM no_rel ],
+				       CASE nom ],
+			    AGR.PNG.PN 1s ] ], 
+	   [ SYNSEM.LOCAL.CAT.HEAD.--BARE - ] >,
+    RNAME ctnp,
+    GENRE robust ].
+
 np-np_crd-m_c := np_coord_mid_eg_rule &
   [ RNAME cmne,
-    ARGS < [ SYNSEM.LOCAL.CAT.HEAD.--BARE - ],
-	   [ SYNSEM.LOCAL.CAT.HEAD.--BARE - ] > ].
+    ARGS < [ SYNSEM.LOCAL.CAT.HEAD.--BARED - ],
+	   [ SYNSEM.LOCAL.CAT.HEAD.--BARED - ] > ].
 
 ;; Insist on Oxford comma in three-part NP coord
 ;; DPF 2017-09-12 - But block for temporal nouns as first conjunct, to avoid
@@ -490,14 +576,28 @@ np_adv_c := npadv_mod_rule &
     RNAME nadv ].
 
 ;; Block robust plural-compound analysis for |Turtles swim|
+;; DPF 2018-02-15 - To block |turtles swim|, changed LPERIPH from bool to -
+;;
 np_nb-frg_c := frag_nbar_rule &
-  [ ARGS.FIRST.SYNSEM.MODIFD.LPERIPH bool,
-  RNAME frnb ].
+  [ ARGS.FIRST.SYNSEM.MODIFD.LPERIPH -,
+    RNAME frnb ].
 
 v-v_crd-fin-ncj_c_rbst := v_coord_fin_top_noconj_phr &
   [ RNAME ctvr,
     GENRE robust ].
 
+;; DPF 2018-02-15 - Split vp_np-ger_c into two, one for coord VPs and one non-c,
+;; so we can avoid spurious robust number disagreement for e.g.
+;; |singing and laughing bother them|
+;;
+vp_np-ger_c := vgerund_rule &
+  [ ARGS < [ SYNSEM.LOCAL.CONT.HOOK.INDEX non_conj_event ] >,
+    RNAME vger ].
+
+vp_np-ger-crd_c := vgerund_rule &
+  [ ARGS < [ SYNSEM.LOCAL.CONT.HOOK.INDEX conj_event ] >,
+    SYNSEM.LOCAL.CAT.HEAD.--BARE -,
+    RNAME vger ].
 
 hd-cmp_2_c := never_unify_rule.
 ;;aj-hd_int-inv_c := never_unify_rule.
