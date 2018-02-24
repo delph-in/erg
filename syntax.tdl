@@ -3059,8 +3059,11 @@ head_adj_int_phrase := head_adj_phrase & isect_mod_phrase & head_initial_infl &
 ;; DPF 2012-11-06 - Added CONJ cnil to hd-dtr; presumably intended all along.
 ;; Also constrained NH-DTR to have saturated SPR, to avoid admitting the
 ;; rare PPs that are missing an obligatory specifier
+;; DPF 2018-02-24 - We need a variant of this rule that does not require INV +
+;; on the head dtr, just in case it is a WH-subj question as in |on Tuesday,
+;; who arrived?|, where the head-filler phrase is necessarily INV -.
 ;;
-adj_head_inv_phrase := head_mod_phrase_simple & binary_headed_phrase &
+basic_adj_head_inv_phrase := head_mod_phrase_simple & binary_headed_phrase &
   [ SYNSEM [ LOCAL.CAT [ VAL.COMPS < >,
 			 NEGPOL #negpol ],
              NONLOC #nonloc & non-local_none,
@@ -3099,6 +3102,18 @@ adj_head_inv_phrase := head_mod_phrase_simple & binary_headed_phrase &
            #hdtr >,
     C-CONT.HOOK [ LTOP #ltop,
 		  INDEX #ind ] ].
+
+adj_head_inv_phrase := basic_adj_head_inv_phrase &
+  [ HD-DTR.SYNSEM.LOCAL.CAT.HEAD.INV + ].
+
+;; DPF 2018-02-24 - The surprising CASE nom constraint is to block non-WH
+;; subj-head constructions even when the INDEX.SF is underspecified, as happens
+;; for speech corpus where period punct is allowed with questions.
+;;
+adj_head_whsbj_phrase := basic_adj_head_inv_phrase &
+  [ HD-DTR.SYNSEM.LOCAL.CAT.HEAD [ INV -,
+				   CASE nom ],
+    C-CONT.HOOK.INDEX.SF ques ].
 
 ; For "the team which in 1924 won the title"
 ; DPF 30-sept-06 - Restrict to exclude npadvs like 'there'
@@ -7343,6 +7358,9 @@ partitive_np_phrase := norm_unary_phrase & phrasal &
 ;; such as |in which we arise|
 ;; DPF 2017-11-02 - Let's try constraining this to LEX +, to cut down on the
 ;; spurious edges introduced in the parse chart.
+;; DPF 2018-02-23 - Allow pronoun-headed vocatives such as "you scoundrel", 
+;; but block first-person, and disallow post-modified phrases to avoid
+;; unwanted ambiguity.
 ;;
 vocative_np_phrase := norm_unary_phrase & phrasal &
  [ INFLECTD +,
@@ -7356,18 +7374,21 @@ vocative_np_phrase := norm_unary_phrase & phrasal &
 					   OPT - ] >,
                                    MINORS.MIN abstr_excl_rel ],
                             MC bool ],
-                      CONJ #conj ],
+                      CONJ #conj,
+		      AGR.PNG.PN 2 ],
               NONLOC #nonloc ],
    ARGS < [ INFLECTD +,
             SYNSEM 
-	     [ LOCAL [ CAT [ HEAD noun & 
-			     [ MINORS [ MIN reg_nom_rel,
+	     [ LOCAL [ CAT [ HEAD basic_noun & mobile &
+			     [ MINORS [ MIN non_temp_nom_rel,
 					ALTMIN def_poss_or_barepl_or_prop_q_rel,
-					NORM no_rel ] ],
+					NORM no_rel ],
+			       CASE no_case ],
 			     VAL [ SPR *olist*,
 				   COMPS < >,
 				   SPEC < anti_synsem_min > ] ],
 		       CONT.HOOK.INDEX #argind,
+		       AGR.PNG.PN 3+2s,
 		       CONJ #conj ],
 	       NONLOC #nonloc,
 	       LEX +,
@@ -7375,9 +7396,10 @@ vocative_np_phrase := norm_unary_phrase & phrasal &
 		       RPUNCT hyphen_or_comma_or_pair_or_clause ] ] ] >,
    ORTH [ FROM #from, TO #to ],
    C-CONT [ HOOK [ LTOP #ltop,
-                   INDEX #index ],
+		   INDEX #arg0 ],
             RELS <! [ LBL #ltop,
                       PRED addressee_rel,
+		      ARG0 #arg0,
                       ARG1 #argind,
                       ARG2 #index,
 		      CFROM #from, CTO #to ] !>,
@@ -8135,6 +8157,7 @@ adj_adjn_rule := binary_rule_left_to_right & adj_adjn_phrase.
 adjh_i_rule := binary_rule_left_to_right & adj_h_int_phrase.
 ;adj_adjh_i_rule := binary_rule_left_to_right & adj_adjh_int_phrase.
 adjh_i_inv_rule := binary_rule_left_to_right & adj_head_inv_phrase.
+adjh_i_whsbj_rule := binary_rule_left_to_right & adj_head_whsbj_phrase.
 adjh_i_rel_rule := binary_rule_left_to_right & adj_head_rel_phrase.
 
 hadj_s_prpnct_nmc_rule := binary_rule_right_to_left & head_adj_scop_prpnct_nmc.
@@ -8451,14 +8474,14 @@ filler_head_rule_wh_root := binary_rule_left_to_right &
 ; to block imperative S-comp, as in "*I know which manager hire"
 ; DPF 24-jun-05 - Further restricted the head-dtr's MSG to always be
 ; prpstn_m_rel.
- 
+; 
 filler_head_rule_wh_subj := binary_rule_left_to_right & 
 			    head_filler_phrase_wh_fin & wh_interrog_fin & 
 			    mc_fillhead_phrase &
-  [ SYNSEM.LOCAL [ CAT [ HEAD.INV -,
-                         VAL.SUBJ *olist* & < anti_synsem_min > ],
+  [ SYNSEM.LOCAL [ CAT [ VAL.SUBJ *olist* & < anti_synsem_min > ],
                    CONT.HOOK.XARG #xarg ],
-    HD-DTR.SYNSEM.LOCAL [ CAT.VAL.SUBJ < >,
+    HD-DTR.SYNSEM.LOCAL [ CAT [ HEAD.INV -,
+				VAL.SUBJ < > ],
                           CONT.HOOK.XARG #xarg ],
     NH-DTR.SYNSEM.LOCAL.CAT.HEAD basic_noun & [ CASE nom ],
     C-CONT [ RELS <! !>,
@@ -9311,7 +9334,8 @@ prep_coord_phr := norm_coord_phr &
                                                          COMPS < > ] ],
                                              CONT.HOOK [ LTOP #ltop,
                                                          INDEX #ind ] ],
-                                         NONLOC.QUE 0-dlist ] >,
+                                         NONLOC.QUE 0-dlist,
+					 OPT + ] >,
 				 SPCMPS < > ],
                            POSTHD #ph ],
                      CONT.HOOK [ LTOP #ltop,
@@ -9823,14 +9847,14 @@ np_coord_top_ig1_rule := np_coord_top_rule &
   [ SYNSEM.LOCAL.CAT.HEAD.CASE nom,
     LCONJ-DTR.SYNSEM.LOCAL [ CAT.HEAD [ MINORS.MIN pron_rel,
                                         CASE acc ],
-                             AGR.PNG.PN -2 ],
+                             AGR.PNG.PN -2s ],
     GENRE nonformal ].
 
 np_coord_top_ig2_rule := np_coord_top_rule &
   [ SYNSEM.LOCAL.CAT.HEAD.CASE nom,
-    RCONJ-DTR.SYNSEM.LOCAL [ CAT.HEAD [ MINORS.MIN pron_rel,
+    RCONJ-DTR.SYNSEM.LOCAL [ CAT.HEAD [ MINORS.MIN nonrefl_or_refl_rel,
                                         CASE acc ],
-			     CONJ.CREL.ARG2.PNG.PN -2 ],
+			     CONJ.CREL.ARG2.PNG.PN -2s ],
     GENRE nonformal ].
 
 ; DPF 02-jun-09 - Restrict to 1st person only (for hypercorrection), to avoid
@@ -11322,12 +11346,13 @@ frag_r_mod_ap_rule := binary_right_frag_rule &
                               CONT [ HOOK [ LTOP #klbl,
                                             INDEX #ind ] ] ],
                       NONLOC.QUE 0-dlist ] ],
-           sign & [ SYNSEM.LOCAL.CAT [ HEAD p_or_adv_or_dadv &
+           sign & [ SYNSEM.LOCAL [ CAT [ HEAD p_or_adv_or_dadv &
                                           [ MOD < [ LOCAL scopal_mod &
                                                      [ CAT.HEAD adverbee,
                                                        CONT.HOOK.LTOP #klbl ],
                                                     --SIND #ind ] > ],
-				       POSTHD + ] ] >,
+					 POSTHD + ],
+				   AGR.PNG.PN 3 ] ] >,
     C-CONT [ HOOK.INDEX.SF prop-or-ques,
              RELS <! [ ARG #ind ] !>,
              HCONS <! !>,
