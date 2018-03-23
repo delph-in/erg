@@ -110,6 +110,10 @@ cl_rc-inf-nwh-sb_c := inf_non_wh_subj_rel_rule &
   [ RNAME rcls,
     SYNSEM.LOCAL.CAT.HEAD.MOD.FIRST.LOCAL.CAT.VAL.SPR.FIRST.OPT - ].
 
+vp_sbrd-prd-prp_c := subconj_prdp_prp_rule &
+  [ SYNSEM.LOCAL.CAT.HEAD.MOD.FIRST.LOCAL.CAT.HEAD.MINORS.ALTMIN non_ellipt_rel,
+    RNAME scpr ].
+
 vp_sbrd-prd-pas_c := subconj_prdp_pas_rule &
   [ ARGS < [ SYNSEM.LEX - ] >,
     RNAME scps ].
@@ -130,13 +134,15 @@ vp_sbrd-prd-aj_c := subconj_prdp_adj_rule &
 ;; DPF 2017-09-29 - Abuse the ALTS attribute here to allow blocking of certain
 ;; adjectives to avoid spurious use of this rule, as in
 ;; |There are five fifth graders between fifteen and twenty feet tall.|
+;; DPF 2018-03-16 - Re 2017-05-17: But blocking SLASH on head means we can't
+;; catch e.g. |yesterday, he nodded friendly|, and anyway, it would not serve
+;; to block |we [admired [a cat it was]] happy|.  
 ;;
 vp_sbrd-prd-aj_rbst := subconj_prdp_adj_rule &
   [ RNAME scpa,
     SYNSEM.LOCAL.CAT.HEAD.MOD < [ LOCAL.CAT.HEAD v_or_a &
                                                [ MINORS.ALTMIN non_ellipt_rel,
-					         AUX - ],
-				  NONLOC.SLASH 0-dlist ] >,
+					         AUX - ] ] >,
     ARGS < [ SYNSEM [ LEX +,
 		      LOCAL.CAT.HEAD.--SBRD + ] ] >,
     GENRE robust ].
@@ -188,6 +194,7 @@ n-hdn_cpd-pl_rbst := noun_n_cmpnd_pl_mal &
 
 n-hdn_cpd-pl-nlx_c := never_unify_rule.
 
+
 ;; DPF 2018-03-07 - This one does not seem to get used as intended often at all,
 ;; and leads to false positives.  Better would be a rule for missing apostrophe
 ;; on possessor in [NP's N].
@@ -197,6 +204,13 @@ n-hdn_cpd-pl-nlx_c_rbst := noun_n_cmpnd_pl_nonlex_rule &
     ARGS.REST.FIRST.SYNSEM.--MIN non_temp_nom_rel,
     GENRE robust ].
 |#
+
+n-hdn_cpd-mnp_c_rbst := noun_n_cmpnd_mnp_mal_rule &
+  [ RNAME nnmp ].
+
+n-hdn_j-n-cpd_c_rbst := noun_adjn_cmpnd_rule &
+  [ RNAME nanc,
+    GENRE robust ].
 
 hdn-np_app-pr_c := appos_prpnct_rule &
   [ RNAME app,
@@ -304,6 +318,9 @@ vp-vp_crd-fin-t_c := vp_coord_fin_top_phr &
   [ ARGS < [ ], [ SYNSEM.LOCAL.CAT.HEAD.--MAL3SG - ] >,
     RNAME ctvpf ].
 
+vp-vp_crd-asym-t_c_rbst := vp_coord_asym_top_phr_mal &
+  [ RNAME ctvpr ].
+
 cl-cl_crd-t_c := s_coord_top_phr &
   [ RNAME cts,
     ARGS < [ SYNSEM.LOCAL.CONT.HOOK.INDEX.SF basic-prop ],
@@ -344,7 +361,9 @@ np-np_crd-i-me-and_c_rbst := basic_np_coord_top_rule &
     RNAME ctnp,
     GENRE robust ].
 
-np-np_crd-and-i-me_c_rbst := basic_np_coord_top_rule &
+;; |admired Kim and I| - Make this non-robust since the accus-case "I" is
+;; already marked as robust
+np-np_crd-and-i-me_c := basic_np_coord_top_rule &
   [ SYNSEM [ LOCAL.CAT.HEAD.CASE non_nom & #case,
 	     MODIFD.RPERIPH #rper ],
     ARGS < [ SYNSEM.LOCAL.CAT.HEAD [ CASE #case,
@@ -354,8 +373,7 @@ np-np_crd-and-i-me_c_rbst := basic_np_coord_top_rule &
 					 CASE no_case ],
 			      CONJ.CREL.ARG2.PNG.PN 1s ],
 		      MODIFD.RPERIPH #rper ] ] >,
-    RNAME ctnp,
-    GENRE robust ].
+    RNAME ctnp ].
 
 ;; DPF 2018-02-14 - |me and Kim| => |Kim and me|
 ;; Not sure we want to insist on this reversal for object NPs, so leave as
@@ -436,7 +454,8 @@ vp_fin-past-frg_c := frag_vp_fin_past_rule &
   [ RNAME frvd ].
 
 vp_fin-aux-frg_c := frag_vp_fin_aux_rule &
-  [ RNAME frvx ].
+  [ SYNSEM.PUNCT.RPUNCT.PSF prop,
+    RNAME frvx ].
 
 ;; Prevent robust-comma-marked fragments as dtrs, and only allow with period
 ;; on first S.
@@ -526,9 +545,19 @@ n-j_j-cpd_c_rbst := n_adj_intr_cmpnd_rule &
     GENRE robust ].
 |#
 
+n-j_j-cpd_c := n_adj_intr_cmpnd_rule &
+  [ RNAME naic,
+    ARGS.FIRST.SYNSEM.PUNCT.RPUNCT hyphen_sgl ].
+
 n-v_j-cpd_c := n_v_cmpnd_rule &
   [ RNAME nvc,
     SYNSEM.LOCAL.CAT.HEAD.--SBRD - ].
+
+;; 2018-03-22 - Constrain dtr to be HS-LEX - so we can avoid bare-NP for
+;; simple robust |something| while getting robust |important something|,
+;; since the adj_n rule stamps HS-LEX - on the mother.
+hdn_bnp_c :+
+  [ ARGS.FIRST.SYNSEM.LOCAL.CAT.HS-LEX - ].
 
 ;;; From erg/arboretum/mal-constructions.tdl
 ;; Commented out in constructions.tdl.
@@ -642,6 +671,22 @@ np_indef-adv_c := npindef_adv_rule &
   [ RNAME niv,
     ARGS < [ SYNSEM.LOCAL.AGR.PNG.PN 3p ]> ].
 
+num_prt-of_c := partitive_num_ppof_rule &
+  [ SYNSEM.LOCAL.CAT.VAL.COMPS.FIRST.LOCAL.AGR.DIV +,
+    RNAME pno ].
+
+num_prt-of_c_rbst := partitive_num_ppof_rule &
+  [ SYNSEM.LOCAL.CAT.VAL.COMPS.FIRST.LOCAL.AGR [ PNG.PN 3s,
+						 DIV - ],
+    ARGS.FIRST.SYNSEM.LOCAL.AGR.DIV -,
+    RNAME pnor,
+    GENRE robust ].
+
+;; Restrict to proper names, to avoid spurious |Dogs, cats and mice ran|
+np_voc-pre_c := vocative_np_lmod_rule &
+  [ ARGS.FIRST.SYNSEM.LOCAL.CAT.HEAD.MINORS.ALTMIN proper_q_rel,
+    RNAME npvl ].
+
 hd-cmp_2_c := never_unify_rule.
 ;;aj-hd_int-inv_c := never_unify_rule.
 hdn-aj_rc-propr_c := never_unify_rule.
@@ -653,8 +698,8 @@ hd-aj_cmod-s_c := never_unify_rule.
 vp_sbrd-prd-ell_c := never_unify_rule.
 np-hdn_cpd-pr_c := never_unify_rule.
 np-hdn_ttl-cpd-pl_c := never_unify_rule.
-n-hdn_j-n-cpd_c := never_unify_rule.
 n-hdn_cpd-pl_c := never_unify_rule.
+n-hdn_j-n-cpd_c := never_unify_rule.
 flr-hd_nwh-nc-np_c := never_unify_rule.
 cl-cl_crd-im_c := never_unify_rule.
 np-np_crd-i-t_c := never_unify_rule.
@@ -665,7 +710,7 @@ n-n_crd-3-t_c := never_unify_rule.
 n-n_crd-im_c := never_unify_rule.
 vp_cp-sb_c := never_unify_rule.
 np_voc-post_c := never_unify_rule.
-np_voc-pre_c := never_unify_rule.
+;np_voc-pre_c := never_unify_rule.
 cl_cnj-frg_c := never_unify_rule.
 vp_fin-frg_c := never_unify_rule.
 cl_cp-frg_c := never_unify_rule.

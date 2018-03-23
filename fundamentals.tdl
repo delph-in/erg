@@ -201,6 +201,7 @@ expressed_non_canonical := non_canonical & expressed_synsem &
   [ NONLOC [ REL 0-dlist,
              QUE 0-dlist ] ].
 
+#|
 gap := expressed_non_canonical &
   [ LOCAL [ CAT #cat,
 	    CONT.HOOK [ INDEX #index,
@@ -214,6 +215,11 @@ gap := expressed_non_canonical &
 					XARG #xarg ],
 			    CONJ #conj,
 			    AGR #agr ] > ] ].
+|#
+gap := expressed_non_canonical &
+  [ LOCAL #local,
+    NONLOC.SLASH 1-dlist &
+                 [ LIST < #local > ] ].
 
 unexpressed_min := canonical_or_unexpressed.
 unexpressed := unexpressed_min & synsem_min2 &
@@ -1117,13 +1123,55 @@ event_relation := arg0_relation &
 ;; Relevant examples:
 ;; we want to slip into paris and into rome.
 ;; where should we be?
+;; DPF 2018-03-14 - Following a more careful study of the semantic algebra,
+;; it became clear that the --SLTOP hack was not really a solution to the
+;; problem of the semantics of ATB extraction.  The core issue is that if
+;; there are nonscopal arguments that share their LTOP with that of the
+;; selecting head and that can be extracted from coordinate structures, we
+;; get dubious semantics.  For example, if pronouns share their LBL with that
+;; of the head, then in |Kim relies on and probably admires him|, `him' would
+;; expect to share its label with both `rely on' and 'admire', wrongly dragging
+;; `rely on' into the scope of `probably'.   Choosing to attach the label of
+;; the pronoun to that of the coordinated VP does not appear motivated 
+;; semantically, and will be difficult to achieve compositionally via 
+;; unification, since the coordination constructions uniformly unify the SLASH
+;; values of the dtrs and the mother.  How would input to the generator know
+;; which label to assign to the pronoun `him' in this example:
+;;   They seemed to continue to adore and probably even grew to admire him.
+;; So the emerging hypothesis is to follow DRT's lead and identify the labels of
+;; (unmodified pronouns with the global top (and perhaps also for ordinary 
+;; proper names if we abandon proper_q_rel), with modified pronouns and
+;; such as in |he who runs fastest will arrive before you who run slower|
+;; or |Kims who like sushi| presumably introducing a quantifier.  
+;; Further, we don't expect other nonscopal arguments to participate in ATB 
+;; extraction:
+;;   ? They slipped or sneaked into the room.
+;;   ? Into which room did they slip or sneak?
+;;   ? He put it and seemed to intend to put it badly.
+;; For reference, these are the verb types that take non-scopal non-NP
+;; complements, and we expect that none of these will participate in ATB
+;; extraction:
+;; v_pp*-pp*_le  lie to X about Y
+;;	      agree with-about, apologize to-for, complain to-about
+;; v_np-pp_le    name X after Y
+;;	      combine with, credit to, delete from, do with, face with
+;; v_p-pp_le     come across as X
+;;	      let up on, lock in on, meet up with, shop around for
+;; v_pp*_le      gossip about X, 
+;;	      deviate from, flirt with, rave about, tower over
+;; v_pp_dir_le   sneak into the room
+;;	      barge, burst, head, inch, lumber, sidle, slip, 
+;; v_pp_unacc_le drop onto the floor
+;;	      curl into a ball, fit into a pocket, slam into the wall, swing up 
+;; v_adv_le      did well
+;;	      auger poorly, behaved badly, went well
+;; v_np-adv_le   put it badly
 
 hook_min := *top*.
 hook := hook_min &
   [ LTOP handle,
     INDEX semarg,
-    XARG semarg,
-    --SLTOP handle ].
+    XARG semarg ].
 
 mrs_min := *avm*.
 mrs_min0 := mrs_min &
@@ -1521,20 +1569,22 @@ param := non_expl_or_param.
 ; Nominal sorts
 nominal-sort := *sort*.
 basic-entity-or-event := nominal-sort.
+;; DPF 2018-03-23 - Added to enable constraints on SORT for by_means_of
+entity-or-qevent := basic-entity-or-event.
 norm-entity-or-event := basic-entity-or-event.
 entity-or-event := norm-entity-or-event.
 nontime := entity-or-event.
-entity := nontime.
+entity := nontime & entity-or-qevent.
 nonloc := entity.
 human := nonloc.
 nonhuman := nonloc.
-location := norm-entity-or-event.
+location := norm-entity-or-event & entity-or-qevent.
 time := location & entity-or-event.
 
 ; DPF 14-nov-05 - Removed 'entity' supertype, since this means we get bad
 ; coordination as in "*We arrived here and the chair."
 place := location.
-nom-event := nontime.
+nom-event := nontime & entity-or-qevent.
 ; DPF 14-nov-09 - Can't make integers be of SORT number distinct from
 ; 'entity' (tempting, to block "Abrams one") because we also want
 ; "Kim is ten" which we currently treat as identity-copula with NP "ten"
@@ -1545,7 +1595,7 @@ nom-event := nontime.
 do-event := nominal-sort.
 
 ;; For nominalized WH-questions
-q-event := basic-entity-or-event.
+q-event := entity-or-qevent.
 
 ; modable_rel distinguishes those relations whose nominal lexical entries can 
 ; undergo a syntactic rule to produce a modifier phrase, as in "we'll meet
@@ -2696,6 +2746,7 @@ _next+door_p_dir_rel := _next+door_p_rel & dir_rel.
 _next+door_p_state_rel := _next+door_p_rel & state_loc_rel.
 _no+matter_p_rel := miscprep_rel.
 _notwithstanding_p_rel := miscprep_rel.
+_nowadays_p_rel := miscprep_rel.
 of_p_rel := miscprep_rel & compound_or_prep_rel.
 _of_p_rel := of_p_rel.
 _of+course_p_rel := miscprep_rel.
@@ -3078,7 +3129,9 @@ quant_or_deg_rel := non_event_dim_rel.
 i_or_e_quant_or_deg_rel := quant_or_deg_rel.
 abstract_q_rel := quant_or_deg_rel.
 quant_rel := abstract_q_rel.
-universal_q_rel := quant_rel.
+;; Exclude "no", as in |*nearly no cats|
+exist_or_univ_q_rel := quant_rel.
+universal_q_rel := exist_or_univ_q_rel.
 non_freerel_q_or_meas_rel := non_freerel_rel.
 non_freerel_q_rel := non_freerel_q_or_meas_rel & quant_rel.
 non_pronoun_q_or_no_rel := predsort.
@@ -3120,8 +3173,9 @@ meas_or_numq_rel := predsort.
 ;; Note that this type is introduced only by the num_det rule, and it is
 ;; intentionally distinct from number_q_rel used elsewhere
 ;;
-num_q_rel := explicit_nodef_q_rel & indef_or_num_q_rel &
-	     both_all_udef_q_rel & meas_or_numq_rel.
+num_or_demon_q_rel := explicit_nodef_q_rel.
+num_q_rel := num_or_demon_q_rel & indef_or_num_q_rel &
+	     both_all_udef_q_rel & meas_or_numq_rel & num_or_demon_q_rel.
 
 ; DPF 19-Oct-02 - This is to allow not only ordinary bare plurals, but also
 ; "afternoons" which must be the one that takes an optional PP-of and
@@ -3131,7 +3185,7 @@ def_udef_some_a_no_q_rel := quant_rel.
 
 ; Used for underspecification in translation
 ;def_udef_some_a_q_rel := def_udef_some_a_no_q_rel.
-existential_q_rel := def_udef_some_a_no_q_rel.
+existential_q_rel := def_udef_some_a_no_q_rel & exist_or_univ_q_rel.
 def_udef_a_q_rel := existential_q_rel.
 udef_a_q_rel := def_udef_a_q_rel.
 
@@ -3144,8 +3198,9 @@ def_or_proper_q_rel := abstr_def_or_udef_q_rel & def_or_meas_rel &
 udef_q_rel := implicit_q_rel & explicit_quant_or_udef_noagr_q_rel &
               both_all_udef_q_rel & udef_a_q_rel &
 	      def_poss_or_barepl_or_prop_q_rel & udef_or_def_or_meas_rel.
-some-any_q_rel := explicit_quant_agr_q_rel & existential_q_rel.
-some_q_rel := some-any_q_rel & indef_or_udef_rel & indef_or_def_or_meas_rel.
+some-any_q_rel := explicit_quant_agr_q_rel & existential_q_rel &
+		  indef_or_udef_rel & indef_or_def_or_meas_rel.
+some_q_rel := some-any_q_rel.
 any_q_rel := some-any_q_rel.
 every_q_rel := explicit_nodef_q_rel & universal_q_rel.
 no_q_rel := explicit_nodef_q_rel & indef_or_udef_rel & a_or_no_q_rel.
@@ -3196,7 +3251,7 @@ num_or_proper_q_rel := non_freerel_q_rel & def_or_proper_q_rel & nodef_q_rel &
 		       meas_or_num_or_proper_q_rel.
 proper_q_rel := num_or_proper_q_rel & impl_or_proper_q_rel &
 		def_poss_or_barepl_or_prop_q_rel.
-number_q_rel := num_or_proper_q_rel & impl_or_proper_q_rel & 
+number_q_rel := num_or_proper_q_rel & impl_or_proper_q_rel &
 		def_or_meas_or_num_rel.
 ; For determiners that can appear e.g. with 'same' (also excluding 'both')
 def_or_demon_q_rel := def_or_udef_or_demon_q_rel.
@@ -3208,7 +3263,7 @@ pronoun_q_rel := non_freerel_q_rel & def_or_demon_q_rel &
 ;; |one door, that for pets, stayed open|, but we'll need a separate rule that
 ;; requires a comma-marked phrase.
 ;;
-demonstrative_q_rel := explicit_nodef_q_rel & def_or_proper_q_rel & 
+demonstrative_q_rel := num_or_demon_q_rel & def_or_proper_q_rel & 
                        def_or_demon_q_rel & appos-able_rel.
 demon_near_q_rel := demonstrative_q_rel.
 demon_far_q_rel := demonstrative_q_rel.
