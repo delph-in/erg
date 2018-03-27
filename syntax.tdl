@@ -409,8 +409,8 @@ head_compositional := headed_phrase &
     HD-DTR.SYNSEM.LOCAL.CONT.HOOK #hook ].
 
 nonhead_compositional := basic_binary_headed_phrase &
-  [ C-CONT.HOOK #hook,
-    NH-DTR.SYNSEM.LOCAL.CONT.HOOK #hook ].
+  [ C-CONT.HOOK.LTOP #ltop,
+    NH-DTR.SYNSEM.LOCAL.CONT.HOOK.LTOP #ltop ].
 
 non_clause := head_nexus_phrase &
   [ SYNSEM.LOCAL.CAT.MC na ].
@@ -1423,7 +1423,7 @@ subconj_prdp_pas_phr := subconj_prdp_final_phr &
 		      OPT + ] ] > ].
 
 subconj_prdp_adj_phr := subconj_prdp_final_phr &
-  [ SYNSEM.LOCAL.CAT.HEAD.MOD < [ PUNCT.RPUNCT comma_or_no_punct ] >,
+  [ SYNSEM.LOCAL.CAT.HEAD.MOD < [ PUNCT.RPUNCT comma_or_pair_or_no_punct ] >,
     ARGS < [ SYNSEM [ LOCAL.CAT.HEAD basic_adj & [ MINORS.NORM norm_rel ],
 		      OPT +,
                       PUNCT.LPUNCT no_punct ] ] > ].
@@ -1861,8 +1861,9 @@ head_second_comp_phrase := basic_head_comp_phrase &
 ; construction of the coordinate phrase.  Then the top-coord rule 'retrieves'
 ; this value from its right conjunct's PNCTPR and makes it once again the
 ; value of PAIRED on the full conjoined phrase.  Affected example:
-; only want the hdn-aj_rc_c rule (and not the hdn-aj_rc-pr_c rule) to build the rel
-; clause in 'Devito manages a programmer Abrams interviewed and Browne hired.'
+; only want the hdn-aj_rc_c rule (and not the hdn-aj_rc-pr_c rule) to build the
+; rel clause in 'Devito manages a programmer Abrams interviewed and Browne 
+; hired.' 
 ; DPF 22-jul-05 - This move creates a little problem for the odd lexical
 ; entry "etc." which acts syntactically like a head-marker phrase.  But then
 ; "etc.?" should undergo the qmark infl rule, leaving it with a non-empty
@@ -2082,14 +2083,15 @@ head_marker_phrase_nbar := basic_head_marker_phrase_nom &
 ; 'their cleverness and zest for life is legendary", we now use the lexical
 ; constraint stored in CONJ.CPNG for 'and' to block "*Abrams and Browne is ..."
 ; while still allowing "Abrams or Browne is ..."
-
+;;
 head_marker_phrase_nom := basic_head_marker_phrase_nom &
   [ INFLECTD #infl,
     SYNSEM.LOCAL [ CONT.HOOK [ LTOP #ltop,
 			       INDEX.PNG #png ],
                    AGR.PNG #png ],
     ARGS < [ INFLECTD +,
-	     SYNSEM.LOCAL.CONJ.CPNG #png ],
+	     SYNSEM.LOCAL [ CAT.HEAD.MINORS.NORM norm_rel,
+			    CONJ.CPNG #png ] ],
 	   [ INFLECTD #infl,
 	     SYNSEM.LOCAL [ CAT.VAL.SPR *olist*,
 			    CONT.HOOK.LTOP #ltop ] ] >,
@@ -2690,15 +2692,20 @@ head_mod_phrase := headed_phrase &
 ;; DPF 2018-02-12 - Constrained NH-DTR..MOD.FIRST to be expressed_synsem,
 ;; so we can exclude e.g. PP+PP copredication phrase which is only used in
 ;; non-modification structures including the copula and locative inversion.
+;; DPF 2018-03-25 - Re 03-nov-03: For tag questions, we want the SF ques to come
+;; from the modifier, but since the INDEX for the clause comes from the head,
+;; the head clause must be MC - (because the subj-head main-clause rule 
+;; identifies SF with the RPUNCT.PSF). So for scopal modifiers, MC will be 
+;; determined by the modifier, normally passing up the MC value of the phrase 
+;; it modifies.
 ;;
 basic_head_mod_phrase_simple := head_mod_phrase & basic_binary_headed_phrase &
                                 norm_binary_punct_phrase &
-  [ SYNSEM.LOCAL.CAT.MC #mc,
-    HD-DTR.SYNSEM [ LOCAL [ CAT [ HEAD #head,
+  [ HD-DTR.SYNSEM [ LOCAL [ CAT [ HEAD #head,
                                   VAL #val,
                                   POSTHD #ph,
                                   HC-LEX #hclex,
-                                  MC #mc ],
+                                  MC #hmc ],
                               AGR #agr,
 			      CONT.HOOK #hook,
 			      CONJ #conj ],
@@ -2715,7 +2722,7 @@ basic_head_mod_phrase_simple := head_mod_phrase & basic_binary_headed_phrase &
                                                              VAL #val,
                                                              POSTHD #ph,
                                                              HC-LEX #hclex,
-                                                             MC #mc ],
+                                                             MC #hmc ],
                                                        AGR #agr,
                                                        CONT.HOOK #hook,
                                                        CONJ #conj ],
@@ -2865,18 +2872,29 @@ head_adj_phrase := basic_head_adj_phrase & binary_punct_phrase &
 
 scopal_mod_phrase := head_mod_phrase_simple & nonhead_compositional &
 		     head_nexus_rel_phrase &
-  [ HD-DTR.SYNSEM.LOCAL.CONT.HOOK [ XARG #xarg ],
+  [ SYNSEM.LOCAL.CAT.MC #mc,
+    HD-DTR.SYNSEM.LOCAL.CONT.HOOK [ INDEX #index,
+				    XARG #xarg ],
     NH-DTR.SYNSEM [ LOCAL [ CAT [ HEAD.MOD < [ LOCAL scopal_mod &
 						 [ CONT.HOOK.XARG #xarg ] ] >,
-				  VAL.COMPS *olist* ],
-			    CONT.HOOK #hook & [ XARG #xarg ] ],
+				  VAL.COMPS *olist*,
+				  MC #mc ],
+			    CONT.HOOK.LTOP #ltop ],
 		    NONLOC.SLASH 0-dlist ],
-    C-CONT.HOOK #hook ].
+    C-CONT.HOOK [ LTOP #ltop,
+		  INDEX #index,
+		  XARG #xarg ] ].
 
+;; DPF 2018-03-25 - Assume that intersective modifiers do not change the
+;; MC value of the phrase they modify, so pass it up here, in case we neglect
+;; to account for MC on some modifiers.
+;;
 isect_mod_phrase := head_mod_phrase_simple & head_compositional &
-  [ SYNSEM.NONLOC.REL [ LIST #first,
-			LAST #last ],
-    HD-DTR.SYNSEM [ LOCAL.CONT [ HOOK.LTOP #hand ],
+  [ SYNSEM [ LOCAL.CAT.MC #mc,
+	     NONLOC.REL [ LIST #first,
+			  LAST #last ] ],
+    HD-DTR.SYNSEM [ LOCAL [ CAT.MC #mc,
+			    CONT.HOOK.LTOP #hand ],
 		    NONLOC.REL [ LIST #first,
 				 LAST #middle ] ],
     NH-DTR.SYNSEM [ LOCAL [ CAT.HEAD.MOD < [ LOCAL intersective_mod ] >,
@@ -2964,12 +2982,12 @@ head_adj_scop_prpnct := head_adj_scop_phrase &
                           PNCTPR #paired ] ].
 
 head_adj_scop_prpnct_mc := head_adj_scop_prpnct &
-  [ SYNSEM [ LOCAL [ CAT.MC +,
-		     CONT.HOOK.INDEX.SF #psf ],
-	     PUNCT.RPUNCT.PSF #psf ] ].
+  [ SYNSEM [ LOCAL.CONT.HOOK.INDEX.SF #psf,
+	     PUNCT.RPUNCT.PSF #psf ],
+    HD-DTR.SYNSEM.LOCAL.CAT.MC + ].
 
 head_adj_scop_prpnct_nmc := head_adj_scop_prpnct &
-  [ SYNSEM.LOCAL.CAT.MC na_or_- ].
+  [ HD-DTR.SYNSEM.LOCAL.CAT.MC na_or_- ].
 
 ; Non-paired variant - propagate comma or clause-punct onward
 ; DPF 10-sept-07 - Added RPERIPH + to mother to enable blocking of stacked
@@ -3657,11 +3675,13 @@ v_mod_phrase := head_initial & binary_punct_phrase &
              LEX - ],
     HD-DTR [ INFLECTD +,
              SYNSEM 
-             [ LOCAL.CAT 
-                     [ VAL #val &
+             [ LOCAL [ CAT 
+                       [ VAL #val &
                            [ COMPS.FIRST canonical_synsem &
 			                 [ --MIN nonpro_or_event_rel,
 					   LOCAL.CAT.VAL.COMPS *olist* ] ] ],
+		       CONT.HOOK [ INDEX #index,
+				   XARG #xarg ] ],
 	       PUNCT.RPUNCT #rpunct ] ],
     NH-DTR 
        [ SYNSEM [ LOCAL [ CAT [ HEAD p_or_basic_adv &
@@ -3676,7 +3696,9 @@ v_mod_phrase := head_initial & binary_punct_phrase &
 				VAL [ SPR *olist*,
                                       COMPS < > ] ] ],
                   NONLOC non-local_none & [ SLASH.LIST < > ] ] ],
-    C-CONT [ RELS <! !>,
+    C-CONT [ HOOK [ INDEX #index,
+		    XARG #xarg ],
+	     RELS <! !>,
 	     HCONS <! !>,
 	     ICONS <! !> ] ].
 
@@ -3723,8 +3745,8 @@ v_mod_int_phrase := v_mod_vg_phrase & head_compositional &
 v_mod_scop_phrase := v_mod_vg_phrase &
   [ NH-DTR.SYNSEM.LOCAL [ CAT.HEAD [ MOD < [ LOCAL scopal_mod ] >,
 				     MINORS.NORM norm_rel ],
-			  CONT.HOOK #hook ],
-    C-CONT.HOOK #hook ].
+			  CONT.HOOK.LTOP #ltop ],
+    C-CONT.HOOK.LTOP #ltop ].
 
 ;; DPF 29-jan-12 - Cannot remember why HD-DTR..HEAD was constrained to
 ;; n_or_a_or_det, but this blocks "arrived and on Tuesday arose", so remove
@@ -3745,8 +3767,7 @@ conj_mod_phrase := v_mod_phrase &
 ;; be an event for adverbs, but there is no available event.
 ;;
 conj_mod_int_phrase := conj_mod_phrase & head_compositional & 
-  [ NH-DTR.SYNSEM.LOCAL [ CAT.HEAD [ MOD < [ LOCAL intersective_mod ] >,
-				     MINORS.NORM no_rel ],
+  [ NH-DTR.SYNSEM.LOCAL [ CAT.HEAD.MOD < [ LOCAL intersective_mod ] >,
 			  CONT.HOOK.LTOP #ltop ],
     HD-DTR.SYNSEM.LOCAL.CONJ.CREL.LBL #ltop,
     C-CONT.HOOK.LTOP #ltop ].
@@ -3756,13 +3777,26 @@ conj_mod_int_phrase := conj_mod_phrase & head_compositional &
 ;; DPF 2016-10-21 - Re 2016-09-26: But this prevents 
 ;; |we arose and, laughing, departed|.  Cf. 
 ;; | we ran from and, exhausted, to Paris|.  So accept the ambiguity.
+;; DPF 2018-03-26 - Tried adding NH-DTR..NORM norm_rel to exclude subconj_prd 
+;; phrases, especially to avoid spurious analysis of |cats [and happy] dogs|
+;; But this also loses |we arrived and, laughing, arose|.  So instead,
+;; propagate NORM value from nh-dtr to mother, so head_marker_nom rule
+;; can restrict first dtr's NORM.
 ;;
 conj_mod_scop_phrase := conj_mod_phrase &
   [ NH-DTR.SYNSEM.LOCAL [ CAT.HEAD [ MOD < [ LOCAL scopal_mod &
-					       [ CONT.HOOK.LTOP #ltop ] ] > ],
-			  CONT.HOOK #hook ],
-    HD-DTR.SYNSEM.LOCAL.CONT.HOOK.LTOP #ltop,
-    C-CONT.HOOK #hook ].
+					       [ CAT.HEAD.MINORS.ALTMIN
+	                                                       non_ellipt_rel,
+						 CONT.HOOK.LTOP #ltop ] ] >,
+				     MINORS.NORM #norm ],
+			  CONT.HOOK.LTOP #mltop ],
+    HD-DTR.SYNSEM.LOCAL [ CAT.HEAD.MINORS.NORM #norm,
+			  CONT.HOOK [ LTOP #ltop,
+				      INDEX #index,
+				      XARG #xarg ] ],
+    C-CONT.HOOK [ LTOP #mltop,
+		  INDEX #index,
+		  XARG #xarg ] ].
 
 ;; DPF 2018-02-12 - It is now clear that we want one semantics of PP+PP to be
 ;; different from ordinary modification, since for |on the mountain near the 
@@ -7974,12 +8008,14 @@ cl_adv_phrase := norm_unary_phrase & phrasal &
   [ SYNSEM [ LOCAL [ CAT [ HEAD adv &
 			   [ MOD < [ LOCAL scopal_mod &
 				     [ CAT [ HEAD verb,
-					     VAL.COMPS < > ],
+					     VAL.COMPS < >,
+					     MC #mc ],
 				       CONJ cnil ],
 				     NONLOC.SLASH 0-dlist,
 				     PUNCT.RPUNCT comma_or_pair_or_no_punct ] >,
 			     PRD + ],
 			   POSTHD +,
+			   MC #mc,
 			   VAL [ SUBJ < >,
 				 SPR < >,
                                  COMPS < >,
@@ -8946,16 +8982,18 @@ mid_coord_infgen_rule := mid_coord_rule &
 ;; block conjunction of no-copula VPs (want the no-cop after conjunction).
 ;; DPF 12-Oct-06 - Changed determination of mother's TAM to come from first
 ;; daughter rather than second.  Seemingly arbitrary, and some prefer it.
-
+;; DPF 2018-03-26 - Re 12-Oct-06: Moved identity of mother's and first dtr's
+;; TAM down to top_coord subtype, since on mid_coord it wrongly forces the
+;; first and second of three or more conjuncts to have the same tense.
+;;
 event_coord_rule := gen_coord_phr &
-  [ SYNSEM.LOCAL.CONT.HOOK.INDEX conj_event & [ E #tam ],
-    LCONJ-DTR.SYNSEM.LOCAL.CONT.HOOK [ LTOP #ltop,
-				       INDEX [ E #tam ] ],
-    RCONJ-DTR.SYNSEM.LOCAL [ CONT.HOOK [ LTOP #ltop,
-					 INDEX conj_event ] ] ].
+  [ LCONJ-DTR.SYNSEM.LOCAL.CONT.HOOK.LTOP #ltop,
+    RCONJ-DTR.SYNSEM.LOCAL.CONT.HOOK [ LTOP #ltop,
+				       INDEX conj_event ] ].
 
 basic_top_coord_event_rule := basic_top_coord_rule & event_coord_rule &
-  [ LCONJ-DTR.SYNSEM.LOCAL.CONT.HOOK.INDEX event_or_deg-ind ].
+  [ SYNSEM.LOCAL.CONT.HOOK.INDEX conj_event & [ E #tam ],
+    LCONJ-DTR.SYNSEM.LOCAL.CONT.HOOK.INDEX event_or_deg-ind & [ E #tam ] ].
 
 top_coord_event_rule := basic_top_coord_event_rule & top_coord_rule &
   [ C-CONT.RELS <! !> ].
@@ -9828,7 +9866,7 @@ verbal_predp_coord_phr := basic_predp_coord_phr &
 
 pp_predp_coord_phr := predp_coord_phr &
   [ SYNSEM.LOCAL.CAT.HEAD prep,
-    LCONJ-DTR.SYNSEM.LOCAL.CAT.HEAD prep,
+    LCONJ-DTR.SYNSEM.LOCAL.CAT.HEAD prep_or_modnp,
     RCONJ-DTR.SYNSEM.LOCAL.CAT.HEAD v_or_a  & [ MINORS.MIN event_rel ] ].
 
 ap_predp_coord_top_phr := ap_predp_coord_phr & top_coord_event_rule &
@@ -10666,6 +10704,8 @@ basic_run_on_rule := binary_rule_right_to_left & basic_binary_phrase &
 ;; |we arise, maybe they arrive.|
 ;; DPF 2016-07-03 - Removed ALTMIN norm_rel from each of two dtrs, since
 ;; this prevented clauses such as |this is to say that we arise| as either dtr.
+;; DPF 2018-03-25 - Also add MOD *anti_list* to right dtr, to avoid e.g.
+;; inverted-conditional as run-on.
 ;;
 basic_run_on_coord_rule := basic_run_on_rule & basic_coord_phr &
  [ SYNSEM [ LOCAL.CAT [ VAL.SUBJ #subj & *anti_list*,
@@ -10684,7 +10724,8 @@ basic_run_on_coord_rule := basic_run_on_rule & basic_coord_phr &
 						 [ E indic_tam ] ] ] ] ],
    RCONJ-DTR #rconj &
              [ SYNSEM [ LOCAL [ CAT [ HEAD verb_or_conj_or_frag &
-                                           [ MINORS [ MIN norm_rel ] ],
+                                           [ MINORS.MIN norm_rel,
+					     MOD *anti_list* ],
                                       VAL.SUBJ *anti_list*,
                                       MC + ],
                                 CONT [ HOOK [ LTOP #ltop,
@@ -11232,7 +11273,11 @@ frag_sent_conj_rule := basic_frag_rule & norm_unary_phrase &
 ; 'hiking in Aurland'
 ;; DPF 2016-11-23 - Re 23-aug-04: Generalized NORM value from norm_rel to
 ;; quantity_or_norm_rel, so we can admit e.g. |tour T16 ten miles|
-
+;; DPF 2018-03-27 - Removed C-CONT..INDEX non_conj_event, since we now propagate
+;; INDEX from subordinating head's complement to the mother, and yet we want
+;; |cats [: they sleep and they run]|
+;; So let's remind ourselves of what this constraint was doing and FIX?
+;;
 binary_frag_rule := norm_frag_rule & binary_punct_phrase &
   [ SYNSEM.LOCAL [ CAT.VAL.SPR < >,
                    CONJ cnil ],
@@ -11259,8 +11304,7 @@ binary_frag_rule := norm_frag_rule & binary_punct_phrase &
                              REL 0-dlist ] ],
            KEY-ARG + ],
     ARGS < sign, [ SYNSEM.PUNCT.RPUNCT.PSF #pred ] >,
-    C-CONT [ HOOK.INDEX non_conj_event,
-	     RELS.LIST < [ LBL #ulbl,
+    C-CONT [ RELS.LIST < [ LBL #ulbl,
                            ARG0 #uind ], ... > ] ].
 
 binary_left_frag_rule := binary_frag_rule &
