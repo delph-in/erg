@@ -47,7 +47,6 @@
   ;;; relation name ends with _i or -i -- this won't quite do because
   ;;; we want to allow for different senses and anyway this should use the
   ;;; standard pred parsing code
-  (setf myrel rel)
   (let* ((relpred (mrs::rel-pred rel))
          (relname (when (and relpred 
                              (or (symbolp relpred) (stringp relpred)))
@@ -60,6 +59,7 @@
 
 ; In lkb/src/lexdb/headers.lsp
 ; Added "5" to load-foreign-types for 64-bit
+#-:lkb-fos
 (defun psql-initialize ()
   (unless (libpq-p)
     #+:linux
