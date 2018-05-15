@@ -167,3 +167,6 @@
                       (setf (rel-pred ep)
                         (format nil pattern (string-downcase form))))))))))
   mrs)
+
+;; Now using modern SEM-I construction machinery, so set this flag accordingly:
+(setf *normalize-predicates-p* t)
