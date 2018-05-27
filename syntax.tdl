@@ -1393,12 +1393,16 @@ subconj_prdp_v_init_phr := subconj_prdp_v_init_phrase &
 ;; least in main clauses.  Can't make it just na since in inverted quotes such
 ;; as |they arrived, reported Kim, relieved.|, the phrase |reported Kim| will
 ;; be MC - as the head of the filler-head construction.
+;; DPF 2018-05-25 - Changed MOD..ALTMIN from norm_rrel back to non_ellipt_rel,
+;; for significant efficiency gain (10%), at the cost of one item in Redwoods:
+;; cb:2200 "... improve the code far more quickly than you could unaided."
+;; FIX someday, perhaps with ubertagging.
 ;;
 subconj_prdp_final_phr := subconj_prdp_phr &
   [ SYNSEM.LOCAL.CAT 
                   [ POSTHD +,
-                   HEAD.MOD < [ LOCAL.CAT [ HEAD.MINORS [ MIN noncop_event_rel,
-							  ALTMIN norm_rel ],
+                 HEAD.MOD < [ LOCAL.CAT [ HEAD.MINORS [ MIN noncop_event_rel,
+							ALTMIN non_ellipt_rel ],
 					    VAL.SPR < synsem_min, ... >,
 					    MC na_or_- ],
 				 MODIFD [ LPERIPH na_or_-,
@@ -1853,7 +1857,7 @@ head_comp_phrase := basic_head_comp_phrase & head_comp_or_marker_phrase.
 head_second_comp_phrase := basic_head_comp_phrase &
   [ SYNSEM.LOCAL.CAT.VAL.COMPS < #comp1 & phr_synsem & canonical_synsem &
 				 [ LEX - ] . #comps >,
-    HD-DTR.SYNSEM.LOCAL.CAT [ HEAD.INV -,
+    HD-DTR.SYNSEM.LOCAL.CAT [ HEAD.AUX -,
 			      VAL.COMPS < #comp1 . < #comp2 . #comps > > ],
     NH-DTR.SYNSEM #comp2 & [ LOCAL.CAT [ HEAD verbal_or_a_or_p & 
 					   [ MOD *olist*,
@@ -1894,7 +1898,7 @@ basic_head_marker_phrase := head_comp_or_marker_phrase &
                      PNCTPR #nhpaired,
 		     RCLSTR #rclstr ] ],
     ARGS < [ SYNSEM [ PUNCT [ LPUNCT #lpunct,
-			      RPUNCT hyphen_sgl_or_rbc_or_no_punct,
+			      RPUNCT hyphen_sgl_or_rbc_or_rparen_or_no_punct,
 			      PAIRED #paired ],
 		      LOCAL [ AGR #agr,
 			      CONT.HOOK #hook,
@@ -2050,7 +2054,7 @@ basic_head_marker_phrase_nom := basic_head_marker_phrase &
 				    DIV #div ],
 			      CONJ complex-conj & [ CREL #crel &
 							 [ ARG2 #ind ] ] ],
-		      PUNCT.RPUNCT hyphen_sgl_or_rbc_or_no_punct ] ],
+		      PUNCT.RPUNCT hyphen_sgl_or_rbc_or_rparen_or_no_punct ] ],
 	   [ SYNSEM.LOCAL [ CAT.HEAD n_or_p & [ MINORS.NORM #norm ],
 			    CONT.HOOK.INDEX #ind & ref-ind,
 			    CONJ cnil_or_numconj ] ] > ].
@@ -2852,27 +2856,23 @@ adj_head_phrase := basic_head_mod_phrase_simple & head_final &
 ;; DPF 2016-12-08 - Pushed mother's MODIFD rmod down to subtypes, since we now
 ;; want post-title compounds like |Bygdin fjord| to not be rmod, in order to
 ;; accept |fingerlike Bygdin fjord| with the desired bracketing.
+;; DPF 2018-05-21 - Instead of appending SLASH values of the two dtrs here, we
+;; have each subtype determine the SLASH of the mother, typically identifying
+;; with the head-dtr's SLASH, except for the head-adj-int variant where the
+;; adjunct has a non-empty SLASH.  That rule would have to be altered in order
+;; to allow for parasitic gaps.
 ;;
 basic_head_adj_phrase := basic_head_mod_phrase_simple & head_initial & phrasal &
   [ SYNSEM [ LOCAL [ CAT.VAL.COMPS #comps,
                      CONJ cnil ],
-	     NONLOC [ SLASH *diff-list* &
-			       [ LIST #first,
-				 LAST #last ] ],
              MODIFD.LPERIPH #periph ],
     HD-DTR.SYNSEM [ LOCAL [ CAT.VAL.COMPS #comps,
                             CONT.HOOK.INDEX.--TPC #tpc ],
-                    NONLOC [ SLASH *diff-list* &
-                                   [ LIST #middle,
-                                     LAST #last ] ],
                     MODIFD.LPERIPH #periph,
                     PUNCT.RPUNCT comma_or_rbc_or_pair_or_no_punct ],
     NH-DTR.SYNSEM [ LOCAL [ CAT [ POSTHD +,
                                   VAL.COMPS *olist* ],
-                            CONT.HOOK.INDEX.--TPC #tpc ],
-                    NONLOC [ SLASH *diff-list* &
-                                   [ LIST #first,
-                                     LAST #middle ] ] ] ].
+                            CONT.HOOK.INDEX.--TPC #tpc ] ] ].
 
 ;; DPF 2017-12-23 - Mysteriously, we were not constraining the WH value of the
 ;; head-dtr, so a WH-marked head-dtr would have the WH value just disappear.
@@ -2902,9 +2902,11 @@ head_adj_phrase := basic_head_adj_phrase & binary_punct_phrase &
 
 scopal_mod_phrase := head_mod_phrase_simple & nonhead_compositional &
 		     head_nexus_rel_phrase &
-  [ SYNSEM.LOCAL.CAT.MC #mc,
-    HD-DTR.SYNSEM.LOCAL.CONT.HOOK [ INDEX #index,
-				    XARG #xarg ],
+  [ SYNSEM [ LOCAL.CAT.MC #mc,
+	     NONLOC.SLASH #slash ],
+    HD-DTR.SYNSEM [ LOCAL.CONT.HOOK [ INDEX #index,
+				      XARG #xarg ],
+		    NONLOC.SLASH #slash ],
     NH-DTR.SYNSEM [ LOCAL [ CAT [ HEAD.MOD < [ LOCAL scopal_mod &
 						 [ CONT.HOOK.XARG #xarg ] ] >,
 				  VAL.COMPS *olist*,
@@ -2955,10 +2957,12 @@ adj_head_scop_phrase := basic_adj_head_scop_phrase &
 ;; |the cat, to annoy the dog, chased it|.  So removing LEX + on NH-DTR.
 ;; DPF 2016-11-08 - Constrained SPR to not only be *cons*, but *ocons*, so we
 ;; make sure to constrain SPCMPS in case no spr has been picked up.
+;; DPF 2018-05-25 - Re 2014-11-26: For efficiency, restore LEX +.
 ;;
 adj_head_scop_xp_phrase := basic_adj_head_scop_phrase &
   [ HD-DTR.SYNSEM.LOCAL.CAT.VAL.SPR *ocons*,
-    NH-DTR.SYNSEM.PUNCT.RPUNCT rbc_or_pair_or_no_punct ].
+    NH-DTR.SYNSEM [ LEX +,
+		    PUNCT.RPUNCT rbc_or_pair_or_no_punct ] ].
 
 ; The paired variant - see comment 7-may-05 for n_adj_relcl_phrase.
 adj_head_scop_prpnct_phrase := adj_head_scop_xp_phrase &
@@ -3271,13 +3275,15 @@ adj_head_rel_phrase := adj_head_phrase & head_mod_phrase_simple &
 n_adj_int_phrase := basic_head_adj_phrase &
   [ INFLECTD #infl,
     SYNSEM [ LOCAL.CAT.NEGPOL #negpol,
-	     NONLOC.QUE #que ],
+	     NONLOC [ SLASH #slash,
+		      QUE #que ] ],
     HD-DTR [ INFLECTD na_or_+ & #infl,
 	     SYNSEM [ LOCAL.CAT [ HEAD supnoun,
 				  VAL [ SPR.FIRST synsem_min,
 					COMPS *obllist* ],
 				  NEGPOL #negpol ],
-		      NONLOC.QUE #que,
+		      NONLOC [ SLASH #slash,
+			       QUE #que ],
 		      PUNCT [ LPUNCT pair_or_no_punct,
 			      RPUNCT comma_or_rbc_or_pair_or_no_punct ],
 		      MODIFD [ RPERIPH na_or_- ] ] ],
@@ -3507,18 +3513,21 @@ n_adj_title_phrase := basic_n_adj_redrel_phrase &
 ; those where it does not.
 
 h_adj_unsl_phrase := head_adj_int_phrase &
-  [ ARGS.REST.FIRST.SYNSEM.NONLOC.SLASH 0-dlist ].
+  [ SYNSEM.NONLOC.SLASH #slash,
+    ARGS < [ SYNSEM.NONLOC.SLASH #slash ],
+	   [ SYNSEM.NONLOC.SLASH 0-dlist ] > ].
 
 ; DPF 10-dec-03 - Restrict this rule to exclude elided auxiliary heads, to
 ; avoid "Berlin, the road is, to"
 ; DPF 20-oct-09 - Restrict hd-dtr to INV -, to avoid spurious ambiguity
 ;
 h_adj_sl_phrase := head_adj_int_phrase &
-  [ SYNSEM.NONLOC.SLASH 1-dlist,
-    HD-DTR.SYNSEM.LOCAL.CAT.HEAD verbal &
-			         [ MINORS.ALTMIN non_ellipt_rel,
-				   INV - ],
-    ARGS.REST.FIRST.SYNSEM.NONLOC.SLASH 1-dlist ].
+  [ SYNSEM.NONLOC.SLASH 1-dlist & #slash,
+    HD-DTR.SYNSEM [ LOCAL.CAT.HEAD verbal &
+				   [ MINORS.ALTMIN non_ellipt_rel,
+				     INV - ],
+		    NONLOC.SLASH 0-dlist ],
+    ARGS.REST.FIRST.SYNSEM.NONLOC.SLASH #slash ].
 
 ; DPF 11-May-01 - Split adj_head_int_phrase into two: one for nominal head-dtrs
 ; and one for non-nominals, parallel to head_adj_phrase split.  Needed at least
@@ -5420,12 +5429,17 @@ noun_adjn_cmpnd_phr := basic_noun_n_cmpnd_phr &
 ;; |$10 million, three-year contract|.
 ;; DPF 2017-12-16 - Add CASE no_case to NH-DTR, to block spurious analysis with
 ;; mass N-N coord rule for |sand and gravel truck|.
+;; DPF 2018-05-21 - Change NH-DTR.INFLECTD from + to na_or_+ so we can also get
+;; |text-to-speech and grapheme-to-speech systems|, where |text- to- speech| is
+;; INFLECTD na.  One consequence is that we now get a spurious parse for
+;; |department manager| since `department' is such that we can get
+;; |the department of linguistics director|.  FIX someday.
 ;;
 noun_n_cmpnd_pl_phr := basic_noun_n_cmpnd_phr &
   [ HD-DTR.SYNSEM abstr_lex_synsem & 
 		  [ MODIFD notmod_or_lmod,
 		    PUNCT.LPUNCT dq_or_no_punct ],
-    NH-DTR [ INFLECTD +,
+    NH-DTR [ INFLECTD na_or_+,
 	     SYNSEM [ LOCAL [ AGR.PNG.PN 3p,
 			      CAT [ HEAD [ --BARE -,
 					   CASE no_case ],
@@ -8462,7 +8476,8 @@ vgerund_slash_rule := rule & vgerund_phrase &
   [ SYNSEM.NONLOC.SLASH 1-dlist & 
 			[ LIST *arglist* &
 			       [ FIRST.CAT.HEAD n_or_p & [ CASE non_nom ] ] ],
-    ARGS < [ SYNSEM nonlex_synsem ] > ].
+    ARGS < [ SYNSEM nonlex_synsem &
+		    [ LOCAL.CAT.VAL.SUBJ.FIRST.NONLOC.SLASH 0-dlist ] ] > ].
 
 cl_adv_rule := rule & cl_adv_phrase.
 npindef_adv_rule := rule & indef_np_adv_phrase.
@@ -8837,7 +8852,7 @@ basic_filler_head_fin_rel_rule := filler_head_rel_rule &
 ;;
 filler_head_fin_np_rel_rule := basic_filler_head_fin_rel_rule &
   [ SYNSEM.LOCAL.CAT.HEAD.MOD.FIRST.LOCAL.CONT.HOOK.XARG #xarg,
-    ARGS < [ ],
+    ARGS < [ SYNSEM.LOCAL.CAT.VAL.SPR *olist* ],
 	   [ SYNSEM.NONLOC.SLASH <! [ CAT.HEAD noun_or_nomger,
 				      CONT.HOOK.XARG #xarg ] !> ] > ].
 
@@ -9054,6 +9069,19 @@ mid_coord_event_infgen_rule := mid_coord_event_rule & mid_coord_infgen_rule.
 ;; danced|, where if the PP were extracted from each of the conjuncts, its
 ;; ARG1 would have to be the unif of the ARG0s of both, forcing them to be
 ;; the same event.
+;; DPF 2018-05-21 - The above constraint was propagating more than desired, 
+;; as in |Here, we arrived as a way to sing and dance.| where the
+;; VP |sing and dance| has SLASH.LIST *arglist*, so if `way' takes |to sing
+;; and dance| as a complement rather than as a relative clause, the NP |a way 
+;; to sing and dance| will also be SLASH.LIST *arglist*, and the same for the
+;; PP |as a way ...|, but that unhappily prevents |arrived| from undergoing 
+;; adjunct extraction (which makes the resulting SLASH.LIST be *modcons*), 
+;; since the SLASH values of the two dtrs in the hd-adj rule are appended and 
+;; their LIST values unified.  The correctoin was to observe that the head-adj
+;; subtypes do not actually ever append the SLASH values of the dtrs, normally
+;; instead passing up the SLASH value of the hd-dtr, except for the subtype that
+;; allows a SLASH in the adjunct (but not in the head, ignoring parasitic gaps).
+;; So changed basic_head_adj_phrase accordingly.
 ;;
 basic_basic_verbal_coord_phr := gen_coord_phr &
   [ SYNSEM [ LEX -,
@@ -10007,8 +10035,7 @@ nom_coord_rule := basic_nom_coord_rule & coord_phr &
 np_coord_rule := nom_coord_rule &
   [ SYNSEM [ LOCAL [ CAT [ VAL [ SPR < synsem_min &
 				     [ --MIN just_only_deg_rel,
-				       LOCAL [ CAT [ HEAD adv,
-						     VAL.SPR *unexplist* ],
+				       LOCAL [ CAT [ VAL.SPR *unexplist* ],
 					       CONT.HOOK.LTOP #splbl ],
 				       OPT + ] >,
 				 SPCMPS < > ],
@@ -11878,7 +11905,7 @@ paren_dash_float_rule := basic_head_initial & head_compositional &
                NONLOC #nonloc & [ SLASH 0-dlist ],
 	       LEX #lex,
                PUNCT.LPUNCT #lpunct ] ],
-    NH-DTR [ INFLECTD +,
+    NH-DTR [ INFLECTD na_or_+,
              SYNSEM canonical_synsem &
   	     [ NONLOC [ SLASH 0-dlist & [ LIST < > ],
                         QUE 0-dlist,
@@ -11908,12 +11935,13 @@ paren_dash_float_s_rule := paren_dash_float_rule &
   [ SYNSEM.MODIFD #modif,
     HD-DTR.SYNSEM [ NONLOC non-local_none,
 		    MODIFD #modif ],
-    NH-DTR.SYNSEM.LOCAL [ CAT [ HEAD verb_or_conj_or_frag,
-                                VAL [ SUBJ *anti_list*,
-                                      SPR < >,
-                                      COMPS < > ],
-                                MC + ],
-                          CONT.HOOK.LTOP #nhtop ],
+    NH-DTR [ INFLECTD +,
+	     SYNSEM.LOCAL [ CAT [ HEAD verb_or_conj_or_frag,
+				  VAL [ SUBJ *anti_list*,
+					SPR < >,
+					COMPS < > ],
+				  MC + ],
+			    CONT.HOOK.LTOP #nhtop ] ],
     C-CONT [ RELS <! [ ARG2 #harg ] !>,
              HCONS <! qeq & [ HARG #harg, LARG #nhtop ] !>,
 	     ICONS <! !> ] ].
@@ -11972,7 +12000,8 @@ paren_float_adj_rule := paren_float_rule & head_initial &
 			      CONT.HOOK [ LTOP #ltop,
 					  INDEX #nhind,
 					  XARG #ind ] ],
-		      PUNCT.RPUNCT #rpunct ] ],
+		      PUNCT.RPUNCT #rpunct ],
+	     INFLECTD + ],
     C-CONT [ HOOK [ LTOP #ltop,
                     INDEX #ind ],
 	     RELS <! [ ARG2 #nhind ] !>,
