@@ -43,19 +43,18 @@
 ; which this function did not expect as value of PRED.
 (in-package :lkb)
 (defun idiom-rel-p (rel)
-  ;;; FIX
-  ;;; relation name ends with _i or -i -- this won't quite do because
-  ;;; we want to allow for different senses and anyway this should use the
-  ;;; standard pred parsing code
+  ;; FIX
+  ;; relation name ends with _i or -i -- this won't quite do because
+  ;; we want to allow for different senses and anyway this should use the
+  ;; standard pred parsing code
   (let* ((relpred (mrs::rel-pred rel))
          (relname (when (and relpred 
                              (or (symbolp relpred) (stringp relpred)))
-                    (string-downcase relpred))))
+                    (string relpred))))
     (and relname
          (or 
-          (equal "_i" (subseq relname (- (length relname) 2)))
-          (equal "-i" (subseq relname (- (length relname) 2)))))))
-
+          (eql (mismatch "_i" relname :from-end t :test #'char-equal) 0)
+          (eql (mismatch "-i" relname :from-end t :test #'char-equal) 0)))))
 
 ; In lkb/src/lexdb/headers.lsp
 ; Added "5" to load-foreign-types for 64-bit

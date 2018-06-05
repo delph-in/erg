@@ -11,13 +11,13 @@
      ,(vsym "MARG") ,(vsym "CARG")))
                                  
 (setf *ignored-sem-features* 
-  (append 
+  (union
    *ignored-sem-features* 
    (list (vsym "LNK") (vsym "WLINK") (vsym "PARAMS")
          (vsym "CFROM") (vsym "CTO"))))
 
 (setf *ignored-extra-features* 
-  (append
+  (union
    *ignored-extra-features*
    (list (vsym "SORT") (vsym "INSTLOC"))))
 
