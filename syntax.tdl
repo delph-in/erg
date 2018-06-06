@@ -1398,7 +1398,7 @@ subconj_prdp_v_init_phr := subconj_prdp_v_init_phrase &
 ;; least in main clauses.  Can't make it just na since in inverted quotes such
 ;; as |they arrived, reported Kim, relieved.|, the phrase |reported Kim| will
 ;; be MC - as the head of the filler-head construction.
-;; DPF 2018-05-25 - Changed MOD..ALTMIN from norm_rrel back to non_ellipt_rel,
+;; DPF 2018-05-25 - Changed MOD..ALTMIN from norm_rel back to non_ellipt_rel,
 ;; for significant efficiency gain (10%), at the cost of one item in Redwoods:
 ;; cb:2200 "... improve the code far more quickly than you could unaided."
 ;; FIX someday, perhaps with ubertagging.
@@ -3531,10 +3531,18 @@ n_adj_title_phrase := basic_n_adj_redrel_phrase &
 
 ; For generator, distinguish constructions where adjunct contains a gap from
 ; those where it does not.
+;; DPF 2018-06-05 - Have the unslashed variant propagate RPERIPH from the
+;; head-dtr, while the slashed variant stamps RPERIPH bool on the mother, in
+;; order to prevent spurious right-node-raising analysis of
+;; |[[arrives and arises] beside] Kim|, while still allowing RNR when an
+;; unextracted adjunct is attached, as in |was [[hired and fired] yesterday] by
+;; Browne|
 
 h_adj_unsl_phrase := head_adj_int_phrase &
-  [ SYNSEM.NONLOC.SLASH #slash,
-    ARGS < [ SYNSEM.NONLOC.SLASH #slash ],
+  [ SYNSEM [ NONLOC.SLASH #slash,
+	     MODIFD.RPERIPH #rperiph ],
+    ARGS < [ SYNSEM [ NONLOC.SLASH #slash,
+	              MODIFD.RPERIPH #rperiph ] ],
 	   [ SYNSEM.NONLOC.SLASH 0-dlist & [ LIST < > ] ] > ].
 
 ; DPF 10-dec-03 - Restrict this rule to exclude elided auxiliary heads, to
@@ -3542,7 +3550,8 @@ h_adj_unsl_phrase := head_adj_int_phrase &
 ; DPF 20-oct-09 - Restrict hd-dtr to INV -, to avoid spurious ambiguity
 ;
 h_adj_sl_phrase := head_adj_int_phrase &
-  [ SYNSEM.NONLOC.SLASH 1-dlist & #slash,
+  [ SYNSEM [ NONLOC.SLASH 1-dlist & #slash,
+	     MODIFD.RPERIPH bool ],
     HD-DTR.SYNSEM [ LOCAL.CAT.HEAD verbal &
 				   [ MINORS.ALTMIN non_ellipt_rel,
 				     INV - ],
@@ -3838,18 +3847,21 @@ conj_mod_int_phrase := conj_mod_phrase & head_compositional &
 ;; DPF 2016-10-21 - Re 2016-09-26: But this prevents 
 ;; |we arose and, laughing, departed|.  Cf. 
 ;; | we ran from and, exhausted, to Paris|.  So accept the ambiguity.
-;; DPF 2018-03-26 - Tried adding NH-DTR..NORM norm_rel to exclude subconj_prd 
-;; phrases, especially to avoid spurious analysis of |cats [and happy] dogs|
-;; But this also loses |we arrived and, laughing, arose|.  So instead,
-;; propagate NORM value from nh-dtr to mother, so head_marker_nom rule
-;; can restrict first dtr's NORM.
-;;
+;; DPF 2018-03-26 - Re 2016-10-21: Instead, propagate NORM value from nh-dtr 
+;; to mother, so head_marker_nom rule can restrict first dtr's NORM.
+;; DPF 2018-06-05 - Tempting to add NH-DTR..POSTHD + to exclude spurious ambig
+;; for |Kim arose and, awoken by Browne, smiled| where |awoken by Browne| is
+;; vp_sbrd_pre_c, when what we want is just the vp_sbrd_prd_pas_c analysis.
+;; But we need to allow pre-VP scopal adverbs such as "probably" to get
+;; Collins conjunction constructions as in |we'll read books [and maybe] papers|
+;; So live with the ambiguity now, and maybe FIX someday.
+;; 
 conj_mod_scop_phrase := conj_mod_phrase &
-  [ NH-DTR.SYNSEM.LOCAL [ CAT.HEAD [ MOD < [ LOCAL scopal_mod &
+  [ NH-DTR.SYNSEM.LOCAL [ CAT [ HEAD [ MOD < [ LOCAL scopal_mod &
 					       [ CAT.HEAD.MINORS.ALTMIN
 	                                                       non_ellipt_rel,
 						 CONT.HOOK.LTOP #ltop ] ] >,
-				     MINORS.NORM #norm ],
+				       MINORS.NORM #norm ] ],
 			  CONT.HOOK.LTOP #mltop ],
     HD-DTR.SYNSEM.LOCAL [ CAT.HEAD.MINORS.NORM #norm,
 			  CONT.HOOK [ LTOP #ltop,
@@ -6658,7 +6670,9 @@ binary_measure_np_phrase := binary_punct_phrase & basic_measure_np_phrase &
 ; DPF 21-oct-09 - The SPR of the mother should not be identified with that of
 ; the right dtr, since it should always be < anti_synsem_min> in order to
 ; be able to undergo the rule for mnp_deg_c, asin "several feet tall"
-
+;; DPF 2018-06-06 - For next relase, relax 3s constraint AGR..PN to 3s so we
+;; can analyze  |those first five kilometers were challenging|.  TO DO.
+;;
 measure_np_phrase := binary_measure_np_phrase &
   [ SYNSEM [ PUNCT.PNCTPR #ppair,
 	     LOCAL.AGR.PNG.PN 3s ],
@@ -7094,6 +7108,8 @@ free_rel_phrase := head_initial_infl &
 ;; |'s| for conjoined NPs.
 ;; DPF 2017-10-03 - Constrain dtr's MOD to be unexpressed, so we can exclude
 ;; adjs that are only to be used attributively, such as robust `fewer'.
+;; DPF 2018-06-06 - Constrain dtr's MODIFD to exclude right modification,
+;; to avoid spurious partitive analysis with |many possible| as the dtr.
 ;;
 basic_partitive_num_phrase := unary_phrase & phrasal &
   [ SYNSEM [ LOCAL [ CAT [ HEAD partn &
@@ -7128,6 +7144,7 @@ basic_partitive_num_phrase := unary_phrase & phrasal &
 		   CONT.HOOK [ LTOP #nhand,
 			       XARG #index  ] ],
 		NONLOC.SLASH 0-dlist,
+		MODIFD notmod_or_lmod,
 		PUNCT #punct & [ LPUNCT pair_or_no_punct ] ] ] >,
     ORTH [ FROM #from, TO #to ],
     C-CONT [ HOOK [ LTOP #nhand,
@@ -7264,6 +7281,10 @@ partitive_num_ppof_phrase := partitive_np_num_phrase &
 ;; want |on one of those days|, where |day|'s indes has a time sort.  So push
 ;; the SORT restriction down to the non-ppof variant, to still block
 ;; |April the two|.
+;; DPF 2018-06-06 - The dtr was constrained to MODIFD hasmod, but this is
+;; surprising, and undesirable since we want to exclude |many possible| as
+;; the dtr, where |possible| is a subconj_prdp_adj.  Let's change to
+;; notmod_or_lmod, and see what happens.
 ;;
 partitive_intadj_phrase := basic_partitive_num_phrase &
   [ SYNSEM [ LOCAL [ CAT [ HEAD [ MINORS.ALTMIN explicit_q_rel,
@@ -7285,7 +7306,7 @@ partitive_intadj_phrase := basic_partitive_num_phrase &
 				    VAL [ SPEC < anti_synsem_min >,
 					  SPR *anti_list* ] ],
 			      CONT.HOOK.INDEX non_conj_event ],
-		      MODIFD hasmod & [ LPERIPH na_or_+ ] ] ] >,
+		      MODIFD [ LPERIPH na_or_+ ] ] ] >,
     C-CONT [ HOOK.LTOP #nhand,
              RELS <! [ LBL #nhand ] !>,
 	     HCONS <! !>,
@@ -12078,8 +12099,8 @@ paren_float_adj_rule := paren_float_rule & head_initial &
 ;; the copula passes its MODIFD value up in |is arising and arriving|.)
 ;; DPF 2018-04-21 - Generalized to allow extraction from the second dtr, as in
 ;; |who did they depend and rely on?|.
-;; DPF 2018-04-29 - Added RPERIPH + to mother, and constrain left dtr to be
-;; RPERIPH na_or_-, to block unwanted immedicate recursion as in 
+;; DPF 2018-04-29 - Added RPERIPH bool to mother, and constrain left dtr to be
+;; RPERIPH na, to block unwanted immedicate recursion as in 
 ;; |[[admired and hired] by] Kim|, while still allowing |who was he admired and
 ;; hired by|
 ;;
@@ -12107,7 +12128,7 @@ right_node_raise_phrase := head_initial_infl & phrasal &
 					  LAST #last ],
 			       QUE 0-dlist,
 			       REL 0-dlist ],
-		      MODIFD notmod & [ RPERIPH na ],
+		      MODIFD notmod_or_rmod & [ RPERIPH na ],
                       PUNCT [ LPUNCT pair_or_no_punct,
 			      RPUNCT comma_or_pair_or_no_punct ] ] ],
 	   [ SYNSEM [ LOCAL #slash & arg-local &
