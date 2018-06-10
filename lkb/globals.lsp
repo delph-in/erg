@@ -153,7 +153,8 @@
 
 (defparameter *packing-restrictor*
   ;'(ORTH RELS HCONS RNAME RPUNCT)
-  '(ORTH RELS HCONS RNAME PSF)
+  ;'(ORTH RELS HCONS RNAME PSF)
+  '(RELS HCONS ICONS RNAME ONSET)
   "restrictor used when parsing with ambiguity packing")
 
 ;;;

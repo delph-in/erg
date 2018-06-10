@@ -7003,6 +7003,9 @@ num_noun_sequence_phrase := binary_phrase &
 ;; of the optional SPR for free relatives, to avoid spurious ambiguity.
 ;; DPF 2017-09-12 - Removed identity of hd-dtr's XARG with LTOP of nh-dtr
 ;; (see note on same date for generic_bare_np_phrase).
+;; DPF 2018-06-09 - This rule was identifying the LTOPs of the two dtrs, but
+;; for |when Kim is not happy|, this wrongly puts the handle of the nom-rel
+;; for |when| in the scope of |not|.  So remove this identity, and CHECK.
 ;;
 free_rel_phrase := head_initial_infl &
   [ SYNSEM [ LOCAL [ CAT [ HEAD n_or_p,
@@ -7025,8 +7028,7 @@ free_rel_phrase := head_initial_infl &
 					SPR #spr & [ FIRST unexpressed &
 							   [ OPT - ] ],
 					SUBJ *olist* ] ],
-			    CONT.HOOK [ LTOP #ltop,
-					INDEX #index,
+			    CONT.HOOK [ INDEX #index,
 					XARG #xarg  ] ],
 		    MODIFD #modif,
 		    NONLOC [ QUE 1-dlist & <! ref-ind !>,
@@ -7042,8 +7044,7 @@ free_rel_phrase := head_initial_infl &
                                         COMPS < > ],
                                   MC - ],
 			    AGR.PNG.PN #pn,
-                            CONT [ HOOK [ LTOP #ltop,
-					  INDEX.SF prop ] ] ],
+                            CONT [ HOOK [ INDEX.SF prop ] ] ],
                     NONLOC [ SLASH 1-dlist &
                                    <! #loc & [ CAT.VAL [ COMPS < >,
 							 SPR *olist* ] ] !>,
@@ -8540,8 +8541,8 @@ vgerund_slash_rule := rule & vgerund_phrase &
 cl_adv_rule := rule & cl_adv_phrase.
 npindef_adv_rule := rule & indef_np_adv_phrase.
 
-fw_seq_l_rule := rule & fw_sequence_left_phrase.
-fw_seq_r_rule := rule & fw_sequence_right_phrase.
+fw_seq_l_rule := fw_sequence_left_phrase & binary_rule_left_to_right.
+fw_seq_r_rule := fw_sequence_right_phrase & binary_rule_left_to_right.
 
 ;; DPF 22-Dec-98 - Modified filler_head_rule_non_wh to require head to be 
 ;; VFORM fin, in order to block "*Kim hire".  The VFORM used to be fin_or_imp,
@@ -9119,11 +9120,16 @@ basic_top_coord_event_rule := basic_top_coord_rule & event_coord_rule &
 top_coord_event_rule := basic_top_coord_event_rule & top_coord_rule &
   [ C-CONT.RELS <! !> ].
 
+;; DPF 2018-06-09 - Corrected ARG2 of the implicit_conj_rel to be the INDEX
+;; of RCONJ-DTR rather than the (old) LTOP.
+;;
 mid_coord_event_rule := mid_coord_rule & event_coord_rule &
   [ SYNSEM.LOCAL [ CONJ.CREL #rel ],
-    RCONJ-DTR.SYNSEM.LOCAL.CONT.HOOK.LTOP #ltop,
+    RCONJ-DTR.SYNSEM.LOCAL.CONT.HOOK [ LTOP #ltop,
+				       INDEX #rind ],
     ORTH [ FROM #from, TO #to ],
-    C-CONT.RELS <! #rel & [ ARG2 #ltop,
+    C-CONT.RELS <! #rel & [ LBL #ltop,
+			    ARG2 #rind,
 			    CFROM #from, CTO #to ] !> ].
 
 mid_coord_event_edgen_rule := mid_coord_event_rule & mid_coord_edgen_rule.
@@ -10717,6 +10723,7 @@ nbar_coord_asym_top_2_rule := top_coord_rule & nbar_coord_asym_2_rule &
 ;; [more [[seasoning] [if needed]]].
 ;;
 basic_adj_noun_coord_rule := min_coord_phr & binary_punct_phrase &
+			     binary_rule_right_to_left &
   [ INFLECTD +,
     SYNSEM synsem &
            [ LOCAL [ CAT [ HEAD adj &
@@ -11089,8 +11096,10 @@ npindef_s_rule := np_s_phrase &
 ;; use of this rule to handle elided relative clauses, as in |we have several
 ;; books that he doesn't|, where the locative PP-rel-pro `that' won't unify
 ;; with `books'.
+;; DPF 2018-06-09 - Added quant_rel to bind the relative clause's MOD..--SIND,
+;; since it doesn't get bound otherwise.
 ;;
-vp-final-relcl_phrase := head_initial_infl &
+vp-final-relcl_phrase := head_initial_infl & binary_rule_right_to_left &
  [ SYNSEM phr_synsem &
 	  [ LOCAL [ CAT #cat,
 		    CONJ cnil ],
@@ -11125,8 +11134,17 @@ vp-final-relcl_phrase := head_initial_infl &
 		      LBL #ltop,
 		      ARG1 #modind,
 		      ARG2 #rcltop,
+		      CFROM #from, CTO #to ],
+		    [ PRED udef_q_rel,
+		      ARG0 #modind,
+		      RSTR #rhand,
+		      CFROM #from, CTO #to ],
+		    [ LBL #nhand,
+		      PRED generic_entity_rel,
+		      ARG0 #modind,
 		      CFROM #from, CTO #to ] !>,
-            HCONS <! !>,
+	    HCONS <! qeq & [ HARG #rhand,
+			     LARG #nhand ] !>,
 	    ICONS <! !> ],
     ORTH [ FROM #from, TO #to ] ].
 
@@ -11264,7 +11282,8 @@ frag_np_rule := frag_nom_rule &
 				  [ CASE acc,
 				    MINORS.NORM quantity_or_norm_or_no_rel ] ],
 			    CONT.HOOK [ LTOP #ltop,
-					INDEX.SORT entity-or-nomevent ],
+					INDEX non_expl &
+					     [ SORT entity-or-nomevent ] ],
 			    CONJ cnil ] ] >,
     C-CONT [ RELS <! [ LBL #ltop ] !>,
              HCONS <! !>,
@@ -11495,7 +11514,7 @@ binary_left_frag_rule := binary_frag_rule &
              RELS <! relation !> ] ].
 
 
-frag_l_mod_np_rule := binary_left_frag_rule &
+frag_l_mod_np_rule := binary_left_frag_rule & binary_rule_left_to_right &
   [ ARGS < sign & 
            [ SYNSEM.LOCAL [ CAT.HEAD.MOD < [ LOCAL.CONT.HOOK.LTOP #lbl ] >,
 			    CONT.HOOK.LTOP #ltop ] ],
@@ -11540,7 +11559,7 @@ frag_l_mod_i_np_rule := frag_l_mod_np_rule &
 ;; identify LTOPs of the two dtrs, while for the scopal ones we don't.  So
 ;; split this rule into two, accordingly.
 ;;
-frag_l_mod_pp_rule := binary_left_frag_rule &
+frag_l_mod_pp_rule := binary_left_frag_rule & binary_rule_left_to_right &
   [ ARGS < sign & [ SYNSEM.LOCAL.CAT [ HEAD.PRD +,
 				       POSTHD - ] ],
            [ SYNSEM.LOCAL [ CAT.HEAD prep & 
@@ -11563,7 +11582,7 @@ frag_l_mod_isect_pp_rule := frag_l_mod_pp_rule &
            [ SYNSEM.LOCAL.CONT.HOOK.LTOP #ltop ] > ].
 
 ;; DPF 28-jun-09 - Added PRD + to block vocatives
-frag_l_mod_adv_rule := binary_left_frag_rule &
+frag_l_mod_adv_rule := binary_left_frag_rule & binary_rule_left_to_right &
   [ ARGS < sign & [ SYNSEM.LOCAL [ CAT [ HEAD p_or_adv_or_dadv &
 					      [ MOD < [ LOCAL scopal_mod ] > ],
 					 POSTHD - ],
@@ -11596,7 +11615,7 @@ binary_right_frag_rule := binary_frag_rule &
 ;; DPF 2017-12-08 - Constrain right dtr to be CONJ cnil, to avoid spurious
 ;; analysis for e.g. |dogs, cats, etc| with |etc| as the `modifier'.
 ;;
-basic_frag_r_mod_np_rule := binary_right_frag_rule &
+basic_frag_r_mod_np_rule := binary_right_frag_rule & binary_rule_right_to_left &
   [ ARGS < [ SYNSEM [ LOCAL [ CAT [ HEAD noun &
                                        [ CASE acc,
                                          MINORS.ALTMIN non_freerel_q_rel,
@@ -11650,7 +11669,7 @@ frag_r_mod_np_adj_rule := basic_frag_r_mod_np_rule &
                              LEX + ] ] >,
     C-CONT.HOOK.LTOP #ltop ].
 
-frag_r_mod_nbar_rule := binary_right_frag_rule &
+frag_r_mod_nbar_rule := binary_right_frag_rule & binary_rule_right_to_left &
   [ ARGS < [ SYNSEM [ LOCAL [ CAT [ HEAD noun &
                                        [ CASE acc,
                                          MINORS.ALTMIN non_freerel_q_rel ],
@@ -11677,7 +11696,7 @@ frag_r_mod_nbar_rule := binary_right_frag_rule &
 	     ICONS <! !> ] ].
 
 ; 'into the room before Kim arrives'
-frag_r_mod_scop_pp_rule := binary_right_frag_rule &
+frag_r_mod_scop_pp_rule := binary_right_frag_rule & binary_rule_right_to_left &
   [ ARGS < [ SYNSEM.LOCAL [ CAT.HEAD p_or_adv &
                                      [ MOD < synsem &
                                              [ LOCAL intersective_mod,
@@ -11697,7 +11716,7 @@ frag_r_mod_scop_pp_rule := binary_right_frag_rule &
              HCONS <! !>,
 	     ICONS <! !> ] ].
 
-frag_r_mod_ap_rule := binary_right_frag_rule &
+frag_r_mod_ap_rule := binary_right_frag_rule & binary_rule_right_to_left &
   [ ARGS < [ SYNSEM [ LOCAL [ CAT.HEAD adj & [ PRD + ],
                               CONT [ HOOK [ LTOP #klbl,
                                             INDEX #ind ] ] ],
@@ -12104,7 +12123,8 @@ paren_float_adj_rule := paren_float_rule & head_initial &
 ;; |[[admired and hired] by] Kim|, while still allowing |who was he admired and
 ;; hired by|
 ;;
-right_node_raise_phrase := head_initial_infl & phrasal &
+right_node_raise_phrase := head_initial_infl & phrasal & 
+			   binary_rule_left_to_right &
   [ SYNSEM [ LOCAL [ CAT [ VAL [ COMPS < >,
 				 SPR #spr,
 				 SPEC #spec,
@@ -12197,9 +12217,9 @@ right_node_raise_nbar_phrase := right_node_raise_phrase &
 		      PUNCT.RPUNCT comma_or_no_punct  ] ],
 	   [ SYNSEM.NONLOC.SLASH #slash ] > ].	   
 
-right_node_raise_vp_rule := right_node_raise_vp_phrase & rule.
-right_node_raise_nonvp_rule := right_node_raise_nonvp_phrase & rule.
-right_node_raise_nbar_rule := right_node_raise_nbar_phrase & rule.
+right_node_raise_vp_rule := right_node_raise_vp_phrase.
+right_node_raise_nonvp_rule := right_node_raise_nonvp_phrase.
+right_node_raise_nbar_rule := right_node_raise_nbar_phrase.
 
 ;; DPF 2012-11-01 
 ;; Rule to discharge a pair of brackets introduced in chart-mapping, where
