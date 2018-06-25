@@ -81,6 +81,10 @@
   '(root_standard root_question root_robust_s root_lex root_frag root_inffrag)
    "specifing valid parses")
 
+;; Default for generation (enabled for LKB-FOS)
+(defparameter *gen-start-symbol* 
+  '(root_gen))
+
 ;;;
 ;;; _fix_me_
 ;;; now that the old `root_lex' et al. are no longer available, we may need to
