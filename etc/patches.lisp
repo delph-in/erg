@@ -73,6 +73,8 @@
 #+:null
 (setf mrs::*normalize-predicates-p* t)
 #+:null
+(in-package :mt)
+#+:null
 (progn
   (setf semi
     (construct-semi       
