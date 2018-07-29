@@ -3830,16 +3830,26 @@ v_mod_int_phrase := v_mod_vg_phrase & head_compositional &
 ;; what happens.
 ;; DPF 2017-01-31 - Let's try constraining the nh-dtr to be NORM norm_rel, to
 ;; exclude depictives, as in [[be considerate] of cats].
-;; DPF 2018-06-24 - Tempting to exclude nouns as heads for the scopal variant,
-;; to avoid e.g. |high interest [meant a rise] in prices|.  But this blocks
-;; |pictures, apparently, of cats were seen|, as in sc02:6005190; and similarly
-;; for |pictures, however, of cats|.  So undo, and perhaps FIX someday.
+;; DPF 2018-06-24 - Want to exclude nouns as heads for the scopal variant,
+;; to avoid e.g. |high interest [meant a rise] in prices| and |the pictures, 
+;; we thought, of Rome| where the semantics would be problematic. In order to
+;; still get lexical scopal adverbs as in |pictures, apparently, of cats were 
+;; seen|, as in sc02:6005190; and similarly |pictures, however, of cats|, we
+;; split this rule into one for verbs/adjectives and one for noun heads where
+;; the nonhead is lexical.
 ;;
-v_mod_scop_phrase := v_mod_vg_phrase &
+basic_v_mod_scop_phrase := v_mod_vg_phrase &
   [ NH-DTR.SYNSEM.LOCAL [ CAT.HEAD [ MOD < [ LOCAL scopal_mod ] >,
 				     MINORS.NORM norm_rel ],
 			  CONT.HOOK.LTOP #ltop ],
     C-CONT.HOOK.LTOP #ltop ].
+
+v_mod_scop_phrase := basic_v_mod_scop_phrase &
+  [ HD-DTR.SYNSEM.LOCAL.CAT.HEAD v_or_a ].
+
+v_mod_noun_scop_phrase := basic_v_mod_scop_phrase &
+  [ HD-DTR.SYNSEM.LOCAL.CAT.HEAD basic_noun,
+    NH-DTR.SYNSEM.LEX + ].
 
 ;; DPF 29-jan-12 - Cannot remember why HD-DTR..HEAD was constrained to
 ;; n_or_a_or_det, but this blocks "arrived and on Tuesday arose", so remove
@@ -8104,7 +8114,7 @@ no_copula_nosubj_phrase := non_rel_clause & head_valence_phrase & head_only &
 
 ;; For clause-as-modifier, as in |you will, _I am sure_, be happy|
 ;; DPF 2015-09-11 - Added VFORM finite to dtr, to block |considered|, which has
-;; an optional SUBJ.  Also conostrain to MC bool, in case a relative clause
+;; an optional SUBJ.  Also constrain to MC bool, in case a relative clause
 ;; might try to sneak in.
 ;; DPF 2017-02-20 - Added PRD + to prevent these from appearing as fragments
 ;; in e.g. NP-Adv rule.
@@ -8112,6 +8122,8 @@ no_copula_nosubj_phrase := non_rel_clause & head_valence_phrase & head_only &
 ;; such as |was [[writing a report after Jones] was writing __]|.  So let's
 ;; constrain the slashed VP to be no_aspect, as a concession to efficiency.
 ;; DPF 2018-05-31 - Add MODIFD notmod for efficiency.
+;; DPF 2018-07-28 - Constrain XARG to exclude WH-CP subject, to block this 
+;; analysis for |which is determined|
 ;;
 cl_adv_phrase := basic_unary_phrase & phrasal &
   [ SYNSEM [ LOCAL [ CAT [ HEAD adv &
@@ -8119,6 +8131,7 @@ cl_adv_phrase := basic_unary_phrase & phrasal &
 				     [ CAT [ HEAD verb,
 					     VAL.COMPS < >,
 					     MC #mc ],
+				       CONT.HOOK.LTOP #sltop,
 				       CONJ cnil ],
 				     LEX -,
 				     PUNCT.RPUNCT comma_or_pair_or_no_punct ] >,
@@ -8158,12 +8171,13 @@ cl_adv_phrase := basic_unary_phrase & phrasal &
 				     [ HEAD [ MINORS.MIN v_event_rel,
 					      VFORM fin,
 					      CASE non_nom,
-					      PRD - ] ] ] !>,
+					      PRD - ] ],
+				 CONT.HOOK.LTOP #sltop ] !>,
 		      MODIFD notmod,
 		      PUNCT #punct & [ RPUNCT comma_or_no_punct ] ] ] >,
     C-CONT [ HOOK [ LTOP #vltop,
 		    INDEX #vind,
-		    XARG #vxarg ],
+		    XARG #vxarg & [ SORT entity ] ],
 	     RELS <! !>,
 	     HCONS <! !>,
 	     ICONS <! !> ],
@@ -8410,6 +8424,7 @@ hadj_i_sl_rule := binary_rule_right_to_left & h_adj_sl_phrase.
 
 v_mod_int_rule := binary_rule_left_to_right & v_mod_int_phrase.
 v_mod_scop_rule := binary_rule_left_to_right & v_mod_scop_phrase.
+v_mod_noun_scop_rule := binary_rule_left_to_right & v_mod_noun_scop_phrase.
 
 conj_mod_int_rule := binary_rule_left_to_right & conj_mod_int_phrase.
 conj_mod_scop_rule := binary_rule_left_to_right & conj_mod_scop_phrase.
@@ -9076,7 +9091,7 @@ top_coord_rule := basic_top_coord_rule &
 ;; DPF 2014-10-19 - Changed left dtr's RPUNCT to also allow quotes, as in
 ;; |we arise, admire "Kim Browne" and sing songs.|
 ;;
-basic_mid_coord_rule := binary_rule_right_to_left & gen_coord_phr &
+basic_mid_coord_rule := binary_rule_right_to_left & min_coord_phr &
   [ SYNSEM [ LOCAL.CONJ phr-conj &
                         [ CHEAD #chead,
                           CREL basic_conj_relation &
@@ -9087,17 +9102,17 @@ basic_mid_coord_rule := binary_rule_right_to_left & gen_coord_phr &
                      RPUNCT #rpunct,
                      PAIRED #paired,
                      PNCTPR #rpnctpr] ],
-    LCONJ-DTR.SYNSEM [ LOCAL.CONJ cnil,
-                       PUNCT [ LPUNCT no_punct,
-                               RPUNCT comma_or_semi_or_pair_or_no_punct,
-                               PNCTPR #pnctpr,
-                               PAIRED #paired ] ],
-    RCONJ-DTR.SYNSEM [ LOCAL [ CONJ complex-conj & 
-                                    [ CHEAD #chead ] ],
-                       PUNCT [ LPUNCT no_punct,
-                               RPUNCT #rpunct,
-                               PAIRED #pnctpr,
-                               PNCTPR #rpnctpr ] ],
+    ARGS < [ SYNSEM [ LOCAL.CONJ cnil,
+		      PUNCT [ LPUNCT no_punct,
+			      RPUNCT comma_or_semi_or_pair_or_no_punct,
+			      PNCTPR #pnctpr,
+			      PAIRED #paired ] ] ],
+	   [ SYNSEM [ LOCAL [ CONJ complex-conj & 
+				   [ CHEAD #chead ] ],
+		      PUNCT [ LPUNCT no_punct,
+			      RPUNCT #rpunct,
+			      PAIRED #pnctpr,
+			      PNCTPR #rpnctpr ] ] ] >,
     C-CONT.HOOK [ LTOP #ltop,
                   INDEX #cind & conj-ind ] ].
 
@@ -9109,21 +9124,21 @@ mid_coord_rule := basic_mid_coord_rule &
 
 ; Edited variant requires left dtr to be comma marked.
 mid_coord_edgen_rule := mid_coord_rule &
-  [ LCONJ-DTR.SYNSEM.PUNCT.RPUNCT comma_or_semicol ].
+  [ ARGS.FIRST.SYNSEM.PUNCT.RPUNCT comma_or_semicol ].
 
 ; Informal variant has no comma on left dtr.
 ;; DPF 2018-06-01 - Right conjunct is CONJ lex-conj, to block iteration of
 ;; non-comma-marked coordination as in |cows cats dogs and mice| - efficiency.
 ;;
 mid_coord_infgen_rule := mid_coord_rule &
-  [ LCONJ-DTR.SYNSEM.PUNCT.RPUNCT pair_or_no_punct,
-    RCONJ-DTR.SYNSEM.LOCAL.CONJ lex-conj,
+  [ ARGS < [ SYNSEM.PUNCT.RPUNCT pair_or_no_punct ],
+	   [ SYNSEM.LOCAL.CONJ lex-conj ] >,
     GENRE nonformal ].
 
 ; Coordination of non-nominal phrases (S's and VPs)
-;; DPF 25-Feb-01 - Changed division of labor with these two rules, so the first now
-;; conjoins all phrases with event index values, while the second conjoins nominal
-;; phrases.
+;; DPF 25-Feb-01 - Changed division of labor with these two rules, so the 
+;; first now conjoins all phrases with event index values, while the second 
+;; conjoins nominal phrases.
 
 ;; DPF 21-Aug-01 - Added E-INDEX.E.TENSE real_tense to both dtrs in order to
 ;; block conjunction of no-copula VPs (want the no-cop after conjunction).
@@ -9915,9 +9930,14 @@ adj_attr_coord_top_phr := adj_attr_coord_phr & top_coord_event_rule &
 ; DPF 14-jul-09 - But this equivalence does not hold for disjunction, as in
 ; "The big, furry, or black cats arrived."  So restrict these mid ones to
 ; disjunction.  FIX
-;
-;adj_attr_coord_mid_eg_phr := adj_attr_coord_phr & mid_coord_event_edgen_rule.
-;adj_attr_coord_mid_ig_phr := adj_attr_coord_phr & mid_coord_event_infgen_rule.
+;; DPF 2018-07-28 - Re 14-jul-09: Finally got around to fixing this.
+;;
+adj_attr_coord_mid_eg_phr := adj_attr_coord_phr & mid_coord_event_edgen_rule &
+  [ RCONJ-DTR.SYNSEM.LOCAL.CONJ.CREL.PRED _or_c_rel ].
+
+adj_attr_coord_mid_ig_phr := adj_attr_coord_phr & mid_coord_event_infgen_rule &
+  [ RCONJ-DTR.SYNSEM.LOCAL.CONJ.CREL.PRED _or_c_rel ].
+
 adj_pred_coord_top_phr := adj_pred_coord_phr & top_coord_event_rule &
   [ LCONJ-DTR.SYNSEM.PUNCT.RPUNCT comma_or_pair_or_no_punct ].
 adj_pred_coord_mid_eg_phr := adj_pred_coord_phr & mid_coord_event_edgen_rule.
@@ -10752,8 +10772,10 @@ nbar_coord_asym_top_2_rule := top_coord_rule & nbar_coord_asym_2_rule &
 ;; DPF 2017-05-25 - Finally noticed that this type failed to constrain CONJ
 ;; on the mother, which for example admitted an unwanted coord-adj phrase
 ;; [more [[seasoning] [if needed]]].
+;; DPF 2018-07-28 - Generalized to also allow addition of the mid-coord
+;; variant, for |the tall, angry, or monster cat|
 ;;
-basic_adj_noun_coord_rule := min_coord_phr & binary_punct_phrase &
+basic_adj_noun_coord_rule := min_coord_phr &
 			     binary_rule_right_to_left &
   [ INFLECTD +,
     SYNSEM synsem &
@@ -10764,10 +10786,12 @@ basic_adj_noun_coord_rule := min_coord_phr & binary_punct_phrase &
 				  MINORS #minors & [ MIN norm_adj_rel ] ],
 			   VAL #val & [ SPR < unexpressed, anti_synsem_min >,
 					COMPS < > ],
-			   POSTHD #posthd & - ],
-		     CONJ cnil ],
+			   POSTHD #posthd & - ] ],
 	     LEX + & #lex,
-	     NONLOC non-local_none ],
+	     NONLOC non-local_none,
+	     PUNCT [ LPUNCT #lpunct,
+		     RPUNCT #rpunct,
+		     RCLSTR #rclstr ] ],
     LCONJ-DTR [ INFLECTD +,
 		SYNSEM [ LOCAL [ CAT [ HEAD adj & 
 					    [ MOD #mod,
@@ -10791,42 +10815,51 @@ basic_adj_noun_coord_rule := min_coord_phr & binary_punct_phrase &
 			 [ PRED compound_rel,
 			   ARG1 #mind,
 			   CFROM #from, CTO #to ], ... > ],
-    ARGS < sign,
-           [ SYNSEM.LOCAL [ CONJ complex-conj ] ] > ].
+    ARGS < [ SYNSEM.PUNCT.LPUNCT #lpunct ],
+           [ SYNSEM [ LOCAL.CONJ complex-conj,
+		      PUNCT [ RPUNCT #rpunct,
+			      RCLSTR #rclstr ] ] ] > ].
 
 
 ;; DPF 2012-08-25 - Added CONJ cnil to left daughter blocking spurious ambig
 ;;
-adj_noun_coord_rule := basic_adj_noun_coord_rule &
+norm_adj_noun_coord_rule := basic_adj_noun_coord_rule &
   [ LCONJ-DTR #ldtr & [ SYNSEM.LOCAL.CONT.HOOK.LTOP #lctop ],
     RCONJ-DTR #rdtr,
-    C-CONT [ RELS <! [ LBL #lctop,
+    C-CONT [ HOOK.LTOP #lctop,
+	     RELS <! [ LBL #lctop,
 		       ARG2 #rcind,
 		       CFROM #from, CTO #to ],
 		     [ PRED udef_q_rel,
 		       ARG0 #ind,
 		       RSTR #rstr,
 		       CFROM #from, CTO #to ] !>,
-	     HCONS <! qeq & [ HARG #rstr,
-			      LARG #lbl ] !>,
+	     HCONS <! qeq & [ HARG #rstr, LARG #lbl ] !>,
 	     ICONS <! !> ],
-    ARGS < #ldtr & [ SYNSEM [ LOCAL [ CONJ cnil ],
+    ARGS < #ldtr & [ SYNSEM [ LOCAL [ CONT.HOOK.INDEX #lcind,
+				      CONJ cnil ],
 			      PUNCT.RPUNCT comma_or_rbc_or_pair_or_no_punct ]],
-	   #rdtr & [ SYNSEM.LOCAL [ CONJ.CREL [ ARG1 #lctop,
+	   #rdtr & [ SYNSEM.LOCAL [ CONJ.CREL [ ARG1 #lcind,
 						ARG2 #rcind ],
 				    CONT.HOOK [ LTOP #lbl,
 						INDEX #ind ] ] ] > ].
 
+adj_noun_coord_rule := norm_adj_noun_coord_rule &
+  [ SYNSEM.LOCAL.CONJ cnil ].
+
+adj_noun_coord_mid_rule := norm_adj_noun_coord_rule & mid_coord_rule.
+
 ;; Note that RCONJ-DTR is the leftmost dtr here (the noun)
 ;; DPF 2012-08-25 - Added CONJ cnil to left dtr, blocking spurious ambig
 ;;
-noun_adj_coord_rule := basic_adj_noun_coord_rule &
+norm_noun_adj_coord_rule := basic_adj_noun_coord_rule &
   [ SYNSEM.LOCAL.CAT.HEAD.MOD < [ LOCAL.CONT.HOOK.LTOP #mltop ] >,
     LCONJ-DTR #ldtr,
     RCONJ-DTR #rdtr & [ SYNSEM [ LOCAL.CONT.HOOK [ LTOP #lbl,
 						   INDEX #ind ],
 				 PUNCT.RPUNCT comma_or_no_punct ] ],
-    C-CONT [ RELS <! [ LBL #cltop,
+    C-CONT [ RELS <! [ LBL #lbl,
+		       ARG0 #clind,
 		       ARG2 #ind,
 		       CFROM #from, CTO #to ],
 		     [ PRED udef_q_rel,
@@ -10838,7 +10871,12 @@ noun_adj_coord_rule := basic_adj_noun_coord_rule &
 	     ICONS <! !> ],
     ARGS < #rdtr & [ SYNSEM.LOCAL.CONJ cnil ],
 	   #ldtr & [ SYNSEM.LOCAL [ CONJ.CREL [ LBL #mltop,
-						ARG1 #cltop ] ] ] > ].
+						ARG1 #clind ] ] ] > ].
+
+noun_adj_coord_rule := norm_noun_adj_coord_rule &
+  [ SYNSEM.LOCAL.CONJ cnil ].
+
+noun_adj_coord_mid_rule := norm_noun_adj_coord_rule & mid_coord_rule.
 
 ; DPF 28-Nov-02 - HOOK comes only from C-CONT
 ; DPF 27-Nov-04 - Removed SPR *anti-list* from left dtr, to allow N-bars

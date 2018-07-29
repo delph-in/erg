@@ -2485,7 +2485,7 @@ np_adv_subst := trans_subst & three_arg_subst &
                                       VAL [ SPR *olist*,
                                             COMPS < > ] ],
                                 CONT.HOOK [ LTOP #hand,
-                                            INDEX #event ] ],
+                                            XARG #event ] ],
                               NONLOC.REL 0-dlist,
                               LEX + ] > ],
     LKEYS.KEYREL [ LBL #hand,
@@ -2796,13 +2796,21 @@ prep_intrans_gap_verb := prep_intrans_event_verb &
 ;; restricting to `v_or_a_or_p'.
 ;; DPF 2018-02-13 - Made COMPS.FIRST..MOD.FIRST be expressed_synsem, to exclude
 ;; newer PP-PP copred analysis here.
+;; DPF 2018-07-28 - We want to block extraction of directional PPs, because 
+;; otherwise we get wrong identification of the ARG0s of the VP conjuncts in 
+;; VP coordination with extraction, as in |from which city did she 
+;; come __ and go __|.  One cost is that we don't parse |in she came| because
+;; PP-in is only directional and the non-wh filler-head rule excludes 
+;; directional PP fillers (to avoid a lot of unwanted ambiguity). See for
+;; example sc03:6034220.  FIX someday.
 ;;
 prep_intrans_dir_verb := twoarg_verb_synsem & basic_prep_intrans_subst &
                          prep_intrans_lt &
-  [ LOCAL.CAT.VAL.COMPS < [ --MIN dir_or_unsp_loc_rel,
+  [ LOCAL.CAT.VAL.COMPS < canonical_or_unexpressed &
+			  [ --MIN dir_or_unsp_loc_rel,
                             LOCAL.CAT [ HEAD prep_or_modnp &
                                          [ MOD < expressed_synsem &
-						[ LOCAL.CAT.HEAD v_or_a_or_p]>],
+						[LOCAL.CAT.HEAD v_or_a_or_p]>],
 					VAL [ SPR *olist*,
                                               COMPS < > ],
                                         MC na ] ] > ].
@@ -7077,7 +7085,7 @@ n_nb_c_le := noun_hclex_word &
 	     MODIFD notmod ] ].
 
 ; 'the word "chair"', 'the term "whippletree"'
-
+;
 ; <type val="n_nb_c-qt_le">
 ; <description>Cn, nbar quoted ('term')         
 ; <ex>B knew the term "ace".
@@ -7094,7 +7102,7 @@ n_nb_c-qt_le := noun_hclex_word &
                                     OPT -,
 				    LOCAL.CAT.HEAD.--BARE - ],
                          HC-LEX + ],
-	     MODIFD notmod ] ].
+	     MODIFD notmod & [ RPERIPH bool ] ] ].
 
 ; <type val="n_nb_c-pro_le">
 ; <description>Cn, pro comp ('pronoun')           
@@ -15035,8 +15043,8 @@ pp_-_i-dir_le := pp_dir_lexent.
 ;; to avoid massive unwanted ambiguity.
 ;;
 ; <type val="pp_-_i-dir-nomodn_le">
-; <description>PP, directional, no n_mod
-; <ex>seen in Paris
+; <description>PP, no n_mod
+; <ex>we stayed in.
 ; <nex>
 ; <todo>
 ; </type>
@@ -19396,6 +19404,8 @@ one_arg_isect := one_arg & isect_synsem.
 ;; DPF 2016-07-03 - Generalized MOD..HEAD from v_or_g to v_or_g_or_a_or_p,
 ;; in order to allow |Kim is happy drunk|.  Pushed tighter constraint down
 ;; to basic_subconj_lex_synsem.
+;; DPF 2018-07-28 - Exclude semantically empty prep PPs as MOD target, as in
+;; |some of them arriving|
 ;;
 basic_subconj_synsem := canonical_lex_or_phrase_synsem &
   [ LOCAL [ CAT [ HEAD prep &
@@ -19405,7 +19415,8 @@ basic_subconj_synsem := canonical_lex_or_phrase_synsem &
 					       VAL.COMPS < >,
 					       MC #mc ],
 					 CONT.HOOK.LTOP #modltop,
-                                         CONJ cnil ] ] >,
+                                         CONJ cnil ],
+				 --MIN independent_rel ] >,
 			 AUX +,
                          MINORS.MIN subord_rel ],
 		  VAL.SUBJ < >,
@@ -19531,11 +19542,14 @@ subconj_cp_inv_synsem := norm_onearg_subconj_synsem &
                                          LARG #cltop ] !>,
 		   ICONS <! !> ] ] ].
 
-; 'We'll stay as time permits'
+; 'We'll stay as you intended'
 ; Restrict to nonaux subord clause, to avoid spurious ambig for id-copula
 ;; DPF 2012-09-28 - Restrict further to not-left-modified clause, to avoid
 ;; spurious analyses of "as though ..." constructions, as in
 ;; |as though the author was growing less interested|
+;; DPF 2018-07-28 - Now think this gap should be a CP rather than an NP, as in
+;; |they lost, as he thought|.  But leave as is for now, just adding a
+;; generic_entity to fill the gapped argument position.
 ;;
 subconj_cp_gap_synsem := subconj_lex_synsem & lex_synsem & cp_addin_tam_pn &
   [ LOCAL [ CAT [ HEAD.PRD -,
@@ -19557,8 +19571,7 @@ subconj_cp_gap_synsem := subconj_lex_synsem & lex_synsem & cp_addin_tam_pn &
                                              <! arg-local &
 					      [ CAT [ HEAD n_or_adv,
 						      VAL.SPR *olist* ],
-						CONT.HOOK.INDEX.SORT
-						    basic-entity-or-event ] !>,
+						CONT.HOOK.INDEX #ind ] !>,
 				       QUE 0-dlist,
                                        REL 0-dlist ],
                               OPT -,
@@ -19567,9 +19580,21 @@ subconj_cp_gap_synsem := subconj_lex_synsem & lex_synsem & cp_addin_tam_pn &
 			KCMP #keycomp ],
                   HC-LEX - ],
 	    CONT [ RELS <! relation & #keyrel &
-                           [ ARG2 #mtop ] !>,
+                           [ ARG2 #mtop,
+			     CFROM #cfrom, CTO #cto ],
+			   [ PRED udef_q_rel,
+			     ARG0 #ind & ref-ind &
+				  [ SORT basic-entity-or-event ],
+			     RSTR #rhand,
+			     CFROM #cfrom, CTO #cto ],
+			   [ LBL #nhand,
+			     ARG0 #ind,
+			     PRED generic_entity_rel,
+			     CFROM #cfrom, CTO #cto ] !>,
                    HCONS <! qeq, qeq & [ HARG #mtop,
-                                         LARG #cltop ] !>,
+                                         LARG #cltop ],
+			    qeq & [ HARG #rhand,
+				    LARG #nhand ] !>,
 		   ICONS <! !> ],
             ARG-S #comps ],
     NONLOC non-local_none,

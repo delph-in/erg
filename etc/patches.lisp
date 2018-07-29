@@ -73,9 +73,8 @@
 #+:null
 (setf mrs::*normalize-predicates-p* t)
 #+:null
-(in-package :mt)
-#+:null
 (progn
+  (in-package :mt)
   (setf semi
     (construct-semi       
      :ids t :rules t :descendp t :embedp t
@@ -93,4 +92,3 @@
   (print-semi
    semi :stream "~/erg/etc/surface.smi"
    :format :compact :filter "^_"))
-
