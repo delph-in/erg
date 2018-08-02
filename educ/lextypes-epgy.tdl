@@ -767,6 +767,12 @@ subconj_synsem := subconj_cp_synsem &
 				      CONT.HOOK.INDEX.SF prop-or-comm ],
 			      --SIND.E.TENSE real_tense ] > ] ].
 
+;; Preserve TAM.TENSE of complement on head, so e.g. robust post-subconj "and"
+;; can avoid attaching to |while S |
+subconj_word :+
+  [ SYNSEM.LOCAL.CAT [ HEAD.TAM.TENSE #tense,
+		       VAL.COMPS.FIRST.LOCAL.CAT.HEAD.TAM.TENSE #tense ] ].
+
 ;; DPF 2017-09-21 - Require tense in main and subord clauses to match
 ;; |She was serious when she tells us the story|
 
@@ -1591,9 +1597,12 @@ bare_np_prd_phrase := reg_bare_np_phrase &
 ; PLMASS for robust plural-mass
 ; AVIP for robust |easy to admire| => |easy admiring|
 ; COMPEQ for comparative as equative with "as" spr
+; JROB for robust adj as |taste/tasty|, so we can avoid it when also adding
+; a robust comma as in |... taste, smell, ...|
 alts :+ [ PLMASS bool,
           AVIP bool,
-	  COMPEQ bool ].
+	  COMPEQ bool,
+	  JROB bool ].
 
 ;; For robust plural of mass nouns
 ;;
@@ -2195,8 +2204,10 @@ adj_adjn_phrase := adj_n_int_phrase &
 ;; Block pre-VP modif, as in |she had [[eaten before she] [had her dinner]]|
 subconj_prdp_v_init_phrase := subconj_prdp_init_phr &
   [ SYNSEM.LOCAL.CAT [ POSTHD -,
-		       HEAD.MOD.FIRST.LOCAL.CAT.VAL.SPR < > ],
-    ARGS < [ SYNSEM.LOCAL.CAT.HEAD verb & [ VFORM pas_or_prp ] ] > ].
+		       HEAD [ MOD.FIRST.LOCAL.CAT.VAL.SPR < >,
+			      TAM.TENSE #tense ] ],
+    ARGS < [ SYNSEM.LOCAL.CAT.HEAD verb & [ VFORM pas_or_prp,
+					    TAM.TENSE #tense ] ] > ].
 
 ;; Add subtypes of appos_rel so we can use paraphrase rule to reverse the
 ;; order of args to generate both |Kim the teacher| and |the teacher Kim|
@@ -2735,8 +2746,8 @@ adj_vp_inf_prp_mal_lr := lex_rule &
 av_-_dc-conj_le_rbst := adv_disc_like_lexent &
  [ SYNSEM.LOCAL.CAT 
      [ HEAD.MOD < [ PUNCT.RPUNCT comma_or_pair_or_no_punct,
-		    LOCAL.CAT [ HEAD prep,
-				POSTHD - ],
+		    LOCAL.CAT [ HEAD prep & [ TAM.TENSE untensed ],
+		    	        POSTHD - ],
 		    --MIN subord_rel ] >,
        POSTHD + ],
    GENRE robust ].
@@ -2870,6 +2881,8 @@ frag_np_rule :+
 
 ;; Add strange constraint AUX - to exclude robust "why" as in |we knew why to
 ;; arise|
+filler_head_rule_wh_root :+
+  [ NH-DTR.SYNSEM.LOCAL.CAT.HEAD.AUX - ].
 filler_head_rule_wh_nr_fin :+
   [ NH-DTR.SYNSEM.LOCAL.CAT.HEAD.AUX - ].
 filler_head_rule_wh_nr_inf :+
@@ -2979,3 +2992,16 @@ regular_class :+
 phrase :+
   [ ARGS.FIRST.ORTH.CLASS.+INITIAL - ].
 
+;; DPF 2018-07-31 - Removed MOD.FIRST unexpressed so we can use the type to
+;; prevent directional PPs from modifying nouns as in |stars into ...|
+;; FIX someday?
+;;
+prep_intrans_dir_verb := twoarg_verb_synsem & basic_prep_intrans_subst &
+                         prep_intrans_lt &
+  [ LOCAL.CAT.VAL.COMPS < canonical_or_unexpressed &
+			  [ --MIN dir_or_unsp_loc_rel,
+                            LOCAL.CAT [ HEAD prep_or_modnp &
+                                        [ MOD < [LOCAL.CAT.HEAD v_or_a_or_p]>],
+					VAL [ SPR *olist*,
+                                              COMPS < > ],
+                                        MC na ] ] > ].
