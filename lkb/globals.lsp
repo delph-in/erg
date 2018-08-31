@@ -1,6 +1,6 @@
 ;;; -*- Mode: Common-Lisp; Package: LKB; -*-
 
-;;; Copyright (c) 1991--2005
+;;; Copyright (c) 1991--2018
 ;;;   John Carroll, Ann Copestake, Robert Malouf, Stephan Oepen;
 ;;;   see LKB `licence.txt' for conditions.
 
