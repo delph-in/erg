@@ -150,43 +150,52 @@
 
 ;; DPF 2014-10-27 (redefined from lkb/src/io-tdl/tdltypeinput.lsp)
 ;; Allow type documuntation strings to be marked withh triple quotes, for
-;; compatibility with PET
+;; compatibility with PET (and more recently ACE).
 ;;
+#-:triple-quoted-typedoc
 (defun read-tdl-type-comment (istream name)
-  ;;; enclosed in """..."""s - called when we've just peeked a "
-  (let ((start-position (file-position istream))
-	(comment-res nil))
-    ;; record this in case the comment isn't closed
+  ;;; enclosed in """..."""s as in Python - called when we've just peeked a "
+  (let ((start-position (file-position istream))) ; record in case the comment isn't closed
+    ;; first read the peeked double quote, and then the only legal following characters are
+    ;; two more double quotes
     (read-char istream)
-    (if (eql (peek-char nil istream nil 'eof) #\")
-      (progn (read-char istream)
-	     (if (eql (peek-char nil istream nil 'eof) #\")
-		 (read-char istream)
-	       (lkb-read-cerror 
-		istream 
-		"Need three double-quote marks for type comment for ~A (comment start at ~A)" 
-		name start-position)))
-      (lkb-read-cerror 
-		istream 
-		"Need three double-quote marks for type comment for ~A (comment start at ~A)" 
-		name start-position))
+    (cond
+      ((and (eql (read-char istream nil 'eof) #\")
+            (eql (read-char istream nil 'eof) #\")))
+      (t
+        (lkb-read-cerror istream 
+          "Need three double-quote marks for type comment for ~A (comment start at ~A)" 
+          name start-position)))
+    ;; accumulate characters until encountering 3 consecutive non-escaped double quotes
+    ;; !!! this is not a general Python string reader: only \newline, \\, \' and \" are
+    ;; recognised as escape sequences
     (loop 
-      (let ((new-char (peek-char nil istream nil 'eof)))
-	(cond ((eql new-char 'eof)
-	       (lkb-read-cerror 
-		istream 
-		"File ended in middle of type comment for ~A (comment start at ~A)" 
-		name start-position)
-	       (return))
-	      ((and (eql new-char #\")
-		    (read-char istream)
-		    (eql (peek-char nil istream nil 'eof) #\")
-		    (read-char istream)
-		    (eql (peek-char nil istream nil 'eof) #\")
-		    (read-char istream))
-	       (return))
-	      (t (push (read-char istream) comment-res)))))
-    (coerce (nreverse comment-res) 'string)))
+      for c = (read-char istream nil 'eof)
+      with ndouble = 0
+      with chars = nil
+      do
+      (block do
+        (case c
+          (eof
+            (lkb-read-cerror istream 
+              "File ended in middle of type comment for ~A (comment start at ~A)" 
+              name start-position)
+            (return ""))
+          (#\\
+            (setq ndouble 0)
+            (let ((next (peek-char nil istream nil 'eof)))
+              (case next
+                (#\newline (read-char istream nil 'eof) (return-from do))
+                ((#\\ #\" #\') (setq c (read-char istream nil 'eof)))
+                (t nil))))
+          (#\"
+            (incf ndouble)
+            (when (= ndouble 3) (loop-finish)))
+          (t
+            (setq ndouble 0)))
+        (push c chars))
+      finally
+      (return (coerce (nreverse (cddr chars)) 'string))))) ; last 2 chars were the pre-final "s
 
 ;; For LexDB, when dumping the database to lexdb.rev file, the final command
 ;; pq:endcopy now apparently returns "1" for okay, where it used to return "0"
