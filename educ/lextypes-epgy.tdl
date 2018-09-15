@@ -7,6 +7,10 @@ mal_bare_div_q_rel := implicit_q_rel.
 proper_np_phrase :+
   [ ARGS.FIRST.SYNSEM.LOCAL.CAT.HEAD.MINORS.ALTMIN norm_proper_q_rel ].
 
+;; Distinguish pronominal vs. nonpronominal NPs.
+basic_n_proper_lexent :+
+  [ SYNSEM.LOCAL.CONT.HOOK.INDEX.PT notpro ].
+
 ;; DPF 2018-03-06 - The +CASE requirement prevents even parsing proper names 
 ;; that are lower case: too brittle, so undo.
 #|
@@ -281,10 +285,12 @@ be_id_pos := be_id &
              LKEYS.KEYREL #keyrel & [ LBL #ltop ] ] ].
 
 ;; Match TAM on complement and head, to enable matching of tenses in clauses
+;; 2018-09-13 - Block bare-sg analysis for |I know that book is boring|
 ;;
 cm_np-vp_that_le :+
   [ SYNSEM.LOCAL.CAT [ HEAD.TAM #tam,
-		       VAL.COMPS.FIRST.LOCAL.CAT.HEAD.TAM #tam ] ].
+		       VAL.COMPS.FIRST.LOCAL [ CAT.HEAD.TAM #tam,
+		                               CONT.HOOK.XARG.--BARESG - ] ] ].
 
 ;; Undo this 3s constraint since we want e.g. |the population is 4 million|
 #|
@@ -568,8 +574,12 @@ av_-_i-pr-aux_le_rbst := av_-_i-vp-pr_lexent &
     GENRE robust ].
 
 ;; Post-head adv used pre-head: |the cat was bad treated|
+;; Can't restrict MOD..HEAD to verb, since we need it for 
+;; |the bad-treated pets| where `treated' has been converted to adj.
+;;
 av_-_i-po-pr_le_rbst := av_-_i-vp-pr_lexent &
-  [ GENRE robust ].
+  [ SYNSEM.LOCAL.CAT.HEAD.MOD.FIRST.LOCAL.CAT.HEAD v_or_a,
+    GENRE robust ].
 
 ; Allow robust post-VP adverbs: "He sang bad"
 ;
@@ -726,9 +736,12 @@ _during+break_p_rel := miscprep_rel.
 _above+ground_p_rel := miscprep_rel.
 _face+to+face_p_rel := miscprep_rel.
 
+_longer_n_1_rel := time_n_rel.
 
 ;; Add hack empty rel for "mop clean the floor"
 _clean_a_sel_rel := selected_adj_rel.
+;; Also one for |they took part in|
+_in_p_mal-sel_rel := selected_prep_rel.
 
 ;; Constrain to non-nominative, to avoid spurious analysis of e.g.
 ;; "what do Kim and Abrams ..."
@@ -1224,7 +1237,8 @@ frag_vp_fin_past_rule := frag_vp_fin_rule &
                                      --ADDIN.ADDTAM #tam ] ] > ].
 
 frag_vp_fin_aux_rule := frag_vp_fin_rule &
-  [ ARGS < [ SYNSEM.LOCAL.CAT.HEAD.AUX + ] > ].
+  [ ARGS < [ SYNSEM.LOCAL.CAT.HEAD [ AUX +,
+                                     MINORS.MIN aux_event_rel ] ] > ].
 
 
 ;; DPF 2017-12-23 - Enable blocking of frag analysis for |how happy he is|
@@ -1316,8 +1330,12 @@ subjh_mc_ques_rule := subjh_rule_decl & head_subj_phrase & clause &
 ;; DPF 2017-10-06 - Replaced ALTMIN udef_q_rel with quant_rel, so we can also 
 ;; get robust |we admire old one|
 bare_np_sg_phrase_robust := basic_bare_np_sg_phrase_robust &
-  [ SYNSEM.LOCAL.CAT.HEAD.MINORS.ALTMIN quant_rel ].
+  [ SYNSEM.LOCAL [ CAT.HEAD.MINORS.ALTMIN quant_rel,
+                   CONT.HOOK.INDEX.--BARESG + ] ].
 
+;; DPF 2018-09-13 - Enable avoiding bare-NP for |I know that book is boring|
+full_index :+
+  [ --BARESG bool ].
 
 #|
 ;; Enrich this rule to propagate dtr's MOD..--BARE value to SPEC, in order to
@@ -1992,6 +2010,11 @@ filler_head_rule_non_wh_infgen := filler_head_rule_non_wh &
 		    PUNCT.RPUNCT no_punct ] ].
 
 
+filler_head_rule_non_wh_edgen :+
+  [ RNAME fhne,
+    HD-DTR.SYNSEM.LOCAL.CONT.HOOK.INDEX.SF prop-or-pol-ques,
+    NH-DTR.SYNSEM.LOCAL.CAT.HEAD.MINORS.MIN independent_rel ].
+
 #|
 ;; For CoNLL, keep comma as separate token
 pt_-_comma_le := punct_right_word &
@@ -2219,6 +2242,10 @@ appos_rev_rel := appos_rel.
 ;p_np_i-nm-poss_lexent :+
 ;  [ SYNSEM.LOCAL.CAT.VAL.COMPS < [ --MIN basic_nonpro_rel ] > ].
 
+;; Exclude |and [out it] went|
+p_np_i-nnm-nt_le :+
+  [ SYNSEM.LOCAL.CAT.VAL.COMPS.FIRST.--MIN basic_nonpro_rel ].
+
 ;; DPF 2016-06-25 - Prevent robust 'he' from appearing in |K is taller than he|
 ;; DPF 2018-04-02 - But NORM norm_rel is too severe, also excluding |than today|
 ;; so use feature --MALCASE instead.
@@ -2295,6 +2322,10 @@ basic_sor_compl_word :+
 
 ;; DPF 2017-10-02 - Restrict CASE to acc to avoid |to long|
 grad_n := partn_mobile & [ CASE acc ].
+
+;; Avoid |I like phones|
+av_-_dc-like-pr_le :+
+  [ SYNSEM.LOCAL.CAT.HEAD.MOD.FIRST.LOCAL.CAT.HEAD [ --MAL3SG -, --MALN3SG - ]].
 
 ;; Avoid |I arrived, [[then I arose] ...]|
 av_-_dc-like-po_le :+
@@ -2545,8 +2576,14 @@ av_-_dg-m_le_rbst := adv_degree_spec_lexent &
     GENRE robust ].
 
 ; |Kim is much happy|
+;; DPF 2018-09-12 - Restrict to predicative adj, to avoid for 
+;; |[so much good] food|
+;; Also tried to use --SBRD + to avoid for |isn't much fun|, but too restrictive
+;; since it also prevents |much tall|, so undo, and count on ranking to block.
+;;
 av_-_dg-v_le_rbst := av_-_dg-v_lexent &
-  [ SYNSEM.LOCAL.CAT.VAL.SPEC.FIRST.LOCAL.CAT.HEAD basic_adj,
+  [ SYNSEM.LOCAL.CAT.VAL.SPEC.FIRST.LOCAL.CAT.HEAD basic_adj & 
+                                                   [ PRD + ],
     GENRE robust ].
 
 ; |We went to Olympics|
@@ -2697,6 +2734,8 @@ av_-_s-cp_le_mal := basic_word &
 		     CONT.RELS <! #keyrel !>,
 		     CONJ cnil ],
 	     NONLOC non-local_none,
+	     PUNCT [ LPUNCT no_punct,
+	             RPUNCT no_punct ],
 	     LKEYS.KEYREL #keyrel ] ].
 
 ; |it was kind for/of kim to arise|
@@ -2742,11 +2781,36 @@ adj_vp_inf_prp_mal_lr := lex_rule &
              HCONS <! !> ],
     GENRE robust ].
 
+;; |Kim is easy to talk to her|
+adj_vp_inf_seq_mal_lr := lex_rule &
+  [ ORTH #orth,
+    DTR [ ORTH #orth,
+	  SYNSEM reg_adj_atrans_synsem &
+	  	 [ LOCAL.CAT.VAL.COMPS < [], [ LOCAL.CAT.HEAD.VFORM inf ] > ],
+	  ALTS.AVIP + ],
+    SYNSEM basic_adj_vpcomp_synsem &
+	 [ LOCAL [ CAT [ HEAD adj & [ MINORS.MIN norm_adj_rel,
+				      --SBRD - ],
+			 VAL.COMPS < [ LOCAL [ CAT.HEAD.VFORM inf,
+					       CONT.HOOK.LTOP #vhand ] ] > ],
+		   CONT [ HOOK.XARG.PNG.GEN animate,
+		          RELS <! relation !>,
+			  HCONS <! qeq & [ HARG #hand,
+					   LARG #vhand ] !>,
+			  ICONS <! !> ] ],
+	   MODIFD.LPERIPH -,
+	   LKEYS.KEYREL.ARG1 handle & #hand ],
+    C-CONT [ RELS <! !>,
+             HCONS <! !> ],
+    GENRE robust ].
+
 ; |given enough time _and_ we will finish|
 av_-_dc-conj_le_rbst := adv_disc_like_lexent &
  [ SYNSEM.LOCAL.CAT 
      [ HEAD.MOD < [ PUNCT.RPUNCT comma_or_pair_or_no_punct,
-		    LOCAL.CAT [ HEAD prep & [ TAM.TENSE untensed ],
+		    LOCAL.CAT [ HEAD prep & [ TAM.TENSE untensed,
+		                              MOD.FIRST.LOCAL scopal_mod ],
+			        VAL.SPR < >,
 		    	        POSTHD - ],
 		    --MIN subord_rel ] >,
        POSTHD + ],
@@ -2801,12 +2865,16 @@ basic_appos_phr :+
   [ HD-DTR.SYNSEM.LOCAL.CAT.HEAD.--BARED - ].
 
 ;; Avoid robust PP particle for ordinary verb-particle-NP as |take in the view|
+;; But using CASE acc here is wrong because lexical PP particles are CASE obliq,
+;; so we would lose |get together the crew|
+#|
 generic_NP_particle_subst :+
   [ LOCAL.CAT.VAL.COMPS.REST.FIRST.LOCAL.CAT.HEAD.CASE acc ].
 particle_subst :+
   [ LOCAL.CAT.VAL.COMPS.FIRST.LOCAL.CAT.HEAD.CASE acc ].
 prep_passive_synsem :+
   [ LOCAL.CAT.VAL.COMPS.FIRST.LOCAL.CAT.HEAD.CASE acc ].
+|#
 
 _clean_p_sel_rel := selected_prep_rel.
 
@@ -2940,8 +3008,10 @@ np_n_cmpnd_phr :+
   [ NH-DTR.SYNSEM.MODIFD.RPERIPH bool ].
 
 ;; Prevent by_means_rbst as in |was amazed by everything|
+;; DPF 2018-09-14 - But this blocks |don't teach me anything|.  Instead,
+;; constrain SORT to entity-or-event.
 n_generic_pro_lexent :+
-  [ SYNSEM.LOCAL.CAT.HEAD.--BARED + ].
+  [ SYNSEM.LOCAL.CONT.HOOK.INDEX.SORT entity-or-event ].
 
 ;; Block |the sign-up sheet| as mid-coord no-conj
 nom_coord_mid_noconj_rule :+
@@ -2976,11 +3046,22 @@ initial_cap_rule := basic_lex_rule_supermost & word_or_punct_rule &
 		    CLASS.+CASE #case ] ] > ].
 
 missing_initial_cap_rule := initial_cap_rule &
-  [ ARGS < [ ORTH.CLASS [ +INITIAL +, +CASE non_capitalized ] ] >,
+  [ ARGS < [ ORTH.CLASS alphanumeric & 
+                        [ +INITIAL +, +CASE non_capitalized ] ] >,
     GENRE robust ].
 
+named_entity_cap_rule := initial_cap_rule &
+  [ ARGS < [ ORTH.CLASS named_entity & [ +INITIAL + ],
+             GENRE #genre ] >,
+    GENRE #genre ].
+
+nonalphanum_cap_rule := initial_cap_rule &
+  [ ARGS < [ ORTH.CLASS non_alphanumeric & [ +INITIAL + ],
+             GENRE #genre ] >,
+    GENRE #genre ].
+
 has_initial_cap_rule := initial_cap_rule &
-  [ ARGS < [ ORTH.CLASS [ +INITIAL +, +CASE capitalized ],
+  [ ARGS < [ ORTH.CLASS non_ne & [ +INITIAL +, +CASE capitalized ],
              GENRE #genre ] >,
     GENRE #genre ].
 
@@ -3005,3 +3086,4 @@ prep_intrans_dir_verb := twoarg_verb_synsem & basic_prep_intrans_subst &
 					VAL [ SPR *olist*,
                                               COMPS < > ],
                                         MC na ] ] > ].
+
