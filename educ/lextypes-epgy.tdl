@@ -1,6 +1,11 @@
 ; Block proper names from taking determiners
+;; DPF 2018-10-01 - Also allow possessive pronouns: |my BMW|
 
-_the_q_prop_rel := _the_q_rel & proper_q_rel.
+_the_q_prop_or_no_rel := predsort.
+no_rel := non_freerel_rel & non_conj_rel & event_or_degree_or_no_rel &
+          nonaux_event_rel & quantity_or_no_rel & norm_or_no_rel &
+	  non_pronoun_q_or_no_rel & _the_q_prop_or_no_rel.
+_the_q_prop_rel := _the_q_rel & proper_q_rel & _the_q_prop_or_no_rel.
 norm_proper_q_rel := proper_q_rel.
 mal_bare_div_q_rel := implicit_q_rel.
 
@@ -24,7 +29,7 @@ norm_n_proper_lexent := reg_n_proper_lexent &
 norm_n_proper_lexent := reg_n_proper_lexent &
   [ SYNSEM [ LKEYS.KEYREL.PRED named_rel,
     	     LOCAL.CAT.VAL.SPR < [ LOCAL.CAT.HEAD.MINORS.ALTMIN 
-	                                    _the_q_prop_rel ] > ],
+	                                    _the_q_prop_or_no_rel ] > ],
     INFLECTD - ].
 
 n_-_c-fem_le := n_intr_lex_entry &
@@ -601,9 +606,14 @@ av_-_i-vp-po_le_rbst := av_-_i-vp-po_mal_lexent.
 av_-_i-vp-po-nmb_le := int_vp_adverb_word & 
   [ SYNSEM.LOCAL.CAT [ HEAD adv_nonmob & 
                             [ MINORS.MIN adv_rel,
-                              MOD < [ LOCAL.CAT.HEAD verb,
+                              MOD < [ LOCAL.CAT.HEAD verb &
+			                     [ MINORS.ALTMIN non_ellipt_rel ],
                                       MODIFD.RPERIPH na_or_- ] > ],
                        POSTHD + ] ].
+
+;; Avoid misanalysis of |this problem is hard|
+av_-_i-vp-po_le :+
+ [ SYNSEM.LOCAL.CAT.HEAD.MOD.FIRST.LOCAL.CAT.HEAD.MINORS.ALTMIN non_ellipt_rel].
 
 ;; Allow robust comparative specifier with comparative adverb: |more faster|
 ;;
@@ -923,27 +933,28 @@ v_vp_have-f-n_le_rbst := have_aux_neg_lex_entry & have_pres &
     ALTS.VPELLIP -,
     GENRE robust ].
 
-#|
-mal_vc_there_synsem := there_cop_verb &
-  [ LOCAL.CAT.VAL.COMPS.FIRST expressed_synsem &
-                              [ LOCAL.CAT.HEAD.MINORS 
-					      [ MIN non_temp_nom_rel,
-					        ALTMIN def_udef_some_a_no_q_rel,
-						NORM no_rel ] ] ].
-|#
+;; Add parent def_udef_some_a_no_q_rel to enable mal-there-cop as in
+;; |there are two cat|
+;;
+num_q_rel := num_or_demon_q_rel & indef_or_num_q_rel &
+	     both_all_udef_q_rel & meas_or_numq_rel &
+	     def_udef_some_a_no_q_rel.
+
 ;; Restricted COMPS..MIN from non_temp_nom_rel to norm_nom_rel in order to
 ;; exclude numbers as in |there are eight|
+;; DPF 2018-10-02 - COMPS..NORM no_rel prevents |there are a bad thing| since 
+;; `thing' is norm_rel.  So remove, monitor, and FIX?
 ;;
 mal_vc_there_synsem := there_cop_verb &
   [ LOCAL.CAT.VAL.COMPS.FIRST expressed_synsem &
                               [ LOCAL.CAT.HEAD.MINORS 
-					      [ MIN norm_nom_rel,
-					        ALTMIN def_udef_some_a_no_q_rel,
-						NORM no_rel ] ] ].
+			         [ MIN norm_nom_rel,
+				   ALTMIN def_udef_some_a_no_q_rel ] ] ].
 
 mal_vc_there_is_le := vc_there_are_lexent &
   [ GENRE robust,
     ALTS.VPELLIP -,
+    INFLECTD +,
     SYNSEM mal_vc_there_synsem &
            [ LOCAL.CAT.VAL.COMPS.FIRST.LOCAL.CONT.HOOK.INDEX nonconj_ref-ind &
 							     [ PNG.PN 3p,
@@ -952,11 +963,13 @@ mal_vc_there_is_le := vc_there_are_lexent &
 mal_vc_there_are_le := vc_there_is_lexent &
   [ GENRE robust,
     ALTS.VPELLIP -,
+    INFLECTD +,
     SYNSEM mal_vc_there_synsem ].
 
 mal_vc_there_was_le := vc_there_were_lexent &
   [ GENRE robust,
     ALTS.VPELLIP -,
+    INFLECTD +,
     SYNSEM mal_vc_there_synsem &
            [ LOCAL.CAT.VAL.COMPS.FIRST.LOCAL.AGR nonconj_ref-ind &
 							     [ DIV + ] ] ].
@@ -964,6 +977,7 @@ mal_vc_there_was_le := vc_there_were_lexent &
 mal_vc_there_were_le := vc_there_was_lexent &
   [ GENRE robust,
     ALTS.VPELLIP -,
+    INFLECTD +,
     SYNSEM mal_vc_there_synsem &
 	  [ LOCAL.CAT.HEAD.--MAL3SG + ] ].
 
@@ -1346,6 +1360,13 @@ num_det_rule :+
     ARGS < [ SYNSEM.LOCAL.CAT.HEAD.MOD < [ LOCAL.CAT.HEAD.--BARE #b ] > ] > ].
 |#
 
+;; Enrich this rule to propagate dtr's MOD..--NOSUFF value to SPEC, in order to
+;; constrain robust "many" as in "many fish"
+;;
+num_det_rule :+ 
+  [ SYNSEM.LOCAL.CAT.VAL.SPEC < [ LOCAL.CAT.HEAD.--NOSUFF #ns ] >,
+    ARGS < [ SYNSEM.LOCAL.CAT.HEAD.MOD < [ LOCAL.CAT.HEAD.--NOSUFF #ns ] > ] > ].
+
 #|
 double_det_rule := head_valence_phrase & head_final & rule &
   [ INFLECTD +,
@@ -1394,11 +1415,12 @@ mal_num_det_rule_1 := basic_num_det_phrase & rule &
 ; "Twenty book"
 ;; DPF 2017-12-22 - Changed from SPEC..AGR..PN to SPEC..INDEX..PN, in order to
 ;; also catch |two third of the cats|
+;; DPF 2018-10-02 - Removed SPEC..--BARE + so we can also trigger robust
+;; |two class arrived|
 ;;
 mal_num_det_rule_2 := basic_num_det_phrase & rule &
   [ SYNSEM.LOCAL.CAT.VAL.SPEC < [ LOCAL [ CONT.HOOK.INDEX.PNG.PN 3s,
-					  CAT.HEAD [ --BARE +,
-						     MINORS.NORM 
+					  CAT.HEAD [ MINORS.NORM 
 					                 norm_or_no_rel ] ] ] >,
     ARGS < [ SYNSEM.LOCAL.CAT.HEAD.MOD < [ LOCAL.AGR.PNG.PN 3p ] > ] >,
     GENRE robust ].
@@ -1406,17 +1428,23 @@ mal_num_det_rule_2 := basic_num_det_phrase & rule &
 ;; Plural det with singular count noun (all, several, many, more, most)
 ;; as in |all cat arose|
 ;; But block this one for temporal nouns as in |all year|
+;; DPF 2018-10-01 - We'll have to treat `all' differently, since we do want the
+;; error for |many/most/several/more year|.  So only `all' gets the SORT entity
+;; constraint on its MOD..INDEX.
+;; DPF 2018-10-01 - Changed MOD..HEAD.--BARE - to --NOSUFF - in order to still
+;; block robust |many fish| while allowing robust |many day|.
 ;;
-aj_-_i-one_le_rbst := aj_-_i-one_lexent &
-  [ SYNSEM [ LOCAL [ CAT [ HEAD [ MINORS [ ALTMIN no_rel,
+aj_-_i-one_le_rbst := basic_aj_-_i-one_lexent &
+  [ SYNSEM basic_one_num_synsem &
+           [ LOCAL [ CAT [ HEAD [ MINORS [ ALTMIN no_rel,
 					   NORM no_rel ],
-				  MOD < [ LOCAL [ CAT [ HEAD.--BARE +,
-				                        VAL.SPR < unexpressed > ],
-						  CONT.HOOK.INDEX 
-						      [ DIV -,
-							SORT entity ] ],
+				  MOD < [ LOCAL [ CAT [ HEAD.--NOSUFF -,
+				                        VAL.SPR < unexpressed>],
+						  CONT.HOOK.INDEX.DIV - ],
 					  LEX - ] > ],
-			   VAL.COMPS *synnull* ] ],
+			   VAL [ COMPS *synnull*,
+			         SPR < [ LOCAL.CAT.VAL.SPR *olist* ] >,
+			         SPCMPS < > ] ] ],
 	     MODIFD.LPERIPH + ],
     GENRE robust ].
 
@@ -1821,15 +1849,6 @@ v_np_wre-n_le_rbst := v_np_wre-n_lexent &
 
 
 ;; Constrain to singular unknown names, to avoid spurious for e.g. |Pistorius|
-#|
-n_-_pn-gen_le := basic_n_proper_lexent & generic_ne_lex_entry &
-  [ INFLECTD -,
-    SYNSEM [ LOCAL [ CAT [ HEAD.MINORS.MIN named_np_rel,
-			   VAL.SPR < [ --MIN _the_q_prop_rel ] > ],
-		     AGR.PNG.PN 3s ],
-	     MODIFD.LPERIPH na_or_+,
-	     LKEYS.KEYREL [ PRED named_rel ] ] ].
-|#
 n_-_pn-gen_le := basic_n_proper_lexent & generic_ne_lex_entry &
   [ INFLECTD -,
     SYNSEM [ LOCAL [ CAT [ HEAD.MINORS.MIN named_np_rel,
@@ -2242,6 +2261,10 @@ appos_rev_rel := appos_rel.
 ;p_np_i-nm-poss_lexent :+
 ;  [ SYNSEM.LOCAL.CAT.VAL.COMPS < [ --MIN basic_nonpro_rel ] > ].
 
+;; DPF 2018-10-02 - Prevent modifier analysis of |all of the teacher|
+p_np_i-nm-poss_lexent :+
+  [ SYNSEM.LOCAL.CAT.HEAD.MOD.FIRST.LOCAL.CAT.HEAD non_partn ].
+
 ;; Exclude |and [out it] went|
 p_np_i-nnm-nt_le :+
   [ SYNSEM.LOCAL.CAT.VAL.COMPS.FIRST.--MIN basic_nonpro_rel ].
@@ -2292,9 +2315,11 @@ alts :+ [ TNS-ID bool ].
 ;; undergo the optcomp rule, which loses ALTS.  So instead, make it a HEAD
 ;; feature of adj.
 ;; DPF 2018-04-07 - Added --IDIOMPART to prevent robust |made sure to leave|
+;; DPF 2018-09-18 - Added --NOUNADJ to prevent robust |much fun|
 ;;
 adj :+ [ --SBRD luk,
-	 --IDIOMPART bool ].
+	 --IDIOMPART bool,
+	 --NOUNADJ bool ].
 
 ;; Add --MAL3SG constraint (hack) to prevent spurious robust intrans in
 ;; |buys and sells books|
@@ -2636,8 +2661,9 @@ lex_rule_compar_equative := lex_rule_basic & word_or_infl_rule &
 							  --MIN much_deg_rel ],
 					      SUBJ #subj,
 					      SPEC #spec,
-					      COMPS.FIRST.--MIN 
-						     _than_p_compar_rel ] ],
+					      COMPS *olist* &
+					      [ FIRST.--MIN 
+						     _than_p_compar_rel ] ] ],
 				  CONT #cont,
 				  CONJ #conj,
 				  CTXT #ctxt,
@@ -2786,8 +2812,7 @@ adj_vp_inf_seq_mal_lr := lex_rule &
   [ ORTH #orth,
     DTR [ ORTH #orth,
 	  SYNSEM reg_adj_atrans_synsem &
-	  	 [ LOCAL.CAT.VAL.COMPS < [], [ LOCAL.CAT.HEAD.VFORM inf ] > ],
-	  ALTS.AVIP + ],
+	  	 [ LOCAL.CAT.VAL.COMPS < [], [ LOCAL.CAT.HEAD.VFORM inf ] > ] ],
     SYNSEM basic_adj_vpcomp_synsem &
 	 [ LOCAL [ CAT [ HEAD adj & [ MINORS.MIN norm_adj_rel,
 				      --SBRD - ],
@@ -2913,6 +2938,10 @@ p_cp_ptcl-npgap_le :+
 filler_head_fin_np_rel_rule :+
   [ ARGS.FIRST.SYNSEM.LOCAL.CAT.HEAD.CASE non_obliq ].
 
+;; DPF 2018-09-18 - Not clear what these constraints aimed to achieve, but
+;; they get in the way of |Recess is a time to enjoy|, so comment out, and
+;; CHECK.
+#|
 n_pp_mc-of-ns_le :+
   [ SYNSEM.LOCAL.CONT.HOOK.INDEX.SORT nontime-or-qevent ].
 n_-_c-ed-ns_le :+
@@ -2943,6 +2972,7 @@ n_pp_mc-ns_le :+
   [ SYNSEM.LOCAL.CONT.HOOK.INDEX.SORT nontime-or-qevent ].
 n_pp_c-gr-of-ns_le :+
   [ SYNSEM.LOCAL.CONT.HOOK.INDEX.SORT nontime-or-qevent ].
+|#
 
 frag_np_rule :+
   [ ARGS.FIRST.SYNSEM.LOCAL.CONT.HOOK.InDEX.SORT norm-entity-or-event ].
@@ -3087,3 +3117,41 @@ prep_intrans_dir_verb := twoarg_verb_synsem & basic_prep_intrans_subst &
                                               COMPS < > ],
                                         MC na ] ] > ].
 
+;; Assign default value [PT notpro].
+noun_word :+
+  [ SYNSEM.--SIND.PT notpro ].
+noun_hclex_word :+
+  [ SYNSEM.--SIND.PT notpro ].
+n_numcomp_lexent :+
+  [ SYNSEM.--SIND.PT notpro ].
+n_pp_mc-of-lhc_lexent :+
+  [ SYNSEM.--SIND.PT notpro ].
+n_pp_c-of-lhc_le :+
+  [ SYNSEM.--SIND.PT notpro ].
+basic_n_intr_infl_lex_entry :+
+  [ SYNSEM.--SIND.PT notpro ].
+n_pred_lexent :+
+  [ SYNSEM.--SIND.PT notpro ].
+basic_np_sing_word :+
+  [ SYNSEM.--SIND.PT notpro ].
+basic_n_proper_lexent :+
+  [ SYNSEM.--SIND.PT notpro ].
+abstr_hour_word :+
+  [ SYNSEM.--SIND.PT notpro ].
+basic_n_day_part_lexent :+
+  [ SYNSEM.--SIND.PT notpro ].
+n_def_day_part_lexent :+
+  [ SYNSEM.--SIND.PT notpro ].
+noun_do_be_synsem :+
+  [ --SIND.PT notpro ].
+
+;; Avoid robust by-means-time in |by waste|
+n_-_mc-ns_lexent :+
+  [ SYNSEM.LOCAL.CONT.HOOK.INDEX.SORT nontime-or-qevent ].
+n_pp_mc-of-ns_le :+
+  [ SYNSEM.LOCAL.CONT.HOOK.INDEX.SORT nontime-or-qevent ].
+
+aj_pp_i-cmp-sme_le_rbst := aj_pp_i-cmp_lexent &
+  [ SYNSEM 
+   [ LOCAL.CAT.HEAD.MOD < [ LOCAL.CAT.VAL.SPR < unexpressed > ] > ],
+   GENRE robust ].
