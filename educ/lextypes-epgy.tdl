@@ -200,6 +200,9 @@ det_poss_lexent := basic_det_poss_lexent &
 			  	  ARG0 [ PT std ] ] !> ].
 |#
 
+det_poss_lexent :+
+  [ SYNSEM.LOCAL.CAT.HEAD.MINORS.MIN def_poss_q_rel ].
+
 adj_equi_bse_mal_synsem := basic_adj_equi_synsem & 
   [ LOCAL [ CAT [ HEAD adj,
 		  VAL [ SPR.FIRST synsem &
@@ -487,8 +490,10 @@ ssr_bse_noimp_verb := ssr_bse_verb &
   [ LOCAL.CAT.HEAD.VFORM fin_or_non_fin ].
 
 ;; |she is done to sing|
+;; but not |she is too busy to sing|
 aj_vp_i-seq-prp_le_rbst := adj_reg_equi_lexent &
-  [ SYNSEM.LOCAL.CAT.HEAD.MINORS.MIN norm_adj_rel,
+  [ SYNSEM.LOCAL.CAT [ HEAD.MINORS.MIN norm_adj_rel,
+                       VAL.SPR.FIRST.--MIN very_deg_rel ],
     GENRE robust ].
 
 ;; For adverbs mistakenly used as attrib adjectives, need lexical rule
@@ -1009,13 +1014,16 @@ mal_vc_prd_is_le := vc_prd_are_lexent &
 ;; constrain via SORT, as is done for normal mal3sg
 ;; Removed SUBJ.--BARE + since it blocks |the style are different|, so
 ;; to block robust |three are happy| with np-num, constrain to RPERIPH na_or_-.
+;; DPF 2018-11-07 Re 2018-03-29: But mass nouns are RPERIPH +, so we don't get
+;; robust |information are available|.  At present, number NPs and mass nouns 
+;; are not very different, so we may need to add some hack property to numbers
+;; to block them with pred copula.  Let's see how often ranking fails and FIX.
 ;;
 mal_vc_prd_are_le := be_pres_lex_entry & be_cop_pos &
   [ INFLECTD +,
     ALTS.VPELLIP -,
     SYNSEM.LOCAL [ CAT.VAL.SUBJ.FIRST [ LOCAL [ AGR.PNG.PN 3s ],
-					--SIND.SORT entity,
-					MODIFD.RPERIPH na_or_- ],
+					--SIND.SORT entity-or-nomevent ],
 		   AGR.PNG png & [ PN 3s ] ],
     GENRE robust ].
 
@@ -1348,8 +1356,11 @@ bare_np_sg_phrase_robust := basic_bare_np_sg_phrase_robust &
                    CONT.HOOK.INDEX.--BARESG + ] ].
 
 ;; DPF 2018-09-13 - Enable avoiding bare-NP for |I know that book is boring|
+;; DPF 2018-11-09 - Added DEF (definiteness) feature, so we can catch
+;; |all of money|.
 full_index :+
-  [ --BARESG bool ].
+  [ --BARESG bool,
+    DEF bool ].
 
 #|
 ;; Enrich this rule to propagate dtr's MOD..--BARE value to SPEC, in order to
@@ -1589,6 +1600,12 @@ cat_infl_nosuff := cat &
 n_-_c-pl_le :+ [ SYNSEM.LOCAL.CAT cat_infl_nosuff ].
 n_-_c-pl-def_le :+ [ SYNSEM.LOCAL.CAT cat_infl_nosuff ].
 
+;; DPF 2018-11-09 - Add --NOSUFF + so we can avoid robust |more food| where
+;; food is mass-or-count, so unmarked for DIV.
+;;
+mass_count_noun :+
+[ CAT.HEAD.--NOSUFF + ].
+
 ;; mal-entry for |they arrived in 1920s|
 n_-_c-pl-gen_le_mal := n_-_c-pl-gen_lexent &
   [ SYNSEM.LOCAL.CAT.VAL.SPR.FIRST unexpressed,
@@ -1667,7 +1684,7 @@ lex_rule_plural_mass := lex_rule_basic & word_or_infl_rule &
 	     NONLOC #nonloc,
 	     OPT #opt,
 	     --MIN #min,
-	     --SIND #sind,
+	     --SIND #sind & [ --BARESG - ],
 	     LEX #lex,
 	     MODIFD #modifd,
 	     PHON #phon,
@@ -2078,6 +2095,16 @@ n_-_c-pl_le_rbst := n_intr_infl_lex_entry &
 					       DIV + ] ] >,
 		   CONT.HOOK.INDEX [ PNG.PN 3p,
 				     DIV + ] ],
+    GENRE robust ].
+
+;; Wrong singulars for pluralia tantum: |I expressed my thank|
+;;
+n_-_c-sg_le_rbst := n_intr_infl_lex_entry &
+  [ SYNSEM.LOCAL [ CAT [ HEAD.MINORS.NORM norm_rel,
+                         VAL.SPR < [ LOCAL.AGR [ PNG.PN 3s,
+			 		         DIV - ] ] > ],
+		   CONT.HOOK.INDEX [ PNG.PN 3s,
+				     DIV - ] ],
     GENRE robust ].
 
 ; Intransitive used as causative: |this deteriorates the problem|
@@ -2553,7 +2580,7 @@ noun_n_cmpnd_mnp_mal_rule := binary_rule_right_to_left &
     NH-DTR [ INFLECTD +,
 	     SYNSEM [ LOCAL [ CAT [ HEAD [ MINORS.MIN meas_nom_rel,
 					   --BARE - ],
-				    VAL.SPR.FIRST.OPT - ],
+				    VAL.SPR.FIRST synsem & [ OPT - ] ],
 			      CONT.HOOK.INDEX nonconj_ref-ind & [ PNG.PN 3p ] ],
 		      MODIFD notmod_or_lmod,
 		      PUNCT.RPUNCT hyphen_or_pair_or_no_punct ] ],
@@ -2570,7 +2597,7 @@ aj_-_i-att_le_rbst := reg_adj_word &
 ;; And added HS-LEX + to prevent robust |something arose| while still getting
 ;; robust |important something arose|.
 ;;
-n_-_m-mod_le_rbst := basic_noun_word &
+n_-_m-mod_lexent_mal := basic_noun_word &
   [ INFLECTD +,
     SYNSEM basic_unsp_common_noun_synsem &
 	   [ LOCAL [ CAT [ HEAD noun &
@@ -2593,6 +2620,12 @@ n_-_m-mod_le_rbst := basic_noun_word &
 	     NONLOC non-local_none,
 	     MODIFD notmod & [ RPERIPH + ] ],
     GENRE robust ].
+
+;; For |important anything| where the adj should follow the noun.
+n_-_m-mod_le_rbst := n_-_m-mod_lexent_mal. 
+
+;; For |we admire new school| where article is oblig
+n_-_m-nomod_le_rbst := n_-_m-mod_lexent_mal. 
 
 ; |Kim is very taller|
 av_-_dg-m_le_rbst := adv_degree_spec_lexent &
@@ -3155,3 +3188,18 @@ aj_pp_i-cmp-sme_le_rbst := aj_pp_i-cmp_lexent &
   [ SYNSEM 
    [ LOCAL.CAT.HEAD.MOD < [ LOCAL.CAT.VAL.SPR < unexpressed > ] > ],
    GENRE robust ].
+
+;; Plural: |ten cents per children|
+;;
+p_nb_i_le_rbst := p_nb_i_lexent &
+  [ SYNSEM.LOCAL.CAT.VAL.COMPS.FIRST.LOCAL.AGR.PNG.PN 3p,
+    GENRE robust ].
+
+;; For |Kim picked up him|
+robust_particle_NP_verb := verb_synsem & basic_particle_NP_subst & 
+                           particle_NP_lt &
+  [ LOCAL.CAT.VAL.COMPS < [], [ --MIN basic_pron_rel ] > ].
+
+NP_particle_lr_mal := basic_NP_particle_lr &
+  [ SYNSEM robust_particle_np_verb,
+    GENRE robust ].
