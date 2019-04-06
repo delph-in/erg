@@ -150,7 +150,7 @@
 (defparameter *mrs-normalization-heuristics*
   '(("JJ[RS]?" nil "_~a_a_unknown")
     ("(?:FW|NN)" nil "_~a_n_unknown")
-    ("NNS" nil "_~a_n_unknown")
+    ("NNS" :n_pl_olr "_~a_n_unknown")
     ("RB" nil "_~a_a_unknown")
     ("VBP?" :v_3s-fin_olr "_~a_v_unknown")
     ("VBD" :v_pst_olr "_~a_v_unknown")
@@ -165,7 +165,7 @@
       when (stringp pred) do
         (loop
             for (tag rule pattern) in *mrs-normalization-heuristics*
-            for re = (format nil "^_([^_]+)/~a_u_unknown$" tag)
+            for re = (format nil "(?i)^_([^_]+)/~a_u_unknown$" tag)
             thereis 
               (multiple-value-bind (start end starts ends) (ppcre:scan re pred)
                 (when (and start end)

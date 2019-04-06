@@ -12,6 +12,8 @@
 (setf *eds-bleached-relations* nil)
 (setf *eds-non-representatives*
   (list (vsym "appos") (vsym "id") (vsym "focus_d") (vsym "parg_d")))
+(setf *eds-predicate-filter* 
+  "^focus_d$|^parg_d$")
 (setf *eds-predicate-modifiers*
   (list (ppcre:create-scanner "_x_deg$|^neg$|^_quite_x$")))
 (setf *eds-untensed* (list (cons (vsym "TENSE") (vsym "untensed"))))
