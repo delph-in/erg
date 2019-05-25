@@ -87,6 +87,21 @@
 (setf *variable-type-mapping* :semi)
 
 ;;;
+;;; starting with its 1214 release, the ERG makes MRS predicate normalization
+;;; the default, i.e. eliminates the symbol vs. string contrast on predicates;
+;;; whereas a grammar might use either one (or both, even for the abstractly
+;;; same predicate, e.g. _afterwards_p and "_afterwards_p" in the 1214 ERG),
+;;; these shall be treated as equivalent in the MRS universe.  also, we will
+;;; now always strip the (optional) *sem-relation-suffix* (‘_rel’ in the ERG)
+;;; from predicate names, as this is a mechanism on the TFS side only (to give
+;;; the grammar something like a separate namespace for its predicates).  in
+;;; the past, some MRS serializations suppressed the symbol vs. type contrast,
+;;; some exposed it; likewise, some stripped the suffix, and others kept it.
+;;; see the discussion on the ‘developers’ list from january 2016 for details.
+;;;
+(setf *normalize-predicates-p* t)
+
+;;;
 ;;; context condition in MRS munging rules
 ;;; 
 (defparameter *mrs-rule-condition-path* (list (vsym "CONTEXT")))
@@ -132,15 +147,15 @@
 ;;; the normalized PRED value.
 ;;;
 (defparameter *mrs-normalization-heuristics*
-  '(("JJ[RS]?" nil "_~a_a_unknown_rel")
-    ("(?:FW|NN)" nil "_~a_n_unknown_rel")
-    ("NNS" nil "_~a_n_unknown_rel")
-    ("RB" nil "_~a_a_unknown_rel")
-    ("VBP?" :v_3s-fin_olr "_~a_v_unknown_rel")
-    ("VBD" :v_pst_olr "_~a_v_unknown_rel")
-    ("VBG" :v_prp_olr "_~a_v_unknown_rel")
-    ("VBN" :v_psp_olr "_~a_v_unknown_rel")
-    ("VBZ" :v_3s-fin_olr "_~a_v_unknown_rel")))
+  '(("JJ[RS]?" nil "_~a_a_unknown")
+    ("(?:FW|NN)" nil "_~a_n_unknown")
+    ("NNS":n_pl_olr "_~a_n_unknown")
+    ("RB" nil "_~a_a_unknown")
+    ("VBP?" :v_3s-fin_olr "_~a_v_unknown")
+    ("VBD" :v_pst_olr "_~a_v_unknown")
+    ("VBG" :v_prp_olr "_~a_v_unknown")
+    ("VBN" :v_psp_olr "_~a_v_unknown")
+    ("VBZ" :v_3s-fin_olr "_~a_v_unknown")))
 
 (defun normalize-mrs (mrs)
   (loop
@@ -149,7 +164,7 @@
       when (stringp pred) do
         (loop
             for (tag rule pattern) in *mrs-normalization-heuristics*
-            for re = (format nil "^_([^_]+)/~a_u_unknown_rel$" tag)
+            for re = (format nil "(?i)^_([^_]+)/~a_u_unknown$" tag)
             thereis 
               (multiple-value-bind (start end starts ends) (ppcre:scan re pred)
                 (when (and start end)
@@ -168,5 +183,3 @@
                         (format nil pattern (string-downcase form))))))))))
   mrs)
 
-;; Now using modern SEM-I construction machinery, so set this flag accordingly:
-(setf *normalize-predicates-p* t)
