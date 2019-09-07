@@ -231,7 +231,7 @@
            (index (read-mrs-index istream))
            (liszt (read-mrs-liszt istream))
            (hcons (if *rel-handel-path* (read-mrs-hcons istream)))
-           (icons (if *rel-handel-path* (read-mrs-icons istream)))
+           (icons (if *icons-p* (read-mrs-icons istream)))
            (vcs (ignore-errors (read-mrs-vcs istream)))
            (psoa
             (make-psoa :top-h ltop

@@ -75,4 +75,12 @@
  #+:null
  ((:path . "tanaka") (:content . "Tanaka Corpus (English Translations)"))
  ((:path . "lpp") (:content . "Le Petit Prince"))
- ((:path . "redwoods") (:content . "Core Redwoods (JHPSTG & WeScience)")))
+ ((:path . "wrev1819") (:content . "Writing Reviews 10/18-01/19"))
+ ((:path . "redwoods") (:content . "Core Redwoods (JHPSTG & WeScience)"))
+ ((:path . "educ") (:content . "Educational Composition"))
+ ((:path . "repsol") (:content . "Alexandre Rademaker mining data"))
+ ((:path . "ccs") (:content . "Collab Compuational Semantics"))
+ ((:path . "control") (:content . "Control examples from literature"))
+ ((:path . "handp12") (:content . "Huddleston and Pullum Ch.12"))
+ ((:path . "sh-spec") (:content . "Sherlock Holmes Speckled Band"))
+)

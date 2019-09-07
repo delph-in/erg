@@ -760,6 +760,7 @@ frag := subst_or_func & verb_or_frag & conj_or_frag & disc_adverbee & mobile &
 ;; conj-s := verbal & verb_or_conj-s.
 verbal_or_conj-s := basic_verb_or_frag.
 conj-s := verb_or_conj-s & verbal_or_conj-s.
+conj-s_full := conj-s & vc_add.
 
 ; For 'foreign' words, typically marked as italicized
 fw := head & [ MOD < > ].
@@ -2468,6 +2469,7 @@ _against_p_rel := dir_or_state_nontemp_rel.
 _against_p_dir_rel := _against_p_rel & dir_rel.
 _against_p_state_rel := _against_p_rel & state_loc_rel.
 _ago_p_rel := state_loc_rel.
+_again_a_rel := miscprep_rel.
 _ahead_p_rel := miscprep_rel.
 _ahead+of_p_rel := dir_or_state_nontemp_rel.
 _ahead+of_p_dir_rel := _ahead+of_p_rel & dir_rel.
@@ -2572,6 +2574,7 @@ _betwixt_p_rel := temp_loc_rel.
 _beyond_p_rel := dir_or_state_nontemp_rel.
 _beyond_p_dir_rel := _beyond_p_rel & dir_rel.
 _beyond_p_state_rel := _beyond_p_rel & state_loc_rel.
+_broadside_p_rel := dir_or_state_nontemp_rel.
 _but+for_p_rel := miscprep_rel.
 _but_p_except_rel := miscprep_rel.
 _by_p_rel := prep_mod_rel.
@@ -2662,6 +2665,7 @@ _from_p_rel := dir_or_state_nontemp_rel.
 _from_p_dir_rel := _from_p_rel & dir_rel.
 _from_p_state_rel := _from_p_rel & state_loc_rel.
 _from_p_place-in_rel := miscprep_rel.
+_from_p_nbar_rel := miscprep_rel.
 _from_p_to_rel := dir_rel & instance_rel.
 _from_p_to-n_rel := dir_rel & instance_rel.
 _from_p_time-on_rel := miscprep_rel.
@@ -3540,6 +3544,7 @@ time_nomod_rel := non_day_diadic_rel & hour_or_time_rel.
 
 ; mealtimes - disallow relative clause modification
 mealtime_rel := hour_or_time_rel.
+
 ;; named_month_rel as in "January is fine"
 ;; DPF 13-Mar-02 - Changed parent non_day_diadic_modable_rel to 
 ;; non_day_diadic_rel since we were overgenerating: "*Kim arrived June" in 
@@ -3547,6 +3552,7 @@ mealtime_rel := hour_or_time_rel.
 ;; allow the latter.
 ;; DPF 04-sep-09 - Changed back, since we want "last June", and can block
 ;; just "June" as NPadv via MODIFD value
+
 mofy_rel := non_day_diadic_modable_rel & abstr_named_np_rel & 
 	    dofm_or_mofy_rel & mofy_or_the_q_rel.
 
@@ -4231,11 +4237,14 @@ punctuation_min1 := punctuation_min &
 ;; mark.
 ;; DPF 2017-02-01 - Also added RITAL (right italics) for foreign-word sequences
 ;; such as |the phrase "el amor".| 
+;; DPF 2019-03-31 - Added LCLSTR so we can verify matched parens, and perhaps
+;; other paired punctuation.
 ;
 punctuation := punctuation_min1 &
   [ LPUNCT basic_punct_mark,
     RPUNCT basic_punct_mark,
     PAIRED pnctpair,
+    LCLSTR lpunct_cluster,
     RCLSTR rpunct_cluster ].
 
 ;; DPF 2018-06-14 - And added LITAL (paired right and left italics) for single
@@ -4245,13 +4254,21 @@ punctuation := punctuation_min1 &
 ;; attributes would block filtering.
 ;;
 rpunct_cluster := *avm* &
-  [ RPAREN bool,
+  [ RPAREN luk,
     RFP bool,
     IGNOREQ bool,
     RITAL bool,
     LITAL bool ].
 
+lpunct_cluster := *avm* &
+  [ LPAREN luk ].
+
 no_punctuation_min := punctuation_min1.
+;; DPF 2019-03-31 - Make default LPAREN value be na_or_- so we can constrain
+;; the right dtr of a binary rule to require unification of LPAREN and RPAREN,
+;; allowing an unpaired right paren (with RPAREN na_or_+) to continue upward, 
+;; but not an unpaired LPAREN.
+;;
 no_punctuation := punctuation & no_punctuation_min &
   [ LPUNCT no_punct,
     RPUNCT no_punct,
@@ -4259,7 +4276,8 @@ no_punctuation := punctuation & no_punctuation_min &
     RCLSTR [ RPAREN -,
 	     RFP -,
 	     RITAL -,
-	     LITAL - ] ].
+	     LITAL - ],
+    LCLSTR.LPAREN na_or_- ].
 
 ;; DPF 2017-12-16 - Type to contrast with inherited lexical no_punctuation,
 ;; a contrast we use in blocking verbal gerunds which are only lexical
@@ -4308,7 +4326,8 @@ comma_or_rbc_or_no_punct := comma_or_rbc_or_pair_or_no_punct &
 comma_or_pair_or_no_punct := comma_or_hyphen_or_pair_or_no_punct &
                              comma_or_rbc_or_pair_or_no_punct &
                              comma_or_clause_or_pair_or_no_punct &
-			     comma_or_semi_or_pair_or_no_punct.
+			     comma_or_semi_or_pair_or_no_punct &
+			     lital_or_pair_or_comma_or_no_punct.
 rbc_or_pair_or_no_punct := comma_or_rbc_or_pair_or_no_punct &
                            comma_or_hyphen_or_pair_or_no_punct &
                            rbc_or_hyphen_or_pair_or_no_punct.
@@ -4334,7 +4353,9 @@ hyphen_sgl_or_no_punct := hyphen_sgl_or_clause_or_no_punct &
 hyphen_dbl_or_no_punct := hyphen_dbl_or_clause_or_no_punct &
                           hyphen_or_pair_or_no_punct.
 3dots_or_no_punct := 3dots_or_clause_or_no_punct.
-lital_or_pair_or_no_punct := basic_punct_mark.
+;; Allow for robust prefixed comma in head_spec
+lital_or_pair_or_comma_or_no_punct := basic_punct_mark.
+lital_or_pair_or_no_punct := lital_or_pair_or_comma_or_no_punct.
 pair_or_no_punct := comma_or_pair_or_no_punct & hyphen_or_pair_or_no_punct
                     & clause_or_pair_or_no_punct & rbc_or_pair_or_no_punct &
 		    semi_or_pair_or_no_punct & lital_or_pair_or_no_punct.
@@ -4508,7 +4529,8 @@ root_orth := orthog.
 basic_root_phr_synsem := basic_root_synsem & phr_synsem.
 basic_root_lex_synsem := basic_root_synsem & lex_synsem.
 root_phr_synsem := root_synsem & phr_synsem.
-root_lex_synsem := root_synsem & lex_synsem.
+root_lex_synsem := root_synsem & lex_synsem &
+  [ NONLOC.SLASH 0-dlist & [ LIST < > ] ].
 
 root_frag_synsem := canonical_synsem &
   [ LOCAL [ CAT [ HEAD conj_or_frag,

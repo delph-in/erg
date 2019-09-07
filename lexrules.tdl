@@ -1,4 +1,4 @@
-;;; -*- Mode: tdl; Coding: utf-8; -*-
+;; -*- Mode: tdl; Coding: utf-8; -*-
 ;;;
 ;;;  Copyright (c) 1994-2018
 ;;;    Dan Flickinger, Rob Malouf, Emily M. Bender
@@ -1527,6 +1527,7 @@ attr_adj_lr := basic_lex_rule_supermost &
 basic_attr_verb_part_lr := lex_rule_basic &
   [ ORTH #orth,
     DTR [ ORTH #orth,
+	  ALTS.VADJ +,
 	  SYNSEM [ LOCAL [ CAT [ HEAD verb &
                                       [ VFORM pas_or_prp,
                                         PRD +,
@@ -1572,8 +1573,7 @@ attr_verb_part_lr := attr_verb_part_nbarmod_lr &
 ; e.g. "the shrinking window"
 ;;
 attr_verb_part_tr_lr := attr_verb_part_nbarmod_lr &
-  [ ALTS.VADJ +,
-    SYNSEM.LOCAL.CAT.VAL.COMPS < >,
+  [ SYNSEM.LOCAL.CAT.VAL.COMPS < >,
     DTR.SYNSEM 
 	[ LOCAL.CAT [ HEAD [ VFORM prp,
 			     MINORS.ALTMIN role_rel ],
@@ -2045,8 +2045,8 @@ basic_enough_addition := lex_rule_basic &
                            VAL [ SUBJ #subj,
                                  COMPS *olist*,
                                  SPR.FIRST synsem &
-				      [ --MIN very_deg_rel,
-					LOCAL.CONT.HOOK #sphook ] ],
+				   [ LOCAL [ CAT.HEAD.MINORS.MIN very_deg_rel,
+					     CONT.HOOK #sphook ] ] ],
 			   MC #mc ],
 		     CONT.HOOK #hook,
                      CTXT #ctxt ],
@@ -2405,7 +2405,8 @@ foreign_lr := lex_rule_supermost & word_or_nonpunct_rule &
 			   RCLSTR [ RPAREN #rp,
 				    RFP #rfp,
 				    RITAL +,
-				    LITAL - ] ],
+				    LITAL - ],
+			   LCLSTR #lclstr ],
 		   LKEYS #lkeys,
 		   PHON.ONSET #onset ],
           KEY-ARG #keyarg,
@@ -2439,7 +2440,8 @@ foreign_lr := lex_rule_supermost & word_or_nonpunct_rule &
 		     RCLSTR [ RPAREN #rp,
 			      RFP #rfp,
 			      RITAL +,
-			      LITAL + ] ],
+			      LITAL + ],
+		     LCLSTR #lclstr  ],
 	     PHON.ONSET #onset ],
     GENRE #genre,
     C-CONT [ HOOK [ LTOP #hand,
@@ -2495,10 +2497,12 @@ basic_punctuation_rule := lex_rule_supermost & word_or_punct_rule &
 
 punctuation_rule := basic_punctuation_rule &
   [ INFLECTD #infl & na_or_+,
-    SYNSEM.PUNCT.RCLSTR #rclstr,
+    SYNSEM.PUNCT [ RCLSTR #rclstr,
+		   LCLSTR #lclstr ],
     GENRE #genre,
     ARGS < [ INFLECTD #infl,
-             SYNSEM.PUNCT.RCLSTR #rclstr,
+             SYNSEM.PUNCT [ RCLSTR #rclstr,
+			    LCLSTR #lclstr ],
              GENRE #genre ] > ].
 
 punctuation_clause_rule := punctuation_rule &
@@ -2535,16 +2539,20 @@ punctuation_colon_rule := punctuation_rule &
     ARGS < [ SYNSEM.PUNCT [ LPUNCT #lpunct & no_punct,
                             RPUNCT pair_or_no_punct ] ] > ].
 
-basic_punctuation_comma_rule := basic_punctuation_rule &
+generic_punctuation_comma_rule := basic_punctuation_rule &
   [ INFLECTD #infl,
-    SYNSEM.PUNCT [ LPUNCT #lpunct,
-                   RCLSTR #rclstr ],
+    SYNSEM.PUNCT [ RCLSTR #rclstr,
+                   LCLSTR #lclstr ],
     GENRE #genre,
     ARGS < [ INFLECTD #infl,
-             SYNSEM.PUNCT [ LPUNCT #lpunct & no_punct,
-                            RPUNCT pair_or_no_punct,
-                            RCLSTR #rclstr ],
+             SYNSEM.PUNCT [ RPUNCT pair_or_no_punct,
+                            RCLSTR #rclstr,
+                            LCLSTR #lclstr ],
              GENRE #genre ] > ].
+
+basic_punctuation_comma_rule := generic_punctuation_comma_rule &
+  [ SYNSEM.PUNCT.LPUNCT #lpunct,
+    ARGS < [ SYNSEM.PUNCT.LPUNCT #lpunct & no_punct ] > ].
 
 punctuation_comma_rule := basic_punctuation_comma_rule &
   [ SYNSEM.PUNCT [ PNCTPR no_ppair,
@@ -2560,17 +2568,19 @@ punctuation_rparen_rule := basic_punctuation_rule &
   [ INFLECTD #infl,
     SYNSEM.PUNCT [ LPUNCT #lpunct,
                    RPUNCT rparen_punct & [ PSF #pred ],
-                   RCLSTR [ RPAREN +,
+                   RCLSTR [ RPAREN na_or_+,
 			    RFP #rfp,
 			    RITAL #rital,
-			    LITAL #lital ] ],
+			    LITAL #lital ],
+		   LCLSTR #lclstr ],
     ARGS < [ INFLECTD #infl,
              SYNSEM.PUNCT [ LPUNCT #lpunct & no_punct,
                             RPUNCT clause_or_pair_or_no_punct &
                                    [ PSF #pred ],
 			    RCLSTR [ RFP #rfp,
 				     RITAL #rital,
-				     LITAL #lital ] ],
+				     LITAL #lital ],
+			    LCLSTR #lclstr ],
 	     GENRE #genre ] >,
     GENRE #genre ].
 
@@ -2578,12 +2588,17 @@ w_rparen_rule := punctuation_rparen_rule.
 w_comma-rp_rule := punctuation_rparen_rule.
 w_rbrack_rule := punctuation_rparen_rule.
 
+;; DPF 2019-03-31 - Added LPAREN na_or_+ so that the normal binary phrase can
+;; require the right dtr to have either no left paren or paired parens, by
+;; unifying LPAREN and RPAREN.
+;;
 punctuation_lparen_rule := basic_punctuation_rule &
   [ INFLECTD #infl,
     SYNSEM.PUNCT [ LPUNCT lparen_punct,
                    RPUNCT #rpunct,
                    PNCTPR #pnctpr,
-                   RCLSTR #rclstr ],
+                   RCLSTR #rclstr,
+		   LCLSTR.LPAREN na_or_+ ],
     ARGS < [ INFLECTD #infl,
              SYNSEM.PUNCT [ RPUNCT #rpunct,
                             PNCTPR #pnctpr,
@@ -2605,6 +2620,7 @@ punctuation_dqright_rule := basic_punctuation_rule &
 			    RFP #rfp,
 			    IGNOREQ #iq,
 			    RITAL + ],
+		   LCLSTR #lclstr,
 		   PAIRED #paired,
 		   PNCTPR #pnctpr ],
     ARGS < [ INFLECTD #infl,
@@ -2613,6 +2629,7 @@ punctuation_dqright_rule := basic_punctuation_rule &
 			    RCLSTR [ RPAREN #rp,
 				     RFP #rfp,
 				     IGNOREQ #iq ],
+			    LCLSTR #lclstr,
 			    PAIRED #paired,
 			    PNCTPR #pnctpr ],
              GENRE #genre ] >,
@@ -2623,6 +2640,7 @@ punctuation_dqleft_rule := basic_punctuation_rule &
     SYNSEM.PUNCT [ LPUNCT dq_punct,
                    RPUNCT #rpunct,
                    RCLSTR #rclstr,
+		   LCLSTR #lclstr,
 		   PAIRED #paired,
 		   PNCTPR #pnctpr ],
     ARGS < [ INFLECTD #infl,
@@ -2630,6 +2648,7 @@ punctuation_dqleft_rule := basic_punctuation_rule &
 			    RPUNCT #rpunct &
 	     		           comma_or_rbc_or_clause_or_pair_or_no_punct,
                             RCLSTR #rclstr,
+			    LCLSTR #lclstr,
 			    PAIRED #paired,
 			    PNCTPR #pnctpr ],
              GENRE #genre ] >,
@@ -2642,14 +2661,16 @@ punctuation_sqright_rule := basic_punctuation_rule &
                    RCLSTR [ RPAREN #rp,
 			    RFP #rfp,
 			    IGNOREQ #iq,
-			    RITAL + ] ],
+			    RITAL + ],
+		   LCLSTR #lclstr ],
     ARGS < [ INFLECTD #infl,
              SYNSEM.PUNCT [ LPUNCT #lpunct & no_punct,
                             RPUNCT comma_or_clause_or_no_punct &
                                    [ PSF #pred ],
                             RCLSTR [ RPAREN #rp,
 				     RFP #rfp,
-				     IGNOREQ #iq ] ],
+				     IGNOREQ #iq ],
+			    LCLSTR #lclstr ],
              GENRE #genre ] >,
     GENRE #genre ].
     
@@ -2657,10 +2678,12 @@ punctuation_sqleft_rule := basic_punctuation_rule &
   [ INFLECTD #infl,
     SYNSEM.PUNCT [ LPUNCT sq_punct,
                    RPUNCT #rpunct,
-                   RCLSTR #rclstr ],
+                   RCLSTR #rclstr,
+		   LCLSTR #lclstr ],
     ARGS < [ INFLECTD #infl,
              SYNSEM.PUNCT [ RPUNCT #rpunct,
-                            RCLSTR #rclstr ],
+                            RCLSTR #rclstr,
+			    LCLSTR #lclstr ],
              ALTS.SQPNCT +,
              GENRE #genre ] >,
     GENRE #genre ].
@@ -2669,12 +2692,14 @@ punctuation_hyphen_rule := basic_punctuation_rule &
   [ INFLECTD #infl,
     SYNSEM.PUNCT [ LPUNCT #lpunct,
                    RPUNCT hyphen_sgl & [ PSF #pred ],
-                   RCLSTR #rclstr ],
+                   RCLSTR #rclstr,
+		   LCLSTR #lclstr ],
     ARGS < [ INFLECTD #infl,
              SYNSEM.PUNCT [ LPUNCT #lpunct & no_punct,
                             RPUNCT no_punct &
                                    [ PSF #pred ],
-                            RCLSTR #rclstr ],
+                            RCLSTR #rclstr,
+			    LCLSTR #lclstr ],
              GENRE #genre ] >,
     GENRE #genre ].
     
@@ -2688,12 +2713,14 @@ punctuation_lefthyphen_rule := basic_punctuation_rule &
     SYNSEM.PUNCT [ LPUNCT hyphen_sgl,
                    RPUNCT #rpunct,
                    PNCTPR #pnctpr,
-                   RCLSTR #rclstr ],
+                   RCLSTR #rclstr,
+		   LCLSTR #lclstr ],
     ARGS < [ INFLECTD #infl,
              SYNSEM.PUNCT [ LPUNCT no_punct,
 			    RPUNCT #rpunct,
                             PNCTPR #pnctpr,
-                            RCLSTR #rclstr ],
+                            RCLSTR #rclstr,
+			    LCLSTR #lclstr ],
              GENRE #genre ] >,
     GENRE #genre ].
 
@@ -2750,12 +2777,14 @@ punctuation_italleft_rule := basic_punctuation_rule &
   [ INFLECTD #infl,
     SYNSEM.PUNCT [ LPUNCT lital_punct,
                    RPUNCT #rpunct,
-                   RCLSTR #rclstr ],
+                   RCLSTR #rclstr,
+		   LCLSTR #lclstr ],
     ARGS < word_or_infl_or_punct_rule &
 	   [ INFLECTD #infl,
 	     SYNSEM [ PUNCT [ RPUNCT #rpunct & 
 				     comma_or_rbc_or_clause_or_no_punct,
-			      RCLSTR #rclstr & [ RITAL - ] ] ],
+			      RCLSTR #rclstr & [ RITAL - ],
+			      LCLSTR #lclstr ] ],
              GENRE #genre ] >,
     GENRE #genre ].
     
@@ -2765,11 +2794,13 @@ punctuation_italright_rule := basic_punctuation_rule &
                    RPUNCT #rpunct,
 		   RCLSTR [ RPAREN #rparen,
 			    RFP +,
-			    RITAL + ] ],
+			    RITAL + ],
+		   LCLSTR #lclstr ],
     ARGS < [ INFLECTD #infl,
 	     SYNSEM [ PUNCT [ LPUNCT #lpunct,
 			      RPUNCT rparen_or_clause_or_no_punct & #rpunct,
-			      RCLSTR.RPAREN #rparen ] ],
+			      RCLSTR.RPAREN #rparen,
+			      LCLSTR #lclstr ] ],
              GENRE #genre ] >,
     GENRE #genre ].
 
@@ -2792,11 +2823,13 @@ punct_drop_italleft_rule := basic_punctuation_rule &
   [ INFLECTD #infl,
     SYNSEM [ PUNCT [ LPUNCT no_punct_dropped,
 		     RPUNCT #rpunct,
-		     RCLSTR #rclstr ] ],
+		     RCLSTR #rclstr,
+		     LCLSTR #lclstr ] ],
     ARGS < [ INFLECTD #infl,
 	     SYNSEM [ PUNCT [ RPUNCT #rpunct & no_punct,
 			      RCLSTR #rclstr & [ IGNOREQ -,
-						 RITAL - ] ],
+						 RITAL - ],
+			      LCLSTR #lclstr ],
 		      PHON.ONSET con_or_voc ],
              GENRE #genre ] >,
     GENRE #genre ].
@@ -2808,11 +2841,13 @@ punct_drop_italright_rule := basic_punctuation_rule &
 		     RCLSTR [ RPAREN #rparen,
 			      RFP -,
 			      IGNOREQ +,
-			      RITAL - ] ] ],
+			      RITAL - ],
+		     LCLSTR #lclstr ] ],
     ARGS < [ INFLECTD #infl,
 	     SYNSEM [ PUNCT [ LPUNCT #lpunct & no_punct,
 			      RPUNCT #rpunct & clause_or_no_punct,
-			      RCLSTR.RPAREN #rparen ],
+			      RCLSTR.RPAREN #rparen,
+			      LCLSTR #lclstr ],
 		      PHON.ONSET con_or_voc ],
              GENRE #genre ] >,
     GENRE #genre ].
@@ -2831,7 +2866,8 @@ basic_derivational_prefix_rule := lex_rule_supermost & word_or_nonpunct_rule &
     DTR word_or_lexrule & #stem &
 	[ INFLECTD #infl,
 	  SYNSEM [ LOCAL [ CONT.HOOK [ LTOP #lbl,
-				       INDEX #index ],
+				       INDEX #index,
+				       XARG #xarg ],
 			   AGR #agr,
 			   CONJ cnil,
 			   CTXT #ctxt ],
@@ -2842,7 +2878,8 @@ basic_derivational_prefix_rule := lex_rule_supermost & word_or_nonpunct_rule &
 		   PHON.ONSET con_or_voc ],
           KEY-ARG #keyarg,
           GENRE #genre ],
-    SYNSEM [ LOCAL [ CONT.HOOK.LTOP #lbl,
+    SYNSEM [ LOCAL [ CONT.HOOK [ LTOP #lbl,
+                                 XARG #xarg ],
 		     AGR #agr,
 		     CONJ cnil,
 		     CTXT #ctxt ],
@@ -2880,7 +2917,7 @@ out_prefix_rule := basic_derivational_prefix_rule &
 				   COMPS *norplist* ],
 			     MC #mc,
 			     HC-LEX #hclex ] ],
-    SYNSEM trans_subst & [ LOCAL [ CAT [ HEAD #head,
+    SYNSEM np_trans_verb & [ LOCAL [ CAT [ HEAD #head,
 					 VAL [ SUBJ #subj,
 					       SPR #spr,
 					       SPEC #spec,

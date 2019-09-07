@@ -119,7 +119,7 @@ contracted_aux_word := word &
 
 ;; Removed RPERIPH + to allow post-modification, as in "it (i.e. B)"
 ;;
-n_-_pr-it_lexent := basic_n_pers_pro_lexent &
+n_-_pr-it_lexent := norm_n_pers_pro_lexent &
   [ SYNSEM [ LOCAL [ CAT.VAL [ SPR < [ --MIN no_rel ] >,
 			       COMPS < > ],
                      CONT.RELS <! relation, relation !>,
@@ -159,7 +159,8 @@ basic_partitive_num_phrase := unary_phrase & phrasal &
                            HC-LEX - ],
                      CONT nom-obj,
                      CONJ cnil,
-                     AGR #agr ] ],
+                     AGR #agr ],
+	     PUNCT #punct ],
     ARGS < [ INFLECTD +,
              SYNSEM 
 	      [ LOCAL 
@@ -170,7 +171,7 @@ basic_partitive_num_phrase := unary_phrase & phrasal &
 		   CONJ cnil,
 		   CONT.HOOK [ LTOP #nhand,
 			       XARG #index  ] ],
-		PUNCT.LPUNCT pair_or_no_punct ] ] >,
+		PUNCT #punct & [ LPUNCT pair_or_no_punct ] ] ] >,
     ORTH [ FROM #from, TO #to ],
     C-CONT [ HOOK [ LTOP #nhand,
                     INDEX #index & overt_non_expl-ind & [ PNG.PN 3p ] ],
@@ -188,12 +189,21 @@ basic_partitive_num_phrase := unary_phrase & phrasal &
 ;; DPF 2018-02-09 - Have to see if we can identify the non_conj property of
 ;; the right conjunct S, since it's no longer visible in CREL.R-INDEX.  FIX
 ;;
+#|
 s_coord_top_nc_phr := s_coord_top_phr &
   [ LCONJ-DTR.SYNSEM.LOCAL [ CONT.HOOK.INDEX non_conj_event &
 					     [ E.MOOD indicative ],
 			     CAT.HEAD.CASE #case ],
     RCONJ-DTR.SYNSEM.LOCAL [ CONT.HOOK.INDEX.E.MOOD indicative,
+			     CONJ.CREL.ARG2 non_conj_event,
 			     CAT.HEAD.CASE #case ] ].
+|#
+s_coord_top_nc_phr := s_coord_top_phr &
+  [ LCONJ-DTR.SYNSEM.LOCAL [ CONT.HOOK.INDEX [ E.MOOD indicative ],
+			     CAT.HEAD.CASE #case ],
+    RCONJ-DTR.SYNSEM.LOCAL [ CONT.HOOK.INDEX.E.MOOD indicative,
+			     CAT.HEAD.CASE #case ] ].
+
 
 ;; For multi-part coordinate structures where all conjunctions are the same
 ;; as in |B and C and D| or |B or C or D|
@@ -207,8 +217,9 @@ s_coord_symm_top_phr := s_coord_top_phr &
     RCONJ-DTR.SYNSEM.LOCAL [ CONT.HOOK.INDEX [ E.MOOD indicative,
 					       SORT #csort ],
 			     CAT.HEAD.CASE #case,
-			     CONJ [ CREL.ARG0 conj_event &
-						 [ SORT #csort ] ] ] ].
+			     CONJ.CREL [ ARG0.SORT #csort,
+			                 ARG2 conj_event ] ] ].
+
 
 ;; Add constraint to prevent |D either's large or is small|
 head_marker_phrase_atomic :+
@@ -289,6 +300,8 @@ head_adj_prule_rule := isect_mod_phrase & head_initial & rule &
 ;; Similarly, for "it is the case that ...", used for embeded conjoined CP
 ;; complements, to provide unambiguous expression of (B or (C and D)) as
 ;; |B or it is the case both that C and that D|.
+;; DPF 2019-06-10 - Since coord-S now always CASE non_nom, push COMPS..CASE nom
+;; down to subtypes, so we can still get |it is not the case that S and S|
 ;;
 v_cp_phrase_lexent := root_marker_word &
   [ SYNSEM [ LOCAL 
@@ -301,7 +314,7 @@ v_cp_phrase_lexent := root_marker_word &
 			   SUBJ < anti_synsem >,
 			   COMPS < canonical_synsem &
 			           [ LOCAL [ CAT s_cat_v_c & 
-						 [ HEAD comp & [ CASE nom ] ],
+						 [ HEAD comp ],
 					     CONT.HOOK.LTOP #chand ],
 				     OPT - ] >,
 			   SPCMPS < > ],
@@ -323,13 +336,41 @@ v_cp_notthecase_le := v_cp_phrase_lexent &
 			                       ASPECT [ PROGR -, PRF - ] ],
 					   SF prop ] ] ] ].
 
-v_cp_thecase_le := v_cp_phrase_lexent &
+distrib_collect := basic-entity-or-event.
+distributive := distrib_collect.
+collective := distrib_collect.
+distrib-entity := entity & distributive.
+collect-entity := entity & collective.
+
+;; DPF 2019-06-12 - Remove COMPS..CASE nom so we can get
+;; |it is the case both that C is large and that D is large| where the
+;; conjoined that-CL is CASE non_nom.
+;; DPF 2019-07-02 - Add SORT because the rule cond_and_thecase_gpr makes the
+;; ARG0 of isthecase be was the ARG0 of the conj, which has SORT value.
+;; But unfortunately this means having two subtypes, one for collective and
+;; one for distributive.
+;;
+#|
+v_cp_thecase_lexent := v_cp_phrase_lexent &
   [ SYNSEM [ LOCAL [ CAT.VAL.COMPS < [ --SIND conj_event & [ E #e ],
-                                       LOCAL.CONJ.LCHEAD atomic-conj ] >, 
+                                       LOCAL [ CONJ.LCHEAD atomic-conj ] ] >, 
                      CONT.HOOK.INDEX #ind & non_conj_event & 
 				   [ E #e & [ MOOD indicative ] ] ],
 	     LKEYS.KEYREL [ PRED "_thecasethat_v_rel",
 	                    ARG0 #ind ] ] ].
+|#
+v_cp_thecase_lexent := v_cp_phrase_lexent &
+  [ SYNSEM [ LOCAL [ CAT.VAL.COMPS < [ --SIND conj_event & [ E #e ] ] >,
+                     CONT.HOOK.INDEX #ind & non_conj_event & 
+				   [ E #e & [ MOOD indicative ] ] ],
+	     LKEYS.KEYREL [ PRED "_thecasethat_v_rel",
+	                    ARG0 #ind ] ] ].
+
+v_cp_thecase-coll_le := v_cp_thecase_lexent &
+  [ SYNSEM.LKEYS.KEYREL.ARG0.SORT collective ].
+
+v_cp_thecase-dist_le := v_cp_thecase_lexent &
+  [ SYNSEM.LKEYS.KEYREL.ARG0.SORT distributive ].
 
 ;; Block extraction from complement clauses, for improved generator efficiency
 sor_compl_word :+
@@ -437,3 +478,30 @@ c_xp_or-pr_le := c_xp_or_le &
    SYNSEM [ PHON.ONSET voc,
             LOCAL.CONJ.CHEAD either,
             LKEYS.KEYREL.PRED _or_c_pr_rel ] ].
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; 2019-04-19
+
+;; DPF 2019-04-19 - Though we no longer propagate CASE here in the regular
+;; grammar, we need to here since we're using CASE as a hack to generate
+;; hand-crafted parenthesized proper names without using a paren infl rule.
+;;
+np_coord_top_eg_rule := np_coord_top_rule &
+  [ SYNSEM.LOCAL.CAT.HEAD.CASE #case,
+    LCONJ-DTR.SYNSEM.LOCAL.CAT.HEAD.CASE #case ].
+
+np_coord_mid_eg_rule := np_coord_mid_rule & mid_coord_edgen_rule &
+  [ ARGS.FIRST.SYNSEM.PUNCT.RPUNCT comma_punct ].
+
+s_coord_top_phr :+
+  [ ARGS.FIRST.SYNSEM.PUNCT.RPUNCT comma_or_no_punct ].
+
+av_-_s-cp-pr_le :+
+  [ SYNSEM.LKEYS.KEYREL.ARG0 event & [ SF prop, E.TENSE untensed ] ].
+
+av_-_s-vp-x_le :+
+  [ SYNSEM.LKEYS.KEYREL.ARG0 event & [ SF prop, E.TENSE untensed ] ].
+
+;; Exclude |B both|
+appos_np_phr :+
+  [ ARGS.REST.FIRST.SYNSEM.LOCAL.CAT.HEAD noun ].

@@ -245,7 +245,8 @@ det_prt-indef_dlr_rbst := part_ppof_agr_constr &
 ; <todo>
 ; </type>
 det_prt-of-nagr_dlr := part_ppof_noagr_constr &
-  [ SYNSEM.LOCAL.CAT.VAL.COMPS.FIRST.--SIND.DIV +,
+  [ ARGS.FIRST.ALTS.DPRT +,
+    SYNSEM.LOCAL.CAT.VAL.COMPS.FIRST.--SIND.DIV +,
     RNAME lpcn ].
 
 det_prt-of-nagr_dlr_rbst := part_ppof_noagr_constr &
@@ -260,7 +261,8 @@ det_prt-of-nagr_dlr_rbst := part_ppof_noagr_constr &
 ; <todo>
 ; </type>
 det_prt-nocmp_dlr := part_nocomp_constr &
-  [ RNAME lpn ].
+  [ ARGS.FIRST.ALTS.DPRT +,
+    RNAME lpn ].
 
 ; <type val="v_np-prtcl_dlr">
 ; <description>Particle-NP reordering           
@@ -765,6 +767,8 @@ lex_rule_infl_affixed &
 ;; so can't block partitives this way.
 ;; DPF 2018-10-02 - Remove SUBJ..--BARE + so we can trigger agreement mismatch
 ;; also for nouns that block robust bare plural, as |the class arise|
+;; DPF 2018-11-25 - Generalize SORT entity to norm-entity-or-event on SUBJ, 
+;; since it was blocking |many month pass|.
 ;;
 third_sg_fin_v_rbst := lex_rule_infl_affixed &
 [ GENRE robust,
@@ -774,8 +778,14 @@ third_sg_fin_v_rbst := lex_rule_infl_affixed &
 	SYNSEM.LOCAL.CAT [ HEAD.--MAL3SG +,
 	                   VAL.SUBJ < expressed_synsem &
 				      [ LOCAL [ AGR.PNG.PN 3s,
-						CAT.HEAD supnoun ],
-					--SIND nonconj_ref-ind & [ SORT entity],
+						CAT.HEAD supnoun &
+							 [ --MALCASE -,
+							   --MALAGR -,
+							   --NOSUFF -,
+							   --BARED -,
+							   --NUM - ] ],
+					--SIND nonconj_ref-ind & 
+					       [ SORT norm-entity-or-event ],
 					PUNCT.RPUNCT comma_or_no_punct ] > ] ],
   SYNSEM.LOCAL third_sg_fin_verb,
   RNAME m3s ].
@@ -827,12 +837,25 @@ w_paren_comma-nf_plr :=
 %suffix (!. !.\(,\))
 punctuation_comma_rule.
 
+;; Also allow Chinese comma character
+w_comma_plr :=
+%suffix (* ,) (* ，)
+punctuation_comma_rule &
+ [ RNAME lpcm ].
+
+;; Also allow Chinese comma character
+w_comma-nf_plr :=
+%suffix (* ,) (* ，)
+punctuation_comma_informal_rule &
+ [ RNAME lpcr ].
+
 ;; For prefixed comma as in |yesterday ,we arose|
 ;;
 w_comma-prefix_plr_rbst :=
-%prefix (!. ,!.)
-basic_punctuation_comma_rule &
- [ GENRE robust ].
+%prefix (!. ,!.) (!. ，!.)
+generic_punctuation_comma_rule &
+ [ SYNSEM.PUNCT.LPUNCT comma_punct,
+   GENRE robust ].
 
 ;; For sandwiched comma: |the tall,green tree|
 w_comma-sdwch_plr := never_unify_rule.
@@ -884,13 +907,15 @@ n_pl_inflrule &
 
 ;; DPF 2017-09-28 - Use for irregular past tense forms, so we can trigger
 ;; robust analysis for e.g. |he had went| but not for |he had arrived|.
+;; DPF 2019-03-28 - Added --MALAGR - to prevent robust |the children slept.|
 v_pst_olr :=
 %suffix (* ed) (!ty !tied) (e ed) (!t!v!c !t!v!c!ced) 
 v_pst_inflrule &
 [ ND-AFF +,
   ALTS.TNS-ID -,
   SYNSEM.LOCAL past_or_subj_verb &
-	       [ CAT.HEAD.TAM.IRR-TENSE - ],
+	       [ CAT [ HEAD.TAM.IRR-TENSE -,
+		       VAL.SUBJ.FIRST.LOCAL.CAT.HEAD.--MALAGR - ] ],
   RNAME lvpt ].
 
 v_pst-irreg_olr :=
@@ -1062,3 +1087,62 @@ v_cp-frag_dlr := never_unify_le.
 w_hasinitcap_dlr := has_initial_cap_rule.
 w_noinitcap_dlr_rbst := missing_initial_cap_rule.
 w_ne_cap_dlr := named_entity_cap_rule.
+w_init_num_dlr := initial_numeric_rule.
+w_hasnoninitcap_dlr_rbst := has_noninitial_cap_rule.
+
+;; Sandwiched period, question mark, bang
+w_clause_punct_plr_rbst :=
+%suffix (!. !..~)
+punctuation_period_rule &
+ [ RNAME lpp,
+   GENRE robust ].
+
+;; For abbreviations: |Mr.Browne|, |Feb.5th|
+w_sdwch_period_plr_rbst :=
+%suffix (!. !..~)
+sandwich_period_abb_rule &
+ [ RNAME lpp,
+   GENRE robust ].
+
+;; Base form for passive as in |was surround by mountains|
+;; with obligatory by-PP to avoid unwanted ambig with v_vp_be-bse-p_le_rbst
+;; Added LPERIPH to prevent spurious n-v_j compound |tax free|
+;;
+v_pas_bse_dlr_rbst := basic_passive_verb_lr &
+  [ ND-AFF -,
+    ORTH #stem,
+    DTR  [ ORTH #stem,
+           SYNSEM trans_subst &
+               [ LOCAL.CAT.VAL [ SUBJ < [ --SIND #subjind, 
+					  NONLOC #snonloc ] >,
+				 COMPS [ FIRST [ LOCAL.CONT #objcont,
+						 --SIND #objind,
+						 NONLOC #ononloc ],
+					 REST #comps & *satlist* ] ],
+                 LKEYS.KEYREL #keyrel ] ],
+    ALTS.VADJ -,
+    SYNSEM basic_passive_synsem &
+           [ LOCAL [ CAT.VAL [ SUBJ < [ LOCAL.CONT #objcont,
+					--SIND #objind,
+					NONLOC #ononloc ] >,
+			       COMPS *obliquecons* &
+				  [ FIRST [ OPT -,
+					    LOCAL [ CAT [ HEAD prep,
+							  VAL [ SUBJ < >,
+								SPR *olist*,
+								COMPS < > ] ],
+						    CONT.HOOK.INDEX #subjind ],
+					    NONLOC #snonloc & [ REL 0-dlist ],
+					    --MIN _by_p_cm_rel ],
+				       REST #comps ] ],
+                     CONT.HOOK.XARG #objind ],
+	     MODIFD.LPERIPH na_or_+,
+             LKEYS.KEYREL #keyrel ],
+  GENRE robust,
+  RNAME lvpbr ].
+
+v_pas-noby_odlr_rbst := 
+%suffix (* ed) (!ty !tied) (e ed) (!t!v!c !t!v!c!ced) 
+no_by_passive_verb_lr_mal &
+  [ ND-AFF +,
+    RNAME lvpa ].

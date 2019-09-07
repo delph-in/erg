@@ -170,3 +170,6 @@
 
 ;; Now using modern SEM-I construction machinery, so set this flag accordingly:
 (setf *normalize-predicates-p* t)
+
+;; To allow alternative grammar versions without ICONS
+(defparameter *icons-p* t)
