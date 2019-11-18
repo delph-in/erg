@@ -862,7 +862,9 @@ norm_passive_verb_lr := basic_passive_verb_lr &
     SYNSEM passive_synsem &
            [ LOCAL.CAT.VAL [ SUBJ < [ LOCAL.CONT.HOOK.XARG #compxarg ] >,
 			     COMPS.FIRST [ LOCAL.CONT.HOOK.INDEX #subjind,
-			     		     NONLOC #snonloc ] ] ] ].
+					   --MIN _by_p_cm_rel,
+					   OPT +,
+					   NONLOC #snonloc ] ] ] ].
 
 ;; DPF 15-06-06 - Restrict result's COMPS.REST to *nolexlist* in order to block
 ;; spurious analysis of |was looked by Kim up|.
@@ -1264,7 +1266,10 @@ trans_nominal_gerund := nominal_gerund &
 
 ; DPF 13-Oct-02 - Added COMPS < > to SPEC..SYNSEM, to avoid spurious ambiguity
 ; for e.g. "Friday evening"
-
+;; DPF 2019-11-08 - Not clear why we had mother's XARG reentrant with SPEC..LTOP
+;; but it seems wrong, and is inconsistent with assumptions in robust extension
+;; as in |June 3rd| contrasted with |June 3|.  So remove, and check (FIX?)
+;;
 date_det_lr := lex_rule &
   [ ORTH #orth,
     DTR [ ORTH #orth,
@@ -1284,8 +1289,7 @@ date_det_lr := lex_rule &
                                                   CONT.HOOK.LTOP #nltop ],
                                           --SIND #ind ] >,
 				 SPCMPS < > ] ],
-                     CONT.HOOK [ INDEX #ind & ref-ind,
-				 XARG #nltop ],
+                     CONT.HOOK.INDEX #ind & ref-ind,
 		     CTXT #ctxt ],
              LKEYS [ KEYREL #keyrel &
                             [ PRED def_explicit_q_rel,
@@ -1325,7 +1329,7 @@ date_det_lr := lex_rule &
 month_det_lr := date_det_lr &
   [ DTR.SYNSEM [ LOCAL.CAT.HEAD.MINORS.MIN mofy_rel,
                  LKEYS.KEYREL.PRED mofy_rel ],
-    SYNSEM.LOCAL.CAT [ HEAD [ MINORS [ MIN defdate_q_rel,
+    SYNSEM.LOCAL.CAT [ HEAD [ MINORS [ MIN _the_q_rel,
 				       ALTMIN mofy_rel ],
                               MOD < > ],
                        VAL [ SPEC < [ --MIN dofm_or_interval_rel ] >,
@@ -1627,6 +1631,8 @@ attr_verb_part_ptcl_psv_lr := basic_attr_verb_part_lr &
 ;; rules each into two, one for passives and one for pres-part.
 ;; DPF 2017-09-16 - Added OPT - to enable blocking of spurious ambig when these
 ;; appear as pred subord phrases, as in |they arrived unprepared|.
+;; DPF 2019-10-22 - Re 2016-09-15: But we also want bare-NP |sparkling Ds|, so
+;; further split the named-mod -ing variants into singular and plural head. Sigh
 ;;
 attr_verb_part_namemod_lr := basic_attr_verb_part_lr & lex_rule &
   [ SYNSEM [ LOCAL.CAT [ HEAD.MOD < [ --MIN named_rel ] >,
@@ -1642,7 +1648,12 @@ attr_verb_part_intr_namemod_lr := attr_verb_part_intr_namemod_lexrule &
   [ DTR.SYNSEM.LOCAL.CAT.HEAD.VFORM pas ].
 
 attr_verb_part_intr_namemod_prp_lr  := attr_verb_part_intr_namemod_lexrule &
-  [ SYNSEM.LOCAL.CAT.HEAD.MOD < [ LOCAL.CAT.VAL.SPR < expressed_synsem > ] >,
+  [ SYNSEM.LOCAL.CAT.HEAD.MOD < [ LOCAL [ CAT.VAL.SPR < expressed_synsem >,
+					  AGR.PNG.PN 3s ] ] >,
+    DTR.SYNSEM.LOCAL.CAT.HEAD.VFORM prp ].
+		       
+attr_verb_part_intr_namemod_pl_prp_lr  := attr_verb_part_intr_namemod_lexrule &
+  [ SYNSEM.LOCAL.CAT.HEAD.MOD < [ LOCAL.AGR.PNG.PN 3p ] >,
     DTR.SYNSEM.LOCAL.CAT.HEAD.VFORM prp ].
 		       
 attr_verb_part_tr_namemod_lexrule := attr_verb_part_namemod_lr &
@@ -1653,7 +1664,12 @@ attr_verb_part_tr_namemod_lr := attr_verb_part_tr_namemod_lexrule &
   [ DTR.SYNSEM.LOCAL.CAT.HEAD.VFORM pas ].
 
 attr_verb_part_tr_namemod_prp_lr := attr_verb_part_tr_namemod_lexrule &
-  [ SYNSEM.LOCAL.CAT.HEAD.MOD < [ LOCAL.CAT.VAL.SPR < expressed_synsem > ] >,
+  [ SYNSEM.LOCAL.CAT.HEAD.MOD < [ LOCAL [ CAT.VAL.SPR < expressed_synsem >,
+					  AGR.PNG.PN 3s ] ] >,
+    DTR.SYNSEM.LOCAL.CAT.HEAD.VFORM prp ].
+
+attr_verb_part_tr_namemod_pl_prp_lr := attr_verb_part_tr_namemod_lexrule &
+  [ SYNSEM.LOCAL.CAT.HEAD.MOD < [ LOCAL.AGR.PNG.PN 3p ] >,
     DTR.SYNSEM.LOCAL.CAT.HEAD.VFORM prp ].
 
 ;; DPF 2016-02-23 - Let's finally add a rule to produce -ly adverbs from 
@@ -2106,8 +2122,24 @@ enough_addition_wcomp := basic_enough_addition &
 							MOD < > ] ],
 					   CONT.HOOK.INDEX #xarg ] !>,
 				OPT -,
-				PUNCT.LPUNCT no_punct ] > ],
+				PUNCT.LPUNCT no_punct ] >,
+		    HC-LEX - ],
 	      CONT.HOOK.XARG #xarg ],
+    C-CONT.HCONS <! qeq & [ HARG #arg2,
+			    LARG #vltop ] !> ].
+
+enough_addition_wcomp_nogap := basic_enough_addition &
+  [ SYNSEM.LOCAL 
+	    [ CAT [ HEAD basic_adj,
+		    VAL.COMPS < [ LKEYS.KEYREL.ARG2 #arg2 ],
+			      synsem &
+			      [ LOCAL [ CAT s_or_vp_inf_cat,
+					CONT.HOOK.LTOP #vltop,
+					CONJ cnil ],
+				NONLOC.SLASH 0-dlist,
+				OPT -,
+				PUNCT.LPUNCT no_punct ] >,
+		    HC-LEX - ] ],
     C-CONT.HCONS <! qeq & [ HARG #arg2,
 			    LARG #vltop ] !> ].
 
