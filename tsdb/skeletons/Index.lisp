@@ -39,6 +39,7 @@
 ;;; [       30,000,000 --        30,999,999] --- Hinoki
 ;;; [       40,000,000 --        49,999,999] --- Brown Corpus
 ;;; [      120,000,000 --     1,099,999,999] --- GENIA
+;;; [    2,000,000,000 --     2,999,999,999] --- NTU CLE
 ;;; [  100,000,000,000 --   299,999,999,999] --- WeSearch Data Collection
 ;;; [1,000,010,000,000 -- 1,128,928,700,510] --- WikiWoods
 ;;; 
@@ -72,7 +73,6 @@
  ((:path . "fracas") (:content . "FraCaS Semantics Test Suite"))
  ((:path . "peted") (:content . "Evaluation By Textual Entailment (Development)"))
  ((:path . "petet") (:content . "Evaluation By Textual Entailment (Test)"))
- #+:null
  ((:path . "tanaka") (:content . "Tanaka Corpus (English Translations)"))
  ((:path . "lpp") (:content . "Le Petit Prince"))
  ((:path . "wrev1819") (:content . "Writing Reviews 10/18-01/19"))
@@ -83,4 +83,6 @@
  ((:path . "control") (:content . "Control examples from literature"))
  ((:path . "handp12") (:content . "Huddleston and Pullum Ch.12"))
  ((:path . "sh-spec") (:content . "Sherlock Holmes Speckled Band"))
+ ((:path . "ntucle") (:content . "NTU CLE learner English corpus"))
+ ((:path . "test") (:content . "Test"))
 )

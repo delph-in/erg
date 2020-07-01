@@ -152,50 +152,125 @@
 ;; Allow type documuntation strings to be marked withh triple quotes, for
 ;; compatibility with PET (and more recently ACE).
 ;;
-#-:triple-quoted-typedoc
-(defun read-tdl-type-comment (istream name)
-  ;;; enclosed in """..."""s as in Python - called when we've just peeked a "
-  (let ((start-position (file-position istream))) ; record in case the comment isn't closed
-    ;; first read the peeked double quote, and then the only legal following characters are
-    ;; two more double quotes
+(defun read-tdl-type-comment (istream name &optional comment)
+  ;; Read a DocString (i.e. """...""" as in Python) - called when we've just
+  ;; peeked a "
+  (let ((start-position (file-position istream)))
+    ;; first read the peeked double quote, and then the only legal following characters
+    ;; are two more double quotes
     (read-char istream)
-    (cond
-      ((and (eql (read-char istream nil 'eof) #\")
-            (eql (read-char istream nil 'eof) #\")))
-      (t
-        (lkb-read-cerror istream 
-          "Need three double-quote marks for type comment for ~A (comment start at ~A)" 
-          name start-position)))
-    ;; accumulate characters until encountering 3 consecutive non-escaped double quotes
-    ;; !!! this is not a general Python string reader: only \newline, \\, \' and \" are
-    ;; recognised as escape sequences
-    (loop 
-      for c = (read-char istream nil 'eof)
-      with ndouble = 0
-      with chars = nil
-      do
-      (block do
-        (case c
-          (eof
-            (lkb-read-cerror istream 
-              "File ended in middle of type comment for ~A (comment start at ~A)" 
-              name start-position)
-            (return ""))
-          (#\\
-            (setq ndouble 0)
-            (let ((next (peek-char nil istream nil 'eof)))
-              (case next
+    (if (and (eql (peek-char nil istream nil nil) #\")
+             (read-char istream)
+             (eql (peek-char nil istream nil nil) #\")
+             (read-char istream))
+      ;; accumulate characters until encountering 3 consecutive non-escaped double quotes
+      ;; NB this is not a general Python string reader: only \<newline>, \\ and \" are
+      ;; recognised as escape sequences
+      (loop 
+        for c = (read-char istream nil 'eof)
+        with ndouble = 0
+        with chars = nil
+        do
+        (block do
+          (case c
+            (eof
+              (lkb-read-cerror istream 
+                "Non-terminated documentation string for ~A (starting on line ~A)"
+                name
+                (prog2 (file-position istream start-position)
+                  (lkb-read-line/char-numbers istream)
+                  (file-position istream :end)))
+              (return ""))
+            (#\\
+              (setq ndouble 0)
+              (case (peek-char nil istream nil 'eof)
                 (#\newline (read-char istream nil 'eof) (return-from do))
-                ((#\\ #\" #\') (setq c (read-char istream nil 'eof)))
-                (t nil))))
-          (#\"
-            (incf ndouble)
-            (when (= ndouble 3) (loop-finish)))
-          (t
-            (setq ndouble 0)))
-        (push c chars))
-      finally
-      (return (coerce (nreverse (cddr chars)) 'string))))) ; last 2 chars were the pre-final "s
+                ((#\\ #\") (setq c (read-char istream nil 'eof)))))
+            (#\"
+              (incf ndouble)
+              (when (= ndouble 3) (loop-finish)))
+            (t
+              (setq ndouble 0)))
+          (push c chars))
+        finally
+        (return
+          (let ((new (coerce (nreverse (cddr chars)) 'string))) ; last 2 chars were pre-final "s
+            (if comment
+                (concatenate 'string comment (string #\newline) new)
+                new))))
+      (progn
+        (lkb-read-cerror istream 
+          "In ~A, expected a documentation string after double quote character, but did not ~
+find two further double quotes" 
+          name)
+        (ignore-rest-of-entry istream name)))))
+
+;; DPF 2020-06-06 - This especially grim hack allows us to still load the
+;; grammar files into the LKB now that instances also contain docstrings.
+;; This is done by checking the name of the sign and dealing with the docstring
+;; just in case the name ends in "_C" or "LR" or "RBST", or it starts with "ROOT"
+;; Note that LKB-FOS already enables docstrings on instances as well as types,
+;; so does not need this hack.
+;; 
+(defun read-tdl-defterm (istream name path-so-far in-default-p)
+;;; DefTerm -> Term | Term / Term | / Term  
+  (let ((next-char (peek-with-comments istream)))
+    (when 
+     (and 
+      (eql next-char #\")
+      (let* ((namestr (string name))
+	     (nlength (length namestr)))
+       (or (and (>= (length namestr) 3)
+		(string-equal (subseq namestr (- nlength 2)) "_C"))
+	   (and (>= (length namestr) 3)
+		(string-equal (subseq namestr (- nlength 2)) "LR"))
+	   (and (>= (length namestr) 6)
+		(string-equal (subseq namestr 0 5) "ROOT_"))
+	   (and (>= (length namestr) 8)
+		(string-equal (subseq namestr (- nlength 7)) "_C_RBST"))
+	   (and (>= (length namestr) 8)
+		(string-equal (subseq namestr (- nlength 7)) "LR_RBST")))))
+      (setq comment (read-tdl-type-comment istream name nil)))
+    (cond ((eql next-char 'eof) 
+           (lkb-read-cerror istream 
+                            "Unexpected eof when reading ~A" name)
+           (ignore-rest-of-entry istream name))
+          ((eql next-char #\.) 
+           (lkb-read-cerror istream "Missing term when reading ~A" name)
+           (ignore-rest-of-entry istream name))
+          ((eql next-char #\/)
+           (when in-default-p
+             (lkb-read-cerror istream
+                              "Double defaults when reading ~A" name)
+             (ignore-rest-of-entry istream name))
+           (check-for #\/ istream name)
+           (let ((persist (lkb-read istream t)))
+             (if path-so-far
+                 (cons
+                  (make-tdl-path-value-unif (reverse path-so-far) *toptype* nil)
+                  ;; need to add non-default path too
+                  (read-tdl-term istream name path-so-far persist))
+              (read-tdl-term istream name path-so-far persist)))) 
+          (t  
+           (let* ((res1 (read-tdl-term istream name path-so-far in-default-p))
+		  (next-char2 (peek-with-comments istream)))
+               (cond ((eql next-char2 'eof) 
+                      (lkb-read-cerror istream
+                                       "Unexpected eof when reading ~A" name)
+                      (ignore-rest-of-entry istream name))
+                     ((eql next-char2 #\/)
+                      (when in-default-p
+                        (lkb-read-cerror 
+                         istream 
+                         "Double defaults when reading ~A" 
+                         name)
+                        (ignore-rest-of-entry istream name))
+                      (check-for #\/ istream name) 
+                      (let ((persist (lkb-read istream t)))
+                        (append res1
+                                (read-tdl-term istream 
+                                               name path-so-far persist))))
+                     (t res1)))))))
 
 ;; For LexDB, when dumping the database to lexdb.rev file, the final command
 ;; pq:endcopy now apparently returns "1" for okay, where it used to return "0"

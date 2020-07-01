@@ -100,6 +100,15 @@ time_ne_1_tmr := ne_tmt &
 [ +INPUT < [ +FORM ^(0?[0-9]|1[0-2])([:.][0-5][0-9])?([aApP][mM])$ ] >,
   +OUTPUT  < [ +CLASS time_ne ] > ].
 
+;; |1:30-6pm| where hyphen-splitting results in |1: 30|
+time_ne_1b_tmr := two_one_keep_brackets_tmt &
+[ +INPUT < [ +FORM ^(0?[0-9]|1[0-2])[:]$,
+             +CLASS non_ne, +PRED #pred, +CARG #carg, +TNT.+MAIN #main ],
+           [ +FORM ^([0-5][0-9])([aApP][mM])?$, +CLASS non_ne ] >,
+  +OUTPUT  < [ +FORM "${I1:+FORM:1}:${I2:+FORM:1}",
+	       +CLASS time_ne,
+              +PRED #pred, +CARG #carg, +TNT null_tnt & [ +MAIN #main ] ] > ].
+
 time_ne_2_tmr := ne_tmt &
 [ +INPUT < [ +FORM ^(0?[0-9]|1[0-9]|2[0-4]):[0-5][0-9]$ ] >,
   +OUTPUT  < [ +CLASS meas_or_time_ne ] > ].
@@ -123,6 +132,7 @@ time_ne_3_tmr := basic_ne_tmt &
 ;; contemplate for now, though strictly speaking these ambiguities are
 ;; somehow defensible.  FIX someday, but for now, just build a mixed fraction.
 ;;
+#|
 mixed_fraction_ne_1_tmr := two_one_keep_brackets_tmt &
 [ +INPUT < [ +FORM ^([1-9][0-9]*)$,
              +CLASS non_ne,
@@ -131,6 +141,30 @@ mixed_fraction_ne_1_tmr := two_one_keep_brackets_tmt &
 	     +CLASS non_ne ] >,
   +OUTPUT < [ +FORM "${I1:+FORM:1} ${I2:+FORM:1}", 
 	      +CLASS frct_ne, +PRED #pred, +CARG #carg, +TNT.+MAIN #main ] > ].
+|#
+mixed_fraction_ne_1_tmr := two_one_keep_brackets_tmt &
+[ +INPUT < [ +FORM ^([1-9][0-9]*)$,
+             +CLASS non_ne,
+             +PRED #pred, +CARG #carg, +TNT.+MAIN #main ],
+	   [ +FORM ^(½|⅓|¼|⅛|⅔|¾)$,
+	     +CLASS non_ne ] >,
+  +OUTPUT < [ +FORM "${I1:+FORM:1} ${I2:+FORM:1}", 
+	      +CLASS frct_ne, +PRED #pred, +CARG #carg, +TNT.+MAIN #main ] > ].
+
+mixed_fraction_ne_1b_tmr := four_one_keep_brackets_tmt &
+[ +INPUT < [ +FORM ^([1-9][0-9]*)$,
+             +CLASS non_ne,
+             +PRED #pred, +CARG #carg, +TNT.+MAIN #main ],
+	   [ +FORM ^([1-9][0-9]*)$,
+	     +CLASS non_ne ],
+	   [ +FORM ^(/)$,
+	     +CLASS non_ne ],
+	   [ +FORM ^([1-9][0-9]*)$,
+	     +CLASS non_ne ] >,
+  +OUTPUT < [ +FORM "${I1:+FORM:1} ${I2:+FORM:1}${I3:+FORM:1}${I4:+FORM:1}", 
+	      +CLASS frct_ne, +PRED #pred, +CARG #carg, +TNT.+MAIN #main ] >,
+  +CONTEXT < > ].
+
 
 ;; A few of the more common fraction symbols.  Far from a general solution.
 ;; FIX someday.
@@ -168,9 +202,12 @@ mixed_fraction_ne_2_tmr := ne_tmt &
 ;; Likewise for his improvement of date_ne_2_tmr to avoid the `date' |7-0|,
 ;; allowed by the old patterh:
 ;; +CONTEXT < [ +FORM ^([01]?[0-9][-/])[0-9]{1,2}$ ] >,
+;; DPF 2020-02-12 - These had to be revised since repp now treats the
+;; dash and slash as separate tokens.
 ;;
 ;; |1/3/84| |1/11/2014| |1-3-84|
 ;;
+#|
 date_ne_1_tmr := ne_tmt &
 [ +INPUT < [ +FORM ^[0-9]{1,2}[-/][0-9]{1,2}[-/][0-9]{2,4}$ ] >,
   +OUTPUT < [ +CLASS date_ne ] > ].   
@@ -185,7 +222,53 @@ date_ne_2_tmr := ne_tmt &
 date_ne_3_tmr := add_ne_tmt &
 [ +CONTEXT < [ +FORM ^(0?[1-9]|1[0-2])[-/](0?[1-9]|[12][0-9]|3[0-1])$ ]>,
   +OUTPUT < [ +CLASS date_ne ] > ].   
+|#
+date_ne_1_tmr := five_one_tmt &
+[ +INPUT < [ +FORM ^([0-9]{1,2})$,
+	     +CLASS non_ne, +TRAIT [ +LB #lb, +RB #rb, +LD #ld, +RD #rd ],
+             +PRED #pred, +CARG #carg, +TNT.+MAIN #main ],
+	   [ +FORM ^([–/])$ ],
+	   [ +FORM ^([0-9]{1,2})$ ],
+	   [ +FORM ^([–/])$ ],
+	   [ +FORM ^([0-9]{2,4})$ ] >,
+  +OUTPUT < [ +FORM "${I1:+FORM:1}${I2:+FORM:1}${I3:+FORM:1}${I4:+FORM:1}${I5:+FORM:1}", 
+	      +CLASS date_ne, +TRAIT [ +LB #lb, +RB #rb, +LD #ld, +RD #rd ],
+              +PRED #pred, +CARG #carg, +TNT null_tnt & [ +MAIN #main ],
+              +TRAIT.+UW + ] >,
+  +CONTEXT <> ].
 
+date_ne_2_tmr := three_one_tmt &
+[ +INPUT < [ +FORM ^([0-9]{1,2})$,
+	     +CLASS non_ne, +TRAIT [ +LB #lb, +RB #rb, +LD #ld, +RD #rd ],
+             +PRED #pred, +CARG #carg, +TNT.+MAIN #main ],
+	   [ +FORM ^([/])$ ],
+	   [ +FORM ^([0-9]{1,4})$ ] >,
+  +OUTPUT < [ +FORM "${I1:+FORM:1}${I2:+FORM:1}${I3:+FORM:1}", 
+	      +TRAIT [ +LB #lb, +RB #rb, +LD #ld, +RD #rd, +UW + ],
+              +PRED #pred, +CARG #carg, +TNT null_tnt & [ +MAIN #main ],
+	      +CLASS date_or_fract_ne ] >,
+  +CONTEXT <> ].
+
+;; DPF 2020-02-12 - Not clear what this rule is/was supposed to do, but here
+;; is an attempt to convert it to the makeover universe:
+;;
+#|
+date_ne_3_tmr := token_mapping_rule &
+[ +CONTEXT < [ +FORM ^(0?[1-9]|1[0-2])$,
+	     +CLASS non_ne, +TRAIT [ +LB #lb, +RB #rb ],
+             +PRED #pred, +CARG #carg, +TNT.+MAIN #main, +ONSET #onset,
+             +ID #id, +FROM #from ],
+	   [ +FORM ^([–/])$ ],
+	   [ +FORM ^(0?[1-9]|[12][0-9]|3[0-1])$,
+	     +TO #to ] >,
+  +INPUT <>,
+  +OUTPUT < [ +FORM "${I1:+FORM:1}${I2:+FORM:1}${I3:+FORM:1}", 
+	      +TRAIT [ +LB #lb, +RB #rb, +UW + ],
+              +PRED #pred, +CARG #carg, +TNT null_tnt & [ +MAIN #main ],
+	      +ONSET #onset, +ID #id, +FROM #from, +TO #to,
+              +CLASS date_ne ] >,
+  +POSITION "C1<C2<C3, O1@C1, O1@C2, O1@C3" ].
+|#
 
 ;;;
 ;;; ratios: |1:1000|, |1:100,000|, et al.
@@ -212,9 +295,17 @@ ratio_ne_2_tmr := ne_tmt &
 ;;; will need to return to a similar pattern (if without the ordinals, maybe)
 ;;; after splitting, however, to do justice to, say, |2 1/2-year|.
 ;;;
-fraction_ne_1_tmr := ne_tmt &
-[ +INPUT < [ +FORM ^[-+±~]?[0-9]+(\.[0-9]*)?/[1-9][0-9]*(th)?[-–]?$ ] >,
-  +OUTPUT < [ +CLASS frct_ne ] > ].   
+fraction_ne_1_tmr := three_one_tmt &
+[ +INPUT < [ +FORM ^([-+±~]?[0-9]+(\.[0-9]*)?)$,
+	     +CLASS non_ne, +TRAIT [ +LB #lb, +RB #rb, +LD #ld, +RD #rd ],
+             +PRED #pred, +CARG #carg, +TNT.+MAIN #main ],
+	   [ +FORM ^([/])$ ],
+	   [ +FORM ^([1-9][0-9]*(th)?[-–]?)$ ] >,
+  +OUTPUT < [ +FORM "${I1:+FORM:1}${I2:+FORM:1}${I3:+FORM:1}", 
+	      +TRAIT [ +LB #lb, +RB #rb, +LD #ld, +RD #rd, +UW + ],
+              +PRED #pred, +CARG #carg, +TNT null_tnt & [ +MAIN #main ],
+	      +CLASS frct_ne ] >,
+  +CONTEXT <> ].
 
 ;;;
 ;;; measure noun phrases (taking precedence over alphanumeric identifiers)
@@ -264,16 +355,15 @@ ratio_measure_ne_tmr := ne_tmt &
 ;;
 currency_measure_ne_tmr := one_two_tmt &
 [ +INPUT < [ +FORM ^((?:AU?|CA?|HK|NZ|US)?\$|S[Kk]r)([0-9]+([\.,][0-9]*)?)$,
-             +TRAIT [ +UW #uw, +LB #lb, +RB #rb, 
-		      +LD #ld, +RD #rd, +HD #hd ], +CLASS non_ne,
+             +TRAIT [ +UW #uw, +LB #lb, +RB #rb, +LD #ld, +RD #rd, 
+		      +HD #hd ], +CLASS non_ne,
              +PRED #pred, +CARG #carg, +TNT.+MAIN #main ] >,
   +OUTPUT < [ +FORM "${I1:+FORM:1}", +CLASS non_ne,
-              +TRAIT [ +UW #uw, +LB #lb, +RB bracket_null, 
-		       +LD #ld, +RD #rd, +HD #hd ],
+              +TRAIT [ +UW #uw, +LB #lb, +RB bracket_null, +LD #ld, +RD #rd, 
+		       +HD #hd ],
               +PRED #pred, +CARG #carg, +TNT null_tnt & [ +MAIN #main ] ],
 	    [ +FORM "${I1:+FORM:2}", +CLASS non_ne,
-              +TRAIT [ +UW #uw, +LB bracket_null, +RB #rb,
-		       +LD #ld, +RD #rd ],
+              +TRAIT [ +UW #uw, +LB bracket_null, +RB #rb, +LD #ld, +RD #rd ],
               +PRED #pred, +CARG #carg, +TNT null_tnt & [ +MAIN #main ] ] > ].
 
 ;;;
@@ -289,7 +379,6 @@ decade_ne_1_tmr := ne_tmt &
 ;; this latter type (plural of decades and, in principle, other names) actually
 ;; is ambiguous with the possessive (i suspect), e.g. `the 1950's style'.  so,
 ;; maybe, optional rules for those?                             (24-sep-08; oe)
-
 ;;
 decade_ne_2_tmr := token_mapping_rule &
 [ +CONTEXT < [ +FORM ^((mid-)?([1,2][0-9])?[0-9]0)$, 

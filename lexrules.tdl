@@ -1,4 +1,4 @@
-;; -*- Mode: tdl; Coding: utf-8; -*-
+;;; -*- Mode: tdl; Coding: utf-8; -*-
 ;;;
 ;;;  Copyright (c) 1994-2018
 ;;;    Dan Flickinger, Rob Malouf, Emily M. Bender
@@ -174,23 +174,30 @@ sing_noun := sing_or_plur_noun &
     CONT.HOOK.INDEX [ PNG png & [ PN 3s ],
                       DIV - ] ]. 
 
+;; DPF 2020-05-17 - Don't need to stamp INDEX.DIV + here since it is already
+;; thus constrained in almost all subtypes of basic_basic_mass_noun_synsem,
+;; except for `time' as in *a long time*
+;;
 mass_noun := noun_local &
   [ CAT [ HEAD noun_or_ttl,
           VAL.SPR < [ LOCAL.AGR [ PNG.PN 3s,
                                   DIV + ] ] > ],
     CONT.HOOK.INDEX [ PNG png & [ PN 3s,
-                                  GEN neut ],
-		      DIV + ] ]. 
+                                  GEN neut ] ] ]. 
 
 mass_count_noun := noun_local &
   [ CAT [ HEAD noun_or_ttl & [ --BARE - ],
           VAL.SPR < [ LOCAL.AGR.PNG.PN 3s ] > ],
     CONT.HOOK.INDEX.PNG png & [ PN 3s ] ].
 
+;; DPF 2020-01-14 - Added AGR..PN 3p since --SIND and AGR are not always
+;; reentrant for plurals as they are for singulars.
+;;
 plur_noun := sing_or_plur_noun &
   [ CAT [ HEAD noun_or_ttl,
           VAL.SPR < [ LOCAL.AGR [ PNG.PN 3p,
                                   DIV + ] ] > ],
+    AGR.PNG.PN 3p,
     CONT.HOOK.INDEX [ PNG.PN 3p,
 		      IND +,
                       DIV + ] ].
@@ -240,10 +247,16 @@ est_super_adj := local &
 ;;; suffix which triggers the spelling-change rules.
 ;; DPF 2016-11-07 - Preserve chart-dependency identities for --+COMPKEY,
 ;; --+OCOMPKEY, and --+ARGIND through lexical rules, so that derived entries 
-;; do not allow leakage.  For example, |put together| was allowing other 
-;; |put| verb-particle entries in via attr_verb_part lexical rules, which had 
+;; do not allow leakage.  For example, *put together* was allowing other 
+;; *put* verb-particle entries in via attr_verb_part lexical rules, which had 
 ;; lost the --+COMPKEY constraint.
-
+;; DPF 2020-05-23 - Move identif of --+ARGIND down to subtypes, since at least
+;; one lexical rule, v_pas-cp_lexrule, needs to change, since its input requires
+;; an expletive-it subj, but the derived form instead takes a CP subject, and
+;; if --+ARGIND is preserved, chart dependencies will exclude the derived edge,
+;; since no expletive "it" is in the chart for a sentence such as
+;; *that she would win was expected by everyone*
+;;
 basic_lex_rule_supermost := word_or_lexrule &
   [ ND-AFF bool,
     DTR sign & [ IDIOM #idiom,
@@ -257,8 +270,7 @@ basic_lex_rule_supermost := word_or_lexrule &
 					 ICONS [ LIST #icfirst,
 						 LAST #icmiddle ] ] ],
 			  LKEYS [ --+COMPKEY #ckey,
-				  --+OCOMPKEY #ockey,
-				  --+ARGIND #argind ] ] ],
+				  --+OCOMPKEY #ockey ] ] ],
     IDIOM #idiom,
     DIALECT #dialect,
     ALTS #alts,
@@ -271,8 +283,7 @@ basic_lex_rule_supermost := word_or_lexrule &
 			    ICONS [ LIST #icfirst,
                                     LAST #iclast ] ] ],
 	     LKEYS [ --+COMPKEY #ckey,
-		     --+OCOMPKEY #ockey,
-		     --+ARGIND #argind ] ],
+		     --+OCOMPKEY #ockey ] ],
     ORTH [ TO #to,
 	   FORM #form ],
     ARGS.FIRST.ORTH [ TO #to,
@@ -286,8 +297,10 @@ basic_lex_rule_supermost := word_or_lexrule &
 
 lex_rule_supermost := basic_lex_rule_supermost &
   [ SYNSEM abstr_lex_synsem,
+    TOKENS #tokens,
     ORTH.CLASS #class,
-    ARGS.FIRST.ORTH.CLASS #class ].
+    ARGS.FIRST [ ORTH.CLASS #class,
+		 TOKENS #tokens ] ].
 
 ; DPF 14-Aug-99 - Reorder appending of RELS from above since treatment of 
 ; fragments looks for the first scope hole from left to right in RELS, and 
@@ -318,9 +331,8 @@ lex_rule_basic := basic_lex_rule_basic &
 ;; rules from applying spuriously after the italics rules (or other punctuation
 ;; rules) have applied.
 ;;
-lex_rule_infl_affixed := basic_lex_rule_basic & word_or_infl_rule &
-  [ INFLECTD +,
-    KEY-ARG #keyarg,   
+basic_lex_rule_infl_affixed := basic_lex_rule_basic & word_or_infl_rule &
+  [ KEY-ARG #keyarg,   
     SYNSEM #synsem,
     ARGS < #dtr >,
     DTR #dtr & word_or_nonpunct_rule &
@@ -329,13 +341,18 @@ lex_rule_infl_affixed := basic_lex_rule_basic & word_or_infl_rule &
                  SYNSEM #synsem ],
     C-CONT.RELS <! !> ].
 
+lex_rule_infl_affixed := basic_lex_rule_infl_affixed &
+  [ INFLECTD + ].
+
 norm_lex_rule := lex_rule_basic &
   [ DTR word_or_lexrule & #stem &
-	[ SYNSEM.LOCAL [ CAT [ MC #mc,
-                               HC-LEX #hclex ] ],
-          KEY-ARG #keyarg ],
+	[ SYNSEM [ LOCAL [ CAT [ MC #mc,
+				 HC-LEX #hclex ] ],
+		   LKEYS.--+ARGIND #argind ],
+	  KEY-ARG #keyarg ],
     SYNSEM [ LOCAL [ CAT [ MC #mc,
-                           HC-LEX #hclex ] ] ],
+                           HC-LEX #hclex ] ],
+	     LKEYS.--+ARGIND #argind ],
     KEY-ARG #keyarg,
     ARGS < #stem >,
     INFLECTD + ].
@@ -399,7 +416,8 @@ basic_sai := lex_rule_basic &
 		  AGR #agr ],
           NONLOC #nonloc,
 	  MODIFD #modif,
-	  LKEYS.KEYREL [ CFROM #cfrom, CTO #cto ] ] ],
+	  LKEYS [ KEYREL [ CFROM #cfrom, CTO #cto ],
+		  --+ARGIND #argind ] ] ],
     SYNSEM [ LOCAL [ CAT [ HEAD [ VFORM #vform,
 				  MINORS #minors ],
 			   VAL [ COMPS < #subj & [ OPT - ]
@@ -411,7 +429,8 @@ basic_sai := lex_rule_basic &
 		     AGR #agr ],
 	     NONLOC #nonloc,
 	     MODIFD #modif,
-	     LKEYS.KEYREL [ CFROM #cfrom, CTO #cto ] ],
+	     LKEYS [ KEYREL [ CFROM #cfrom, CTO #cto ],
+		     --+ARGIND #argind ] ],
     C-CONT.ICONS <! !> ].
 
 ; DPF 28-mar-05 - Now propagate AUX from daughter, since we need cop-id to
@@ -424,7 +443,7 @@ basic_sai := lex_rule_basic &
 ; modifier to.
 ;; DPF 2016-08-02 - We want to have inverted auxiliaries be marked as 
 ;; non-elliptical unless they have undergone the ellipsis rule, in order to 
-;; block |So did Kim arise.|  Hence split this rule into two, one for 
+;; block *So did Kim arise.*  Hence split this rule into two, one for 
 ;; non-ellipsis and one for ellipsis, and stamp ALTMIN non_ellipt_rel on
 ;; the dtr of the first.
 
@@ -452,8 +471,8 @@ sai_ell_lexrule := sai &
     DTR.SYNSEM.LOCAL.CAT.VAL.COMPS < > ].
 
 ;; DPF 2012-09-10 - Changed MOD..NONLOC non-local_none to REL,QUE 0-dlist,
-;; to allow non-empty SLASH, as in |on the other hand, had they stayed, Kim
-;; would have cried|
+;; to allow non-empty SLASH, as in *on the other hand, had they stayed, Kim
+;; would have cried*
 
 cond_sai := basic_sai & 
   [ SYNSEM basic_sai_synsem &
@@ -520,7 +539,8 @@ tag := lex_rule_basic &
                                      XARG #xarg ],
                          AGR #agr ],
                  NONLOC #nonloc & non-local_none,
-		 LKEYS.KEYREL [ CFROM #from, CTO #to ] ] ],
+		 LKEYS [ KEYREL [ CFROM #from, CTO #to ],
+			 --+ARGIND #argind ] ] ],
     SYNSEM tag_synsem &
 	 [ LOCAL [ CAT [ HEAD [ TAM #tam,
                                 MINORS.MIN #min,
@@ -538,6 +558,7 @@ tag := lex_rule_basic &
            NONLOC #nonloc,
 	   LKEYS [ KEYREl [ CFROM #from,
 			    CTO #to ],
+		   --+ARGIND #argind,
 		   ALTKEYREL [ CFROM #from,
 			       CTO #to ] ] ],
     C-CONT [ HOOK.LTOP #ltop,
@@ -580,7 +601,10 @@ tag := lex_rule_basic &
 ; application of this rule to "must".  Then what about non-neg adverbs with
 ; "must"?  FIX someday.
 ;; DPF 2012-12-21 - Removed dtr's ALT2KEYREL.PRED never_unify_rel,
-;; since this blocked e.g. |Kim isn't always Abrams|
+;; since this blocked e.g. *Kim isn't always Abrams*
+;; DPF 2020-05-23 - One might think to block output of this rule as input to 
+;; subj-aux inversion, but in fact that order is needed for *when is a rose not
+;; a rose?*
 ;;
 basic_adv_addition := lex_rule &
   [ ORTH #orth,
@@ -640,8 +664,8 @@ basic_adv_addition := lex_rule &
 
 ;; DPF 2013-11-08 - Split this rule into two, one for "not" and one for the
 ;; rest, since only "not" can be added to an elliptical aux verb, while they
-;; can all appear with verbs that have overt complements.  Thus |we should not|
-;; but |*we should never|, |*we should both|, etc.
+;; can all appear with verbs that have overt complements.  Thus *we should not*
+;; but not *we should never*, *we should both*, etc.
 
 adv_addition := basic_adv_addition &
   [ DTR.SYNSEM.LOCAL.CAT.VAL.COMPS *cons* ].
@@ -666,10 +690,10 @@ adv_add_neg_ellipt := basic_adv_addition &
 ;; [AUX -] VPs.
 ;; DPF 2011-08-23 - For now, exclude elided verbs in inverted conditionals,
 ;; even though they can be okay at least in S-initial position, in context:
-;; [We hadn't left the door open.] |Had we, the flies would have entered.|
+;; [We hadn't left the door open.] *Had we, the flies would have entered.*
 ;; But it's hard to find good examples in S-final position:
-;; ... |? The files would have left, had we.|
-;; And there is spurious ambiguity for e.g. |Who did we know were programmers?|
+;; ... *? The files would have left, had we.*
+;; And there is spurious ambiguity for e.g. *Who did we know were programmers?*
 ;; DPF 2016-12-02 - Try changing dtr's COMPS.FIRST from canonical_or_unexpressed
 ;; to just unexpressed, so that we can prevent robust auxiliaries such as
 ;; has_aux_finc_rbst from also undergoing ellipsis.
@@ -770,9 +794,9 @@ vp_ellipsis_expl := vp_ellipsis &
 		     --+ARGIND #subjind ] ] ].
 
 ;; For contracted (positive) auxiliaries that are not inverted, and hence
-;; require their complement to be canonical, to avoid |*Kim 'll|
+;; require their complement to be canonical, to avoid *Kim 'll*
 ;;
-contracted_aux_noninv_lr := norm_lex_rule &
+contracted_aux_noninv_lexrule := norm_lex_rule &
  [ DTR #dtr & 
        [ ORTH #orth,
 	 INFLECTD na,
@@ -803,7 +827,7 @@ contracted_aux_noninv_lr := norm_lex_rule &
 ; DPF 19-jun-09 - Added parent type word_or_infl_rule so drop_ital rules
 ; will also apply to passive verb forms.
 
-basic_passive_verb_lr := lex_rule_basic & word_or_infl_rule &
+basic_passive_verb_lexrule := lex_rule_basic & word_or_infl_rule &
   [ INFLECTD +,
     DTR #dtr &
         [ ALTS.PASSIVE +,
@@ -853,9 +877,10 @@ basic_passive_verb_lr := lex_rule_basic & word_or_infl_rule &
 ;; DPF 13-05-09 - The reentrancy of DTR..SUBJ..NONLOC and COMPS.FIRST..NONLOC 
 ;; (that is, identifying the dtr's NP NONLOC with the mother's PP-by NONLOC)
 ;; is a bad idea, since there are more general constraints on SLASH that
-;; conflict, meaning that we were not parsing e.g. |happily, Kim is being
-;; admired|.
-norm_passive_verb_lr := basic_passive_verb_lr &
+;; conflict, meaning that we were not parsing e.g. *happily, Kim is being
+;; admired*.
+;; DPF 2020-03-24 - Added COMPS..--MIN and ..OPT as per trunk
+norm_passive_verb_lexrule := basic_passive_verb_lexrule &
   [ DTR.SYNSEM.LOCAL.CAT.VAL [ SUBJ < [ --SIND #subjind, 
 					NONLOC #snonloc ] >,
 			       COMPS [ FIRST.LOCAL.CONT.HOOK.XARG #compxarg ] ],
@@ -867,26 +892,35 @@ norm_passive_verb_lr := basic_passive_verb_lr &
 					   NONLOC #snonloc ] ] ] ].
 
 ;; DPF 15-06-06 - Restrict result's COMPS.REST to *nolexlist* in order to block
-;; spurious analysis of |was looked by Kim up|.
-;; DPF 2015-09-10 - Re 15-06-06: But this blocks |was considered creative|. We
-;; also can't usse *indeplist* instead (it would block |known as ...|.  So 
+;; spurious analysis of *was looked by Kim up*.
+;; DPF 2015-09-10 - Re 15-06-06: But this blocks *was considered creative*. We
+;; also can't usse *indeplist* instead (it would block *known as ...*.  So 
 ;; define new list type *satlist* which requires COMPS to be saturated, thus
 ;; excluding just particles.
 ;;
-v_pas-norm_lexrule := norm_passive_verb_lr &
-  [ SYNSEM.LOCAL.CAT.VAL.COMPS.REST *satlist* ].
+v_pas-norm_lexrule := norm_passive_verb_lexrule &
+  [ SYNSEM [ LOCAL.CAT.VAL.COMPS.REST *satlist*,
+	     LKEYS.--+ARGIND #argind ],
+    DTR.SYNSEM.LKEYS.--+ARGIND #argind ].
 
-v_pas-cp_lexrule := norm_passive_verb_lr.
-v_pas-dat_lexrule := basic_passive_verb_lr.
+;; DPF 2020-05-23 - This is at least one lexical rule that does not pass up
+;; its LKEYS.--+ARGIND from its dtr, since the dtr wants an expl-it subj, but
+;; the derived form does not.
+;;
+v_pas-cp_lexrule := norm_passive_verb_lexrule.
+
+v_pas-dat_lexrule := basic_passive_verb_lexrule &
+  [ SYNSEM.LKEYS.--+ARGIND #argind,
+    DTR.SYNSEM.LKEYS.--+ARGIND #argind ].
 
 ; 'was referred to as ...'
 ;;
 ;; DPF 2017-03-01 - Removed selected_rel constraint on first comp's --MIN,
-;; since this blocked |Kim was lied to| and |Kim was spoken to| where these
+;; since this blocked *Kim was lied to* and *Kim was spoken to* where these
 ;; lexical entries select for a contentful PP.  Might revisit those verbs, but
 ;; let's see how this works out.  FIX??
 ;;
-prep_passive_verb_lr := basic_passive_verb_lr &
+prep_passive_verb_lexrule := basic_passive_verb_lexrule &
   [ DTR.SYNSEM [ LOCAL.CAT.VAL [ SUBJ < [ --SIND #sind, 
 					NONLOC #snonloc ] >,
 				 COMPS [ FIRST phr_synsem &
@@ -897,7 +931,8 @@ prep_passive_verb_lr := basic_passive_verb_lr &
 					       --SIND #objind,
 					       --MIN #min ],
 					 REST #comps ] ],
-		 LKEYS.KEYREL #keyrel ],
+		 LKEYS [ KEYREL #keyrel,
+			 --+ARGIND #argind ] ],
     SYNSEM prep_passive_synsem &
            [ LOCAL [ CAT [ VAL [ SUBJ < [ LOCAL.CONT #objcont,
 					  --SIND #objind,
@@ -907,12 +942,13 @@ prep_passive_verb_lr := basic_passive_verb_lr &
 						  NONLOC #snonloc ],
 					  REST #comps ] ] ] ],
 		     CONT.HOOK.XARG #objind ],
-		 LKEYS.KEYREL #keyrel ] ].
+		 LKEYS [ KEYREL #keyrel,
+			 --+ARGIND #argind ] ] ].
 
 ;; 'was done away with'
 ;; `was checked up on'
 ;;
-ptcl_prep_passive_verb_lr := basic_passive_verb_lr &
+ptcl_prep_passive_verb_lexrule := basic_passive_verb_lexrule &
   [ DTR.SYNSEM [ LOCAL.CAT.VAL [ SUBJ < [ --SIND #sind, 
 					  NONLOC #snonloc ] >,
 				 COMPS [ FIRST abstr_lex_synsem &
@@ -928,8 +964,9 @@ ptcl_prep_passive_verb_lr := basic_passive_verb_lr &
 						  --SIND #objind,
 						  OPT - ],
 						REST #comps ] ] ],
-		 LKEYS.KEYREL #keyrel ],
-   SYNSEM ptcl_prep_passive_synsem &
+		 LKEYS [ KEYREL #keyrel,
+			 --+ARGIND #argind ] ],
+    SYNSEM ptcl_prep_passive_synsem &
            [ LOCAL 
 	     [ CAT [ VAL [ SUBJ < [ LOCAL.CONT #objcont,
 				    --SIND #objind,
@@ -941,12 +978,13 @@ ptcl_prep_passive_verb_lr := basic_passive_verb_lr &
 						    NONLOC #snonloc ],
 					    REST #comps ] ] ] ] ],
 	       CONT.HOOK.XARG #objind ],
-	     LKEYS.KEYREL #keyrel ] ].
+	     LKEYS [ KEYREL #keyrel,
+		     --+ARGIND #argind ] ] ].
 
 ; "this chapter has been added to" (dtr has opt NP complement)
 ; or verb+NP+particle
 ;;
-basic_prep_passive_trans_verb_lr := basic_passive_verb_lr &
+basic_prep_passive_trans_verb_lexrule := basic_passive_verb_lexrule &
   [ DTR.SYNSEM 
      [ LOCAL.CAT.VAL [ SUBJ < [ --SIND #sind, 
 				NONLOC #snonloc ] >,
@@ -957,7 +995,8 @@ basic_prep_passive_trans_verb_lr := basic_passive_verb_lr &
 					      LOCAL [ CAT.HEAD prep,
 						      CONT #objcont ] ],
 				      REST #comps ] ] ],
-       LKEYS.KEYREL #keyrel ],
+       LKEYS [ KEYREL #keyrel,
+	       --+ARGIND #argind ] ],
     SYNSEM prep_passive_synsem &
         [ LOCAL [ CAT [ VAL [ SUBJ < [ LOCAL.CONT #objcont,
 				       --SIND #objind,
@@ -967,31 +1006,32 @@ basic_prep_passive_trans_verb_lr := basic_passive_verb_lr &
 						   NONLOC #snonloc ],
 					   REST #comps ] ] ] ],
 		  CONT.HOOK.XARG #objind ],
-	  LKEYS.KEYREL #keyrel ] ].
+	  LKEYS [ KEYREL #keyrel,
+		  --+ARGIND #argind ] ] ].
 
-;; For |the collection was added to|
-prep_passive_trans_verb_lr := basic_prep_passive_trans_verb_lr &
+;; For *the collection was added to*
+prep_passive_trans_verb_lexrule := basic_prep_passive_trans_verb_lexrule &
  [ DTR.SYNSEM.LOCAL.CAT.VAL.COMPS [ FIRST.OPT +,
 				    REST.FIRST [ LOCAL.CAT.VAL.COMPS < >,
 						 --SIND #objind ] ],
    SYNSEM.LOCAL.CONT.HOOK.XARG #objind ].
 
-;; For |the answer could be looked up|
+;; For *the answer could be looked up*
 ;; DPF 2016-11-07 - The dtr's second complement (the particle) was wrongly
-;; constrained to have a non-empty COMPS, blocking |the kit was put together|.
+;; constrained to have a non-empty COMPS, blocking *the kit was put together*.
 ;; So instead constrain type to abstr_lex_synsem.
 ;;
-prep_passive_ptcl_verb_lr := basic_prep_passive_trans_verb_lr &
+prep_passive_ptcl_verb_lexrule := basic_prep_passive_trans_verb_lexrule &
  [ DTR.SYNSEM.LOCAL.CAT.VAL.COMPS [ FIRST [ OPT -,
 					    LOCAL.CONT.HOOK.INDEX #objind ],
 				    REST.FIRST abstr_lex_synsem &
 					  [ NONLOC.SLASH 0-dlist ] ],
    SYNSEM.LOCAL.CONT.HOOK.XARG #objind ].
 
-;;; For |was made an example of|, |was made fun of|
+;;; For *was made an example of*, *was made fun of*
 ;; Exclude dative-shifted verbs as input.
 ;;
-np_prep_passive_verb_lr := basic_passive_verb_lr &
+np_prep_passive_verb_lexrule := basic_passive_verb_lexrule &
   [ DTR [ SYNSEM [ LOCAL.CAT.VAL [ SUBJ < [ --SIND #sind, 
 					    NONLOC #snonloc ] >,
 				   COMPS [ FIRST [ LOCAL.CAT.HEAD noun,
@@ -1005,7 +1045,8 @@ np_prep_passive_verb_lr := basic_passive_verb_lr &
 						   --SIND #objind,
 						   OPT - ],
 						  REST #comps ] ] ],
-		 LKEYS.KEYREL #keyrel ],
+		 LKEYS [ KEYREL #keyrel,
+			 --+ARGIND #argind ] ],
 	  ALTS.DATIVE - ],
    SYNSEM np_prep_passive_synsem &
            [ LOCAL 
@@ -1019,7 +1060,8 @@ np_prep_passive_verb_lr := basic_passive_verb_lr &
 						  NONLOC #snonloc ],
 					       REST #comps ] ] ] ],
 	       CONT.HOOK.XARG #objind ],
-	     LKEYS.KEYREL #keyrel & [ ARG2 #compind ] ] ].
+	     LKEYS [ KEYREL #keyrel & [ ARG2 #compind ],
+		     --+ARGIND #argind ] ] ].
 
 
 ;; This has the same problem as the passive lexical rule.  Since we derive the
@@ -1090,13 +1132,13 @@ np_prep_passive_verb_lr := basic_passive_verb_lr &
 ;; nbar_coord_asym_rule.
 ;; DPF 2017-02-20 - Re 24-Jun-01: Since nominal and verbal gerunds are distinct,
 ;; we can now let nominal ones with a complement preserve the REL value of that
-;; complement, to admit |Rome, the founding of which was important, flourished|,
-;; and since relative |which| and |that| are now distinguished, we still don't
-;; get unwanted |*Rome, the founding of that was important, flourished|.
+;; complement, to admit *Rome, the founding of which was important, flourished*,
+;; and since relative *which* and *that* are now distinguished, we still don't
+;; get unwanted *Rome, the founding of that was important, flourished*.
 ;; DPF 2017-11-07 - Constrain XARG of dtr to be non-expletive, to avoid 
-;; |our being here| with there-copula `being'.
+;; *our being here* with there-copula `being'.
 ;; DPF 2018-03-12 - Added LPERIPH na to block spurious n-j-n analysis for
-;; |bank holding company| assuming N-N |holding company|.
+;; *bank holding company* assuming N-N *holding company*.
 ;;
 nominal_gerund := lex_rule_basic &
   [ ORTH #orth & [ FROM #from, TO #to ],
@@ -1119,6 +1161,7 @@ nominal_gerund := lex_rule_basic &
 			 CTXT #ctxt ],
                  LKEYS [ KEYREL.ARG0.E [ TENSE no_tense,
                                          ASPECT.PRF - ],
+			 --+ARGIND #argind,
                          --COMPKEY #cmin,
                          --OCOMPKEY #ocmin ],
 		 NONLOC [ QUE #que,
@@ -1154,6 +1197,7 @@ nominal_gerund := lex_rule_basic &
                                 ARG0 #ind,
                                 ARG1 #vhand,
 				CFROM #from, CTO #to ],
+		     --+ARGIND #argind,
 		     --COMPKEY #cmin,
                      --OCOMPKEY #ocmin ],
 	     NONLOC [ SLASH 0-dlist,
@@ -1183,7 +1227,7 @@ intrans_nominal_gerund := nominal_gerund &
 ; empty PP complements still require them. So propagate OPT value from DTR's
 ; COMP to mother.
 ;; DPF 2016-10-03 - Changed DTR.SYNSEM from unsat_two_arg_subst to
-;; abstr_lex_synsem so we can also get derived verbs such as |overloading|
+;; abstr_lex_synsem so we can also get derived verbs such as *overloading*
 ;; to be input, where the synsem type is derived_verb_synsem.
 ;;
 intrans_pp_nominal_gerund := nominal_gerund &
@@ -1268,9 +1312,9 @@ trans_nominal_gerund := nominal_gerund &
 ; for e.g. "Friday evening"
 ;; DPF 2019-11-08 - Not clear why we had mother's XARG reentrant with SPEC..LTOP
 ;; but it seems wrong, and is inconsistent with assumptions in robust extension
-;; as in |June 3rd| contrasted with |June 3|.  So remove, and check (FIX?)
+;; as in *June 3rd* contrasted with *June 3*.  So remove, and check (FIX?)
 ;;
-date_det_lr := lex_rule &
+date_det_lexrule := lex_rule &
   [ ORTH #orth,
     DTR [ ORTH #orth,
 	  SYNSEM [ LOCAL [ CAT [ HEAD noun,
@@ -1326,10 +1370,10 @@ date_det_lr := lex_rule &
 ; "October": NP => Determiner
 ;          "(in) October" => "October first"
 
-month_det_lr := date_det_lr &
+month_det_lexrule := date_det_lexrule &
   [ DTR.SYNSEM [ LOCAL.CAT.HEAD.MINORS.MIN mofy_rel,
                  LKEYS.KEYREL.PRED mofy_rel ],
-    SYNSEM.LOCAL.CAT [ HEAD [ MINORS [ MIN _the_q_rel,
+    SYNSEM.LOCAL.CAT [ HEAD [ MINORS [ MIN defdate_q_rel,
 				       ALTMIN mofy_rel ],
                               MOD < > ],
                        VAL [ SPEC < [ --MIN dofm_or_interval_rel ] >,
@@ -1339,7 +1383,7 @@ month_det_lr := date_det_lr &
 ;          "(on) Tuesday" => "Tuesday morning"
 ; DPF 13-aug-09 - Restrict dtr to singular: "*Tuesdays morning"
 ;
-weekday_det_lr := date_det_lr &
+weekday_det_lexrule := date_det_lexrule &
   [ SYNSEM [ LOCAL.CAT [ HEAD [ MINORS [ MIN def_explicit_q_rel,
 					 ALTMIN dofw_rel ],
 				MOD < > ],
@@ -1348,8 +1392,8 @@ weekday_det_lr := date_det_lr &
 			 AGR.PNG.PN 3s ],
                  LKEYS.KEYREL.PRED dofw_rel ] ].
 
-;; |13th of July| from |July 13th|
-dom_ppof_lr := lex_rule_basic &
+;; *13th of July* from *July 13th*
+dom_ppof_lexrule := lex_rule_basic &
   [ INFLECTD bool,
     ORTH #orth,
     DTR word_or_lexrule & #stem &
@@ -1362,6 +1406,7 @@ dom_ppof_lr := lex_rule_basic &
 			   CONT.HOOK #hook,
 			   CTXT #ctxt ],
                    LKEYS [ KEYREL #keyrel,
+			   --+ARGIND #argind,
                            --COMPKEY #cmin,
                            --OCOMPKEY #ocmin ],
 		   NONLOC #nonloc ],
@@ -1394,6 +1439,7 @@ dom_ppof_lr := lex_rule_basic &
 	       CTXT #ctxt ],
 	     LEX -,
              LKEYS [ KEYREL #keyrel& [ ARG1 #cind ],
+		     --+ARGIND #argind,
                      --COMPKEY #cmin,
                      --OCOMPKEY #ocmin ],
 	     NONLOC #nonloc & [ SLASH 0-dlist,
@@ -1409,7 +1455,7 @@ dom_ppof_lr := lex_rule_basic &
 ; Relate transitive predicative adjectives to their intransitive attributive
 ; counterparts
 
-attr_adj_lr := basic_lex_rule_supermost & 
+attr_adj_lexrule := basic_lex_rule_supermost & 
   [ ORTH #orth,
     DERIVED +,
     DTR word_or_lexrule & #stem &
@@ -1431,7 +1477,8 @@ attr_adj_lr := basic_lex_rule_supermost &
 		   NONLOC #non-local,
 		   MODIFD #modif,
 		   PUNCT #punct & [ LPUNCT no_punct,
-				    RPUNCT no_punct ] ],
+				    RPUNCT no_punct ],
+		   LKEYS.--+ARGIND #argind ],
 	  GENRE #genre,
 	  KEY-ARG #keyarg ],
     SYNSEM attr_adj_constr_synsem &
@@ -1449,6 +1496,7 @@ attr_adj_lr := basic_lex_rule_supermost &
 	    NONLOC #non-local,
 	    MODIFD #modif,
 	    PUNCT #punct,
+	    LKEYS.--+ARGIND #argind,
 	    PHON.ONSET #onset ],
     KEY-ARG #keyarg,
     ARGS < #stem & [ SYNSEM.PHON.ONSET #onset ] >,
@@ -1516,22 +1564,21 @@ attr_adj_lr := basic_lex_rule_supermost &
 ;; do have decomposed semantics.  So remove it.
 ;; DPF 16-feb-15 - Removed DTR..INDEX.E.TENSE no_tense because we want to allow
 ;; the un-prefixing rule to derive a predicative adj from this, as in
-;; |the cat is unchanged|
+;; *the cat is unchanged*
 ;; DPF 2016-10-16 - This rule was quite reasonably requiring its dtr to be a 
 ;; verb which is [PRF -], but trouble arises because we want this output to then
 ;; be able to undergo the un- prefix rule, which makes an adjective such as
-;; |unemployed| which can either be attributive or predicative, and when
+;; *unemployed* which can either be attributive or predicative, and when
 ;; predicative, it may well appear in a PRF + context, as in 
-;; |has been unemployed|.  So instead constrain the dtr to be VFORM pas_or_prp.
+;; *has been unemployed*.  So instead constrain the dtr to be VFORM pas_or_prp.
 ;; Also, we can't stamp SF prop on the index of the output, since we also want
-;; |was Kim unemployed?|.  Check the effect of removing this on generation. FIX
+;; *was Kim unemployed?*.  Check the effect of removing this on generation. FIX
 ;; DPF 2017-08-21 - Add POSTHD reentrancy to dtr, at least to avoid spurious 
 ;; analysis for educ entries such as died_a1_post_mal which is marked POSTHD +.
 ;;
-basic_attr_verb_part_lr := lex_rule_basic &
+basic_attr_verb_part_lexrule := lex_rule_basic &
   [ ORTH #orth,
     DTR [ ORTH #orth,
-	  ALTS.VADJ +,
 	  SYNSEM [ LOCAL [ CAT [ HEAD verb &
                                       [ VFORM pas_or_prp,
                                         PRD +,
@@ -1543,6 +1590,7 @@ basic_attr_verb_part_lr := lex_rule_basic &
                                          INDEX #event ] ],
                            CTXT #ctxt ],
                    NONLOC #non-local,
+		   LKEYS.--+ARGIND #argind,
 		   MODIFD #modif ] ],
     SYNSEM adj_synsem_lex_constr &
      [ LOCAL [ CAT [ HEAD.PRD -,
@@ -1550,6 +1598,7 @@ basic_attr_verb_part_lr := lex_rule_basic &
 		     MC na ],
 	       CTXT #ctxt ],
        MODIFD #modif,
+       LKEYS.--+ARGIND #argind,
        NONLOC #non-local ],
     C-CONT [ HOOK [ LTOP #ltop,
                     INDEX #event,
@@ -1563,11 +1612,11 @@ basic_attr_verb_part_lr := lex_rule_basic &
 ; 'chased one' as an NP with num-noun 'one'
 ;
 
-attr_verb_part_nbarmod_lr := basic_attr_verb_part_lr & lex_rule &
+attr_verb_part_nbarmod_lexrule := basic_attr_verb_part_lexrule & lex_rule &
   [ SYNSEM [ LOCAL.CAT.HEAD.MOD < [ --MIN gen_nom_nbar_rel ] >,
 	     LEX + ] ].
 
-attr_verb_part_lr := attr_verb_part_nbarmod_lr &
+attr_verb_part_lexrule := attr_verb_part_nbarmod_lexrule &
   [ SYNSEM.LOCAL.CAT.VAL.COMPS < >,
     DTR.SYNSEM [ LOCAL.CAT.VAL.COMPS < >,
 		 LKEYS.--COMPKEY independent_rel ] ].
@@ -1576,8 +1625,9 @@ attr_verb_part_lr := attr_verb_part_nbarmod_lr &
 ; DPF 25-aug-07 - Block causative -ing forms to avoid spurious ambiguity for
 ; e.g. "the shrinking window"
 ;;
-attr_verb_part_tr_lr := attr_verb_part_nbarmod_lr &
-  [ SYNSEM.LOCAL.CAT.VAL.COMPS < >,
+attr_verb_part_tr_lexrule := attr_verb_part_nbarmod_lexrule &
+  [ ALTS.VADJ +,
+    SYNSEM.LOCAL.CAT.VAL.COMPS < >,
     DTR.SYNSEM 
 	[ LOCAL.CAT [ HEAD [ VFORM prp,
 			     MINORS.ALTMIN role_rel ],
@@ -1588,7 +1638,7 @@ attr_verb_part_tr_lr := attr_verb_part_nbarmod_lr &
 					   VAL.SPR *olist* ] ] . *norplist* > ],
 	  LKEYS.--COMPKEY independent_rel ] ].
 
-attr_verb_part_psv_lr := attr_verb_part_nbarmod_lr &
+attr_verb_part_psv_lexrule := attr_verb_part_nbarmod_lexrule &
   [ SYNSEM.LOCAL.CAT.VAL.COMPS < >,
     DTR [ SYNSEM [ LOCAL.CAT [ HEAD.VFORM pas,
 			       VAL.COMPS < unexpressed &
@@ -1597,11 +1647,11 @@ attr_verb_part_psv_lr := attr_verb_part_nbarmod_lr &
 	  ALTS.ATTRJ + ],
     C-CONT.RELS <! !> ].
 
-;; For e.g. |the dried out cloth| |the written up report| (often with hyphens)
+;; For e.g. *the dried out cloth* *the written up report* (often with hyphens)
 ;; DPF 2013-09-25 - Constrain mother to be LEX - but HC-LEX + in order to block
-;; |*the dried cloth out|.
+;; ungrammatical *the dried cloth out*.
 ;;
-attr_verb_part_ptcl_psv_lr := basic_attr_verb_part_lr &
+attr_verb_part_ptcl_psv_lexrule := basic_attr_verb_part_lexrule &
   [ SYNSEM [ LOCAL.CAT [ HEAD.MOD < [ --MIN gen_nom_nbar_rel ] >,
 			 VAL.COMPS < #comp >,
 			 MC #mc,
@@ -1626,49 +1676,54 @@ attr_verb_part_ptcl_psv_lr := basic_attr_verb_part_lr &
 ; DPF 30-sept-06 - The DTR..VFORM prp constraint prevents e.g. "the newly
 ; built Paris", so remove and see what happens to added ambiguity.
 ;; DPF 2016-09-15 - The constraint MOD..SPR expressed_synsem blocks 
-;; |spoken English|.  But removing it means we would get an undesirable
-;; analysis for |Abrams is hiring Browne|, so we'll further split these
+;; *spoken English*.  But removing it means we would get an undesirable
+;; analysis for *Abrams is hiring Browne*, so we'll further split these
 ;; rules each into two, one for passives and one for pres-part.
 ;; DPF 2017-09-16 - Added OPT - to enable blocking of spurious ambig when these
-;; appear as pred subord phrases, as in |they arrived unprepared|.
-;; DPF 2019-10-22 - Re 2016-09-15: But we also want bare-NP |sparkling Ds|, so
+;; appear as pred subord phrases, as in *they arrived unprepared*.
+;; DPF 2019-10-22 - Re 2016-09-15: But we also want bare-NP *sparkling Ds*, so
 ;; further split the named-mod -ing variants into singular and plural head. Sigh
 ;;
-attr_verb_part_namemod_lr := basic_attr_verb_part_lr & lex_rule &
+attr_verb_part_namemod_lexrule := basic_attr_verb_part_lexrule & lex_rule &
   [ SYNSEM [ LOCAL.CAT [ HEAD.MOD < [ --MIN named_rel ] >,
  			 VAL.COMPS < > ],
 	     LEX +,
 	     OPT - ],
     DTR.SYNSEM.LKEYS.--COMPKEY independent_rel ].
 
-attr_verb_part_intr_namemod_lexrule := attr_verb_part_namemod_lr &
+attr_verb_part_intr_namemod_lrule := attr_verb_part_namemod_lexrule &
   [ DTR.SYNSEM.LOCAL.CAT.VAL.COMPS < > ].
 
-attr_verb_part_intr_namemod_lr := attr_verb_part_intr_namemod_lexrule &
+attr_verb_part_intr_namemod_lexrule := attr_verb_part_intr_namemod_lrule &
   [ DTR.SYNSEM.LOCAL.CAT.HEAD.VFORM pas ].
 
-attr_verb_part_intr_namemod_prp_lr  := attr_verb_part_intr_namemod_lexrule &
+;; DPF 2020-03-24 - Added MOD..PN 3s as per trunk
+;;
+attr_verb_part_intr_namemod_prp_lexrule := attr_verb_part_intr_namemod_lrule &
   [ SYNSEM.LOCAL.CAT.HEAD.MOD < [ LOCAL [ CAT.VAL.SPR < expressed_synsem >,
 					  AGR.PNG.PN 3s ] ] >,
     DTR.SYNSEM.LOCAL.CAT.HEAD.VFORM prp ].
 		       
-attr_verb_part_intr_namemod_pl_prp_lr  := attr_verb_part_intr_namemod_lexrule &
+;; DPF 2020-03-24 - Added type as per trunk.
+attr_verb_part_intr_namemod_pl_prp_lexrule := attr_verb_part_intr_namemod_lrule &
   [ SYNSEM.LOCAL.CAT.HEAD.MOD < [ LOCAL.AGR.PNG.PN 3p ] >,
     DTR.SYNSEM.LOCAL.CAT.HEAD.VFORM prp ].
-		       
-attr_verb_part_tr_namemod_lexrule := attr_verb_part_namemod_lr &
+
+attr_verb_part_tr_namemod_lrule := attr_verb_part_namemod_lexrule &
   [ DTR.SYNSEM.LOCAL.CAT.VAL.COMPS < unexpressed &
                                      [ LOCAL.CAT.HEAD n_or_p ] > ].
 
-attr_verb_part_tr_namemod_lr := attr_verb_part_tr_namemod_lexrule &
+attr_verb_part_tr_namemod_lexrule := attr_verb_part_tr_namemod_lrule &
   [ DTR.SYNSEM.LOCAL.CAT.HEAD.VFORM pas ].
 
-attr_verb_part_tr_namemod_prp_lr := attr_verb_part_tr_namemod_lexrule &
+;; DPF 2020-03-24 - Added MOD..PN 3s as per trunk.
+attr_verb_part_tr_namemod_prp_lexrule := attr_verb_part_tr_namemod_lrule &
   [ SYNSEM.LOCAL.CAT.HEAD.MOD < [ LOCAL [ CAT.VAL.SPR < expressed_synsem >,
 					  AGR.PNG.PN 3s ] ] >,
     DTR.SYNSEM.LOCAL.CAT.HEAD.VFORM prp ].
-
-attr_verb_part_tr_namemod_pl_prp_lr := attr_verb_part_tr_namemod_lexrule &
+		       
+;; DPF 2020-03-24 - Added type as per trunk.
+attr_verb_part_tr_namemod_pl_prp_lexrule := attr_verb_part_tr_namemod_lrule &
   [ SYNSEM.LOCAL.CAT.HEAD.MOD < [ LOCAL.AGR.PNG.PN 3p ] >,
     DTR.SYNSEM.LOCAL.CAT.HEAD.VFORM prp ].
 
@@ -1679,16 +1734,18 @@ adj_to_adv_lexrule := lex_rule_basic &
   [ DTR #dtr & [ ALTS.JTOR +,
 		 SYNSEM basic_adj_abstr_lex_synsem &
 			[ LOCAL.CAT [ HEAD adj,
-				      VAL.COMPS *olist* ] ] ],
+				      VAL.COMPS *olist* ],
+			  LKEYS.--+ARGIND #argind ] ],
     SYNSEM basic_basic_adverb_synsem &
 	       [ LOCAL.CAT [ VAL.COMPS < >,
-			     POSTHD + ] ],
+			     POSTHD + ],
+		 LKEYS.--+ARGIND #argind ],
     C-CONT [ RELS <! !>,
              HCONS <! !>,
 	     ICONS <! !> ],
     ARGS < #dtr > ].
 
-adj_to_adv_int_lr := adj_to_adv_lexrule &
+adj_to_adv_int_lexrule := adj_to_adv_lexrule &
   [ DTR.SYNSEM.LOCAL.CAT.HEAD.MOD < [ LOCAL int_mod_local ] >,
     SYNSEM basic_intersect_adverb_synsem &
 	   [ LOCAL.CONT.RELS <! #keyrel & adv_relation !>,
@@ -1729,12 +1786,13 @@ adj_to_adv_int_lr := adj_to_adv_lexrule &
 ;; "all of the oats are", plural when "all" is the mass determiner here: 
 ;; agreement is determined, here, by the plural form of the complement noun.
 ;; DPF 2015-09-20 - Changed INDEX from overt_non_expl-ind to nonconj_overt-ind
-;; to block right-node-raising analysis of |all of the cats|
+;; to block right-node-raising analysis of *all of the cats*
 ;; DPF 2016-07-03 - Let's try preserving the NEGPOL value from dtr to mother,
-;; to keep the difference between |any of the cats| and |some of the cats|
+;; to keep the difference between *any of the cats* and *some of the cats*
 ;;
 basic_part_constr := lex_rule &
  [ ORTH #orth,
+   ALTS.DETPART +,
    DTR [ ORTH #orth,
          SYNSEM basic_part_det_synsem & 
 	  [ LOCAL.CAT [ HEAD.MINORS.MIN #min,
@@ -1795,15 +1853,15 @@ part_ppof_noagr_constr := basic_part_constr &
 ; of the NP, as in "Which problem did Kim figure out?"
 ;; DPF 2011-08-20 - Curious observation: If we don't include the (desirable)
 ;; re-entrancy for --COMPKEY in this rule, we get an asymmetry between the 
-;; LKB and PET for the sentence |Throw away paper or other rice.| -- namely, 
+;; LKB and PET for the sentence *Throw away paper or other rice.* -- namely, 
 ;; the LKB quicly produces three analyses, while PET fails to terminate.  
 ;; Further, PET is happy as long as the rule vp_cr-cc_c is commented out.  
 ;; FIX? - Maybe diagnose this someday.
 ;; DPF 2012-08-21 - Identified --ADDIN on mother and dtr, to avoid spurious
-;; analysis with mismatched subj-verb agreement, as in |she turn in homework|.
+;; analysis with mismatched subj-verb agreement, as in *she turn in homework*.
 ;; Sigh.
 
-basic_NP_particle_lr := lex_rule &
+basic_NP_particle_lexrule := lex_rule &
  [ ORTH #orth,
    ALTS.NPPART +,
    DTR [ ORTH #orth,
@@ -1859,12 +1917,12 @@ basic_NP_particle_lr := lex_rule &
             HCONS <! !>,
 	    ICONS <! !> ] ].
 
-NP_particle_lr := basic_NP_particle_lr &
+NP_particle_lexrule := basic_NP_particle_lexrule &
   [ SYNSEM generic_particle_np_verb ].
 
 ; --OCOMPKEY is not the same for ditrans and to-trans.
 
-dative_shift_lr := lex_rule_basic &
+dative_shift_lexrule := lex_rule_basic &
  [ ORTH #orth,
    INFLECTD -,
    DTR #dtr & 
@@ -1886,6 +1944,7 @@ dative_shift_lr := lex_rule_basic &
                     CTXT #ctxt ],
             LKEYS [ KEYREL #keyrel,
                     ALTKEYREL #altkeyrel,
+		    --+ARGIND #argind,
                     --COMPKEY #cmin ],
             NONLOC #nonlocal ] ],
    SYNSEM empty_to_trans_verb &
@@ -1904,6 +1963,7 @@ dative_shift_lr := lex_rule_basic &
 		    CTXT #ctxt ],
             LKEYS [ KEYREL #keyrel,
                     ALTKEYREL #altkeyrel,
+		    --+ARGIND #argind,
                     --COMPKEY #cmin ],
 	    NONLOC #nonlocal ],
    ARGS < #dtr >,
@@ -1913,10 +1973,10 @@ dative_shift_lr := lex_rule_basic &
 
 ;; Verbs with expletive-it subject and direct object alternate with second
 ;; complement as CP or VP:
-;; |It annoyed him that we left|
-;; |It annoyed him to shave himself| 
+;; *It annoyed him that we left*
+;; *It annoyed him to shave himself* 
 ;;
-verb_it_cp_vp_lr := lex_rule_basic &
+verb_it_cp_vp_lexrule := lex_rule_basic &
  [ ORTH #orth,
    INFLECTD -,
    DTR #dtr & 
@@ -1937,6 +1997,7 @@ verb_it_cp_vp_lr := lex_rule_basic &
                     CTXT #ctxt ],
             LKEYS [ KEYREL #keyrel,
                     ALTKEYREL #altkeyrel,
+		    --+ARGIND #argind,
                     --COMPKEY #cmin ],
             NONLOC #nonlocal ] ],
    SYNSEM expl_it_subj_np_vp_verb &
@@ -1954,6 +2015,7 @@ verb_it_cp_vp_lr := lex_rule_basic &
 		    CTXT #ctxt ],
             LKEYS [ KEYREL #keyrel,
                     ALTKEYREL #altkeyrel,
+		    --+ARGIND #argind,
                     --COMPKEY #cmin ],
 	    NONLOC #nonlocal ],
    ARGS < #dtr >,
@@ -1964,7 +2026,7 @@ verb_it_cp_vp_lr := lex_rule_basic &
 ; Converts e.g. int-adj 'twenty' to minute-noun for 'twenty (minutes) to nine'
 ; Currently does not allow 'twenty-two to nine' - would need to append COMPS
 ; more carefully.
-;; DPF 2017-09-28 - Constrain to only cardinals, to avoid |first of|.
+;; DPF 2017-09-28 - Constrain to only cardinals, to avoid *first of*.
 ;;
 basic_minute_lex_rule := lex_rule_basic &
  [ ORTH #orth,
@@ -1979,8 +2041,9 @@ basic_minute_lex_rule := lex_rule_basic &
 			  MC #mc,
 			  HC-LEX #hclex ],
                     CTXT #ctxt ],
-            LKEYS.KEYREL [ LBL #arghand,
-			   CFROM #cfrom, CTO #cto ],
+            LKEYS [ KEYREL [ LBL #arghand,
+			     CFROM #cfrom, CTO #cto ],
+		    --+ARGIND #argind ],
 	    PHON.ONSET con_or_voc,
 	    NONLOC #nonlocal ] ],
    SYNSEM basic_minute_noun_synsem &
@@ -1991,6 +2054,7 @@ basic_minute_lex_rule := lex_rule_basic &
             LKEYS [ KEYREL #keyrel & [ LBL #arghand,
 				       ARG0 #minst,
 				       CFROM #cfrom, CTO #cto ],
+		    --+ARGIND #argind,
 		    ALTKEYREL #altkeyrel ],
 	    NONLOC #nonlocal ],
    C-CONT [ HOOK #hook,
@@ -1999,21 +2063,21 @@ basic_minute_lex_rule := lex_rule_basic &
    INFLECTD +,
    ARGS < #dtr > ].
 
-minute_noprep_lr := basic_minute_lex_rule &
+minute_noprep_lexrule := basic_minute_lex_rule &
  [ SYNSEM [ LOCAL [ CAT [ HEAD.CASE no_case,
 			  VAL.COMPS < > ], 
 		    CONT.HOOK.INDEX #mind ],
 	    LKEYS.KEYREL.ARG0 #mind ] ].
 
-minute_prep_lr := basic_minute_lex_rule &
+minute_prep_lexrule := basic_minute_lex_rule &
  [ SYNSEM minute_noun_wcomp_synsem ].
 
-; |three twenty p.m.|
+; *three twenty p.m.*
 ;; DPF 2016-08-026 - Instead of identifying INFL -, change mother to na_or_-,
-;; as we need for |the ten thirty departure| where the head-comp rule requires
+;; as we need for *the ten thirty departure* where the head-comp rule requires
 ;; the head to be na_or_+.
 ;;
-hour_np_lr := word_or_nonpunct_rule &
+hour_np_lexrule := word_or_nonpunct_rule &
   [ SYNSEM hour_np_synsem &
 	   [ PUNCT #punct,
 	     PHON.ONSET #onset,
@@ -2023,9 +2087,11 @@ hour_np_lr := word_or_nonpunct_rule &
     INFLECTD na_or_-,
     ORTH #orth,
     DERIVED +,
+    TOKENS #tokens,
     ARGS < [ ORTH #orth,
 	     IDIOM #idiom, DIALECT #dialect, GENRE #genre, ALTS #alts, 
 	     INFLECTD -,
+	     TOKENS #tokens,
 	     SYNSEM [ LOCAL [ CAT [ HEAD noun & [ MINORS.MIN numbered_hour_rel],
 				    VAL.COMPS < synsem > ],
 			      CONJ cnil,
@@ -2043,10 +2109,10 @@ hour_np_lr := word_or_nonpunct_rule &
 ; For "A large enough cat arrived."
 
 ;; DPF 2013-09-27 - Constrain dtr to be norm_adj_lex_synsem in order to
-;; block as input deverbal adjectives: |*we brought a baked enough cake|
-;; DPF 2017-10-29 - Removed HC-LEX + on output, since we want both |a tall 
-;; enough tree| (where HC-LEX on |tall| needs to be +), and also |a building 
-;; tall enough to see| (where HC-LEX on |tall enough| needs to be -).
+;; block as input deverbal adjectives: *we brought a baked enough cake*
+;; DPF 2017-10-29 - Removed HC-LEX + on output, since we want both *a tall 
+;; enough tree* (where HC-LEX on *tall* needs to be +), and also *a building 
+;; tall enough to see* (where HC-LEX on *tall enough* needs to be -).
 ;;
 basic_enough_addition := lex_rule_basic &
   [ ORTH #orth,
@@ -2054,6 +2120,7 @@ basic_enough_addition := lex_rule_basic &
     DTR word_or_lexrule & #stem &
 	[ ORTH #orth,
 	  INFLECTD +,
+	  ALTS.ENOUGH +,
 	  SYNSEM 
            [ LOCAL [ CAT [ HEAD #head & a_or_adv &
                                 [ MINORS.MIN independent_mod_rel,
@@ -2085,7 +2152,7 @@ basic_enough_addition := lex_rule_basic &
 			       LEX +,
 			       OPT - ] ],
 		     SPR < anti_synsem >,
-                     SPCMPS < > ],
+		     SPCMPS < > ],
 	       MC #mc ],
 	      CONT.HOOK #hook,
 	      CTXT #ctxt ],
@@ -2097,17 +2164,31 @@ basic_enough_addition := lex_rule_basic &
 	     ICONS <! !> ],
     ARGS < #stem > ].
 
-; |Kim is competent enough|
+; *Kim is competent enough*
 enough_addition_nocomps := basic_enough_addition &
-  [ SYNSEM.LOCAL.CAT.VAL.COMPS < synsem >,
+  [ ARGS < [ SYNSEM.LEX #lex ] >,
+    SYNSEM [ LOCAL.CAT.VAL.COMPS < synsem >,
+	     LEX #lex ],
     C-CONT.HCONS <! !> ].
 
-; |Kim is competent enough to hire|
+; *Kim is competent enough to hire*
 ;; DPF 2018-03-09 - Constrain this one only to adjectives, since can't find
-;; examples like |?Kim ran quickly enough to admire| with a VP/NP following
-;; |quickly enough|.  Contrast with adj: |that tree is tall enough to see
-;; from here|.
+;; examples like *?Kim ran quickly enough to admire* with a VP/NP following
+;; *quickly enough*.  Contrast with adj: *that tree is tall enough to see
+;; from here*.
+;; DPF 2020-03-24 - Added SYNSEM..HC-LEX - as per trunk.
+;; DPF 2020-04-29 - Re 2020-03-24: But the adj-N rule for e.g. *tall enough cat*
+;; requires adj to be LEX +, so leave HC-LEX unconstrained.  
+;; DPF 2020-04-30 - Would like to block *a tall enough to see building* while
+;; preserving *a tall enough building to see*, but neither HC-LEX nor POSTHD
+;; offer viable avenues.  In principle, would need the VP to provide a value
+;; to its head-comp phrase that is incompatible with being an adj in adj_N,
+;; such as LEX - or POSTHD +, but *tall* can't effect that, since with either
+;; NP, the VP will unify its constraints into *tall*.  Briefly tried having
+;; the hcomp rule propagate either HC-LEX or POSTHD from its nonhd, but both
+;; features are too much in play for other constructions.
 ;;
+#|
 enough_addition_wcomp := basic_enough_addition &
   [ SYNSEM.LOCAL 
 	    [ CAT [ HEAD basic_adj,
@@ -2122,35 +2203,81 @@ enough_addition_wcomp := basic_enough_addition &
 							MOD < > ] ],
 					   CONT.HOOK.INDEX #xarg ] !>,
 				OPT -,
-				PUNCT.LPUNCT no_punct ] >,
-		    HC-LEX - ],
+				PUNCT.LPUNCT no_punct ] > ],
 	      CONT.HOOK.XARG #xarg ],
     C-CONT.HCONS <! qeq & [ HARG #arg2,
 			    LARG #vltop ] !> ].
+|#
 
+basic_enough_addition_wcomp := basic_enough_addition &
+  [ SYNSEM.LOCAL.CAT [ HEAD basic_adj,
+		       VAL.COMPS < [ LKEYS.KEYREL.ARG2 #arg2 ],
+				   synsem &
+				   [ LOCAL [ CAT.NH-LEX -,
+					     CONT.HOOK.LTOP #vltop,
+					     CONJ cnil ],
+				     OPT -,
+				     PUNCT.LPUNCT no_punct ] > ],
+    C-CONT.HCONS <! qeq & [ HARG #arg2,
+			    LARG #vltop ] !> ].
+
+enough_addition_wcomp := basic_enough_addition_wcomp &
+  [ SYNSEM.LOCAL 
+	    [ CAT [ VAL.COMPS < [ ],
+				[ LOCAL.CAT s_or_vp_inf_cat,
+				  NONLOC.SLASH 1-dlist &
+				    <! [ CAT np_cat_acc_min &
+					     [ HEAD [ MINORS.MIN norm_nom_rel,
+						      MOD < > ] ],
+					 CONT.HOOK.INDEX #xarg ] !> ] > ],
+	      CONT.HOOK.XARG #xarg ] ].
+
+
+;; DPF 2020-30-24 - Added type as per trunk.
+;; DPF 2020-04-29 - Generalized COMPS..CAT from s_or_vp_inf_cat to also
+;; admit finite CPs, as in *old enough that he can participate*
+;; DPF 2020-04-30 - Prevent *the sleepy enough to sleep cat* by making adj's
+;; POSTHD be assigned as + by its second complement, so it is not yet
+;; constrained for *sleepy enough* to give *sleepy enough cat*.
+;;
+#|
 enough_addition_wcomp_nogap := basic_enough_addition &
   [ SYNSEM.LOCAL 
 	    [ CAT [ HEAD basic_adj,
 		    VAL.COMPS < [ LKEYS.KEYREL.ARG2 #arg2 ],
 			      synsem &
-			      [ LOCAL [ CAT s_or_vp_inf_cat,
+			      [ LOCAL [ CAT [ HEAD comp & 
+						   [ VFORM fin_or_inf,
+						     MOD *anti_list* ],
+					      VAL.COMPS < >,
+					      POSTHD +,
+					      NH-LEX -,
+					      MC na_or_- ],
 					CONT.HOOK.LTOP #vltop,
 					CONJ cnil ],
 				NONLOC.SLASH 0-dlist,
 				OPT -,
-				PUNCT.LPUNCT no_punct ] >,
-		    HC-LEX - ] ],
+				PUNCT.LPUNCT no_punct ] > ] ],
     C-CONT.HCONS <! qeq & [ HARG #arg2,
 			    LARG #vltop ] !> ].
+|#
+enough_addition_wcomp_nogap := basic_enough_addition_wcomp &
+  [ SYNSEM.LOCAL.CAT.VAL.COMPS < [ ],
+				 [ LOCAL.CAT [ HEAD comp & [ VFORM fin_or_inf,
+							     MOD *anti_list* ],
+					       VAL.COMPS < >,
+					       POSTHD +,
+					       MC na_or_- ],
+				   NONLOC.SLASH 0-dlist ] > ].
 
 ; For "eyed" of "wide-eyed"
 ;
 ;; DPF 2015-04-05 - Removed DTR..SPR.FIRST unexpressed since this prevents
-;; |four-legged| where card words require their MOD to be SPR expressed, to
-;; avoid spurious analysis for |four cats| since we make card |four| into det.
+;; *four-legged* where card words require their MOD to be SPR expressed, to
+;; avoid spurious analysis for *four cats* since we make card *four* into det.
 ;; Not clear what this constraint was blocking, but it was added since 1214.
 ;;
-noun_adj_lr := lex_rule_basic &
+noun_adj_lexrule := lex_rule_basic &
   [ DTR word_or_lexrule & #stem &
         [ INFLECTD -,
           SYNSEM [ LOCAL [ CAT [ HEAD noun &
@@ -2164,6 +2291,7 @@ noun_adj_lr := lex_rule_basic &
                            CONT.HOOK [ LTOP #nltop,
                                        INDEX #nind ],
                            CTXT #ctxt ],
+		   LKEYS.--+ARGIND #argind,
 		   NONLOC #non-local,
 		   MODIFD.LPERIPH #lper ],
           KEY-ARG #keyarg ],
@@ -2176,6 +2304,7 @@ noun_adj_lr := lex_rule_basic &
 		     AGR #nind,
                      CTXT #ctxt ],
              NONLOC #non-local,
+	     LKEYS.--+ARGIND #argind,
              MODIFD notmod & [ LPERIPH #lper ] ],
     C-CONT [ HOOK [ LTOP #nltop,
                     INDEX #nind ],
@@ -2186,28 +2315,32 @@ noun_adj_lr := lex_rule_basic &
     ARGS < #stem >,
     INFLECTD + ].
 
-tough_adj_lr := lex_rule_basic &
+tough_adj_lrule := lex_rule_basic &
   [ DTR word_or_lexrule & #stem &
         [ INFLECTD #infl,
 	  ORTH #orth,
           SYNSEM norm_adj_atrans_synsem &
-		 [ LOCAL [ CAT [ VAL.SPR.FIRST.--MIN #min,
+		 [ LOCAL [ CAT [ VAL [ SPR.FIRST.--MIN #min,
+				       COMPS.REST.REST #compsrest ],
 				 HC-LEX #hclex ],
 		           CONT.HOOK [ LTOP #ltop,
                                        INDEX #ind ],
                            CTXT #ctxt ],
+		   LKEYS.--+ARGIND #argind,
 		   NONLOC #non-local ],
 	  ALTS.TOUGH +,
           KEY-ARG #keyarg ],
-    SYNSEM tough_adj_atrans_synsem &
+    SYNSEM basic_tough_adj_atrans_synsem &
 	[ LOCAL [ CAT [ HEAD adj & [ MINORS.ALTMIN non_ellipt_rel ],
-			 VAL.SPR.FIRST synsem &
-			      [ --MIN #min,
-				LOCAL.CAT.HS-LEX #hslex ],
+			 VAL [ SPR.FIRST synsem &
+					 [ --MIN #min,
+					   LOCAL.CAT.HS-LEX #hslex ],
+			       COMPS.REST.REST #compsrest ],
 		         HC-LEX #hclex,
 			 HS-LEX #hslex ],
 		  CTXT #ctxt ],
 	  MODIFD notmod,
+	  LKEYS.--+ARGIND #argind,
 	  NONLOC #non-local ],
     C-CONT [ HOOK [ LTOP #ltop,
                     INDEX #ind ],
@@ -2219,39 +2352,49 @@ tough_adj_lr := lex_rule_basic &
     ORTH #orth,
     INFLECTD #infl ].
 
+tough_adj_lexrule := tough_adj_lrule &
+  [ DTR.SYNSEM.LOCAL.CAT.VAL.COMPS < [], [] >,
+    SYNSEM tough_adj_atrans_synsem ].
+
+tough_adj_compar_lexrule := tough_adj_lrule &
+  [ DTR.SYNSEM.LOCAL.CAT.VAL.COMPS < [], [], [] >,
+    SYNSEM tough_adj_atrans_compar_synsem ].
 
 ;; DPF 2012-12-01 - Identified missing PUNCT on dtr and mother, to prevent
 ;; e.g. spurious application of the paired_bracket rule.
+;; DPF 2020-04-29 - Exclude proper names via ALTMIN, to avoid for generic 
+;; proper nouns as with *President*.  Sigh.
 ;;
-pre_noun_adj_lr := lex_rule_supermost & word_or_nonpunct_rule &
+basic_pre_noun_adj_lexrule := lex_rule_supermost & word_or_nonpunct_rule &
   [ DTR word_or_lexrule & #stem &
         [ INFLECTD +,
-          SYNSEM [ LOCAL [ CAT [ HEAD noun &
-                                      [ MOD < >,
-                                        MINORS.MIN reg_nom_rel ],
+          SYNSEM [ LOCAL [ CAT [ HEAD noun & [ MOD < > ],
 				 VAL [ SUBJ < >,
 				       SPR < synsem & 
 					     [ --MIN quant_or_deg_rel ] >,
-				       COMPS < > ] ],
+				       COMPS #comps ] ],
 			   CONT.HOOK [ LTOP #nhand,
                                        INDEX #nind ],
 			   AGR.PNG.PN 3s,
 			   CONJ cnil ],
 		   NONLOC #nonloc,
-		   PUNCT #punct,
-		   LKEYS.KEYREL [ CFROM #cfrom, CTO #cto ],
+		   PUNCT #punct & [ LPUNCT dq_or_sq_or_lital_or_no_punct ],
+		   LKEYS [ KEYREL [ CFROM #cfrom, CTO #cto ],
+			   --+ARGIND #argind ],
 		   PHON.ONSET #onset ],
 	  KEY-ARG #keyarg ],
     SYNSEM adj_synsem_lex_rule &
 	   [ LOCAL [ CAT [ HEAD.MOD.FIRST.LOCAL.CONT.HOOK [ LTOP #ltop,
 							    INDEX #modind ],
-			   VAL.SPR.FIRST anti_synsem_min ],
+			   VAL [ SPR.FIRST anti_synsem_min,
+				 COMPS #comps ] ],
 		     CONT.HOOK #hook,
 		     CONJ cnil ],
              NONLOC #nonloc,
 	     PUNCT #punct,
 	     LEX +,
              MODIFD notmod,
+	     LKEYS.--+ARGIND #argind,
 	     PHON.ONSET #onset ],
     C-CONT [ HOOK #hook & [ LTOP #ltop,
 			    INDEX #ind ],
@@ -2273,12 +2416,20 @@ pre_noun_adj_lr := lex_rule_supermost & word_or_nonpunct_rule &
     DERIVED +,
     INFLECTD + ].
 
+pre_noun_adj_lexrule := basic_pre_noun_adj_lexrule &
+  [ DTR.SYNSEM.LOCAL.CAT [ HEAD.MINORS.MIN gen_nom_nbar_rel,
+			   VAL.COMPS < > ] ].
+
+pre_propn_adj_lexrule := basic_pre_noun_adj_lexrule &
+  [ DTR [ SYNSEM.LOCAL.CAT.HEAD.MINORS.MIN abstr_named_rel,
+	  TOKENS.+LIST.FIRST.+CLASS.+CASE mixed ] ].
+
 ; Converts bipartite nouns which are prescriptively [IND -] ("*many sunglasses
 ; were broken") into less constrained variants which are used for more robust
 ; parsing.  (All ignoring the type/individual contrast which the ERG currently
 ; doesn't distinguish.)
 
-bipart_lr := lex_rule_supermost & word_or_nonpunct_rule &
+bipart_lexrule := lex_rule_supermost & word_or_nonpunct_rule &
   [ INFLECTD -,
     DERIVED +,
     ORTH #orth,
@@ -2315,12 +2466,13 @@ bipart_lr := lex_rule_supermost & word_or_nonpunct_rule &
 ;; DPF 2012-10-20 -  Added SF prop to mother to prevent an inverted main-verb
 ;; S from being mistaken for a WH-phrase in the CP->NP rule.
 ;; DPF 2014-11-17 - Re 18-jul-07: But the ambiguity is there just as much for
-;; "Kim knew the cat was afraid", and we want |the cat, said he|, so remove
+;; "Kim knew the cat was afraid", and we want *the cat, said he*, so remove
 ;; this constraint, and accept the (real) ambiguity.
 ;; DPF 2017-10-31 - Constrain inverted subj to exclude gerunds to avoid spurious
-;; abmig for e.g. |agreed-inv [[to sell its headquarters] [building here]|
+;; abmig for e.g. *agreed-inv [[to sell its headquarters] [building here]*
+;; DPF 2020-05-23 - Constrain inverted subj to have empty SLASH.
 ;
-inverted_quote_lr := lex_rule_basic &
+inverted_quote_lexrule := lex_rule_basic &
  [ ORTH #orth,
    INFLECTD +,
    DTR #dtr & 
@@ -2331,7 +2483,8 @@ inverted_quote_lr := lex_rule_basic &
 	  [ LOCAL [ CAT [ HEAD #head,
                           VAL [ SUBJ < #subj & canonical_synsem &
                                        [ LOCAL.CAT.HEAD.MINORS.NORM norm_rel,
-					 NONLOC.QUE 0-dlist ] >,
+					 NONLOC [ SLASH 0-dlist,
+						  QUE 0-dlist ] ] >,
 				COMPS #comps,
                                 KCMP #keycomp ],
                           HC-LEX #hclex ],
@@ -2362,10 +2515,10 @@ inverted_quote_lr := lex_rule_basic &
             HCONS <! !>,
 	    ICONS <! !> ] ].
 
-;; |he said "Yes."| from |he said "we should".|
-;; and also |"Yes," he said.| from (derived) |"we should," he said.|
+;; *he said "Yes."* from *he said "we should".*
+;; and also *"Yes," he said.* from (derived) *"we should," he said.*
 ;;
-cp_frag_lr := lex_rule_basic &
+cp_frag_lexrule := lex_rule_basic &
  [ ORTH #orth,
    INFLECTD -,
    DTR #dtr & 
@@ -2383,7 +2536,8 @@ cp_frag_lr := lex_rule_basic &
                     CONT.HOOK #hook & [ INDEX.SF prop ],
                     AGR #agr,
                     CTXT #ctxt ],
-            LKEYS.KEYREL #keyrel,
+            LKEYS [ KEYREL #keyrel,
+		   --+ARGIND #argind ],
             NONLOC #nonlocal,
 	    PHON.ONSET #onset ] ],
    SYNSEM cp_frag_intrans_verb &
@@ -2393,7 +2547,8 @@ cp_frag_lr := lex_rule_basic &
                     CONT.HOOK #hook,
                     AGR #agr,
 		    CTXT #ctxt ],
-            LKEYS.KEYREL #keyrel,
+            LKEYS [ KEYREL #keyrel,
+		    --+ARGIND #argind ],
 	    NONLOC #nonlocal,
 	    PHON.ONSET #onset ],
    ALTS.CPFRAG +,
@@ -2401,91 +2556,6 @@ cp_frag_lr := lex_rule_basic &
    C-CONT [ RELS <! !>,
             HCONS <! !>,
 	    ICONS <! !> ] ].
-
-;; Foreign words
-;; DPF 2016-01-27 - Removed ALTMIN no_rel on dtr, since this prevents these
-;; appearing in appositives as in |the pronoun "you"|
-;; DPF 2016-02-03 Replaced output's ALTMIN def_implicit_q_rel with
-;; impl_or_proper_q_rel so these can be right dtr of appositives, as in
-;; |the expression "foo"|
-;; Also added NORM norm_rel to output, to prevent these from appearing as first
-;; daughter in np_pred phrases, as in |the abbreviation ["in" for "inches"]|
-;; DPF 2016-09-18 - Re 2016-02-03: Well, it may be annoying to have the fw
-;; |"in"| appear in np_pred, but in general we do want to allow other foreign
-;; words there, as in |we gasped, "glump" being such a rude word|.  So remove
-;; norm_rel on mother, which has the added benefit of allowing in particular
-;; |We speak two languages, the other being Spanish| where special adj |other|
-;; is [NORM no_rel].
-;; DPF 2017-02-13 - Preserve RPUNCT from dtr to mother, instead of stamping
-;; clause_or_no_punct on mother, so we can avoid run-on analysis for
-;; |''glump'' arose|.
-;;
-foreign_lr := lex_rule_supermost & word_or_nonpunct_rule &
-  [ INFLECTD +,
-    ORTH #orth,
-    KEY-ARG #keyarg,
-    DTR #stem &
-	[ INFLECTD na_or_+,
-	  ORTH #orth,
-	  DERIVED -,
-	  SYNSEM basic_lex_synsem &
-		 [ LOCAL [ CONT.HOOK [ LTOP #hand,
-				       INDEX #index1 ] ],
-		   NONLOC #nonloc,
-                   PUNCT [ LPUNCT dq_or_sq_or_lital_punct,
-			   RPUNCT #rpunct,
-			   RCLSTR [ RPAREN #rp,
-				    RFP #rfp,
-				    RITAL +,
-				    LITAL - ],
-			   LCLSTR #lclstr ],
-		   LKEYS #lkeys,
-		   PHON.ONSET #onset ],
-          KEY-ARG #keyarg,
-          GENRE #genre ],
-    SYNSEM lex_phr_synsem &
-	   [ LOCAL [ CAT basic_nbar_cat &
-			 [ HEAD noun & 
-				[ MOD < >,
-				  MINORS [ MIN named_np_rel,
-					   ALTMIN #spmin,
-					   NORM quantity_or_norm_rel ] ],
-			   VAL [ SPR < synsem &
-				       [ --MIN quant_rel & #spmin,
-					 LOCAL.CAT [ HEAD det,
-						     VAL [ SUBJ < >,
-							   SPR *olist* ] ],
-					 LEX +,
-					 OPT - ] >,
-				 SPCMPS < > ] ],
-		     CONT nom-obj &
-			 [ HOOK.INDEX nonconj_ref-ind & #index ],
-		     CONJ cnil,
-		     AGR #index & [ PNG.PN 3s, DIV - ] ],
-	     MODIFD notmod,
-	     NONLOC #nonloc & non-local_none,
-	     LEX +,
-	     LKEYS #lkeys & [ KEYREL [ CFROM #from, CTO #to ] ],
-             PUNCT [ LPUNCT no_punct,
-		     RPUNCT #rpunct & rparen_or_clause_or_no_punct,
-		     PNCTPR ppair,
-		     RCLSTR [ RPAREN #rp,
-			      RFP #rfp,
-			      RITAL +,
-			      LITAL + ],
-		     LCLSTR #lclstr  ],
-	     PHON.ONSET #onset ],
-    GENRE #genre,
-    C-CONT [ HOOK [ LTOP #hand,
-		    INDEX #index ],
-	     RELS <! [ LBL #hand,
-		       PRED fw_seq_rel,
-		       ARG0 #index,
-		       ARG1 #index1,
-		       CFROM #from, CTO #to ] !>,
-	     HCONS <! !>,
-	     ICONS <! !> ],
-    ARGS < #stem > ].
 
 ;; Punctuation rules
 ;
@@ -2529,12 +2599,10 @@ basic_punctuation_rule := lex_rule_supermost & word_or_punct_rule &
 
 punctuation_rule := basic_punctuation_rule &
   [ INFLECTD #infl & na_or_+,
-    SYNSEM.PUNCT [ RCLSTR #rclstr,
-		   LCLSTR #lclstr ],
+    SYNSEM.PUNCT [ RCLSTR #rclstr ],
     GENRE #genre,
     ARGS < [ INFLECTD #infl,
-             SYNSEM.PUNCT [ RCLSTR #rclstr,
-			    LCLSTR #lclstr ],
+             SYNSEM.PUNCT [ RCLSTR #rclstr ],
              GENRE #genre ] > ].
 
 punctuation_clause_rule := punctuation_rule &
@@ -2551,7 +2619,7 @@ punctuation_qmark_rule := punctuation_clause_rule &
   [ SYNSEM.PUNCT.RPUNCT.PSF punct-ques ].
 
 ;; DPF 2016-10-16 - PSF was punct-prop-comm, but this excludes questions, as in
-;; |will they win; and will we lose?|
+;; *will they win; and will we lose?*
 ;;
 punctuation_semicol_rule := punctuation_rule &
   [ SYNSEM.PUNCT [ LPUNCT #lpunct,
@@ -2573,13 +2641,11 @@ punctuation_colon_rule := punctuation_rule &
 
 generic_punctuation_comma_rule := basic_punctuation_rule &
   [ INFLECTD #infl,
-    SYNSEM.PUNCT [ RCLSTR #rclstr,
-                   LCLSTR #lclstr ],
+    SYNSEM.PUNCT [ RCLSTR #rclstr ],
     GENRE #genre,
     ARGS < [ INFLECTD #infl,
              SYNSEM.PUNCT [ RPUNCT pair_or_no_punct,
-                            RCLSTR #rclstr,
-                            LCLSTR #lclstr ],
+                            RCLSTR #rclstr ],
              GENRE #genre ] > ].
 
 basic_punctuation_comma_rule := generic_punctuation_comma_rule &
@@ -2603,16 +2669,14 @@ punctuation_rparen_rule := basic_punctuation_rule &
                    RCLSTR [ RPAREN na_or_+,
 			    RFP #rfp,
 			    RITAL #rital,
-			    LITAL #lital ],
-		   LCLSTR #lclstr ],
+			    LITAL #lital ] ],
     ARGS < [ INFLECTD #infl,
              SYNSEM.PUNCT [ LPUNCT #lpunct & no_punct,
                             RPUNCT clause_or_pair_or_no_punct &
                                    [ PSF #pred ],
 			    RCLSTR [ RFP #rfp,
 				     RITAL #rital,
-				     LITAL #lital ],
-			    LCLSTR #lclstr ],
+				     LITAL #lital ] ],
 	     GENRE #genre ] >,
     GENRE #genre ].
 
@@ -2629,8 +2693,7 @@ punctuation_lparen_rule := basic_punctuation_rule &
     SYNSEM.PUNCT [ LPUNCT lparen_punct,
                    RPUNCT #rpunct,
                    PNCTPR #pnctpr,
-                   RCLSTR #rclstr,
-		   LCLSTR.LPAREN na_or_+ ],
+                   RCLSTR #rclstr ],
     ARGS < [ INFLECTD #infl,
              SYNSEM.PUNCT [ RPUNCT #rpunct,
                             PNCTPR #pnctpr,
@@ -2642,7 +2705,7 @@ w_lparen_rule := punctuation_lparen_rule.
 w_lbrack_rule := punctuation_lparen_rule.
 
 ; DPF 03-jun-10 - Changed LPUNCT from dq_or_no_punct to no_punct to avoid
-; spurious ambiguity for |"cat"|
+; spurious ambiguity for *"cat"*
 ;;
 punctuation_dqright_rule := basic_punctuation_rule &
   [ INFLECTD #infl,
@@ -2652,7 +2715,6 @@ punctuation_dqright_rule := basic_punctuation_rule &
 			    RFP #rfp,
 			    IGNOREQ #iq,
 			    RITAL + ],
-		   LCLSTR #lclstr,
 		   PAIRED #paired,
 		   PNCTPR #pnctpr ],
     ARGS < [ INFLECTD #infl,
@@ -2661,7 +2723,6 @@ punctuation_dqright_rule := basic_punctuation_rule &
 			    RCLSTR [ RPAREN #rp,
 				     RFP #rfp,
 				     IGNOREQ #iq ],
-			    LCLSTR #lclstr,
 			    PAIRED #paired,
 			    PNCTPR #pnctpr ],
              GENRE #genre ] >,
@@ -2672,7 +2733,6 @@ punctuation_dqleft_rule := basic_punctuation_rule &
     SYNSEM.PUNCT [ LPUNCT dq_punct,
                    RPUNCT #rpunct,
                    RCLSTR #rclstr,
-		   LCLSTR #lclstr,
 		   PAIRED #paired,
 		   PNCTPR #pnctpr ],
     ARGS < [ INFLECTD #infl,
@@ -2680,7 +2740,6 @@ punctuation_dqleft_rule := basic_punctuation_rule &
 			    RPUNCT #rpunct &
 	     		           comma_or_rbc_or_clause_or_pair_or_no_punct,
                             RCLSTR #rclstr,
-			    LCLSTR #lclstr,
 			    PAIRED #paired,
 			    PNCTPR #pnctpr ],
              GENRE #genre ] >,
@@ -2693,16 +2752,14 @@ punctuation_sqright_rule := basic_punctuation_rule &
                    RCLSTR [ RPAREN #rp,
 			    RFP #rfp,
 			    IGNOREQ #iq,
-			    RITAL + ],
-		   LCLSTR #lclstr ],
+			    RITAL + ] ],
     ARGS < [ INFLECTD #infl,
              SYNSEM.PUNCT [ LPUNCT #lpunct & no_punct,
                             RPUNCT comma_or_clause_or_no_punct &
                                    [ PSF #pred ],
                             RCLSTR [ RPAREN #rp,
 				     RFP #rfp,
-				     IGNOREQ #iq ],
-			    LCLSTR #lclstr ],
+				     IGNOREQ #iq ] ],
              GENRE #genre ] >,
     GENRE #genre ].
     
@@ -2710,12 +2767,10 @@ punctuation_sqleft_rule := basic_punctuation_rule &
   [ INFLECTD #infl,
     SYNSEM.PUNCT [ LPUNCT sq_punct,
                    RPUNCT #rpunct,
-                   RCLSTR #rclstr,
-		   LCLSTR #lclstr ],
+                   RCLSTR #rclstr ],
     ARGS < [ INFLECTD #infl,
              SYNSEM.PUNCT [ RPUNCT #rpunct,
-                            RCLSTR #rclstr,
-			    LCLSTR #lclstr ],
+                            RCLSTR #rclstr ],
              ALTS.SQPNCT +,
              GENRE #genre ] >,
     GENRE #genre ].
@@ -2724,35 +2779,31 @@ punctuation_hyphen_rule := basic_punctuation_rule &
   [ INFLECTD #infl,
     SYNSEM.PUNCT [ LPUNCT #lpunct,
                    RPUNCT hyphen_sgl & [ PSF #pred ],
-                   RCLSTR #rclstr,
-		   LCLSTR #lclstr ],
+                   RCLSTR #rclstr ],
     ARGS < [ INFLECTD #infl,
              SYNSEM.PUNCT [ LPUNCT #lpunct & no_punct,
                             RPUNCT no_punct &
                                    [ PSF #pred ],
-                            RCLSTR #rclstr,
-			    LCLSTR #lclstr ],
+                            RCLSTR #rclstr ],
              GENRE #genre ] >,
     GENRE #genre ].
     
 w_hyphen_rule := punctuation_hyphen_rule.
 w_threedot_rule := punctuation_hyphen_rule.
 
-;; DPF 2017-09-18 - For tokens with leading hyphen, such as |chmod -rw|
+;; DPF 2017-09-18 - For tokens with leading hyphen, such as *chmod -rw*
 ;; But exclude these in prefixing rules such as pre-booked
 punctuation_lefthyphen_rule := basic_punctuation_rule &
   [ INFLECTD #infl,
     SYNSEM.PUNCT [ LPUNCT hyphen_sgl,
                    RPUNCT #rpunct,
                    PNCTPR #pnctpr,
-                   RCLSTR #rclstr,
-		   LCLSTR #lclstr ],
+                   RCLSTR #rclstr ],
     ARGS < [ INFLECTD #infl,
              SYNSEM.PUNCT [ LPUNCT no_punct,
 			    RPUNCT #rpunct,
                             PNCTPR #pnctpr,
-                            RCLSTR #rclstr,
-			    LCLSTR #lclstr ],
+                            RCLSTR #rclstr ],
              GENRE #genre ] >,
     GENRE #genre ].
 
@@ -2809,14 +2860,12 @@ punctuation_italleft_rule := basic_punctuation_rule &
   [ INFLECTD #infl,
     SYNSEM.PUNCT [ LPUNCT lital_punct,
                    RPUNCT #rpunct,
-                   RCLSTR #rclstr,
-		   LCLSTR #lclstr ],
+                   RCLSTR #rclstr ],
     ARGS < word_or_infl_or_punct_rule &
 	   [ INFLECTD #infl,
 	     SYNSEM [ PUNCT [ RPUNCT #rpunct & 
 				     comma_or_rbc_or_clause_or_no_punct,
-			      RCLSTR #rclstr & [ RITAL - ],
-			      LCLSTR #lclstr ] ],
+			      RCLSTR #rclstr & [ RITAL - ] ] ],
              GENRE #genre ] >,
     GENRE #genre ].
     
@@ -2826,42 +2875,38 @@ punctuation_italright_rule := basic_punctuation_rule &
                    RPUNCT #rpunct,
 		   RCLSTR [ RPAREN #rparen,
 			    RFP +,
-			    RITAL + ],
-		   LCLSTR #lclstr ],
+			    RITAL + ] ],
     ARGS < [ INFLECTD #infl,
 	     SYNSEM [ PUNCT [ LPUNCT #lpunct,
 			      RPUNCT rparen_or_clause_or_no_punct & #rpunct,
-			      RCLSTR.RPAREN #rparen,
-			      LCLSTR #lclstr ] ],
+			      RCLSTR.RPAREN #rparen ] ],
              GENRE #genre ] >,
     GENRE #genre ].
 
 ;; DPF 29-mar-10 - Don't remember why dtr was constrained to word_or_infl_rule,
-;; but it blocks e.g. |``(For| so remove it and see what happens. 
+;; but it blocks e.g. *``(For* so remove it and see what happens. 
 ;; DPF 08-apr-10 - Well, the above constraint ensures that these two rules
 ;; apply in only one order when a single token is marked with both left and
 ;; right.  Otherwise we get two derivations for the dropped-italic analysis
 ;; of e.g. ⌊/in/⌋
-;; So for now, we'll sacrifice the tokens like |``(For|, until a better
+;; So for now, we'll sacrifice the tokens like *``(For*, until a better
 ;; solution emerges to control the interaction of these two rules.
 ;; DPF 2016-09-18 - Now that we've added IGNOREQ + on right-drop rule's mother
 ;; (needed separately for handling foreign-word sequences), let's use it to
 ;; enforce left-before-right dropping rules to avoid spurious ambiguity.
 ;; DPF 2016-10-12 - Re 2016-09-18: And hence let's drop the constraint on
 ;; dtr being word_or_infl_or_punct_rule, since it was also blocking the attrib
-;; adj analysis of |the ⌊/complete cat/⌋|.
+;; adj analysis of *the ⌊/complete cat/⌋*.
 ;;
 punct_drop_italleft_rule := basic_punctuation_rule &
   [ INFLECTD #infl,
     SYNSEM [ PUNCT [ LPUNCT no_punct_dropped,
 		     RPUNCT #rpunct,
-		     RCLSTR #rclstr,
-		     LCLSTR #lclstr ] ],
+		     RCLSTR #rclstr ] ],
     ARGS < [ INFLECTD #infl,
 	     SYNSEM [ PUNCT [ RPUNCT #rpunct & no_punct,
 			      RCLSTR #rclstr & [ IGNOREQ -,
-						 RITAL - ],
-			      LCLSTR #lclstr ],
+						 RITAL - ] ],
 		      PHON.ONSET con_or_voc ],
              GENRE #genre ] >,
     GENRE #genre ].
@@ -2873,13 +2918,11 @@ punct_drop_italright_rule := basic_punctuation_rule &
 		     RCLSTR [ RPAREN #rparen,
 			      RFP -,
 			      IGNOREQ +,
-			      RITAL - ],
-		     LCLSTR #lclstr ] ],
+			      RITAL - ] ] ],
     ARGS < [ INFLECTD #infl,
 	     SYNSEM [ PUNCT [ LPUNCT #lpunct & no_punct,
 			      RPUNCT #rpunct & clause_or_no_punct,
-			      RCLSTR.RPAREN #rparen,
-			      LCLSTR #lclstr ],
+			      RCLSTR.RPAREN #rparen ],
 		      PHON.ONSET con_or_voc ],
              GENRE #genre ] >,
     GENRE #genre ].
@@ -2887,8 +2930,8 @@ punct_drop_italright_rule := basic_punctuation_rule &
 ; DPF 09-aug-09 - Restrict these prefixing rules to native entries, since
 ; there is little benefit in decomposition of unknown words, and it's hard
 ; to get the PHON.ONSET right for native (con) vs generic (unk)
-;; DPF 2010-10-10 - Consider |reschedule| which has an optional complement,
-;; even though |schedule| has an obligatory one.  FIX?
+;; DPF 2010-10-10 - Consider *reschedule* which has an optional complement,
+;; even though *schedule* has an obligatory one.  FIX?
 ;; DPF 2018-05-14 - For now, assume all prefixes are non-scopal, instead
 ;; for verbs presenting the ARG0 of the prefix's predication as the derived 
 ;; word's INDEX, and for nouns and adjectives preserving the input's INDEX.
@@ -2906,7 +2949,8 @@ basic_derivational_prefix_rule := lex_rule_supermost & word_or_nonpunct_rule &
                    PUNCT #punct & [ LPUNCT no_punct,
                                     RPUNCT no_punct ],
 		   NONLOC #nonloc,
-		   LKEYS.KEYREL [ CFROM #from, CTO #to ],
+		   LKEYS [ KEYREL [ CFROM #from, CTO #to ],
+			   --+ARGIND #argind ],
 		   PHON.ONSET con_or_voc ],
           KEY-ARG #keyarg,
           GENRE #genre ],
@@ -2917,7 +2961,8 @@ basic_derivational_prefix_rule := lex_rule_supermost & word_or_nonpunct_rule &
 		     CTXT #ctxt ],
 	     PUNCT #punct,
 	     NONLOC #nonloc,
-	     LKEYS.KEYREL [ CFROM #from, CTO #to ] ],
+	     LKEYS [ KEYREL [ CFROM #from, CTO #to ],
+		     --+ARGIND #argind ] ],
     GENRE #genre,
     KEY-ARG #keyarg,
     ARGS < #stem >,
@@ -2939,6 +2984,10 @@ verb_prefix_rule := derivational_prefix_rule &
     C-CONT.RELS <! #keyrel !> ].
 
 ;; Output verb is (strictly) transitive, even if input is not transitive
+;; DPF 2020-03-13 - But the semantics isn't right yet - FIX, and in the meantime
+;; just treat out- as ordinary verb-prefix rule, so won't get e.g. 
+;; *outslept his brother*
+;;
 out_prefix_rule := basic_derivational_prefix_rule &
   [ INFLECTD -,
     DTR.SYNSEM [ LOCAL.CAT [ HEAD #head & verb & [ AUX - ],
@@ -2963,17 +3012,59 @@ out_prefix_rule := basic_derivational_prefix_rule &
 						    ARG2 #cind ] ],
     C-CONT.RELS <! #keyrel !> ].
 
-v_v-co_rule := verb_prefix_rule.
-v_v-counter_rule := verb_prefix_rule.
-v_v-mis_rule := verb_prefix_rule.
-v_v-out_rule := out_prefix_rule.
-v_v-over_rule := verb_prefix_rule.
-v_v-under_rule := verb_prefix_rule.
-v_v-pre_rule := verb_prefix_rule.
-v_v-re_rule := verb_prefix_rule.
-v_v-self_rule := verb_prefix_rule.
-v_v-un_rule := verb_prefix_rule.
-v_v-cross_rule := verb_prefix_rule.
+v_v-co_rule := verb_prefix_rule &
+ [ ND-AFF +,
+   SYNSEM.PHON.ONSET con,
+   C-CONT.RELS <! [ PRED "_co-_a_with_rel" ] !> ].
+
+v_v-counter_rule := verb_prefix_rule &
+ [ ND-AFF +,
+   SYNSEM.PHON.ONSET con,
+   C-CONT.RELS <! [ PRED "_counter-_a_anti_rel" ] !> ].
+
+v_v-mis_rule := verb_prefix_rule &
+ [ ND-AFF +,
+   SYNSEM.PHON.ONSET con,
+   C-CONT.RELS <! [ PRED "_mis-_a_error_rel" ] !> ].
+; v_v-out_rule := out_prefix_rule &
+v_v-out_rule := verb_prefix_rule &
+ [ ND-AFF +,
+   SYNSEM.PHON.ONSET voc,
+   C-CONT.RELS <! [ PRED "_out-_a_1_rel" ] !> ].
+
+v_v-over_rule := verb_prefix_rule &
+ [ ND-AFF +,
+   SYNSEM.PHON.ONSET voc,
+   C-CONT.RELS <! [ PRED "_over-_a_1_rel" ] !> ].
+
+v_v-under_rule := verb_prefix_rule &
+ [ ND-AFF +,
+   SYNSEM.PHON.ONSET voc,
+   C-CONT.RELS <! [ PRED "_under-_a_1_rel" ] !> ].
+
+v_v-pre_rule := verb_prefix_rule &
+ [ ND-AFF +,
+   SYNSEM.PHON.ONSET con,
+   C-CONT.RELS <! [ PRED "_pre-_a_ante_rel" ] !> ].
+
+v_v-re_rule := verb_prefix_rule &
+ [ ND-AFF +,
+   SYNSEM.PHON.ONSET con,
+   C-CONT.RELS <! [ PRED "_re-_a_again_rel" ] !> ].
+v_v-self_rule := verb_prefix_rule &
+ [ ND-AFF +,
+   SYNSEM.PHON.ONSET con,
+   C-CONT.RELS <! [ PRED "_self-_a_1_rel" ] !> ].
+
+v_v-un_rule := verb_prefix_rule &
+ [ ND-AFF +,
+   SYNSEM.PHON.ONSET voc,
+   C-CONT.RELS <! [ PRED "_un-_a_rvrs_rel" ] !> ].
+
+v_v-cross_rule := verb_prefix_rule &
+ [ ND-AFF +,
+   SYNSEM.PHON.ONSET con,
+   C-CONT.RELS <! [ PRED "_cross-_a_1_rel" ] !> ].
 
 basic_noun_prefix_rule := derivational_prefix_rule &
   [ DTR.SYNSEM.LOCAL [ CAT.HEAD basic_noun &
@@ -2984,46 +3075,71 @@ basic_noun_prefix_rule := derivational_prefix_rule &
 noun_prefix_rule := basic_noun_prefix_rule &
   [ INFLECTD + ].
 
-;; For e.g. |the counter-narcotics team|
+;; For e.g. *the counter-narcotics team*
 ;;
 noun_prefix_noninfl_rule := basic_noun_prefix_rule &
   [ SYNSEM.LOCAL noninfl_noun_local,
     DTR.SYNSEM.LOCAL noninfl_noun_local ].	  
 
-n_n-co_rule := noun_prefix_rule.
-n_n-co-ni_rule := noun_prefix_noninfl_rule.
-n_n-counter_rule := noun_prefix_rule.
-n_n-counter-ni_rule := noun_prefix_noninfl_rule.
-n_n-mini_rule := noun_prefix_rule.
-n_n-mini-ni_rule := noun_prefix_noninfl_rule.
+n_n-co_rule := noun_prefix_rule &
+ [ ND-AFF +,
+   SYNSEM.PHON.ONSET con,
+   C-CONT.RELS <! [ PRED "_co-_a_with_rel" ] !> ].
+
+n_n-co-ni_rule := noun_prefix_noninfl_rule &
+ [ ND-AFF +,
+   SYNSEM.PHON.ONSET con,
+   C-CONT.RELS <! [ PRED "_co-_a_with_rel" ] !> ].
+
+n_n-counter_rule := noun_prefix_rule &
+ [ ND-AFF +,
+   SYNSEM.PHON.ONSET con,
+   C-CONT.RELS <! [ PRED "_counter-_a_anti_rel" ] !> ].
+
+n_n-counter-ni_rule := noun_prefix_noninfl_rule &
+ [ ND-AFF +,
+   SYNSEM.PHON.ONSET con,
+   C-CONT.RELS <! [ PRED "_counter-_a_anti_rel" ] !> ].
+
+n_n-mini_rule := noun_prefix_rule &
+ [ ND-AFF +,
+   SYNSEM.PHON.ONSET con,
+   C-CONT.RELS <! [ PRED "_mini-_a_1_rel" ] !> ].
+
+n_n-mini-ni_rule := noun_prefix_noninfl_rule &
+ [ ND-AFF +,
+   SYNSEM.PHON.ONSET con,
+   C-CONT.RELS <! [ PRED "_mini-_a_1_rel" ] !> ].
+
 
 ;; DPF 16-02-16 - Can't identify CAT values, since we want the un-prefixing
 ;; rule to change PRD value of daughter from - to bool, in order to get intended
-;; analysis of |the cat is unchanged|
+;; analysis of *the cat is unchanged*
 ;; DPF 2016-10-11 - To avoid spurious reordering of attrib and this rule for
-;; e.g. |unhappy| or |nonlinear|, tried to restrict dtr to exclude lex-rule.
+;; e.g. *unhappy* or *nonlinear*, tried to restrict dtr to exclude lex-rule.
 ;; But this is wrong, since we want un- rule to apply to the result of passive,
-;; as in |unintended|.  So let's try constraining dtr to be PRD +, forcing the
+;; as in *unintended*.  So let's try constraining dtr to be PRD +, forcing the
 ;; attrib-adj lexical rule to apply afterward.
 ;; No, the rule converting passive V to adj constrains the output to be PRD -,
-;; of course, to avoid adj analysis for |Kim was hired|.  So if we were going to
+;; of course, to avoid adj analysis for *Kim was hired*.  So if we were going to
 ;; use PRD here, it would have to be PRD -, but we are already using the PRD
-;; contrast to allow post-mod for a few adjectives such as |available|, and we
-;; still want |the seat is unavailable|, where this input |available| would 
+;; contrast to allow post-mod for a few adjectives such as *available*, and we
+;; still want *the seat is unavailable*, where this input *available* would 
 ;; have to be PRD +.  It might appear that the source of the spurious ambiguity
 ;; in ordering is because this rule was not preserving PRD from dtr to mother.
-;; But while we want the adj |evaluated| to be PRD - (to avoid ambiguity), the 
-;; analysis we want for |he was unevaluated| must have |unevaluated| as not 
+;; But while we want the adj *evaluated* to be PRD - (to avoid ambiguity), the 
+;; analysis we want for *he was unevaluated* must have *unevaluated* as not 
 ;; PRD -.
 ;; So instead, let's make the attr-adj rule have its output be of a synsem
 ;; type that is not compatible with basic_lex_synsem, and hence it will
 ;; have to apply after the adj-prefix rules.
-;; DPF 2017-11-08 - The rule was identifying its MOD with dtr's MOD, but since instances
-;; of this type, such as j_j-un, can have as dtr a derived passive participle (which
-;; excludes pronouns as targets for modification), we were blocking |it is unchanged|.
-;; So instead made derived_adj_synsem inherit from norm_adj_synsem, which gives it normal
-;; MOD constraint, and further restrict dtr here to exclude MOD..MIN named_rel, to avoid
-;; the MOD..named_rel variants of deverbal adjectives.
+;; DPF 2017-11-08 - The rule was identifying its MOD with dtr's MOD, but since
+;; instances of this type, such as j_j-un, can have as dtr a derived passive 
+;; participle (which excludes pronouns as targets for modification), we were 
+;; blocking *it is unchanged*.  So instead made derived_adj_synsem inherit from
+;; norm_adj_synsem, which gives it normal MOD constraint, and further restrict
+;; dtr here to exclude MOD..MIN named_rel, to avoid the MOD..named_rel variants
+;; of deverbal adjectives.
 ;;
 adj_prefix_rule := basic_derivational_prefix_rule &
   [ DTR word_or_lexrule &
@@ -3043,11 +3159,28 @@ adj_prefix_rule := basic_derivational_prefix_rule &
 		     CONT.HOOK.INDEX #index ],
 	     OPT #opt ] ].
 
-j_j-co_rule := adj_prefix_rule.
-j_j-un_rule := adj_prefix_rule.
-j_j-non_rule := adj_prefix_rule.
+j_j-co_rule := adj_prefix_rule &
+ [ ND-AFF +,
+   SYNSEM.PHON.ONSET con,
+   C-CONT.RELS <! [ PRED "_co-_a_with_rel" ] !> ].
 
-dependency_annotation_lr := lex_rule_supermost & word_or_punct_rule &
+j_j-un_rule := adj_prefix_rule &
+ [ ND-AFF +,
+   SYNSEM.PHON.ONSET voc,
+   C-CONT.RELS <! [ PRED "_un-_a_neg_rel" ] !> ].
+
+j_j-non_rule := adj_prefix_rule &
+ [ ND-AFF +,
+   SYNSEM.PHON.ONSET con,
+   C-CONT.RELS <! [ PRED neg_rel ] !> ].
+
+j_j-over_rule := adj_prefix_rule &
+ [ ND-AFF +,
+   SYNSEM.PHON.ONSET voc,
+   C-CONT.RELS <! [ PRED "_over-_a_1_rel" ] !> ].
+
+
+dependency_annotation_lexrule := lex_rule_supermost & word_or_punct_rule &
   [ ND-AFF +,
     KEY-ARG #keyarg,   
     INFLECTD #infl,
@@ -3078,4 +3211,38 @@ v_n3s-bse_inflrule := lex_rule_infl_affixed.
 n_sg_inflrule := lex_rule_infl_affixed.
 n_ms_inflrule := lex_rule_infl_affixed.
 n_ms-cnt_inflrule := lex_rule_infl_affixed.
-n_pl-cur_inflrule := lex_rule_infl_affixed.
+;; DPF 2020-03-30 - Changed INFLECTD + to na_or_+ to get *$10 Cabernet*
+;n_pl-cur_inflrule := lex_rule_infl_affixed.
+n_pl-cur_inflrule := basic_lex_rule_infl_affixed &
+  [ INFLECTD na_or_+ ].
+;; DPF 2020-04-17 - Also need singular variant for *the $1 book*
+n_sg-cur_inflrule := basic_lex_rule_infl_affixed &
+  [ INFLECTD na_or_+ ].
+
+;; DPF 2020-05-02 - Discharge weak brackets for multitoken lexical entries such 
+;; as *Yahoo !* where the tokenizer has separated the suffixed character, and
+;; for *HK $*, where a rule in tmr/split.tdl has added weak brackets to force
+;; use of the multi-token entry, avoiding stranding of *$*.
+;; DPF 2020-05-07 - Changed SYNSEM from lex_synsem to basic_lex_synsem so we
+;; can also get robust *Once ,* lex entry to go through.
+;;
+multitoken_bracket_rule := basic_lex_rule_supermost & word_or_punct_rule &
+  [ INFLECTD #infl,
+    KEY-ARG #keyarg,   
+    DERIVED +,
+    GENRE #genre,
+    ORTH [ LB #lb, RB #rb, LD #ld, CLASS #class,
+	   RD bracket_null ],
+    SYNSEM #synsem & basic_lex_synsem,
+    DTR #dtr,
+    ARGS < #dtr &
+           [ INFLECTD #infl & na_or_+,
+	     KEY-ARG #keyarg,   
+	     DERIVED -,
+             GENRE #genre,
+	     SYNSEM #synsem,
+	     ORTH [ LB #lb, RB #rb, LD #ld, CLASS #class,
+		    RD bracket_nonnull ],
+	     TOKENS.+LIST < [ +TRAIT.+RD bracket_nonnull ], 
+			    [ +TRAIT.+RD bracket_nonnull ] > ] >,
+    C-CONT.RELS <! !> ].

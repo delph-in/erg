@@ -79,16 +79,16 @@
     (construct-semi       
      :ids t :rules t :descendp t :embedp t
      :semi (read-semi
-            "~/erg/etc/erg.smi"
+            "~/logon/lingo/mo/etc/erg.smi"
             :includep nil :finalizep nil :recordp nil)
-     :patches "~/erg/etc/patches.lisp"
+     :patches "~/logon/lingo/mo/etc/patches.lisp"
      :finalizep t))
   (print-semi
-   semi :stream "~/erg/etc/hierarchy.smi"
+   semi :stream "~/logon/lingo/mo/etc/hierarchy.smi"
    :format :hierarchy)
   (print-semi
-   semi :stream "~/erg/etc/abstract.smi"
+   semi :stream "~/logon/lingo/mo/etc/abstract.smi"
    :format :compact :filter "^[^_]")
   (print-semi
-   semi :stream "~/erg/etc/surface.smi"
+   semi :stream "~/logon/lingo/mo/etc/surface.smi"
    :format :compact :filter "^_"))

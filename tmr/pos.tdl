@@ -199,20 +199,26 @@ tnt_filter_dup_jj_tmr := token_mapping_rule &
 ;; generic names in initial position to survive the filtering, look at the
 ;; combined string-level and PoS evidence and create an actual NE.  this rule
 ;; needs to be late in the process, so that we have PoS tags multiplied out.
+;; DPF 2020-05-06 - Generalized +INPUT..+CASE from capitalized+lower to just
+;; captitalized, because we want to include capitalized+mixed as in |Mao_Zedong|
+;; and maybe we don't care about failing to exclude all-caps here.
+;; DPF 2020-05-16 - The commented out def preserves the entry for |Liu_Wen|
+;; which is dropped by `uniq' token-dropping rule unless +MAIN value is changed
+;; as shown.  But we want `uniq' to discard redundant entries for e.g. |W.R.|,
+;; so FIX before using makeover for educ.
 ;;
-initial_capitalized_name_nnp_tmr := token_mapping_rule &
+initial_capitalized_name_tmr := token_mapping_rule &
 [ +INPUT < [ +FORM #form, 
-             +CLASS alphanumeric & [ +INITIAL +, +CASE capitalized+lower ],
+             +CLASS alphanumeric & [ +INITIAL +, +CASE capitalized ],
              +TRAIT #trait & [ +UW + ], +PRED #pred, +CARG #carg,
              +ID #id, +FROM #from, +TO #to, 
              +TNT [ +MAIN #main, +TAGS < ^NNP|NN|VBZ$ > ] ] >,
   +OUTPUT < [ +FORM #form, +CLASS proper_ne,
               +TRAIT #trait, +PRED #pred, +CARG #carg,
               +ID #id, +FROM #from, +TO #to, 
-              +TNT null_tnt & [ +MAIN #main ] ] >,
+             +TNT null_tnt & [ +MAIN #main ] ] >,
   +CONTEXT < >,
   +POSITION "I1@O1" ].   
-
 
 ;; DPF 2017-07-09 - The ACE tagger seems to often land on JJ as a default for
 ;; an unknown S-initial word, as in |Equitable of New York survives|.  So add
@@ -251,45 +257,4 @@ generic_pred_tmr := token_mapping_rule &
   +CONTEXT < >,
   +POSITION "O1@I1" ].
 
-;;; DPF 2012-11-05 - Added rule to accommodate multi-word proper names
-;;; where right-most token has a hyphen and thus a right bracket, here
-;;; moving the left bracket leftward one token.  The rule is awkward
-;;; because capitalized tokens come in two flavors: a generic proper name
-;;; and a capitalized native token, and we have a lexical filtering rule
-;;; that eliminates a generic proper given a native proper.
-;;; So we take as input both of these, followed by a hyphenated proper_ne 
-;;; (in +CONTEXT), and we produce four new tokens, two copying the input 
-;;; tokens but now with left brackets, and two copying the context token 
-;;; but erasing the left brackets.  This lets us get all three of the 
-;;; following:
-;;; (1) |Hong Kong-based| where |Hong| is a native proper name
-;;; (2) |Los Gatos-based| where |Los| is unknown
-;;; (3) |New York-based| where |York| is unknown
-;;;
-;; DPF 2016-02-06 - Restored this rule now that strong and weak brackets are
-;; settled in, so we can get both bracketings for |the New York-based office|
-;; (cf |the Kim Smythe-Browne office|).  The rule copies the two tokens for
-;; the first word (proper and generic variants), changing the left weak
-;; bracket +LD from empty to non-empty, and makes two copies (again proper
-;; and generic variants) of the second word (the one with the hyphen suffix),
-;; emptying the weak left bracket.
-;;
-name_name_hyphen_tmr := three_four_tmt &
-[ +CONTEXT < [ +CLASS proper_ne,
-	       +TRAIT [ +UW #uw1 & +, +LD bracket_null, +RD #rd1, 
-			+LB #lb1, +RB #rb1 ], +TICK - ],
-	     [ +CLASS.+CASE capitalized,
-	       +TRAIT [ +UW #uw2 & -, +RD #rd1 ], +TICK - ],
-	     [ +FORM ^[[:alpha:]]+[–-]$, 
-	       +CLASS proper_ne,
-	       +TRAIT [ +LD <! ctype !>, 
-			+RD #rd2, +LB #lb2, +RB #rb2 ] ] >,
-  +INPUT < >,
-  +OUTPUT < [ +TRAIT [ +UW #uw1, +LD bracket_nonnull & <! ctype !>, 
-		       +RD bracket_null, +LB #lb1, +RB #rb1 ], +TICK + ],
-	    [ +TRAIT [ +UW #uw2, +LD bracket_nonnull & <! ctype !>, 
-		       +RD bracket_null, +LB #lb1, +RB #rb1 ], +TICK + ],
-            [ +TRAIT [ +UW #uw1, +LD bracket_null, +RD #rd2, 
-		       +LB #lb2, +RB #rb2 ] ],
-	    [ +TRAIT [ +UW #uw2, +LD bracket_null, +RD #rd2, 
-		       +LB #lb2, +RB #rb2 ] ] > ].
+
