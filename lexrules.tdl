@@ -522,6 +522,12 @@ cond_sai := basic_sai &
 		      qeq & [ HARG #subord,
 			      LARG #dltop ] !> ] ].
 
+;; DPF 2020-07-17 - This derived entry needs to also "liberate" the 
+;; --ADDIN.ADDPN properties of the clause it modifies, to avoid 
+;; "The dog bark, didn't it?". But note that it can't expose the ADDTAM, since
+;; we want "The dog is barking, isn't it" where the derived-ellipsis "isn't" 
+;; in the tag has TAM..PROGR -.
+;; 
 tag := lex_rule_basic &
   [ ORTH #orth,
     INFLECTD +,
@@ -542,11 +548,13 @@ tag := lex_rule_basic &
 		 LKEYS [ KEYREL [ CFROM #from, CTO #to ],
 			 --+ARGIND #argind ] ] ],
     SYNSEM tag_synsem &
-	 [ LOCAL [ CAT [ HEAD [ TAM #tam,
-                                MINORS.MIN #min,
-                                MOD < [ LOCAL.CONT.HOOK [ LTOP #mltop,
-                                                          XARG #subjind ]] > ],
-                         VAL.COMPS.FIRST synsem & 
+     [ LOCAL [ CAT [ HEAD [ TAM #tam,
+			    MINORS.MIN #min,
+			    MOD < [ LOCAL [ CAT.HEAD.--ADDIN.ADDPN #pn,
+					    AGR.PNG.PN #pn,
+					    CONT.HOOK [ LTOP #mltop,
+							XARG #subjind ] ] ] > ],
+		     VAL.COMPS.FIRST synsem & 
                                   [ LOCAL [ CAT nomp_cat_nom_min,
                                             CONT.HOOK.INDEX #xarg &
                                                 [ PNG #png ],
@@ -1735,7 +1743,14 @@ attr_verb_part_tr_namemod_pl_prp_lexrule := attr_verb_part_tr_namemod_lrule &
 
 ;; DPF 2016-02-23 - Let's finally add a rule to produce -ly adverbs from 
 ;; adjectives
-
+;; DPF 2020-07-17 - Before reactivating this rule, need to revise it so that
+;; the new EP on the mother (one not present on the dtr) is introduced via
+;; C-CONT rather than simply inherited from the mother's synsem type.  This
+;; is necessary (or at least useful) in enabling at least the ACE generator
+;; to account properly for the sources of EPs (either in lexemes or in the
+;; C-CONT of rules).
+;;
+#|
 adj_to_adv_lexrule := lex_rule_basic &
   [ DTR #dtr & [ ALTS.JTOR +,
 		 SYNSEM basic_adj_abstr_lex_synsem &
@@ -1757,6 +1772,7 @@ adj_to_adv_int_lexrule := adj_to_adv_lexrule &
 	   [ LOCAL.CONT.RELS <! #keyrel & adv_relation !>,
 	     LKEYS.KEYREL #keyrel & [ ARG1 #xarg ] ],
     C-CONT.HOOK.XARG #xarg ].
+|#
 
 ;; The partitive construction rule introduces a new type of relation: 
 ;; part_of_rel, which contains the semantic information of the partitive.
@@ -2082,13 +2098,66 @@ minute_prep_lexrule := basic_minute_lex_rule &
 ;; DPF 2016-08-026 - Instead of identifying INFL -, change mother to na_or_-,
 ;; as we need for *the ten thirty departure* where the head-comp rule requires
 ;; the head to be na_or_+.
+;; DPF 2017-09-04 - In order to make the CFROM/CTO on minute_rel match those
+;; of the number phrase that is the complement of this hour word, we would have
+;; to have these values be accessible in HOOK somewhere, since the expression
+;; might be *three twenty-two* where there is no LKEYS.KEYREL for *twenty-two*.
+;; For now, just make these two rels have the same CFROM/CTO as the hour_rel.
+;; DPF 2020-03-24 - Added COMPS..SPR *olist* as per trunk.
+;; DPF 2020-07-17 - Changed this rule to not inherit from lex_rule_supermost
+;; because the mother's INDEX has to be the ARG0 of the plus_c_rel added in
+;; C-CONT, which has to be the first rel on RELS (as assumed in 
+;; count_noun_synsem), but lex_rule_supermost's append strategy would make 
+;; the first rel on the mother be the first rel of the dtr.
 ;;
 hour_np_lexrule := word_or_nonpunct_rule &
-  [ SYNSEM hour_np_synsem &
+  [ SYNSEM basic_hour_synsem &
 	   [ PUNCT #punct,
 	     PHON.ONSET #onset,
-	     LOCAL.CONT.RELS <! relation, relation, relation, relation,
-			        #altkeyrel, #alt2keyrel !>],
+	     LOCAL [ CAT [ HEAD noun,
+			   VAL [ COMPS < [ LOCAL [ CAT [ HEAD intadj2,
+							 VAL [ COMPS *olist*,
+							       SPR *olist* ] ],
+						   CONJ cnil,
+						   CONT.HOOK [ LTOP #mlbl,
+							       XARG #minind ] ],
+					   OPT -,
+					   NONLOC.SLASH 0-dlist,
+					   PUNCT.LPUNCT no_punct ],
+					 #ampmcomp >,
+				 KCMP #ampmcomp,
+				 SPR < [ LOCAL.CONT.HOOK [ LTOP #clbl,
+							   XARG #cind ] ] > ] ],
+	     CONT [ HOOK #hook & [ INDEX.IND + ],
+                    RELS [ LIST #rfirst,
+			   LAST #rlast ],
+		    HCONS [ LIST #hcfirst,
+			    LAST #hclast ],
+		    ICONS 0-dlist ] ] ],
+    C-CONT [ HOOK #hook & [ INDEX #cind ],
+	     RELS [ LIST #rfirst &
+			 < [ PRED plus_c_rel,
+			     LBL #clbl,
+			     ARG0 #cind,
+			     ARG1 #index,
+			     ARG2 #minind ],
+			   [ PRED udef_q_rel,
+			     ARG0 #cind,
+			     RSTR #rhand,
+			     CFROM #cfrom, CTO #cto ],
+			   [ PRED minute_n_rel,
+			     LBL #mlbl,
+			     ARG0 #minind & ref-ind,
+			     CFROM #cfrom, CTO #cto ],
+			   [ PRED def_implicit_q_rel,
+			     ARG0 #minind,
+			     RSTR #rmhand,
+			     CFROM #cfrom, CTO #cto ] . #rmiddle >,
+		    LAST #rmiddle ],
+	     HCONS [ LIST #hcfirst & < qeq, qeq & [ HARG #rhand, LARG #clbl ],
+			  qeq & [ HARG #rmhand, LARG #mlbl ] . #hcmiddle >,
+		     LAST #hcmiddle ],
+	     ICONS 0-dlist ],
     IDIOM #idiom, DIALECT #dialect, ALTS #alts, GENRE #genre, 
     INFLECTD na_or_-,
     ORTH #orth,
@@ -2100,14 +2169,16 @@ hour_np_lexrule := word_or_nonpunct_rule &
 	     TOKENS #tokens,
 	     SYNSEM [ LOCAL [ CAT [ HEAD noun & [ MINORS.MIN numbered_hour_rel],
 				    VAL.COMPS < synsem > ],
+			      CONT [ HOOK.INDEX #index,
+				     RELS [ LIST #rmiddle,
+					    LAST #rlast ],
+				     HCONS [ LIST #hcmiddle,
+					     LAST #hclast ] ],
 			      CONJ cnil,
 			      AGR.PNG.PN 3s ],
-		      LKEYS [ ALTKEYREL #altkeyrel,
-			      ALT2KEYREL #alt2keyrel ],
 		      PHON.ONSET #onset,
 		      PUNCT #punct & [ LPUNCT no_punct,
 				       RPUNCT no_punct ] ] ] > ].
-
 
 ; DPF 28-jun-07 - Restricted dtr to HEAD a_or_adv to block partitive dets
 ; like "a bit".  Also made mother's SPCMPS < >.
@@ -3231,8 +3302,18 @@ n_sg-cur_inflrule := basic_lex_rule_infl_affixed &
 ;; use of the multi-token entry, avoiding stranding of *$*.
 ;; DPF 2020-05-07 - Changed SYNSEM from lex_synsem to basic_lex_synsem so we
 ;; can also get robust *Once ,* lex entry to go through.
+;; DPF 2020-07-22 - For simple single token entries (excluding the punctuation
+;; mark), such as "Yahoo !", it is enough to assume that the TOKENS list is
+;; exactly two elements long, where we check that each of those two has a
+;; non-empty right delimiter (+TRAIT.+RD), and this would also work for a
+;; prefixed punctuated lexical entry if we had any (e.g. "! Yahoo").  But for
+;; an entry such as "et al ." the TOKENS list has more than two elements, and
+;; we can't easily generalize to just check the last two elements of a list of
+;; arbitrary length (TDL doesn't give us a way to do that).  So for now add
+;; subtypes of this rule for two-token and three-token entries, just for suffix
+;; punctuation, and defer the search for a more general solution.  FIX someday.
 ;;
-multitoken_bracket_rule := basic_lex_rule_supermost & word_or_punct_rule &
+basic_multitoken_bracket_rule := basic_lex_rule_supermost & word_or_punct_rule &
   [ INFLECTD #infl,
     KEY-ARG #keyarg,   
     DERIVED +,
@@ -3248,7 +3329,16 @@ multitoken_bracket_rule := basic_lex_rule_supermost & word_or_punct_rule &
              GENRE #genre,
 	     SYNSEM #synsem,
 	     ORTH [ LB #lb, RB #rb, LD #ld, CLASS #class,
-		    RD bracket_nonnull ],
-	     TOKENS.+LIST < [ +TRAIT.+RD bracket_nonnull ], 
-			    [ +TRAIT.+RD bracket_nonnull ] > ] >,
+		    RD bracket_nonnull ] ] >,
     C-CONT.RELS <! !> ].
+
+;; For two-token lexical entry including punct token such as "Yahoo !"
+multitoken_bracket_rule := basic_multitoken_bracket_rule &
+  [ ARGS < [ TOKENS.+LIST < [ +TRAIT.+RD bracket_nonnull ], 
+			    [ +TRAIT.+RD bracket_nonnull ] > ] > ].
+
+;; For three-token lexical entry including punct token such as "et al ."
+multitoken_3_bracket_rule := basic_multitoken_bracket_rule &
+  [ ARGS < [ TOKENS.+LIST < [ ],
+			    [ +TRAIT.+RD bracket_nonnull ], 
+			    [ +TRAIT.+RD bracket_nonnull ] > ] > ].

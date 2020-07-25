@@ -13054,6 +13054,13 @@ title_synsem := basic_title_synsem &
 ;; where (for some reason) the city-state compound for *Abrams, Brownes* makes
 ;; the mother's AGR that of the right dtr.  Not the whole story, but not clear
 ;; why we constrained the head nominal's AGR anyway.
+;; DPF 2020-07-24 - Re 2017-07-13: Now that we build "closely held Acme" first,
+;; we could again consider having post-title attach to NP rather than nbar,
+;; which would give a better analysis of "Abrams and Browne Inc.", which just
+;; now can only be analyzed with constituent "Browne Inc.".
+;; And Re 7-mar-05: This blocks desired analysis of "Fruit of the Loom Inc.",
+;; so consider removing MODIFD constraint and see what ambiguity we face,
+;; independent of whether post-titles modify NP or nbar.
 ;;
 n_-_tt-post_lexent := noncqrs-hm &
   [ INFLECTD -,
@@ -20957,7 +20964,7 @@ c_-_etal_le := et_conj_lexent &
 Conj, only 'et al'               
 <ex>B hired C et al.
 """
-  [ SYNSEM.LOCAL [ CAT [ HEAD supnoun,
+  [ SYNSEM.LOCAL [ CAT [ HEAD supnoun & [ MINORS.MIN nonpro_rel ],
                          VAL.SPR < > ],
                    CONT.RELS <! [ PRED _et+al_c_rel ] !> ] ].
 
@@ -22636,51 +22643,6 @@ abstr_hour_word := noncqrs-m & basic_noun_word &
   [ INFLECTD -,
     SYNSEM basic_hour_synsem ].
 
-; *at three twenty*
-;; DPF 2017-09-04 - In order to make the CFROM/CTO on minute_rel match those
-;; of the number phrase that is the complement of this hour word, we would have
-;; to have these values be accessible in HOOK somewhere, since the expression
-;; might be *three twenty-two* where there is no LKEYS.KEYREL for *twenty-two*.
-;; For now, just make these two rels have the same CFROM/CTO as the hour_rel.
-;; DPF 2020-03-24 - Added COMPS..SPR *olist* as per trunk.
-;;
-hour_np_synsem := basic_hour_synsem &
-  [ LOCAL [ CAT.VAL [ COMPS < [ LOCAL [ CAT [ HEAD intadj2,
-					      VAL [ COMPS *olist*,
-						    SPR *olist* ] ],
-					CONJ cnil,
-					CONT.HOOK [ LTOP #mlbl,
-						    XARG #minind ] ],
-				OPT -,
-				NONLOC.SLASH 0-dlist,
-				PUNCT.LPUNCT no_punct ],
-			      #ampmcomp >,
-		      KCMP #ampmcomp ],
-	    CONT [ HOOK.INDEX #cind,
-		   RELS <! [ PRED plus_c_rel,
-			     LBL #clbl,
-			     ARG0 #cind,
-			     ARG1 #index,
-			     ARG2 #minind ],
-			 [ PRED udef_q_rel,
-			   ARG0 #cind,
-			   RSTR #rhand,
-			   CFROM #cfrom, CTO #cto ],
-			 [ PRED minute_n_rel,
-			   LBL #mlbl,
-			   ARG0 #minind & ref-ind,
-			   CFROM #cfrom, CTO #cto ],
-			 [ PRED def_implicit_q_rel,
-			   ARG0 #minind,
-			   RSTR #rmhand,
-			   CFROM #cfrom, CTO #cto ],
-			 #altkeyrel & [ ARG0 #index ],
-			 #alt2keyrel !>,
-		   HCONS <! qeq, qeq & [ HARG #rhand, LARG #clbl ],
-			    qeq & [ HARG #rmhand, LARG #mlbl ] !> ] ],
-    LKEYS [ ALTKEYREL #altkeyrel & [ CFROM #cfrom, CTO #cto ],
-	    ALT2KEYREL #alt2keyrel ] ].
-
 n_-_pn-hour_lexent := abstr_hour_word &
   [ SYNSEM [ LOCAL [ CAT.VAL [ COMPS < #kcmp >,
 			       KCMP #kcmp ],
@@ -22697,13 +22659,6 @@ Named hour of day
 <ex>B won at noon.
 """
   [ SYNSEM.LEX - ].
-
-n_np_pn-hour_le := abstr_hour_word &
-"""
-Named hour of day with oblig minute complement
-<ex>B won at ten oh four.
-"""
-  [ SYNSEM hour_np_synsem & [ LEX + ] ].
 
 ; sixish
 n_-_pn-hour-apx_le := abstr_hour_word &
@@ -25229,12 +25184,11 @@ First half of fraction w/'one'
 adj_one_an_lexent := word &
   [ INFLECTD +,
     SYNSEM basic_one_num_synsem & 
-           [ LOCAL [ CAT.HEAD intadj1 &
-                                [ MOD < [ LOCAL intersective_mod &
-						[ CAT.HEAD noun,
-						  AGR [ PNG.PN 3s,
-							DIV - ] ] ] > ],
-		     CONT.RELS.LIST.FIRST.CARG "1" ] ] ].
+           [ LOCAL.CAT.HEAD intadj1 &
+			    [ MOD < [ LOCAL intersective_mod &
+					    [ CAT.HEAD noun,
+					      AGR [ PNG.PN 3s,
+						    DIV - ] ] ] > ] ] ].
 
 ; DPF 27-apr-08 - Tried adding MODIFD lmod but this also blocks "a hundred", 
 ; which we want. So instead, constrain num_det rule
@@ -25259,7 +25213,8 @@ Adj, only 'one' cannot modify
 					MODIFD.LPERIPH +,
 					--MIN abstr_meas_nom_rel ] >,
 				MINORS.ALTMIN no_rel ],
-		     CONT.HOOK.INDEX.PT zero ],
+		     CONT [ HOOK.INDEX.PT zero,
+			    RELS.LIST.FIRST.CARG "1" ] ],
 	     MODIFD hasmod & [ LPERIPH na ] ] ].
 
 aj_-_i-one-nmd_le := aj_one_nomod_lexent &
@@ -25288,8 +25243,10 @@ Adj, generic sub-one fract or decimal, singular agreement, no mod
 <ex>The cat weighs 0.3 ounce.
 <native> aj_-_i-one-nmd_le
 """
-  [ SYNSEM.LOCAL.CAT.HEAD [ CASE no_case,
-			    MOD < anti_synsem & [ LOCAL.AGR.PNG.PN 3s ] > ] ].
+  [ SYNSEM [ LOCAL.CAT.HEAD [ CASE no_case,
+			       MOD < anti_synsem & [ LOCAL.AGR.PNG.PN 3s ] > ],
+	     LKEYS.KEYREL.CARG #carg ],
+    TOKENS.+LIST < [ +CARG #carg ] > ].
 
 ; For 'several thousand' 'a few dozen'
 ; DPF 3-May-08 - Add MOD..NORM norm_rel to block "a few cat" from being
@@ -25349,10 +25306,11 @@ Adj, non-inflected, only 'a couple of'
 
 adj_one_fract_lexent := adj_one_an_lexent &
   [ SYNSEM one_num_fract_synsem &
-           [ LOCAL.CAT [ HEAD [ MINORS.ALTMIN no_rel,
-				MOD.FIRST.--MIN abstr_meas_nom_rel ],
-			 VAL.COMPS < phr_synsem >,
-                         HC-LEX - ],
+           [ LOCAL [ CAT [ HEAD [ MINORS.ALTMIN no_rel,
+				  MOD.FIRST.--MIN abstr_meas_nom_rel ],
+			   VAL.COMPS < phr_synsem >,
+			   HC-LEX - ],
+		     CONT.RELS.LIST.FIRST.CARG "1" ],
              MODIFD hasmod & [ LPERIPH + ] ] ].
 
 aj_np_i-frct-a_le := adj_one_fract_lexent &
@@ -26158,6 +26116,12 @@ Punct, bang
 """
   [ SYNSEM.PUNCT.RPUNCT.PSF punct-prop-comm ].
 
+;; DPF 2020-07-22 - Tried changing COMPS..RPUNCT from pair_or_no_punct to
+;; clause_or_pair_or_no_punct so we can be more robust about misplaced periods
+;; as in "We arrived on Nov. 20., happily".  But this leads to systematic
+;; unwanted ambiguity for "Acme Inc., the ...".  So undo here, and overwrite
+;; for educ to gain more robustness.
+;;
 pt_-_comma_le := punct_right_word &
 """
 Punct, comma

@@ -85,5 +85,6 @@
  ((:path . "handp12") (:content . "Huddleston and Pullum Ch.12"))
  ((:path . "sh-spec") (:content . "Sherlock Holmes Speckled Band"))
  ((:path . "ntucle") (:content . "NTU CLE learner English corpus"))
+ ((:path . "marco2nd300") (:content . "Second 300 Marco user queries"))
  ((:path . "test") (:content . "Test"))
 )

@@ -1742,12 +1742,19 @@ n_-_pn-gen_le := basic_n_proper_lexent & generic_ne_lex_entry &
 n_-_pn_le := n_proper_lexent &
   [ TOKENS.+LAST.+CLASS.+CASE capitalized ].
 
+;; For at least "Dear sir"
+n_-_pn-maycap_le := n_proper_lexent &
+  [ TOKENS.+LAST.+CLASS.+CASE non_capitalized ].
+
 n_-_pn_le_nocap_rbst := n_proper_lexent &
   [ TOKENS.+LAST.+CLASS.+CASE non_capitalized,
     GENRE robust ].
 
+;; For "states in the us"
 n_-_c-nm_le_nocap_rbst := n_intr_named_lexent &
-  [ SYNSEM.PUNCT no_punctuation_min,
+  [ SYNSEM [ PUNCT no_punctuation_min,
+             LOCAL.CAT.HEAD.--CPDNHD -,
+	     MODIFD.LPERIPH + ],
     TOKENS.+LIST.FIRST.+CLASS.+CASE non_capitalized,
     GENRE robust ].
 
@@ -1946,6 +1953,10 @@ n_-_c-pl_le_rbst := n_intr_infl_lex_entry &
 		   CONT.HOOK.INDEX [ PNG.PN 3p,
 				     DIV + ] ],
     GENRE robust ].
+
+;; Block robust bare-sg for e.g. "people".
+n_-_c-sg_lexent :+
+  [ SYNSEM.LOCAL.CAT.HEAD.--BARE - ].
 
 ;; Wrong singulars for pluralia tantum: |I expressed my thank|
 ;; DPF 2019-03-27 - Mark this to avoid also having robust non3sg verb, as for
@@ -2511,13 +2522,16 @@ n_poss_pro_lexent :+
 ;; DPF 2019-06-06 - Add --NOCJCRD to prevent robust noconj-coord VP as left
 ;; member in larger VP coord.
 ;; DPF 2019-11-11 - Add --MALCOPBSE to prevent |be warm| using robust |be begin|
+;; DPF 2020-07-11 - Add --HAVEBE so we can prevent passivizable verbs and other
+;; verbs from combining with robust is/has as in "is expected to arrive"
 ;;
 verbal :+
   [ --VNEG bool,
     --COPID bool,
     --MALFIN bool,
     --NOCJCRD bool,
-    --MALCOPBSE bool ].
+    --MALCOPBSE bool,
+    --HAVEBE bool ].
 
 robust_nom_rel := non_proper_rel.
 
@@ -3095,6 +3109,7 @@ has_noninitial_cap_rule := basic_initial_cap_rule &
 named_entity_cap_rule := initial_cap_rule &
   [ ARGS < [ ORTH.CLASS named_entity & [ +INITIAL + ],
              GENRE #genre ] >,
+    ALTS.NONINITCAP -,
     GENRE #genre ].
 
 initial_numeric_rule := initial_cap_rule &
@@ -3106,16 +3121,31 @@ initial_numeric_rule := initial_cap_rule &
 ;; to ensure only one order of rule application for inflectional rules and
 ;; the initial_cap rules, forcing the latter to go first, to avoid two parses
 ;; for |Kim|.  But oddly, when parsing with ACE without the "-p" (packing) flag
-;; we only get one parse for |Kim| (without the following constraint), though
-;; we get two with "-p" added, showing both orders of the n_sg rule and the
-;; has_init_cap rule.  Until we solve that mystery, don't add this constraint,
-;; but FIX.
+;; and with the following constraint include, we get no parse for "Kim", though
+;; we get one with "-p" added, applying first the has_init_cap_rule and then
+;; the n_sg rule, as expected.
+;; With this constraint commented out, and without the "-p" flag, we get one
+;; parse for "Kim" (using the unwanted order first n_sg and then noninitcap),
+;; and two parses using the "-p" flag, with both orders of the two rules.
+;; That is, without packing, it appears that the desired order of the two
+;; rules is blocked by the following constraint, but available with packing.
+;; 2020-07-05 - Related to this, we fail to parse the unknown lower case 
+;; "monticello" without packing, but we get one parse as expected with "-p"
+;; (whether or not the following constraint is included).  
+;; The failure involves the root condition, since the intended covering edge is
+;; in the chart with and without packing, suggesting that the preprocessing
+;; step that imposes the required sequence of lexical rules is not getting the
+;; initcap rules right.  Note that interactive unification of the intended
+;; root symbol succeeds with the intended edge, so not a feature-value unif
+;; failure.
+;;
+;; Until we solve the mystery, don't add this constraint, but FIX.
 #|
 lex_rule_supermost :+
   [ ARGS < [ ORTH.CLASS.+INITIAL - ] > ].
 |#
 
-;; Pull up attributes +INITIAL and +CASE.
+;; Pull up attributes +INITIAL and +CASE to type regular_class.
 ;;
 regular_class :+
   [ +INITIAL luk,
@@ -4422,6 +4452,15 @@ p_prd_s-v-p_le_mal := noncqrs-nab &
                                          [ TAM.ASPECT.PROGR - ] ] > ],
     GENRE robust ].
 
+;; Robustly allow misplaced period before comma.
+;;
+pt_-_comma_le := punct_right_word &
+  [ SYNSEM [ LOCAL.CAT.VAL.COMPS.FIRST.PUNCT.RPUNCT clause_or_pair_or_no_punct,
+             PUNCT [ PNCTPR no_ppair,
+	  	     PAIRED no_ppair,
+		     LPUNCT no_punct,
+		     RPUNCT comma_punct ] ] ].
+
 ;; To catch robust |Last we made dessert.|
 pt_-_comma_le :+
   [ SYNSEM.LOCAL.CAT.VAL.COMPS.FIRST.LOCAL.CAT.HEAD.--CMA + ].
@@ -4467,3 +4506,9 @@ n_-_c-aj_le_rbst := n_intr_lex_entry &
 ;;
 p_np_i-nm-poss_lexent :+
   [ SYNSEM.LOCAL.CAT.HEAD.MINORS.ALTMIN no_rel ].
+
+;; DPF 2020-07-11 - Mark passivizable verbs with feature to prevent them from
+;; combining with robust is/has as in "is expected to arrive"
+;;
+trans_subst :+
+  [ LOCAL.CAT.HEAD.--HAVEBE - ].
