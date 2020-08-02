@@ -1,15 +1,15 @@
 (in-package :lkb)
 
 ;;;
-;;; Copyright (c) 2009 -- 2018 Stephan Oepen (oe@ifi.uio.no); 
-;;; see `LICENSE' for conditions.
+;;; Copyright (c) 2009 -- 2020 Stephan Oepen (oe@ifi.uio.no); 
+;;; see 'LICENSE' for conditions.
 ;;;
 
 
 (clear-repp)
 
 ;;;
-;;; as of September 2008, REPP supports `ensembles' of rule sets, where select
+;;; as of September 2008, REPP supports 'ensembles' of rule sets, where select
 ;;; modules (XML or LaTeX markup normalization, for example) can be activated
 ;;; in the REPP environment or top-level repp() call.  by default, turn on the
 ;;; XML and ASCII modules.
