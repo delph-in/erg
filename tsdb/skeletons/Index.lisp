@@ -76,6 +76,7 @@
  ((:path . "petet") (:content . "Evaluation By Textual Entailment (Test)"))
  ((:path . "tanaka") (:content . "Tanaka Corpus (English Translations)"))
  ((:path . "lpp") (:content . "Le Petit Prince"))
+ ((:path . "bcs") (:content . "Brown Corpus Sampler (SDP 2015 Task)"))
  ((:path . "wrev1819") (:content . "Writing Reviews 10/18-01/19"))
  ((:path . "redwoods") (:content . "Core Redwoods (JHPSTG & WeScience)"))
  ((:path . "educ") (:content . "Educational Composition"))
