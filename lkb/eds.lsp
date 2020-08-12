@@ -19,5 +19,9 @@
    (list (vsym "L-INDEX") (vsym "L-HNDL") "^h")
    (list (vsym "R-INDEX") (vsym "R-HNDL") "^h")))
 (setf *eds-predicate-modifiers*
-  (list (ppcre:create-scanner "_x_deg$|^neg$|^_quite_x$")))
+  (list
+   (ppcre:create-scanner "_x_deg$|^neg$|^_(?:not\\+)?quite_x$")
+   #+:null (ppcre:create-scanner "relative_mod")))
 (setf *eds-untensed* (list (cons (vsym "TENSE") (vsym "untensed"))))
+(setf *eds-vpm* :eds)
+(setf *eds-normalize-p* t)
