@@ -1014,13 +1014,19 @@ vc_prd_was-n_le_mal := be_past_neg_lex_entry & be_cop_neg &
 			   COMPS.FIRST expressed_synsem ],
     GENRE robust ].
 
+;; DPF 2020-07-24 - Copied SUBJ..HEAD constraints from third_sg_fin_v_ilr_rbst
+;;
 vc_prd_were_le_mal := vc_prd_was_lexent &
   [ INFLECTD +,
     ALTS.VPELLIP -,
     SYNSEM.LOCAL.CAT [ HEAD.--MAL3SG +,
                        VAL [ SUBJ.FIRST [ LOCAL [ AGR.PNG.PN sg,
-						  CAT.HEAD [ --NUM -,
-						             --NOSUFF - ] ],
+						  CAT.HEAD [ --MALCASE -,
+							     --MALAGR -,
+							     --NOSUFF -,
+							     --BARED -,
+							     --NUM -,
+							     --POSSRBST - ] ],
 					  --SIND.SORT entity,
 					  MODIFD.LPERIPH bool ],
 			     COMPS.FIRST expressed_synsem ] ],
@@ -1256,9 +1262,13 @@ subjh_mc_ques_rule := subjh_rule_decl & head_subj_phrase & clause &
 ;; DPF 2017-10-06 - Replaced ALTMIN udef_q_rel with quant_rel, so we can also 
 ;; get robust |we admire old one|
 ;; 2020-04-10 - Add SPR unexpressed to block robust |every [word]|
+;; 2020-08-01 - Identify lexical constraints on detless-PPs to block bare
+;; singulars such as for "on top".
 ;;
 bare_np_sg_phrase_robust := basic_bare_np_sg_phrase_robust &
-  [ SYNSEM.LOCAL [ CAT [ HEAD.MINORS.ALTMIN quant_rel,
+  [ SYNSEM.LOCAL [ CAT [ HEAD [ MINORS.ALTMIN quant_rel,
+				--BAREDPP #bpp,
+				--BAREPP #bpp ],
 			 VAL.SPR.FIRST unexpressed ],
                    CONT.HOOK.INDEX.--BARESG + ] ].
 
@@ -1287,6 +1297,7 @@ num_det_rule :+
                                                    --MSCT #msct,
                                                    MINORS.MIN #min ] ] > ] > ].
 ;; "One books"
+;; 2020-08-01 - Block for "one or two books"
 ;;
 mal_num_det_rule_1 := basic_num_det_phrase & rule &
   [ SYNSEM.LOCAL.CAT.VAL.SPEC < [ LOCAL [ AGR.PNG.PN 3p,
@@ -1294,8 +1305,9 @@ mal_num_det_rule_1 := basic_num_det_phrase & rule &
     			      	          CAT.HEAD [ MINORS.NORM 
 					                 norm_or_no_rel,
 						     --BARE - ] ] ] >,
-    ARGS < [ SYNSEM.LOCAL.CAT.HEAD [ MOD < [ LOCAL.AGR.PNG.PN 3s ] >,
-				     MINORS.NORM norm_rel ] ] >,
+    ARGS < [ SYNSEM.LOCAL [ CAT.HEAD [ MOD < [ LOCAL.AGR.PNG.PN 3s ] >,
+				       MINORS.NORM norm_rel ],
+			    CONT.HOOK.INDEX non_conj_event ] ] >,
     GENRE robust ].
 
 ; "Twenty book"
@@ -1354,13 +1366,59 @@ aj_-_i-one_le_rbst := basic_aj_-_i-one_lexent &
 aj_-_i-one_le :+
   [ SYNSEM.LOCAL.CAT.HEAD.MOD.FIRST.LOCAL.CAT.HEAD.--BARE - ].
 
+;; 2020-08-01 - Pending a more reliable parse selection model, 
+;; add collection of ad hoc features to block robust analysis of detless-PPs 
+;; (or MWEs) such as "on top" or "at present", where e.g. the prep "at" 
+;; constrains its NP complement to be compatible with [BP-AT +] (accepting 
+;; a robust bare NP such as "at park"), but the noun "present" is marked 
+;; [BP-AT -] to prevent robust "at present".
+
+bare_pp_min := *avm*.
+
+bare_pp := bare_pp_min &
+  [ BP-ABOVE bool,
+    BP-AHEADOF bool,
+    BP-AROUND bool,
+    BP-AT bool,
+    BP-BEHIND bool,
+    BP-BELOW bool,
+    BP-DOWN bool,
+    BP-FOR bool,
+    BP-FROM bool,
+    BP-IN bool,
+    BP-INCASEOF bool,
+    BP-INTO bool,
+    BP-NEAR bool,
+    BP-OF bool,
+    BP-OFF bool,
+    BP-ON bool,
+    BP-OUT bool,
+    BP-OUTOF bool,
+    BP-TO bool,
+    BP-UNDER bool,
+    BP-UP bool,
+    BP-UPON bool,
+    BP-WITHIN bool,
+    BP-WITHOUT bool ].
+
 ;; We need to know when an NP is a number, e.g. to avoid robust |ten grow|
 ;; --NOTTL allows blocking of post-title for |Beijing University|
+;; 2020-08-01 - Added --OFMOD to enable nouns such as "kind" to block of-modif
+;; to avoid robust |that kind of cat|.
+;; 2020-08-01 - Added --BAREPP so nouns can block being bare-sing when there is
+;; a variant for detless-PP MWEs.  The --BAREDPP is identified with --BAREPP
+;; in the robust bare singular rule, so "on the top" is fine but not robust
+;; "on top".
+;; 2020-08-03 - Added --MALCPNP to enable blocking of robust "as if he won"
 ;;
 supnoun :+
   [ --NOSUFF bool,
     --NUM bool,
-    --NOTTL bool ].
+    --NOTTL bool,
+    --OFMOD bool,
+    --MALCPNP bool,
+    --BAREPP bare_pp_min,
+    --BAREDPP bare_pp_min ].
 
 num_noun_rule :+
   [ SYNSEM.LOCAL.CAT.HEAD.--NUM + ].
@@ -1401,10 +1459,15 @@ cp_cop_verb := nv_cop_verb &
 ;;
 genitive := non_obliq.
 
+;; 2020-08-01 - Also add blocking subtype of real_case to avoid robust
+;; "in December of [last year]" using "last" which is only for NP-adv to
+;; catch tense mismatch.
+nounif_case := real_case.
+
 ;; Prevent mal-det and mal-adj (e.g. "all") from spurious robust analyses:
 ;; (--BARE -] for mal-adj, [--MALCM -] for mal-det
 ;;
-mass_or_count_nocomp_synsem :+ 
+basic_mass_or_count_nocomp_synsem :+ 
   [ LOCAL.CAT.HEAD [ --BARE -,
 		     --MALCM - ] ].
 
@@ -1754,7 +1817,7 @@ n_-_pn_le_nocap_rbst := n_proper_lexent &
 n_-_c-nm_le_nocap_rbst := n_intr_named_lexent &
   [ SYNSEM [ PUNCT no_punctuation_min,
              LOCAL.CAT.HEAD.--CPDNHD -,
-	     MODIFD.LPERIPH + ],
+	     MODIFD.LPERIPH na_or_+ ],
     TOKENS.+LIST.FIRST.+CLASS.+CASE non_capitalized,
     GENRE robust ].
 
@@ -1837,12 +1900,14 @@ aj_pp-cp_i-it_le := reg_adj_atrans_cp_word &
 ;; DPF 04-aug-10 - Block free relatives via NH-DTR..HEAD value
 ;; DPF 2017-04-03 - Restrict to MC + to avoid use in e.g.
 ;; |he was in the theater seat sleeping|
+;; DPF 2020-08-12 - Block pres participles
 ;;
 subjh_nonfin_robust_rule := subjh_rule_basic & head_subj_phrase &
 			    non_rel_clause &
   [ SYNSEM [ LOCAL [ CAT [ HEAD verb & 
 				[ VFORM non_pas,
-				  TAM indic_tam & [ ASPECT.PRF - ] ],
+				  TAM indic_tam & [ ASPECT [ PRF -,
+							     PROGR - ] ] ],
 			   MC + ],
                      CONT.HOOK.INDEX.SF #pred ],
 	     NONLOC.SLASH 0-dlist,
@@ -2077,6 +2142,9 @@ d_-_the_prop_le := det_word_nonque &
              MODIFD #mod ],
     ORTH.TOKCASE #tokcase ].
 
+d_-_the_le_mal := d_-_the_lexent &
+  [ GENRE robust ].
+
 ;; Avoid robust |one of these cats|
 ;;
 det_pl_lexent :+
@@ -2089,8 +2157,9 @@ basic_det_poss_lexent :+
 ;; ambig. as in |cyborgs won the most|.
 ;;
 d_-_prt-plm_le_rbst := det_word_nonque &
-  [ SYNSEM [ LOCAL [ CAT.VAL.SPR < [ --MIN just_only_deg_rel,
-				     LEX + ] >,
+  [ SYNSEM [ LOCAL [ CAT.VAL [ SPR < [ --MIN just_only_deg_rel,
+				       LEX + ] >,
+			       SPEC.FIRST.LOCAL.CAT.HEAD.--MALCM + ],
 		     AGR.DIV - ],
              LKEYS.KEYREL [ ARG0.DIV -,
 			    PRED explicit_quant_agr_q_rel ],
@@ -2206,7 +2275,7 @@ appos_rev_rel := appos_rel.
 ;; to subtype and instances, and add a second entry to modify (at least) 
 ;; deictics.
 ;;
-p_np_i-nm-poss_le_rbst :+
+p_np_i-nm-poss_le_mal :+
   [ SYNSEM.LOCAL.CAT.HEAD.MOD.FIRST.LOCAL.CAT.HEAD non_partn ].
 
 ;; Exclude |and [out it] went|
@@ -2236,6 +2305,8 @@ minute_prep_lexrule := basic_minute_lex_rule &
 ;; |We arrived, please stay.| and |We arrived, will they leave?|
 ;; 2020-04-17 - Block for left-modified left dtr, to avoid for
 ;; |every time he arises, he arrives|.  CHECK for whether too strict
+;; 2020-08-11 - Note that --MAL3SG - on second dtr blocks parse for double 
+;; robust "We won,it annoy him."  Recall what the constraint is doing and FIX.
 ;; 
 run_on_coord_punct_rule := basic_run_on_coord_rule &
  [ LCONJ-DTR.SYNSEM phr_synsem &
@@ -2280,6 +2351,7 @@ run_on_coord_dash_rule := run_on_coord_punct_rule &
 ;; a robust comma as in |... taste, smell, ...|
 ;;
 adj_or_intadj :+ [ --SBRD luk,
+		   --MALSBRD bool,
 		   --IDIOMPART bool,
 		   --NOUNADJ bool,
 		   --JROB bool ].
@@ -2382,9 +2454,10 @@ aj_pp_i-er-sbrd_le := adj_trans_lexent &
 			    --SBRD na ] ].
 
 ;; Block unwanted robust for |it smelled disgusting|
+;; 2020-08-02 - Instead, constrain robust subord-adjrule to exclude [PRD +]
 ;;
 aj_-_i-prd_le :+
-  [ SYNSEM.LOCAL.CAT.HEAD.--SBRD - ].
+  [ SYNSEM.LOCAL.CAT.HEAD.--SBRD na ].
 
 aj_pp_i_le_rbst := adj_trans_lexent &
   [ SYNSEM.LOCAL.CAT [ HEAD [ MINORS.MIN norm_adj_rel,
@@ -2524,6 +2597,9 @@ n_poss_pro_lexent :+
 ;; DPF 2019-11-11 - Add --MALCOPBSE to prevent |be warm| using robust |be begin|
 ;; DPF 2020-07-11 - Add --HAVEBE so we can prevent passivizable verbs and other
 ;; verbs from combining with robust is/has as in "is expected to arrive"
+;; DPF 2020-08-11 - Add --CLRC to control extraposed relative rule, so we can
+;; catch robust "told him that do not be late".
+;; And add --ROBAUX to enable blocking of robust "can better admire the cat".
 ;;
 verbal :+
   [ --VNEG bool,
@@ -2531,7 +2607,9 @@ verbal :+
     --MALFIN bool,
     --NOCJCRD bool,
     --MALCOPBSE bool,
-    --HAVEBE bool ].
+    --HAVEBE bool,
+    --CLRC bool,
+    --ROBAUX bool ].
 
 robust_nom_rel := non_proper_rel.
 
@@ -2878,9 +2956,23 @@ p_vp_ptcl-bse_le_rbst := p_vp_ptcl-ngap_lexent &
 ;; |what will he say is not known|
 ;;
 np_cp_wh_rule_mal := rule & basic_np_cp_wh_phrase &
-  [ ARGS < [ SYNSEM.LOCAL.CAT [ HEAD.INV +,
+  [ ARGS < [ SYNSEM.LOCAL.CAT [ HEAD [ INV +,
+				       MINORS.NORM norm_rel ],
                                 VAL.SUBJ *anti_list* & *olist*,
                                 MC + ] ] > ].
+
+;; "We thought about if he would win"
+;;
+np_cp_wh_if_rule_mal := rule & basic_np_cp_wh_phrase &
+  [ SYNSEM.LOCAL.CAT.HEAD [ CASE obliq,
+			    --MALCPNP + ],
+    ARGS < [ SYNSEM.LOCAL.CAT [ HEAD comp & [ INV -,
+					      CASE non_nom,
+					      VFORM fin,
+					      --MAL3SG -,
+					      MINORS.NORM no_rel ],
+                                VAL.SUBJ < >,
+                                MC - ] ] > ].
 
 ;; Prevent yes-no as dtr in the above mal rule
 ;;
@@ -2994,11 +3086,6 @@ frag_adv_rule :+
 frag_sent_adv_rule :+
   [ ARGS.FIRST.SYNSEM.LOCAL.CAT.HEAD.MOD.FIRST unexpressed ].
 
-;; Block in robust n-j-cmpnd rule for |place great|
-;;
-n_pp_c-plc-of_le :+
-  [ SYNSEM.LOCAL.CONT.HOOK.INDEX.SORT place ].
-
 ;; Prevent misanalysis of |He gave his math students homework.|
 ;; and |he buys his cats cat toys|
 ;; Also exclude pronouns for second NP.
@@ -3104,6 +3191,7 @@ has_noninitial_cap_rule := basic_initial_cap_rule &
 		    TOKCASE capitalized ],
 	     ALTS.NONINITCAP + ] >,
     ORTH.TOKCASE non_capitalized & [ TOKCASEROB + ],
+    SYNSEM.PHON.ONSET.--TL.FIRST.+CLASS.+CASE.TOKCASEROB +,
     GENRE robust ].
 
 named_entity_cap_rule := initial_cap_rule &
@@ -3290,12 +3378,6 @@ n_-_c-approx_le :+
 p_np-pp_i-frm-to_le :+
   [ SYNSEM.LOCAL.CAT.VAL.COMPS.FIRST.LOCAL.CAT.HEAD.--BARE - ].
 
-;; DPF 2019-01-20 - Block |as possibly|
-;;
-av_-_dg-cmp-so_le :+
-  [ SYNSEM.LOCAL.CAT.VAL.SPEC.FIRST.LOCAL.CAT.HEAD.MOD.FIRST.LOCAL 
-                                                            intersective_mod ].
-
 ;; Block |reasons why humans|
 ;;
 x_xp_howabt-n-p_le :+
@@ -3391,6 +3473,7 @@ n_-_pr-fr_le := n_freerel_pro_lexent &
 ;; DPF 2019-05-06 - Ignore this for robustness, allowing as grammatical
 ;; |what bother us most are grumpy students.|
 ;; 2019-06-20 - Add CASE nom to avoid these as complements of be, preps.
+;; DPF 2020-07-24 - Block robust verb inflection on complement
 ;;
 n_-_pr-fr_le_rbst := n_freerel_pro_lexent &
   [ SYNSEM [ LOCAL [ CONT.RELS.LIST.FIRST.PRED free_relative_q_rel,
@@ -3723,7 +3806,13 @@ basic_adv_refl_pro_lexent :+
 basic_n_rel_pro_lexent :+
   [ ORTH.TOKCASE #tokcase,
     SYNSEM.PHON.ONSET.--TL.FIRST.+CLASS.+CASE #tokcase ].
+generic_pro_adv_word :+
+  [ ORTH.TOKCASE #tokcase,
+    SYNSEM.PHON.ONSET.--TL.FIRST.+CLASS.+CASE #tokcase ].
 n_pp_pr-dei-3pl_le :+
+  [ ORTH.TOKCASE #tokcase,
+    SYNSEM.PHON.ONSET.--TL.FIRST.+CLASS.+CASE #tokcase ].
+n_wh_pro_lexent :+
   [ ORTH.TOKCASE #tokcase,
     SYNSEM.PHON.ONSET.--TL.FIRST.+CLASS.+CASE #tokcase ].
 adj_attr_intrans_que_lexent :+
@@ -3998,6 +4087,14 @@ n_cp_m-nocmp_le_rbst := noun_word &
 					    [ MINORS.ALTMIN non_ellipt_rel ],
 			       SPR.FIRST.NONLOC.QUE 0-dlist ] ] ],
     GENRE robust ].
+
+;; Block robust |She stood unmoving|
+basic_attr_verb_part_lexrule :+
+  [ SYNSEM.LOCAL.CAT.HEAD.--MALSBRD - ].
+
+adj_prefix_rule :+
+  [ SYNSEM.LOCAL.CAT.HEAD.--MALSBRD #sbrdrbst,
+    ARGS.FIRST.SYNSEM.LOCAL.CAT.HEAD.--MALSBRD #sbrdrbst ].
 
 attr_verb_part_namemod_lexrule :+
   [ ARGS.FIRST.ALTS [ MALPASS -,
@@ -4415,9 +4512,13 @@ basic_measure_np_phrase :+
 ;; Prevent robust tokencase with post punctuation, though really only want
 ;; this for (opening and) closing double quotes as in 
 ;; |"Taking Care of Our Forests"|
+;; 2020-08-11 - Since we want to parse  We admired a Cat.   we can't have this
+;; [TOKCASEROB -] for all post-punct.  So constrain to double quotes.
 ;;
+#|
 punct_marker_hinit_brk_rule :+
   [ ARGS.FIRST.ORTH.TOKCASE.TOKCASEROB - ].
+|#
 
 ;; 2020-05-28 - Block "every" as full NP, avoiding |[not every] loud noise|
 ;;
@@ -4493,8 +4594,16 @@ av_-_s-vp-x_le_rbst := basic_adverb_word &
 	     OPT + ],
     GENRE robust ].
 
+;; DPF 2020-07-24 - Copied SUBJ..HEAD constraints from third_sg_fin_v_ilr_rbst
+;;
 v_np_was_le_mal := be_was_lex_entry & be_id_pos &
-  [ GENRE robust ].
+  [ SYNSEM.LOCAL.CAT.VAL.SUBJ.FIRST.LOCAL.CAT.HEAD [ --MALCASE -,
+						     --MALAGR -,
+						     --NOSUFF -,
+						     --BARED -,
+						     --NUM -,
+						     --POSSRBST - ],
+    GENRE robust ].
 
 ;; For adjectives wrongly used as nouns,as *a various of solutions"
 n_-_c-aj_le_rbst := n_intr_lex_entry &
@@ -4507,8 +4616,51 @@ n_-_c-aj_le_rbst := n_intr_lex_entry &
 p_np_i-nm-poss_lexent :+
   [ SYNSEM.LOCAL.CAT.HEAD.MINORS.ALTMIN no_rel ].
 
+;; DPF 2020-08-01 - Enable nouns such as "kind" or "type" to block modif by
+;; "of", to avoid robust "That kind of cat"
+;;
+p_np_i-nm-poss_le :+
+  [ SYNSEM.LOCAL.CAT.HEAD.MOD.FIRST.LOCAL.CAT.HEAD.--OFMOD + ].
+
 ;; DPF 2020-07-11 - Mark passivizable verbs with feature to prevent them from
 ;; combining with robust is/has as in "is expected to arrive"
 ;;
 trans_subst :+
   [ LOCAL.CAT.HEAD.--HAVEBE - ].
+
+;; Block informal comma to avoid robust "improves our [memory, and makes] us..."
+nbar_coord_top_1_rule :+
+  [ ARGS.FIRST.SYNSEM.PUNCT.RPUNCT comma_or_semi_or_pair_or_no_punct ].
+
+;; Propagate robust case from head dtr
+noun_n_cmpnd_phr :+
+  [ ORTH.TOKCASE.TOKCASEROB #robcase,
+    HD-DTR.ORTH.TOKCASE.TOKCASEROB #robcase ].
+
+;; Nouns with wrong "the" specifier, as for "in the while"
+;;
+n_-_c-the_le_rbst := n_-_c-sg-ifl-nmd_lexent &
+  [ SYNSEM.LOCAL.CAT.HEAD.MINORS.ALTMIN _the_q_rel,
+    GENRE robust ].
+
+;; Prevent robust caps with quoted expressions
+pt_-_dqright_le :+
+[ SYNSEM.LOCAL.CAT.VAL.COMPS.FIRST.PHON.ONSET.--TL.FIRST.+CLASS.+CASE.TOKCASEROB
+                                                                            - ].
+pt_-_dqleft_le :+
+[ SYNSEM.LOCAL.CAT.VAL.COMPS.FIRST.PHON.ONSET.--TL.FIRST.+CLASS.+CASE.TOKCASEROB
+                                                                            - ].
+subconj_nonbse_synsem := subconj_bse_or_inf_synsem &
+  [ LOCAL.CAT.VAL.COMPS < [ LOCAL [ CAT vp_cat &
+					[ HEAD verb &
+					       [ MINORS.ALTMIN non_ellipt_rel ],
+					  VAL.SUBJ < unexpressed_reg &
+						[ LOCAL.CAT.HEAD basic_noun ]>],
+				    CONT.HOOK.XARG non_expl-ind ] ] > ].
+
+;; "am writing to inviting you"
+p_vp_ing_le_mal := nonconj & non_affix_bearing &
+  [ SYNSEM subconj_nonbse_synsem &
+	   [ LOCAL.CAT [ HEAD.MOD.FIRST.LOCAL.CAT.HEAD verb,
+			 VAL.COMPS.FIRST.LOCAL.CAT.HEAD.VFORM prp ] ],
+    GENRE robust ].

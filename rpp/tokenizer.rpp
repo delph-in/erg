@@ -1,8 +1,8 @@
 ;;; -*- mode: fundamental; coding: utf-8; indent-tabs-mode: t; -*-
 
 ;;;
-;;; Copyright (c) 2009 -- 2020 Stephan Oepen (oe@ifi.uio.no); 
-;;; see 'LICENSE' for conditions.
+;;; Copyright (c) 2009 -- 2018 Stephan Oepen (oe@ifi.uio.no); 
+;;; see `LICENSE' for conditions.
 ;;;
 
 
@@ -11,7 +11,7 @@
 ;;; and tokenization in LKB grammars.  requires LKB version of 1-feb-09 or
 ;;; newer.  note that the syntax is rigid: everything starting in column 2
 ;;; (i.e. right after the rule type marker) is used as the match pattern until
-;;; the first '\t' (tabulator sign); one or more tabulators are considered the
+;;; the first `\t' (tabulator sign); one or more tabulators are considered the
 ;;; separator between the matching pattern and the replacement, but other
 ;;; whitespace will be considered part of the patterns.  empty lines or lines
 ;;; with a semicolon in column 1 (i.e. in place of the rule type marker, this
@@ -26,7 +26,7 @@
 ;;; preceding or following tokens, reflecting standard orthographic convention,
 ;;; and are then analyzed as pseudo-affixes.  
 ;;;
-;;; this file is inspired by the PTB 'tokenizer.sed' script, and by and large
+;;; this file is inspired by the PTB `tokenizer.sed' script, and by and large
 ;;; should yield very similar results.  with the addition of token mapping as
 ;;; a separate step inside the parser, we want to restrict RE-based processing
 ;;; to pure string-level phenomena.  however, to actually tokenize (following
@@ -38,7 +38,7 @@
 ;;; various types of quotes and dashes.  we aim to map mark-up to corresponding
 ;;; UniCode characters, and preserve those in parsing, as much as possible.
 ;;;
-;;; the original 'tokenizer.sed' script actually cannot always yield the exact
+;;; the original `tokenizer.sed' script actually cannot always yield the exact
 ;;; tokenization found in the PTB.  the script unconditionally separates a set
 ;;; of punctuation or other non-alphanumeric characters (e.g. |&| and |!|) that
 ;;; may be part of a single token (say in |AT&T| or URLs).  we aim to do better
@@ -59,7 +59,7 @@
 
 ;;;
 ;;; string rewrite rules: all matches, over the entire string, are replaced by
-;;; the right-hand side; grouping (using '(' and ')') in the pattern) and group
+;;; the right-hand side; grouping (using `(' and `)') in the pattern) and group
 ;;; references (`\1' for the first group, et al.) carry over part of the match.
 ;;;
 
@@ -72,27 +72,20 @@
 ;; in the 21st century, there are of course various whitespace code points, so
 ;; maybe we should look for a UniCode property to use here.  however, it used
 ;; to be the case, at least, that the LKB implementation of REPP did not have
-;; the full UniCode CL-PPCRE extensions (and even though it does now, one might
-;; first have to read up on interactions of locales and UniCode properties,
-;; before relying on such fancy whitespace detection.           (29-nov-12; oe)
+;; the full UniCode CL-PPCRE extensions (and even if it did, one might first
+;; have to read up on interactions of locales and UniCode properties, before
+;; relying on such fancy whitespace detection.                 (29-nove-12; oe)
 ;;
 !^(.+)$								 \1 
 ![\t　]								 
 !  +								 
 
-;;
-;; before we start to take things apart, mask common patterns (e.g. some types
-;; of named entities, like email addresses) that shall remain as is.
-;;
->ne
-
-;;
-;; a set of 'mark-up modules', often replacing mark-up character entities with
+;; a set of `mark-up modules', often replacing mark-up character entities with
 ;; actual UniCode characters (e.g. |&mdash;| or |---| as |—|), or just ditching
 ;; mark-up that has no bearing on parsing for now (e.g. most wiki mark-up).
 ;; these modules can be activated selectively by name in the REPP environment
 ;; or the top-level call into REPP.
-;;
+
 >xml
 >latex
 >ascii
@@ -103,7 +96,7 @@
 
 ;;
 ;; we hope to keep it to a minimum and only invoke it in select configurations,
-;; but at times we need to heuristically 'fix up' deficiencies in the input;
+;; but at times we need to heuristically `fix up' deficiencies in the input;
 ;; for example spurious duplicate punctuation, and such.
 ;;
 >robustness
@@ -119,7 +112,7 @@
 ;; directional quotes (|“|, |”|, |‘|, and |’|) and ambiguous, straight ones
 ;; (|"| and |'|).  the former group can be restricted to opening and closing
 ;; functions, and in the case of closing quotes also to apostrophes and units
-;; of measure (feet and inches, or seconds and minutes; for which in 'proper'
+;; of measure (feet and inches, or seconds and minutes; for which in `proper'
 ;; typography the double prime and prime symbols could be used); the straight
 ;; quotes, on the other hand, need to be considered ambiguous between opening
 ;; and closing, apostrophe, or prime usages.                    (9-feb-10; oe)
@@ -168,19 +161,19 @@
 ;;
 ;; a new REPP facility: named groups and iterative group calls.  there are a
 ;; number of characters that PTB tokenizes off (unconditionally, it seems, in
-;; the original 'tokenizer.sed'), though not when they are parts of names or
+;; the original `tokenizer.sed'), though not when they are parts of names or
 ;; NE patterns, e.g. |AT&T| or |http://www.emmtee.net/?foo.php&bar=42|.  thus,
 ;; we only want these as separate tokens when they are preceded or followed by
 ;; whitespace; this leaves a problem with, say, |http://www.emmtee.net/|, where
-;; one would have to apply NE recognition (what used to be 'ersatzing') _prior_
+;; one would have to apply NE recognition (what used to be `ersatzing') _prior_
 ;; to tokenization.
 ;;
-;; either way, because characters we want to tokenize off might be 'clustered'
+;; either way, because characters we want to tokenize off might be `clustered'
 ;; with each other, e.g. |(42%), |, the notion of adjacent whitespace needs to
 ;; apply transitively through such clusters.  it seems an iterative group is
 ;; the most straightforward way of getting that effect.  the rules from the
 ;; group will be applied repeatedly (in order) at the time the group is called
-;; (by means of the '>' operator), until there are no further matches.  we need
+;; (by means of the `>' operator), until there are no further matches.  we need
 ;; to be careful to avoid indefinite recursion within the group, i.e. not add
 ;; duplicate spaces.  thus, once again, make sure the full string is bracketed
 ;; by single spaces, and ditch multiple spaces initially; then we can require a
@@ -190,7 +183,7 @@
 ;; part because that is the PTB approach (|-| and |/|), in part because they
 ;; can be prefixes or suffixes of one-token named entities, i.e. |<| and |>| in
 ;; URLs and email addresses.  to work around these, we may need a string-level
-;; 'ersatzing' facility, associating a sub-string (that can be unambiguously 
+;; `ersatzing' facility, associating a sub-string (that can be unambiguously 
 ;; identified by surface properties, e.g. a URL) with an identifier of a token
 ;; class.
 ;;
@@ -250,13 +243,13 @@
 ;; challenging: it presumably is frequent enough so that for PTB compliance we
 ;; should pull it apart, but that would seem to introduce unwanted ambiguity.
 ;; i doubt that |she cannot participate on monday| has the reading of her being
-;; able to 'not participate' (stay out of the way) on monday.  or does it?
+;; able to `not participate' (stay out of the way) on monday.  or does it?
 ;;                                                              (19-sep-08; oe)
 ;;
 ;; _fix_me_
 ;; starting in mid-2012, normalize towards UniCode apostrophes (where we used
 ;; to normalize towards ASCII straight quotes).  as a consequence, we no longer
-;; expect straight quotes in the 'standard' setup, i.e. lexical entries need to
+;; expect straight quotes in the `standard' setup, i.e. lexical entries need to
 ;; be available with UniCode apostrophes.  for robustness to non-standard modes
 ;; (e.g. running without REPP), however, we should either keep duplicates of
 ;; all lexical entries containing apostrophes, or normalize in token mapping?
