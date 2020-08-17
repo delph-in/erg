@@ -13,7 +13,9 @@
 ; grammar-specific, so should probably be in user-fns.lsp, or should
 ; have global in this function bound to list of grammar-specific feature
 ; names.
-
+;; DPF 2020-08-17 - The MARG feature has not been present in the ERG for many
+;; years now, so let's see if we can do without this patch.
+#|
 (in-package :mrs)
 (defun chain-down-margs (rel mrsstruct)
   (let* ((marg-fvp (dolist (fvpair (rel-flist rel))
@@ -34,7 +36,7 @@
 	    (dolist (qeq (psoa-h-cons mrsstruct))
 	      (when (eq marg-value (var-id (hcons-scarg qeq)))
 		(return (values qeq marg-fvp)))))))))
-
+|#
 
 ; In mrs/idioms.lisp
 ; Added check in idiom_rel-p() since mt::transfer-mrs() is surprised at
