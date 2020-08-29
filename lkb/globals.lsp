@@ -236,6 +236,11 @@
   (load-erg-settings-file 
     (merge-pathnames "openproof/nogen-rules.set" *grammar-directory*)))
 
+#+:educ
+(setf *gen-ignore-rules* 
+  (load-erg-settings-file 
+    (merge-pathnames "educ/nogen-rules.set" *grammar-directory*)))
+
 
 (setf *semantics-index-path* '(SYNSEM LOCAL CONT HOOK INDEX))
 

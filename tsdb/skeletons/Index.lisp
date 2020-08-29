@@ -35,6 +35,7 @@
 ;;; [        4,000,000 --         4,999,999] --- SciBorg
 ;;; [        5,000,000 --         5,099,999] --- BioScope
 ;;; [        6,000,000 --         6,099,999] --- SemCore
+;;; [        7,000,000 --         7,099,999] --- Open Multilingual WordNet
 ;;; [       10,000,000 --        19,999,999] --- WeScience
 ;;; [       20,000,000 --        29,999,999] --- PTB WSJ
 ;;; [       30,000,000 --        30,999,999] --- Hinoki
@@ -88,7 +89,6 @@
  ((:path . "sh-spec") (:content . "Sherlock Holmes Speckled Band"))
  ((:path . "ntucle") (:content . "NTU CLE learner English corpus"))
  ((:path . "omw") (:content . "Open Multilingual WordNet sample definitions"))
- ((:path . "omw5k") (:content . "More Open Multilingual WordNet sample definitions"))
  ((:path . "marco2nd300") (:content . "Second 300 Marco user queries"))
  ((:path . "test") (:content . "Test"))
 )
