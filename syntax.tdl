@@ -387,6 +387,11 @@ decl_phrase := basic_decl_phrase &
 ;; to modifiers that don't want imperatives, such as "last night".
 ;; DPF 2020-03-20 - Removed the recent constraint phr_synsem on mother, since
 ;; it blocks e.g. |Arise!|.  Let's see why it was added ...
+;; DPF 2020-10-20 - Re 2012-02-20: But this eventually blocks subj-extraction
+;; needed for relative clause containing an imperative CP complement, as in
+;; `people who say "open the door"'. And the supposed prohibition on object
+;; extraction with imperatives seems wrong anyway: "Cheese as old as that, 
+;; never serve without tasting it first!".
 ;;
 imp_phrase := basic_non_rel_clause & head_valence_phrase & head_only &
   [ SYNSEM [ LOCAL [ CAT [ HEAD verb &
@@ -400,7 +405,6 @@ imp_phrase := basic_non_rel_clause & head_valence_phrase & head_only &
                                  COMPS < > ],
                            MC bool ],
                      CONT.HOOK.INDEX.SF basic-comm ],
-	     NONLOC.SLASH.LIST *modlist*,
              LEX #lex,
 	     PUNCT #punct ],
     HD-DTR.SYNSEM [ LOCAL [ CAT [ HEAD verb & [ VFORM #vform ],
@@ -621,9 +625,17 @@ basic_rel_cl := sign &
       PHON.ONSET #onset ],
     ARGS.FIRST.SYNSEM.PHON.ONSET #onset ].
 
+;; DPF 2020-09-10 - Removed VFORM constraint, to enable robust subtypes of
+;; relative clause.  All existing normal subtypes already specialize VFORM to
+;; either fin or inf.
+#|
 rel_cl := basic_rel_cl & clause & phrasal &
   [ SYNSEM [ LOCAL.CAT.HEAD.VFORM fin_or_inf,
              NONLOC [ QUE 0-dlist,
+                      REL 0-dlist ] ] ].
+|#
+rel_cl := basic_rel_cl & clause & phrasal &
+  [ SYNSEM [ NONLOC [ QUE 0-dlist,
                       REL 0-dlist ] ] ].
 
 ; We prevent PP adjunct extraction from feeding thatless_rel rule by requiring
@@ -2294,8 +2306,7 @@ extracted_subj_phrase := extracted_arg_phrase & clause &
 	     LEX -,
 	     PUNCT #punct ],
     HD-DTR.SYNSEM 
-             [ LOCAL.CAT [ HEAD verbal & [ VFORM fin_or_inf,
-					   PRD - ],
+             [ LOCAL.CAT [ HEAD verbal,
                            VAL [ SUBJ < gap &
 			                [ LOCAL arg-local &
                                                 [ CAT.HEAD.MINORS.MIN #min,
@@ -2316,9 +2327,10 @@ extracted_subj_phrase := extracted_arg_phrase & clause &
 
 extracted_subj_phrase_fin := extracted_subj_phrase & decl_phrase &
   [ SYNSEM.LOCAL [ CAT [ HEAD.TAM indic_tam,
-                         VAL.SUBJ *anti_null* ],
-                   CONT [ HOOK.INDEX.SF prop-or-ques ] ],
-    HD-DTR.SYNSEM.LOCAL.CAT [ HEAD.VFORM fin,
+			 VAL.SUBJ *anti_null* ],
+		   CONT [ HOOK.INDEX.SF prop-or-ques ] ],
+    HD-DTR.SYNSEM.LOCAL.CAT [ HEAD [ VFORM fin,
+				     PRD - ],
                               VAL.SUBJ < expressed_non_canonical &
 					 [ LOCAL.CAT.HEAD.CASE nom ] > ] ].
 
@@ -4482,7 +4494,7 @@ bare_npq_phrase := basic_unary_phrase &
 	     PUNCT #punct ],
     ARGS < [ INFLECTD #infl,
 	     SYNSEM 
-             [ LOCAL [ CAT [ HEAD #head & partn,
+             [ LOCAL [ CAT [ HEAD #head & basic_partn,
                              HC-LEX #hclex,
                              VAL [ SUBJ *olist*,
                                    COMPS < >,
@@ -5481,13 +5493,15 @@ noun_n_cmpnd_phr := basic_noun_n_cmpnd_phr &
 ;; DPF 2018-03-10 - Generalize hd-dtr from nonlex_synsem to 
 ;; nonlex_or_lex_phr_synsem so we can also get |five-year direct marketing plan|
 ;; and |thirty-day full refund guarantee|.
+;; DPF 2020-10-16 - Generalized NH-DTR..RPUNCT from comma_or_no_punct to
+;; rparen_or_comma_or_no_punct to also get "the #10 ($20) hostile bid".
 ;;
 noun_adjn_cmpnd_phr := basic_noun_n_cmpnd_phr &
   [ HD-DTR.SYNSEM nonlex_or_lex_phr_synsem &
 		  [ MODIFD lmod & [ LPERIPH - ] ],
     NH-DTR [ INFLECTD na_or_-,
 	     SYNSEM abstr_lex_synsem &
-		      [ PUNCT.RPUNCT comma_or_no_punct ] ],
+		      [ PUNCT.RPUNCT rparen_or_comma_or_no_punct ] ],
     GENRE nonformal ].
 
 ;; DPF 2016-02-16 - Exclude conjoined non-head to avoid ambig.
@@ -6132,7 +6146,7 @@ appos_phr_deictic_prpnct := appos_phr_prpnct &
     NH-DTR.SYNSEM phr_synsem &
    	          [ LOCAL.CAT [ HEAD.MINORS.ALTMIN demonstrative_q_rel,
 				VAL.SPEC *cons* ],
-		    PUNCT.RPUNCT comma_or_clause ] ].
+		    PUNCT.RPUNCT hyphen_or_comma_or_clause ] ].
 
 ;; DPF 2017-07-10 - Further constrained this new rule to exclude number NPs
 ;; as heads, to avoid spurious analysis for |3.2 shares|
@@ -7805,7 +7819,7 @@ possessed_np_phrase := basic_unary_phrase & phrasal &
 
 partitive_np_phrase := basic_unary_phrase & phrasal &
  [ INFLECTD +,
-   SYNSEM [ LOCAL [ CAT [ HEAD partn &
+   SYNSEM [ LOCAL [ CAT [ HEAD basic_partn &
                                [ MOD < >,
                                  POSS -,
                                  MINORS [ MIN part_nom_rel,
@@ -8744,7 +8758,6 @@ hmark_atomic_rule := binary_rule_left_to_right & head_marker_phrase_atomic.
 extracomp_rule := rule & extracted_comp_phrase.
 
 extrasubj_fin_rule := rule & extracted_subj_phrase_fin.
-;extrasubj_inf_rule := rule & extracted_subj_phrase_inf.
 
 hspec_rule := binary_rule_right_to_left & head_spec_phrase.
 hspec_hc_rule := binary_rule_right_to_left & head_spec_hc_phrase.
@@ -9328,7 +9341,7 @@ filler_head_rel_rule := binary_rule_left_to_right & rel_cl &
                       PUNCT [ RPUNCT rparen_or_comma_or_no_punct,
 			      PNCTPR ppair ] ] ],
 	   [ INFLECTD +,
-             SYNSEM [ LOCAL [ CAT [ HEAD verbal & [ VFORM #vform & fin_or_inf,
+             SYNSEM [ LOCAL [ CAT [ HEAD verbal & [ VFORM #vform,
                                                     TAM #tam,
                                                     AUX #aux,
                                                     INV #inv,
@@ -9996,12 +10009,16 @@ basic_s_coord_top_phr := s_coord_phr & basic_top_coord_event_rule &
 
 ;; DPF 2020-03-24 - Changed LCONJ..RPUNCT to comma_or_semi_or_pair_or_no_punct
 ;; from comma_or_pair_or_no_punct
+;; DPF 2020-10-28 - Identified INV on mother with that of right dtr rather than
+;; left one, so we can get "in the past, not only did they sing, but they also
+;; danced".
 ;;
 s_coord_top_phr := basic_s_coord_top_phr &
   [ SYNSEM.LOCAL.CAT.HEAD.INV #inv,
-    LCONJ-DTR.SYNSEM [ LOCAL [ CAT.HEAD.INV #inv,
-			       CONT.HOOK.INDEX.SF prop-or-comm ],
-		       PUNCT.RPUNCT comma_or_semi_or_pair_or_no_punct ] ].
+    LCONJ-DTR.SYNSEM [ LOCAL [ CONT.HOOK.INDEX.SF prop-or-comm ],
+		       PUNCT.RPUNCT comma_or_semi_or_pair_or_no_punct ],
+    RCONJ-DTR.SYNSEM.LOCAL.CAT.HEAD.INV #inv ].
+
     
 ; This variant requires that if the first conjunct is a question,
 ; the second must be as well.  Needed to avoid leaving the first
@@ -10562,6 +10579,7 @@ vp_a-or-p_predp_coord_phr := predp_coord_phr &
 ; FIX
 ;; DPF 2020-05-14 - Propagate HEAD.TAM from left dtr to mother, to keep
 ;; ASPECT visible, to block e.g. |Kim seems arriving and departing|
+;; DPF 2020-09-10 - Added SUBJ..SLASH 0-dlist to dtrs.
 ;
 verbal_predp_coord_phr := basic_predp_coord_phr &
   [ SYNSEM.LOCAL.CAT.HEAD verb & [ VFORM non_fin & #vform,
@@ -10572,7 +10590,8 @@ verbal_predp_coord_phr := basic_predp_coord_phr &
 				   VAL [ SUBJ < synsem &
 					      [ LOCAL [ CAT #cat,
 							AGR #agr ],
-						NONLOC #nonloc,
+						NONLOC #nonloc &
+						      [ SLASH 0-dlist ],
 						--SIND #sind ] >,
 					 SPR *anti_cons* ] ] ],
     RCONJ-DTR.SYNSEM.LOCAL [ CAT.VAL [ SUBJ < synsem &
@@ -11924,15 +11943,18 @@ frag_nom_rule := basic_frag_nom_rule &
 ;; add a separate rule to do this.  Sigh.
 ;; DPF 2020-06-02 - Re 2016-11-20: But we want |Difficult problems and how to
 ;; solve them|, where the SORT of the conjoined NP is q-event.
+;; DPF 2020-09-30 - Preserve MODIFD property from dtr.
 ;; 
 frag_np_rule := frag_nom_rule &
-  [ SYNSEM.LOCAL.CAT.VAL.SPR *olist*,
-    ARGS < [ SYNSEM.LOCAL [ CAT [ HEAD 
+  [ SYNSEM [ LOCAL.CAT.VAL.SPR *olist*,
+	     MODIFD #modif ],
+    ARGS < [ SYNSEM [ LOCAL [ CAT [ HEAD 
 				  [ CASE acc,
 				    MINORS.NORM quantity_or_norm_or_no_rel ] ],
-			    CONT.HOOK [ LTOP #ltop,
-					INDEX non_expl ],
-			    CONJ cnil ] ] >,
+				CONT.HOOK [ LTOP #ltop,
+					    INDEX non_expl ],
+				CONJ cnil ],
+		      MODIFD #modif ] ] >,
     C-CONT [ RELS <! [ LBL #ltop ] !>,
              HCONS <! !>,
 	     ICONS <! !> ] ].
