@@ -91,6 +91,7 @@
  ((:path . "omw") (:content . "Open Multilingual WordNet sample definitions"))
  ((:path . "marco300") (:content . "First set of 300 Marco user queries"))
  ((:path . "marco2nd300") (:content . "Second 300 Marco user queries"))
+ ((:path . "marco3rd300") (:content . "Third 300 Marco user queries"))
  ((:path . "ersa") (:content . "ERS Algebra examples"))
  ((:path . "test") (:content . "Test"))
 )
