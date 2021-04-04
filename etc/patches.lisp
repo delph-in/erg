@@ -74,7 +74,7 @@
 (setf mrs::*normalize-predicates-p* t)
 #+:null
 (progn
-  (in-package :mt)
+  (in-package "MT")
   (setf semi
     (construct-semi       
      :ids t :rules t :descendp t :embedp t

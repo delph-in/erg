@@ -40,180 +40,7 @@
 ;; (|⌊| and |⌋|, UniCode U+230a and U+230b) instead of just the former broken
 ;; vertical bar (|¦|).
 ;;
-#|
-;;
-;; make hyphen a token in its own right between numbers (an n-dash, actually),
-;; e.g. |50-60|.  otherwise, break at hyphens following alphabetic prefixes,
-;; but keep the hyphen on the prefix, e.g. |sub-| |discipline|.
-;; DPF 2015-09-04 - Tried accommodating more complex inputs such as the
-;; range in |2/3-7/8| for a reading of "two-thirds to seven-eighths", or
-;; "Feb.2 through July 8".  But can't get this pattern to match:
-;; [ +INPUT < [ +FORM ^([+-]?[0-9]+(?:\.[0-9]*)?(/[1-9][0-9]*)?)[–-]([0-9]+(?:\.[0-9]*)?(/[1-9][0-9]*)?)$,
-;; FIX someday?
-numeric_hyphen_tmr := one_three_tmt &
-[ +INPUT < [ +FORM ^([+-]?[0-9]+(?:\.[0-9]*)?)[–-]([0-9]+(?:\.[0-9]*)?)$,
-             +CLASS non_ne, +TRAIT.+UW #uw,
-             +PRED #pred, +CARG #carg, +TNT #tnt ] >,
-  +OUTPUT < [ +FORM "${I1:+FORM:1}",
-              +TRAIT [ +UW #uw, +LD bracket_nonnull & <! ctype !>, 
-		       +RD bracket_null ],
-              +PRED #pred, +CARG #carg, +TNT #tnt ],
-            [ +FORM "–",
-              +TRAIT [ +UW -, +LD bracket_null, +RD bracket_null ],
-              +PRED #pred, +CARG #carg, +TNT null_tnt ],
-            [ +FORM "${I1:+FORM:2}",
-              +TRAIT [ +UW #uw, +LD bracket_null, 
-		       +RD bracket_nonnull & <! ctype !> ],
-              +PRED #pred, +CARG #carg, +TNT #tnt ] > ].
 
-;; DPF 2015-03-14 - Added rule for sandwiched multiple hyphens used as ndashes,
-;; as in |Kim--the doctor--arose.| or |Kim---the doctor---arose|.
-;; Since ACE has already replaced the double-hyphen by ndash before this (for
-;; some reason), let's try also doing this three-token split for ndashes,
-;; noting that this means we don't get the bracketing constraint for ndashes
-;; via the alphabetic-hyphen rules below, but maybe this is right.
-;;
-alphabetic_multi_hyphen_tmr := one_three_tmt &
-[ +INPUT < [ +FORM ^([^–-]+)(--|---|–)([[:alnum:]]+)$, +CLASS non_ne,
-             +TRAIT.+UW #uw,
-             +PRED #pred, +CARG #carg, +TNT #tnt & [ +MAIN #main ] ] >,
-  +OUTPUT < [ +FORM "${I1:+FORM:1}",
-              +TRAIT [ +UW #uw, +LD bracket_null, +RD bracket_null ],
-              +PRED #pred, +CARG #carg, 
-	      +TNT #tnt ],
-            [ +FORM "–",
-              +TRAIT [ +UW #uw, +LD bracket_null, +RD bracket_null ],
-              +PRED #pred, +CARG #carg, 
-	      +TNT #tnt ],
-            [ +FORM "${I1:+FORM:3}",
-              +TRAIT [ +UW #uw, +LD bracket_null, +RD bracket_null ],
-              +PRED #pred, +CARG #carg, +TNT #tnt ] > ].
-
-;; sandwiched sentence final period |We arrived.He left.|
-sandwich_period_tmr := one_three_tmt &
-[ +INPUT < [ +FORM ^(.+)([\.?!])([[:upper:]][[:alnum:]]*)$,             
-             +CLASS non_ne, +TRAIT #trait,
-             +PRED #pred, +CARG #carg, +TNT #tnt ] >,
-  +OUTPUT < [ +FORM "${I1:+FORM:1}",
-              +TRAIT #trait, +PRED #pred, +CARG #carg, +TNT #tnt ],
-            [ +FORM "${I1:+FORM:2}", +PRED #pred, +CARG #carg, +TNT null_tnt, 
-	      +TRAIT.+UW - ], 
-            [ +FORM "${I1:+FORM:3}",
-              +TRAIT #trait, +PRED #pred, +CARG #carg, +TNT #tnt ] > ].
-
-;; sandwiched comma |The tall,green tree|
-;; DPF 2019-06-05 - Accommodate a non-standard (Chinese) comma
-sandwich_comma_tmr := one_three_tmt &
-[ +INPUT < [ +FORM ^(.+)[,，、]([[:alpha:]-][[:alnum:]]*)$,             
-             +CLASS non_ne, +TRAIT #trait,
-             +PRED #pred, +CARG #carg, +TNT #tnt ] >,
-  +OUTPUT < [ +FORM "${I1:+FORM:1}",
-              +TRAIT #trait, +PRED #pred, +CARG #carg, +TNT #tnt ],
-            [ +FORM "⸴", +PRED #pred, +CARG #carg, +TNT null_tnt, 
-	      +TRAIT.+UW - ], 
-            [ +FORM "${I1:+FORM:2}",
-              +TRAIT #trait, +PRED #pred, +CARG #carg, +TNT #tnt ] > ].
-
-;;
-;; _fix_me_
-;; when we break up tokens, it is not obvious which tag to assign to the first
-;; segment.  often, especially for unknown words (which most hyphenated tokens
-;; are), the PoS value will reflect the suffix.  for now, copy over +TNT to the
-;; initial segment.  if nothing else, names should still work when capitalized,
-;; for tokens containing multiple hyphens, the rule will apply from the rear,
-;; i.e. the final segment is guaranteed to carry the +TNT information.
-;; i just re-tooled this rule a little, see whether dan likes it this way?
-;;                                                              (12-jan-09; oe)
-;; DPF 2010-09-14 - One example where this goes wrong is in |Fetchmail-friends|
-;; where |Fetchmail-| wrongly inherits "NNS" from |friends|, preventing the
-;; construction of the NP-N compound, which requires an uninflected non-head.
-;; (To reproduce, choose another unknown name in place of |Fetchmail|, which
-;; I've now added to the lexicon.)
-;;
-;; DPF 2011-02-15 - Stamp POS "NN" on the left member of the split, to allow 
-;; correct parse for e.g. |mitogen-stimulated|, instead of assigning the left 
-;; member the POS of the whole ("JJ").  Would be more robust to allow both 
-;; "NN" and "JJ", but not clear that it's worth the extra ambiguity.
-;;
-;; _fix_me_
-;; as we add brackets around token sequences split at hyphens, we need to make
-;; sure there is only one pair of outermost brackets, as token mapping has no
-;; way of predicting the internal syntactic structure of, e.g. |two-year-old|.
-;; for now, bifurcate the splitting rule, into a recursive case (that applies
-;; when there are additional hyphens, and does not insert brackets) and a base
-;; case for the outermost structure.  maybe this is the best solution we can
-;; find, but i will want to reconsider the question.            (2-nov-12; oe)
-;;
-alphabetic_hyphen_singleton_tmr := one_three_tmt &
-[ +INPUT < [ +FORM ^([^–-]+)([–-])([[:alnum:]/⌋]+)$, +CLASS non_ne,
-             +TRAIT [ +UW #uw, +LB #lb, +RB #rb ],
-             +PRED #pred, +CARG #carg, +TNT #tnt & [ +MAIN #main ] ] >,
-  +OUTPUT < [ +FORM "${I1:+FORM:1}",
-              +TRAIT [ +UW #uw, +LB #lb, +RB bracket_null,
-		       +LD bracket_nonnull & <! ctype !>, +RD bracket_null ],
-              +PRED #pred, +CARG #carg, 
-	      +TNT [ +MAIN #main, +TAGS < "NN" >, +PRBS < "1.0" > ] ],
-            [ +FORM "${I1:+FORM:2}",
-              +TRAIT [ +UW #uw, +LD bracket_null, +RD bracket_null ],
-              +PRED #pred, +CARG #carg, 
-	      +TNT #tnt ],
-            [ +FORM "${I1:+FORM:3}",
-              +TRAIT [ +UW #uw, +LB bracket_null, +RB #rb,
-		       +LD bracket_null, +RD bracket_nonnull & <! ctype !> ],
-              +PRED #pred, +CARG #carg, +TNT #tnt ] > ].
-
-alphabetic_hyphen_initialize_tmr := one_three_tmt &
-[ +INPUT < [ +FORM ^(.+[–-].+)([–-])([[:alnum:]/⌋]+)$, +CLASS non_ne,
-             +TRAIT [ +UW #uw, +LD #ld, +RD #rd, +LB #lb, +RB #rb ],
-             +PRED #pred, +CARG #carg, +TNT #tnt & [ +MAIN #main ] ] >,
-  +OUTPUT < [ +FORM "${I1:+FORM:1}",
-              +TRAIT [ +UW #uw, +LB #lb, +RB bracket_null, +LD #ld, +RD #rd ],
-              +PRED #pred, +CARG #carg, 
-	      +TNT [ +MAIN #main, +TAGS < "NN" >, +PRBS < "1.0" > ] ],
-            [ +FORM "${I1:+FORM:2}",
-              +TRAIT [ +UW #uw, +LD bracket_null, +RD bracket_null ],
-              +PRED #pred, +CARG #carg, 
-	      +TNT #tnt ],
-            [ +FORM "${I1:+FORM:3}",
-              +TRAIT [ +UW #uw, +LB bracket_null, +RB #rb,
-		       +LD #ld, +RD bracket_nonnull & <! ctype !> ],
-              +PRED #pred, +CARG #carg, +TNT #tnt ] > ].
-
-alphabetic_hyphen_recurse_tmr := one_three_tmt &
-[ +INPUT < [ +FORM ^(.+[–-].+)([–-])([[:alnum:]/⌋]+-?)$, +CLASS non_ne,
-             +TRAIT [ +UW #uw, +LD #ld, +RD #rd, +LB #lb, +RB #rb ],
-             +PRED #pred, +CARG #carg, +TNT #tnt & [ +MAIN #main ] ] >,
-  +OUTPUT < [ +FORM "${I1:+FORM:1}",
-              +TRAIT [ +UW #uw, +LB #lb, +RB bracket_null, +LD #ld, +RD #rd ],
-              +PRED #pred, +CARG #carg, 
-	      +TNT [ +MAIN #main, +TAGS < "NN" >, +PRBS < "1.0" > ] ],
-            [ +FORM "${I1:+FORM:2}",
-              +TRAIT [ +UW #uw, +LD bracket_null, +RD bracket_null ],
-              +PRED #pred, +CARG #carg, 
-	      +TNT #tnt ],
-            [ +FORM "${I1:+FORM:3}",
-              +TRAIT [ +UW #uw, +LB bracket_null, +RB #rb, +LD #ld, +RD #rd ],
-              +PRED #pred, +CARG #carg, +TNT #tnt ] > ].
-
-alphabetic_hyphen_terminate_tmr := one_three_tmt &
-[ +INPUT < [ +FORM ^(.+)([–-])([[:alnum:]/⌋]+-?)$, +CLASS non_ne,
-             +TRAIT [ +UW #uw, +LD #ld, +RD #rd, +LB #lb, +RB #rb ],
-             +PRED #pred, +CARG #carg, +TNT #tnt & [ +MAIN #main ] ] >,
-  +OUTPUT < [ +FORM "${I1:+FORM:1}",
-              +TRAIT [ +UW #uw,  +LB #lb, +RB bracket_null,
-		       +LD bracket_nonnull & <! ctype !>, +RD #rd ],
-              +PRED #pred, +CARG #carg, 
-	      +TNT [ +MAIN #main, +TAGS < "NN" >, +PRBS < "1.0" > ] ],
-            [ +FORM "${I1:+FORM:2}",
-              +TRAIT [ +UW #uw, +LD bracket_null, +RD bracket_null ],
-              +PRED #pred, +CARG #carg, 
-	      +TNT #tnt ],
-            [ +FORM "${I1:+FORM:3}",
-              +TRAIT [ +UW #uw, +LB bracket_null, +RB #rb, +LD #ld, +RD #rd ],
-              +PRED #pred, +CARG #carg, +TNT #tnt ] > ].
-|#
-
-;;
 ;; with the new addition of derivational lexical rules, immediately re-attach
 ;; certain (verbal) prefixes (e.g. |mis-| and |re-|).  it is a bit unfortunate
 ;; that we end up duplicating information from the orthographemic annotation
@@ -243,24 +70,15 @@ alphabetic_hyphen_terminate_tmr := one_three_tmt &
 ;; |They thinned out - and disappeared|
 ;; DPF 2020-03-31 - Also allow all-caps, as in |CROSS-BRED|
 ;;
-#|
-derivational_prefix_tmr := three_one_final_form_trait_tmt &
-[ +INPUT < [ +FORM ^((?:[Cc]o(?:unter)?|[Cc]ross|[Mm]is|[Oo]ut|[Oo]ver|[Pp]?[Rr]e|[Ss]elf|[Uu]n(?:der)?))$, 
-	     +TRAIT.+LD #ld ],
-           [ +FORM ^([-])$ ],
-           [ +FORM ^((?!and\z|or\z|but\z)[[:alnum:]]+)$,
-             +TRAIT [ +UW #uw, +RD #rd, +HD #hd ] ] >,
-  +OUTPUT < [ +FORM "${I1:+FORM:1}${I2:+FORM:1}${I3:+FORM:1}",
-              +TRAIT [ +UW #uw, +LD #ld, +RD #rd, +HD #hd ] ] > ].
-|#
 derivational_prefix_tmr := three_one_final_form_trait_tmt &
 [ +INPUT < [ +FORM ^((?:[Cc][Oo](?:(unter|UNTER))?|[Cc](ross|ROSS)|[Mm](is|IS)|[Oo](ut|UT)|[Oo](ver|VER)|[Pp]?[Rr][Ee]|[Ss](elf|ELF)|[Uu][Un](?:(der|DER))?))$, 
-	     +TRAIT.+LD #ld ],
+	     +TRAIT [ +LD #ld, +LB #lb ] ],
            [ +FORM ^([-])$ ],
            [ +FORM ^((?!and\z|or\z|but\z)[[:alnum:]]+)$,
-             +TRAIT [ +UW #uw, +RD #rd, +HD #hd ] ] >,
+             +TRAIT [ +UW #uw, +RD #rd, +HD #hd, +RB #rb ] ] >,
   +OUTPUT < [ +FORM "${I1:+FORM:1}${I2:+FORM:1}${I3:+FORM:1}",
-              +TRAIT [ +UW #uw, +LD #ld, +RD #rd, +HD #hd ] ] > ].
+              +TRAIT [ +UW #uw, +LD #ld, +RD #rd, +HD #hd, 
+		       +LB #lb, +RB #rb ] ] > ].
 
 
 ;; Add brackets to ensure immediate attachment of right punctuation mark,
@@ -275,59 +93,61 @@ derivational_prefix_tmr := three_one_final_form_trait_tmt &
 ;;
 punct_suffix_clitic_tmr := two_two_tmt &
 [ +INPUT < [ +FORM ^([[:alnum:],\.⌊/⌋]+)$, +CLASS #class,
-             +TRAIT [ +UW #uw, 
+             +TRAIT [ +UW #uw, +LB #lb1, +RB #rb1,
 		      +LD #ld, +RD [ LIST #rdlist, LAST #rdlast ] ],
              +PRED #pred, +CARG #carg, +TNT #tnt ],
 	   [ +FORM ^([,⸴\.~\?!;”\)\]]+)$, +CLASS #classp,
-             +TRAIT [ +UW #uwp, +RD bracket_null ],
+             +TRAIT [ +UW #uwp, +LB #lb2, +RB #rb2, +RD bracket_null ],
              +PRED #predp, +CARG #cargp, +TNT #tntp ]>,
   +OUTPUT < [ +FORM "${I1:+FORM:1}", +CLASS #class,
-              +TRAIT [ +UW #uw, 
+              +TRAIT [ +UW #uw, +LB #lb1, +RB #rb1,
 		       +LD #ld,
 		       +RD bracket_nonnull & 
 			   [ LIST < n . #rdlist >, LAST #rdlast ] ],
               +PRED #pred, +CARG #carg, +TNT #tnt ],
             [ +FORM "${I2:+FORM:1}", +CLASS #classp,
-              +TRAIT [ +UW #uwp, 
+              +TRAIT [ +UW #uwp, +LB #lb2, +RB #rb2,
 		       +LD bracket_null, +RD bracket_nonnull & <! n !> ],
               +PRED #predp, +CARG #cargp, +TNT #tntp ] >,
   +CONTEXT < > ].
 
 punct_punct_suffix_clitic_tmr := two_two_tmt &
 [ +INPUT < [ +FORM ^([\?!;”\)\]]+)$, +CLASS #class,
-             +TRAIT [ +UW #uw, 
+             +TRAIT [ +UW #uw, +LB #lb1, +RB #rb1,
 		      +LD #ld, +RD [ LIST #rdlist, LAST #rdlast ] ],
              +PRED #pred, +CARG #carg, +TNT #tnt ],
 	   [ +FORM ^([,⸴\.~\?!;”\)\]]+)$, +CLASS #classp,
-             +TRAIT [ +UW #uwp, +RD bracket_null ],
+             +TRAIT [ +UW #uwp, +LB #lb2, +RB #rb2, +RD bracket_null ],
              +PRED #predp, +CARG #cargp, +TNT #tntp ]>,
   +OUTPUT < [ +FORM "${I1:+FORM:1}", +CLASS #class,
-              +TRAIT [ +UW #uw, 
+              +TRAIT [ +UW #uw, +LB #lb1, +RB #rb1,
 		       +LD #ld,
 		       +RD bracket_nonnull & 
 			   [ LIST < n . #rdlist >, LAST #rdlast ] ],
               +PRED #pred, +CARG #carg, +TNT #tnt ],
             [ +FORM "${I2:+FORM:1}", +CLASS #classp,
-              +TRAIT [ +UW #uwp, 
+              +TRAIT [ +UW #uwp, +LB #lb2, +RB #rb2,
 		       +LD bracket_null, +RD bracket_nonnull & <! n !> ],
               +PRED #predp, +CARG #cargp, +TNT #tntp ] >,
   +CONTEXT < > ].
 
 punct_prefix_clitic_tmr := two_two_tmt &
 [ +INPUT < [ +FORM ^([“\(\[])$, +CLASS #classp,
-             +TRAIT [ +UW #uwp, +LD bracket_null, +RD bracket_null ],
+             +TRAIT [ +UW #uwp, +LB #lb1, +RB #rb1,
+		      +LD bracket_null, +RD bracket_null ],
              +PRED #predp, +CARG #cargp, +TNT #tntp ],
 	   [ +FORM ^([[:alnum:]“\(\[]+)$, +CLASS #class,
-             +TRAIT [ +UW #uw, +LD [ LIST #ldlist,
-				     LAST #ldlast ], 
+             +TRAIT [ +UW #uw, +LB #lb2, +RB #rb2,
+		      +LD [ LIST #ldlist,
+			    LAST #ldlast ], 
 		      +RD #rd ],
              +PRED #pred, +CARG #carg, +TNT #tnt ] >,
   +OUTPUT < [ +FORM "${I1:+FORM:1}", +CLASS #classp,
-              +TRAIT [ +UW #uwp, 
+              +TRAIT [ +UW #uwp, +LB #lb1, +RB #rb1,
 		       +LD bracket_nonnull & <! n !>, +RD bracket_null ],
               +PRED #predp, +CARG #cargp, +TNT #tntp ],
 	    [ +FORM "${I2:+FORM:1}", +CLASS #class,
-              +TRAIT [ +UW #uw, 
+              +TRAIT [ +UW #uw, +LB #lb2, +RB #rb2,
 		       +LD bracket_nonnull & 
 		                    [ LIST < n . #ldlist >,
 				      LAST #ldlast ], 
@@ -345,20 +165,20 @@ punct_prefix_clitic_tmr := two_two_tmt &
 ;;
 character_suffix_clitic_tmr := two_two_tmt &
 [ +INPUT < [ +FORM ^(AU|C|HK|NZ)$, +CLASS #class,
-             +TRAIT [ +UW #uw, 
+             +TRAIT [ +UW #uw, +LB #lb1, +RB #rb1,
 		      +LD #ld, +RD [ LIST #rdlist, LAST #rdlast ] ],
              +PRED #pred, +CARG #carg, +TNT #tnt ],
 	   [ +FORM ^([\$])$, +CLASS #classp,
-             +TRAIT [ +UW #uwp, +RD bracket_null ],
+             +TRAIT [ +UW #uwp, +LB #lb2, +RB #rb2, +RD bracket_null ],
              +PRED #predp, +CARG #cargp, +TNT #tntp ]>,
   +OUTPUT < [ +FORM "${I1:+FORM:1}", +CLASS #class,
-              +TRAIT [ +UW #uw, 
+              +TRAIT [ +UW #uw, +LB #lb1, +RB #rb1, 
 		       +LD #ld,
 		       +RD bracket_nonnull & 
 			   [ LIST < n . #rdlist >, LAST #rdlast ] ],
               +PRED #pred, +CARG #carg, +TNT #tnt ],
             [ +FORM "${I2:+FORM:1}", +CLASS #classp,
-              +TRAIT [ +UW #uwp, 
+              +TRAIT [ +UW #uwp, +LB #lb2, +RB #rb2,
 		       +LD bracket_null, +RD bracket_nonnull & <! n !> ],
               +PRED #predp, +CARG #cargp, +TNT #tntp ] >,
   +CONTEXT < > ].
