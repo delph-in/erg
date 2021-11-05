@@ -4,8 +4,7 @@ The English Resource Grammar is a broad-coverage HPSG grammar of English.
 
 This project is currently only for [issue-tracking](https://github.com/delph-in/erg/issues).
 
-Please see the [ERG website](http://www.delph-in.net/erg/)
-or [wiki](http://moin.delph-in.net/ErgTop) for more information.
+Please see the [ERG wiki](https://github.com/delph-in/docs/wiki/ErgTop) for more information.
 
 ## Getting the grammar
 
@@ -18,8 +17,14 @@ $ svn checkout http://svn.delph-in.net/erg/trunk
 It is also available as part of the [LOGON distribution](http://moin.delph-in.net/LogonTop).
 
 The quickest way to get started using the ERG is with the
-pre-compiled binary available with the
-[ACE](http://sweaglesw.org/linguistics/ace/) processor.
+pre-compiled binary 
+[ACE](http://sweaglesw.org/linguistics/ace/) parser. There are also precompiled grammars available there. If you want more recent versions of the grammar to use with ACE, you can create a grammar file by checking out a specific ERG release. ERG releases are tagged in the [SVN repository](http://svn.delph-in.net/erg/tags/). Choose the version you want and check it out using the tag name like this:
+```
+svn checkout http://svn.delph-in.net/erg/tags/tag_name
+cd trunk/ace
+ace -G grammar.dat -g ./config.tdl
+```
+Then, the grammar.dat file can be used with the 
 
 ## References
 
