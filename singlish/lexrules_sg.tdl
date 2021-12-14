@@ -1,0 +1,244 @@
+;;; -*- Mode: tdl; Coding: utf-8; -*-
+;;;
+;;;  Copyright (c) 1994-2018
+;;;    Dan Flickinger, Rob Malouf, Emily M. Bender
+;;;    see LICENSE for conditions
+;;;
+;;;  lexrules_sgshort.tdl
+;;;
+;;;  Inflectional affixes and derivational lexical rules
+;;;  Additions to the Singlish branch of the English Resource Grammar
+;;;
+;;;  Created: Rob Malouf, 3-Nov-1994
+;;;
+;;;  $Id: lexrules.tdl 7479 2010-02-21 23:11:30Z danf $
+;;;  Chow Siew Yeng 2020, 2021
+
+; 18-4-2021 - should the VFORM be changed to just fin #totest
+; 10-6-2021 change subject OPT
+; 6-10-2021 remove present tense in ADDTAM
+bse_or_fin_verb := local &
+"""
+CSY 2-11-2020 for Singlish, no inflection verbs (take away no_aspect)
+optional SUBJ, took away person number
+<ex>he eat already.
+"""
+  [ CAT [ HEAD verb &
+  	       [ VFORM fin_or_bse_or_imp,
+                 PRD -,
+		 ;TAM.ASPECT no_aspect,
+                 --ADDIN [ ;ADDPN -3s,
+			   ADDTAM indic_tam ] ],
+          POSTHD +,
+	  VAL.SUBJ < synsem & [ OPT -,
+                                LOCAL [ CAT.HEAD.CASE nom,
+                                        CONT nom-obj,
+                                        CONJ cnil,
+                                        AGR #agr ] ] > ],
+    AGR #agr ].
+
+; 30-7-2021 add in the change in 3SGINFL value so that verbs that pass through this can 
+; be distinguished from verbs that pass through v_3s-fin_inflrule
+; this was used for the opt subject because I wanted 3sg inflected verbs to not be able to have opt Subj
+; but it is not currently implemented well in this grammar and should probably be commented out
+;v_n3s-bse_inflrule := lex_rule_infl_affixed &
+;  [ SYNSEM.LOCAL.CAT.HEAD.3SGINFL 3sg_unk ].
+  
+; CSY 29-12-2020 for the count nouns that don't need specifier in Singlish
+; DIV value not specified. Even though this allows for unusual NPs like "much cats"
+; This is also allowed in the ERG.
+; 2-3-2021 - add nonc-hm to prevent this from taking proper names
+; so that <ex>Abrams works does not undergo this, and end up with a BNP Abrams
+; preserve DIV bool instead of - because i want <ex>Many cat sleep.
+; removed nonc-hm
+singlish_count_noun := sing_or_plur_noun &
+  [ CAT [ HEAD noun_or_ttl,
+          VAL.SPR.FIRST [ LOCAL.AGR [ PNG.PN 3,
+				    DIV - ] ] ],
+    CONT.HOOK.INDEX [ PNG png & [ PN 3 ] ] ].
+
+; CSY 13-9-2020 - rule to allow predicative adj to take subjects
+; 10-9-2020 - change DTR from aj_-_i-prd_le to norm_adj_word (not sure if overgenerates)
+; added SYNSEM intrans_pred_adj_synsem to DTR
+; 17-11-2020 - changed DTR from aj_-_i-prd_le to its supertype to prevent undergenerating
+; 3-12-2020 - added COMPS to the mother and hd daughter to ensure COMPS value is passed up,
+; prevents over-generation
+; 11-12-2020 - add nonloc and inherit semantics instead of syntax
+; 9-1-2021 - replaced DTR's SYNSEM norm_adj_synsem to try to allow it to apply to aj_pp_i-er_le
+; other adjs like 'happy' can go through the rule when the COMPS value is not passed up          
+pred_adj_subj_lexrule:= norm_lex_rule & aj_nocop_i-prd_le &
+  [ ORTH #orth,
+    SYNSEM.LOCAL.CAT [ HEAD.MINORS #minors,
+    			VAL [ SUBJ < synsem_min & [ LOCAL.CONT.HOOK.LTOP #ltop,
+					  	 NONLOC #nonloc ] >,
+			   COMPS #comps ] ],
+    DTR norm_adj_word & [ ORTH #orth,
+			  SYNSEM adj_synsem &
+				[ LOCAL.CAT [ HEAD [ MINORS #minors, 
+						    MOD < [ LOCAL.CONT.HOOK.LTOP #ltop,
+							   NONLOC #nonloc & non-local_none ] > ],
+					      VAL.COMPS #comps ] ] ] ].
+					      
+; 2-11-2021 #test to try to implement the pumping rule for pred adj to fin VP
+; so that adjectives can be without VFORM and sentences like <ex>They very happy
+; can parse
+nocop_pred_lexrule:= norm_lex_rule &      
+  [ ORTH #orth,
+   SYNSEM.LOCAL [ CAT [ HEAD verbal &
+   			   [ VFORM fin,
+   			     PRD - ],
+   		        VAL [ SPR < anti_synsem_min >,
+   		        	SUBJ < synsem_min & [ --SIND #subjind & basic_non_expl,
+					     	  LOCAL [ CAT [ HEAD supnoun,
+						      	 	VAL.SPR *olist*],
+						          CONT.HOOK.LTOP #ltop ],
+					  	 NONLOC #nonloc ] > ] ],
+   		  CONT #cont &
+   		  	[ HOOK.XARG #subjind ] ],
+   DTR norm_adj_word & [ ORTH #orth,
+   			  SYNSEM adj_synsem & 
+   			  	[ LOCAL [ CAT [ HEAD adj &
+   			  			  [ PRD +,
+   			  			    MOD < [ LOCAL.CONT.HOOK.LTOP #ltop,
+							   NONLOC #nonloc & non-local_none ] > ],
+   			  		       VAL [ COMPS < > ] ],
+   			  		  CONT #cont ] ] ] ].
+					     
+
+; CSY 9-11-2020 Don't assign PRD + for Singlish, to allow "he eating"
+; CSY 18-3-2021 - supertype of lex_rule_affixed that the prp_verb will inherit 
+; from supertype without SLASH 0-dlist, so that VPs headed by prp verbs can 
+; undergo hd_xsb-finprp_c
+verb_participle_super_affix := local &
+  [ CAT [ HEAD verb,
+	  VAL.SUBJ < synsem &
+		     [ LOCAL.AGR #agr ] >,
+	  HC-LEX - ],
+    AGR #agr ].
+    
+verb_participle_affix := verb_participle_super_affix &
+  [ CAT [ HEAD.PRD +,
+  	  VAL.SUBJ < synsem & [ NONLOC.SLASH 0-dlist ] > ] ].
+  
+; 18-3-2021 new prp verb that inherits instead from verb_participle_super_affix
+prp_verb := non_fin_verb & verb_participle_super_affix &
+  [ CAT.HEAD [ VFORM prp,
+	       TAM.ASPECT [ PROGR + ] ] ].
+
+; CSY 29-12-2020 new inflectional rule for singlish nouns that have underspec number
+; and don't need SPR
+; 9-3-2021 pass up minors for to make sure proper nouns get the bnp_pn rule only
+n_singlish_inflrule := lex_rule_infl_affixed &
+  [ SYNSEM.LOCAL.CAT.HEAD.MINORS #minors,
+    DTR.SYNSEM.LOCAL.CAT.HEAD.MINORS #minors ].
+
+;;; commented out because instead of making this rule, changed the VFORM in subjh rule
+;;; to the newly created fin_or_prp 
+; CSY 7-1-2020 - rule for allowing Ving verbs to be finite
+;v_prp-to-fin_lexrule := norm_lex_rule &
+;"""
+;For the present participle to be finite
+;for sentences like "He admiring the cat" in Singlish
+;<ex>admiring
+;"""
+;  [ ORTH #orth,
+;    SYNSEM.LOCAL fin_verb &
+;		[ CAT.VAL.COMPS #comps ],
+;    DTR [ ORTH #orth,
+;	  SYNSEM norm_adj_synsem &
+;		[ LOCAL prp_verb & 
+;	  		CAT.VAL.COMPS #comps ] ] ].
+
+; 28-7-2021 need to change the 3sginfl value to 3sg_plus
+; but the basic_lex_rule_infl_affixed ensures that the daughter and mother have the
+; same SYNSEM values. 
+; 29-7-2021 - branch the basic_lex_rule into 2 and change one such that every part of SYNSEM except 3SGINFL is inherited
+basic_lex_rule_infl_affixed_super := basic_lex_rule_basic & word_or_infl_rule.
+basic_lex_rule_infl_affixed := basic_lex_rule_infl_affixed_super &
+  [ KEY-ARG #keyarg,   
+    SYNSEM #synsem,
+    ARGS < #dtr >,
+    DTR #dtr & word_or_nonpunct_rule &
+	       [ INFLECTD -,
+                 KEY-ARG #keyarg,   
+                 SYNSEM #synsem ],
+    C-CONT.RELS <! !> ].
+    
+;basic_3sglex_rule_infl_affixed := basic_lex_rule_infl_affixed_super &
+;  [ KEY-ARG #keyarg,   
+;    SYNSEM [ LOCAL [ CONT #cont,
+;    		     CAT [ HEAD [ MINORS #minors,
+;    		     		   MOD #mod,
+ ;   		     		   PRD #prd,
+  ;  		     		   AUX #aux,
+   ; 		     		   INV #inv,
+    ;		     		   TAM #tam,
+    ;		     		   CASE #case,
+;    		     		   POSS #poss,
+;    		     		   --ADDIN #addin,
+;    		     		   VFORM #vform ],
+;    		           VAL #val,
+;    		     	   MC #mc,
+;    		     	   POSTHD #posthd,
+;    		     	   HC-LEX #hc-lex,
+;    		     	   HS-LEX #hs-lex,
+;    		     	   NEGPOL #negpol ],
+;    		      AGR #agr,
+;    		      ARG-S #arg-s,
+;    		      CONJ #conj,
+;    		      CTXT #ctxt ],
+;    		LKEYS #lkeys,
+;    		NONLOC #nonloc,
+;    		OPT #opt,
+;    		--SIND #sind,
+;    		--MIN #min,
+;    		LEX #lex,
+;    		MODIFD #modifd,
+;    		PHON #phon,
+;    		PUNCT #punct ],
+;    ARGS < #dtr >,
+;    DTR #dtr & word_or_nonpunct_rule &
+;	       [ INFLECTD -,
+;                 KEY-ARG #keyarg,   
+;                 SYNSEM [ LOCAL [ CONT #cont,
+;    		     		  CAT [ HEAD [ MINORS #minors,
+;    		     		   		MOD #mod,
+;    		     		   		PRD #prd,
+;    		     		   		AUX #aux,
+;    		     		   		INV #inv,
+;    		     		   		TAM #tam,
+;    		     		   		CASE #case,
+;    		     		   		POSS #poss,
+;    		     		   		--ADDIN #addin,
+;    		     		   		VFORM #vform ],
+;    		           		VAL #val,
+;    		     	   		MC #mc,
+;    		     	   		POSTHD #posthd,
+;    		     	   		HC-LEX #hc-lex,
+;    		     	   		HS-LEX #hs-lex,
+;    		     	   		NEGPOL #negpol ],
+;    		      		AGR #agr,
+;    		      		ARG-S #arg-s,
+;    		      		CONJ #conj,
+;    		      		CTXT #ctxt ],
+;    			LKEYS #lkeys,
+;    			NONLOC #nonloc,
+;    			OPT #opt,
+;    			--SIND #sind,
+;    			--MIN #min,
+;    			LEX #lex,
+;    			MODIFD #modifd,
+;    			PHON #phon,
+;    			PUNCT #punct ] ],
+;    C-CONT.RELS <! !> ].
+    
+;3sglex_rule_infl_affixed := basic_3sglex_rule_infl_affixed &
+;  [ INFLECTD + ].
+      
+;v_3s-fin_inflrule := 3sglex_rule_infl_affixed &
+;  [ SYNSEM.LOCAL.CAT.HEAD.3SGINFL 3sg_plus ].
+
+;16-11-2021 #temporary
+;v_3s-fin_inflrule := lex_rule_infl_affixed &
+;  [ SYNSEM.LOCAL.CAT.HEAD.3SGINFL 3sg_plus ].
+

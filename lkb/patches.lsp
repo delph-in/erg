@@ -5,39 +5,6 @@
 
 (in-package :lkb)
 
-
-;;; For better batch testing of MRS quality, esp produce-one-scope()
-
-; In lkb/src/mrs/mrsresolve.lsp, modified chain-down-margs() to also allow
-; for top-level conjunctions (including discourse relation) - clearly
-; grammar-specific, so should probably be in user-fns.lsp, or should
-; have global in this function bound to list of grammar-specific feature
-; names.
-;; DPF 2020-08-17 - The MARG feature has not been present in the ERG for many
-;; years now, so let's see if we can do without this patch.
-#|
-(in-package :mrs)
-(defun chain-down-margs (rel mrsstruct)
-  (let* ((marg-fvp (dolist (fvpair (rel-flist rel))
-		    (when (or (eq (fvpair-feature fvpair) 'lkb::marg)
-                              (eq (fvpair-feature fvpair) 'lkb::r-hndl)
-                              (eq (fvpair-feature fvpair) 'lkb::main))
-		      (return fvpair))))
-	(marg-value 
-	 (if marg-fvp
-	       (get-var-num (fvpair-value marg-fvp)))))
-    (if marg-value
-	(let ((top-rels
-	       (get-rels-with-label-num marg-value mrsstruct)))
-	  (if top-rels
-	      (if (cdr top-rels)
-		  nil
-		(chain-down-margs (car top-rels) mrsstruct))
-	    (dolist (qeq (psoa-h-cons mrsstruct))
-	      (when (eq marg-value (var-id (hcons-scarg qeq)))
-		(return (values qeq marg-fvp)))))))))
-|#
-
 ; In mrs/idioms.lisp
 ; Added check in idiom_rel-p() since mt::transfer-mrs() is surprised at
 ; finding a predicate name as value of ARG1 for degree specifiers of
@@ -163,3 +130,20 @@
     ;;(format t "~%PSQL ~a" error-message)
     (throw :sql-error (cons :putline "endcopy failed"))))
 
+;; Enable LUI chart display to use abbreviated rule names
+;;
+(defun lui-chart-edge-name (edge)
+  (let* ((rule (edge-rule edge))
+         (rname
+           (when (rule-p rule)
+             (existing-dag-at-end-of 
+               (tdfs-indef (rule-full-fs rule)) '(RNAME)))))
+    (format nil "~a[~a]"
+      (cond 
+        ((not (edge-children edge)) 
+          (let ((le (get-lex-entry-from-id (first (edge-lex-ids edge)))))
+            (dag-type (tdfs-indef (lex-entry-full-fs le)))))
+        (rname (dag-type rname))
+        (t
+          (tree-node-text-string (find-category-abb (edge-dag edge)))))
+      (edge-id edge))))

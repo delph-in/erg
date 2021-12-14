@@ -21,6 +21,13 @@ mrk-nh_n_c := hmark_nbar_rule &
     ARGS.REST.FIRST.SYNSEM.LOCAL.CAT.HEAD [ --BARE -,
 					    --COORD + ] ].
 
+;; 2021-04-07 - Identify OPT value of adjunct and mother, to enable avoiding of
+;; robust "and [afterward arose]"
+aj-hd_int_c := adjh_i_rule &
+  [ SYNSEM.OPT #opt,
+    ARGS.FIRST.SYNSEM.OPT #opt,
+    RNAME mhi ].
+
 ;; DPF 2017-09-12 - Removed hd-dtr's ALTMIN since n-ed nouns have ALTMIN no_rel
 ;; so we were blocking |warm-blooded|.  Check what this constraint was doing,
 ;; and FIX?
@@ -35,10 +42,11 @@ aj-hdn_adjn_c := adj_adjn_rule &
   [ ARGS.REST.FIRST.SYNSEM.LOCAL.CAT.HEAD.--MALPLCPD -,
     RNAME mhna ].
 
+;; 2021-06-16 - Removed HD-DTR--MIN non_proper_rel since this blocks
+;; "the English he spoke was excellent"
 hdn-aj_rc_c := hadj_i_relcl_npr_rule &
   [ RNAME hmrn,
-    HD-DTR.SYNSEM [ LOCAL.CAT.HEAD.MINORS.MIN non_proper_rel,
-		    PUNCT.RPUNCT no_punct ] ].
+    HD-DTR.SYNSEM.PUNCT.RPUNCT no_punct ].
 
 ; Exclude pronoun heads (except for WH pronouns)
 ;; DPF 13-03-14 - Relax to MIN basic_nonpro_rel, to also allow e.g. deictics
@@ -56,7 +64,8 @@ hd-aj_vmod_c := v_mod_int_rule &
 					 LOCAL.CAT.HEAD basic_noun,
 					 MODIFD hasmod,
 					 --SIND nonconj_ref-ind ] ],
-    HD-DTR.SYNSEM.LEX +,
+    HD-DTR.SYNSEM [ LEX +,
+		    PUNCT.RPUNCT comma_or_pair_or_no_punct ],
     NH-DTR.SYNSEM nonlex_synsem & [ LOCAL.CAT [ HEAD prep,
 						VAL.SPR *synlist* ] ] ].
 
@@ -72,11 +81,14 @@ vmod_i_scomp_c := v_mod_int_rule &
 					 LOCAL.CAT.HEAD verbal &
 					           [ VFORM fin_or_inf ] ] ],
     HD-DTR.SYNSEM [ LEX +,
+		    PUNCT.RPUNCT comma_or_pair_or_no_punct,
 		    LOCAL.CAT.HEAD.--MALPASCP na ] ].
 
 ;; 2020-11-24 - --BARESG - blocks robust "each [student will be provided...]"
+;; 2021-06-16 - Block for "that we admired"
 cl_rc-fin-nwh_c := fin_non_wh_rel_rule &
   [ RNAME rclf,
+    SYNSEM.LOCAL.CAT.HEAD.MOD.FIRST.--SIND.PT notpro,
     ARGS.FIRST.SYNSEM.LOCAL.CONT.HOOK.XARG.--BARESG - ].
 
 cl_rc-inf-nwh-sb_c := inf_non_wh_subj_rel_rule &
@@ -96,10 +108,12 @@ vp_sbrd-prd-pas_c := subconj_prdp_pas_rule &
 
 ;; DPF 2020-08-01 - LEX - blocks "stood there motionless" so remove and
 ;; constrain for individual adjectives
+;; 2021-06-16 - Avoid robust "His English is close to fluent"
 ;;
 vp_sbrd-prd-aj_c := subconj_prdp_adj_rule &
   [ RNAME scpa,
-    ARGS < [ SYNSEM [ LOCAL.CAT.HEAD.--SBRD na_or_+ ] ] > ].
+    ARGS < [ SYNSEM.LOCAL.CAT.HEAD [ --SBRD na_or_+,
+				     --TOODEGROB - ] ] > ].
 
 ;; DPF 2018-02-15 - For adjectives such as |sick| or |drunk| which are readily
 ;; usable as depictives.
@@ -159,7 +173,8 @@ n-hdn_cpd-pl-nlx_c := never_unify_rule.
 
 ;; Block robust NP |the rain ruined my plans|
 vp_rc-redrel_c := red_rel_cl_rule &
-  [ ARGS.FIRST.SYNSEM.LOCAL.CAT.HEAD.--PASSNOBY -,
+  [ ARGS.FIRST.SYNSEM.LOCAL.CAT.HEAD [ --PASSNOBY -,
+				       --MALPASCP - ],
     RNAME rclv ].
 
 ;; DPF 2018-04-02 - Restrict to unexpressed spr on head, to avoid title analysis
@@ -306,9 +321,12 @@ flr-hd_wh-nmc-fin_c := filler_head_rule_wh_nr_fin &
 
 ;; 2020-07-24 - Propagate --MALAGR from hd-dtr's SLASH to mother's MOD, to
 ;; block robust |the number of cats who admire Kim arose|
+;; 2021-06-24 - Block robust rel-that of "cat that we waited for" while still
+;; getting robust "cat for that we waited"
 flr-hd_rel-fin_c := filler_head_fin_np_rel_rule &
   [ SYNSEM.LOCAL.CAT.HEAD.MOD.FIRST.LOCAL.CAT.HEAD.--MALAGR #malagr,
-    ARGS < [], [ SYNSEM.NONLOC.SLASH.LIST.FIRST.CAT.HEAD.--MALAGR #malagr ] >,
+    ARGS < [ SYNSEM.LOCAL.CAT.HEAD.--MALRELPRO - ], 
+	   [ SYNSEM.NONLOC.SLASH.LIST.FIRST.CAT.HEAD.--MALAGR #malagr ] >,
     RNAME fhr ].
 
 ;; Topicalization again, as for flr-hd_nwh_c
@@ -375,7 +393,8 @@ vp-vp_crd-fin-t_c := vp_coord_fin_top_phr &
 				     --MALINTR - ] ],
            [ SYNSEM.LOCAL.CAT.HEAD [ --NOCJCRD -,
 	                             --MALN3SG -,
-				     --MAL3SG - ] ]>,
+				     --MAL3SG -,
+				     --MALINTR - ] ]>,
     RNAME ctvpf ].
 
 vp-vp_crd-nfin-t_c := vp_coord_nonfin_top_phr &
@@ -528,12 +547,15 @@ vp_fin-aux-frg_c := frag_vp_fin_aux_rule &
 
 ;; Prevent robust-comma-marked fragments as dtrs, and only allow with period
 ;; on first S.
+;; 2021-06-29 - Tried second arg's LPERIPH na_or_- to force robust analysis of
+;; "you run - you win", avoiding s-initial dash modifier, but this blocks
+;; "We win. However, you lose." since adj-hd rule imposes LPERIPH + on mother.
+;; So instead, comment out S-initial hyphen adverb entry.
 ;;
 cl-cl_runon_c := run_on_coord_rule &
   [ ARGS < [ SYNSEM [ LOCAL.CAT.HEAD verb,
-		      LEX -,
-		      PUNCT.RPUNCT basic_clause_punct ] ],
-	   [ SYNSEM [ LOCAL [ CAT.HEAD verb,
+		      LEX - ] ],
+	   [ SYNSEM [ LOCAL [ CAT.HEAD verbal_or_conj-s,
 	                      CONJ cnil ],
 		      LEX -,
 		      PHON.ONSET.--TL.FIRST.+CLASS.+CASE capitalized & 
@@ -574,8 +596,12 @@ cl-np_runon_c := basic_run_on_np_rule &
 ;; DPF 2020-09-29 - Block robust subj-hd-comma first dtr, to avoid for
 ;; "These houses, crowded closely together, [NP share walls]."
 cl-np_runon-comma_c := basic_run_on_np_rule &
-  [ ARGS < [ SYNSEM [ LOCAL.CAT.HEAD verb & [ --SBJCMA - ],
+  [ DTR1 #dtr1,
+    DTR2 #dtr2,
+    ARGS < #dtr1 &
+	   [ SYNSEM [ LOCAL.CAT.HEAD verb & [ --SBJCMA - ],
 		      PUNCT.RPUNCT hyphen_or_comma ] ],
+	   #dtr2 &
 	   [ SYNSEM [ PUNCT.LPUNCT lparen_or_dq_or_no_punct,
 		      LOCAL.CAT [ HEAD noun &
 		                       [ MINORS.ALTMIN quant_rel ],
@@ -670,8 +696,11 @@ np_prt-poss_c := partitive_np_rule &
 ;; Exclude prefixed comma on dtr, to avoid for |...caged ,their feathers ...|
 ;; DPF 2019-11-11 - MOD..ALTMIN non_ellipt_rel sadly blocks |We will tomorrow|.
 ;; So undo, and see what this was doing.
+;; 2021-04-27 - Exclude selected-PP as mod targets, to avoid robust
+;; "to him yesterday"
 np_adv_c := npadv_mod_rule &
-  [ SYNSEM.LOCAL.CAT.HEAD.MOD.FIRST.--SIND.E #tam,
+  [ SYNSEM.LOCAL.CAT.HEAD.MOD.FIRST [ --SIND.E #tam,
+				      --MIN independent_rel ],
     ARGS.FIRST.SYNSEM [ LOCAL.CONT.HOOK.XARG.E #tam,
 			PUNCT.LPUNCT lparen_or_dq_or_no_punct ],
     RNAME nadv ].
@@ -752,7 +781,8 @@ np_voc-imp-pre_c := vocative_np_lmod_rule &
 ;; 2020-05-07 - Block mal-intrans VPs as in |poster to bring|, via hack --MAL3SG
 ;;
 cl_rc-inf-nwh-sb_c := inf_non_wh_subj_rel_rule &
-  [ ARGS.FIRST.SYNSEM.LOCAL.CAT.HEAD.--MAL3SG -,
+  [ ARGS.FIRST.SYNSEM.LOCAL.CAT.HEAD [ --MAL3SG -,
+				       --MALINTR - ],
     RNAME rcls ].
 
 cl_rc-inf-nwh_c := inf_non_wh_rel_rule &
@@ -847,6 +877,22 @@ np-cl_indef_c := npindef_s_rule &
 hd_imp_c := imperative_mc_rule &
   [ ARGS.FIRST.SYNSEM.LOCAL.CAT.HEAD.--NOCJCRD -,
     RNAME imp ].
+
+jpr-jpr_crd-t_c := ap_predp_coord_top_phr &
+  [ RNAME ctax,
+    ARGS.REST.FIRST.SYNSEM.LOCAL.CAT.HEAD.--PASSNOBY - ].
+
+;; "When should we meet? On Monday."
+cl-frg_runon-ques_c := run_on_coord_rule &
+  [ ARGS < [ SYNSEM [ LOCAL.CAT.HEAD verb,
+		      LEX -,
+		      PUNCT.RPUNCT basic_clause_punct &
+				     [ PSF ques ] ] ],
+	   [ SYNSEM [ LOCAL [ CAT.HEAD frag,
+	                      CONJ cnil ],
+		      LEX - ],
+	     ORTH.TOKCASE.TOKCASEROB - ] >,
+    RNAME sns ].
 
 ;;hd-cmp_2_c := never_unify_rule.
 ;;aj-hd_int-inv_c := never_unify_rule.
