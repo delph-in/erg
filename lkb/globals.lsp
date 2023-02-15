@@ -158,7 +158,7 @@
 (defparameter *packing-restrictor*
   ;'(ORTH RELS HCONS RNAME RPUNCT)
   ;'(ORTH RELS HCONS RNAME PSF)
-  '(RELS HCONS ICONS RNAME ONSET)
+  '(RELS HCONS ICONS RNAME +TI +LL +TG)
   "restrictor used when parsing with ambiguity packing")
 
 ;;;
@@ -370,3 +370,50 @@
 ;; in order for the "Save as XML" button on MRS windows to work.  FIX?
 
 (setf *mrs-xml-output-file* "~/tmp/mrs.xml")
+
+;;;
+;;; chart mapping is enabled by setting *token-type* to the name of the token
+;;; type (standardly, `token'). Token feature structures have type *token-type*
+;;; and consist of grammar-specific bundles of properties that were input to
+;;; parsing; to access individual components, there are a number of
+;;; (customizable) paths.
+;;;
+(def-lkb-parameter *token-type* 'token)
+
+(def-lkb-parameter *token-form-path* '(+FORM))
+(def-lkb-parameter *token-id-path* '(+ID))
+(def-lkb-parameter *token-from-path* '(+FROM))
+(def-lkb-parameter *token-to-path* '(+TO))
+(def-lkb-parameter *token-postags-path* '(+TNT +TAGS))
+(def-lkb-parameter *token-posprobs-path* '(+TNT +PRBS))
+
+;;;
+;;; when token mapping is enabled, lexical entries behave similarly to grammar
+;;; rules in one respect: the list of input tokens that license a lexical entry
+;;; are unified into *lexicon-tokens-path*.  furthermore, to give the
+;;; grammarian easier access to the token in the right periphery, the last element
+;;; of the tokens list is made re-entrant with *lexicon-last-token-path*.
+;;;
+(def-lkb-parameter *lexicon-tokens-path* '(TOKENS +LIST))
+(def-lkb-parameter *lexicon-last-token-path* '(TOKENS +LAST))
+
+;;;
+;;; chart mapping rules consist of between 1 and 5 components (the minimum being
+;;; a single input FS)
+;;;
+(def-lkb-parameter *chart-mapping-context-path* '(+CONTEXT))
+(def-lkb-parameter *chart-mapping-input-path* '(+INPUT))
+(def-lkb-parameter *chart-mapping-output-path* '(+OUTPUT))
+(def-lkb-parameter *chart-mapping-position-path* '(+POSITION))
+(def-lkb-parameter *chart-mapping-jump-path* '(+JUMP))
+
+;;;
+;;; some rules should be constrained to only apply over the entire string, i.e.
+;;; to edges that span the full input; this should improve parsing efficiency
+;;; only, rather than be considered part of the linguistic analyses.
+;;;
+(defparameter *spanning-only-rules*
+  '(aj-hd_int-inv_c
+    aj-r_frg_c np-aj_frg_c cl_rel-frg_c aj-np_int-frg_c
+    pp-aj_frg_c j-aj_frg_c np_nb-frg_c np-cl_numitem_c np-cl_lettitem_c 
+    cl_cp-frg_c cl-np_runon-prn_c conj-frg_c hd-aj_scp-noclpnct_c))

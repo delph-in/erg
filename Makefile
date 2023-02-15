@@ -10,6 +10,7 @@ tar:
 	  --exclude "*/lexdb*" --exclude "./robot*" --exclude "./mrs*" \
 	  --exclude "*/Notes*" --exclude "./Tmplex*" --exclude "./essay*" \
 	  --exclude "*/Todo*" --exclude "./fontconfig" \
+	  --exclude "./singlish*" \
 	  --exclude "jhpstg.g.mem" --exclude "*~" --exclude "*.dat" .
 
 titan:

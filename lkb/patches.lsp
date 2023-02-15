@@ -147,3 +147,116 @@
         (t
           (tree-node-text-string (find-category-abb (edge-dag edge)))))
       (edge-id edge))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;
+;; Useful utilities provided by John Carroll, October 2022
+
+;------------------------------------------------------------------------------
+;; Subsumption test - does edge n1 subsume edge n2, and if not, what path fails
+;;
+(defun check-subsume-edges (n1 n2)
+  (let ((e1 (find-edge-given-id n1))
+        (e2 (find-edge-given-id n2)))
+    (unless (and e1 e2) (error "Could not find one or both edges in chart"))
+    (check-dag-subsumes-p (tdfs-indef (edge-dag e1)) (tdfs-indef (edge-dag e2)) t t)))
+
+(defun check-dag-subsumes-p (dag1 dag2 &optional (forwardp t) (backwardp nil))
+  (with-unification-context (dag1)
+    (check-subsume-wffs-p dag1 dag2 forwardp backwardp nil)))
+
+(defun check-subsume-wffs-p (dag1 dag2 forwardp backwardp path)
+  ;; forwardp, backwardp are true when it's possible that dag1 subsumes dag2
+  ;; and vice-versa respectively. When the possibility has been ruled out the
+  ;; appropriate variable is set to false. Fail as soon as they are both false.
+  (labels
+    ((check-subsume-wffs-p-aux (dag1 dag2 path &aux donep)
+      ;; dag-p tests allow compiler to elide type checks in dag slot accessors below
+      (unless (and (dag-p dag1) (dag-p dag2))
+        (error "Inconsistency - ~S called with a non-dag argument" 'check-subsume-wffs-p-aux))
+      ;; donep improves on the original algorithm, avoiding repeated processing below
+      ;; a pair of nodes we've visited previously due to reentrancies
+      (when forwardp
+        (let ((c1 (dag-copy dag1)))
+          (cond
+            ((null c1)
+              (setf (dag-copy dag1) dag2))
+            ((eq c1 dag2)
+              (setq donep t))
+            (t (format t "~&Reentrancy at ~A - not forward~%" (reverse path))
+               (unless backwardp (return-from check-subsume-wffs-p nil))
+               (setq forwardp nil)))))
+      (when backwardp
+        (let ((c2 (dag-comp-arcs dag2))) ; can't also use copy slot in case dags share nodes
+          (cond
+            ((null c2)
+              (setf (dag-comp-arcs dag2) dag1))
+            ((eq c2 dag1)
+              (setq donep t))
+            (t (format t "~&Reentrancy at ~A - not backward~%" (reverse path))
+               (unless forwardp (return-from check-subsume-wffs-p nil))
+               (setq backwardp nil)))))
+      (cond
+        (donep)
+        ((eq dag1 dag2)
+          ;; when the dags are eq we still need to traverse them to check reentrancies,
+          ;; but other processing can be bypassed
+          (dolist (arc (dag-arcs dag1))
+            (check-subsume-wffs-p-aux
+              (dag-arc-value arc) (dag-arc-value arc) (cons (dag-arc-attribute arc) path))))
+        (t
+          (let ((type1 (dag-type dag1))
+                (type2 (dag-type dag2)))
+            (unless (or (eq type1 type2)
+                        (and (stringp type1) (stringp type2) (string= type1 type2)))
+              (let ((gcs (greatest-common-subtype type1 type2)))
+                (cond
+                  ((eq gcs type1)
+                     (format t "~&Types ~A ~A at ~A - not forward~%" type1 type2 (reverse path))
+                     (unless backwardp (return-from check-subsume-wffs-p nil))
+                     (setq forwardp nil))
+                  ((eq gcs type2)
+                     (format t "~&Types ~A ~A at ~A - not backward~%" type1 type2 (reverse path))
+                     (unless forwardp (return-from check-subsume-wffs-p nil))
+                     (setq backwardp nil))
+                  (t (format t "~&Types ~A ~A at ~A - no common subtype~%" type1 type2 (reverse path))
+                     (return-from check-subsume-wffs-p nil)))))
+            (let* ((arcs2 (dag-arcs dag2))
+                   (arcs2-tail arcs2))
+              (dolist (arc1 (dag-arcs dag1))
+                (let ((f1 (dag-arc-attribute arc1)))
+                  (block subsume-arc
+                    (do ((tail arcs2-tail (cdr tail))) ; start just beyond previous match
+                        ((atom tail))
+                        #1=(when (eq (dag-arc-attribute (car tail)) f1)
+                             (check-subsume-wffs-p-aux
+                               (dag-arc-value arc1) (dag-arc-value (car tail))
+                               (cons f1 path))
+                             (setq arcs2-tail (cdr tail))
+                             (return-from subsume-arc)))
+                    (do ((tail arcs2 (cdr tail)))
+                        ((eq tail arcs2-tail))
+                        #1#))))))))))
+    (check-subsume-wffs-p-aux dag1 dag2 path)
+    (values forwardp backwardp)))
+;;------------------------------------------------------------------------------
+;; Show table with edge counts in each cell of the current parse chart
+;;
+(defun sum-chart ()
+ (let ((len
+        (loop for s from 0 below (1- *chart-limit*)
+            when (aref *chart* s (1+ s)) maximize (1+ s))))
+  (format t "~&Total edges: ~D~%"
+    (loop for i from 0 below (array-total-size *chart*) sum (length (row-major-aref *chart* i))))
+  (format t "      ")
+  (loop for v from 0 to len do (format t "~2D    " v))
+  (loop for start from 0 to len
+      do
+      (format t "~&~2D " start)
+      (loop for end from 0 to len
+          do
+          (cond
+            ((<= end start) (format t "      "))
+            (t (format t "~5D " (length (aref *chart* start end)))))))))
+;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

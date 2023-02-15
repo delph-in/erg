@@ -40,6 +40,8 @@
 ;;; [       20,000,000 --        29,999,999] --- PTB WSJ
 ;;; [       30,000,000 --        30,999,999] --- Hinoki
 ;;; [       40,000,000 --        49,999,999] --- Brown Corpus
+;;; [       60,000,000 --        69,999,999] --- Sherlock Holmes
+;;; [       70,000,000 --        79,999,999] --- Open English WordNet
 ;;; [      120,000,000 --     1,099,999,999] --- GENIA
 ;;; [    2,000,000,000 --     2,999,999,999] --- NTU CLE
 ;;; [  100,000,000,000 --   299,999,999,999] --- WeSearch Data Collection
@@ -87,6 +89,7 @@
  ((:path . "control") (:content . "Control examples from literature"))
  ((:path . "handp12") (:content . "Huddleston and Pullum Ch.12"))
  ((:path . "sh-spec") (:content . "Sherlock Holmes Speckled Band"))
+ ((:path . "sh-danc") (:content . "Sherlock Holmes Dancing Man"))
  ((:path . "ntucle") (:content . "NTU CLE learner English corpus"))
  ((:path . "omw") (:content . "Open Multilingual WordNet sample definitions"))
  ((:path . "marco300") (:content . "First set of 300 Marco user queries"))

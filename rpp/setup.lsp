@@ -30,5 +30,6 @@
 (setf *repp-calls* '(:xml :lgt :ascii :quotes))
 (setf *repp-characterize-p* t)
 (setf *repp-characterization-beam* 2)
-(setf *repp-interactive* '(:tokenizer :xml :lgt :ascii :quotes :lkb))
+;(setf *repp-interactive* '(:tokenizer :xml :lgt :ascii :quotes :lkb))
+(setf *repp-interactive* '(:tokenizer :xml :ascii :quotes :wiki :gml :html))
 (setf *repp-debug-p* nil)

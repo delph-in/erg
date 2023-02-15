@@ -15,8 +15,7 @@ proper_q_rel := num_or_proper_q_rel & impl_or_proper_q_rel &
 		def_poss_or_barepl_or_prop_q_rel & udef_or_proper_q_rel &
 	      _the_q_prop_or_no_rel.
 ;; Also allow |Lucy's English|
-poss_rel := of_p_rel & dofw_or_poss_q_rel & comp_or_poss_rel &
-	    _the_q_prop_or_no_rel.
+poss_rel := of_p_rel & dofw_or_poss_q_rel & _the_q_prop_or_no_rel.
 
 norm_proper_q_rel := proper_q_rel.
 mal_bare_div_q_rel := implicit_q_rel.
@@ -36,10 +35,15 @@ _face+to+face_p_rel := miscprep_rel.
 _by+this+means_p_rel := miscprep_rel.
 _from+view_p_rel := dir_rel.
 
+;; DPF 2022-04-23 - For provisional lexPP while we figure out the right analysis
+;; for "made more money this year than last"
+_than+last_p_rel := miscprep_rel.
+
 ;; Treat online as lexical PP
 _online_p_rel := dir_or_state_nontemp_rel.
 _online_p_dir_rel := _online_p_rel & dir_rel.
 _online_p_state_rel := _online_p_rel & state_loc_rel.
+
 
 proper_np_phrase :+
   [ ARGS.FIRST.SYNSEM.LOCAL.CAT.HEAD.MINORS.ALTMIN norm_proper_q_rel ].
@@ -53,7 +57,7 @@ basic_n_proper_lexent :+
 norm_n_proper_lexent := reg_n_proper_lexent &
   [ SYNSEM [ LKEYS.KEYREL.PRED named_rel,
     	     LOCAL.CAT.VAL.SPR < [ LOCAL.CAT.HEAD.MINORS.ALTMIN 
-	                                    _the_q_prop_or_no_rel ] > ],
+	         _the_q_prop_or_no_rel ] > ],
     INFLECTD - ].
 
 n_-_c-fem_le := n_intr_lex_entry &
@@ -177,6 +181,8 @@ n_pp_c-pl_le := n_plur_ppcomp_lexent &
 ;; past-tense infl, which constrains --MALAGR on subj.
 ;; 2021-01-19 - Add --MALCOMP to avoid mal "that we arrive" missing "at"
 ;; 2021-06-24 - Added --MALRELPRO to avoid robust "cat that we waited for"
+;; 2022-04-23 - Added --MALTHAT to avoid robust "everything that cats need"
+;; 2022-04-26 - Added --FRAG to enable blocking for fragment "Ann plants trees"
 ;;
 nominal :+ [ --MALPLCPD bool,
 	     --MALPL bool,
@@ -184,8 +190,9 @@ nominal :+ [ --MALPLCPD bool,
 	     --COORD bool,
 	     --PLNOAFF bool,
 	     --MALCOMP bool,
-	     --MALRELPRO bool ].
-
+	     --MALRELPRO bool,
+	     --MALTHAT bool,
+	     --FRAG bool ].
 
 ;; 2021-01-15 - Moved --MALCASE up to subst so we can use it to constrain
 ;; modifee of preps which still need to also modify verbs
@@ -212,15 +219,20 @@ d_-_sg-nmd_le_mal := basic_det_sg_nomod_lexent &
 ;; |we made an great progress|.
 ;; DPF 2020-04-06 - Block with nominal gerunds, to avoid robust analysis of
 ;; |a finding/reading/...|
+;; DPF 2022-04-23 - Re 2020-04-06: But these examples with finding/reading
+;; are not gerunds but nouns with separate lexical entries, and we do want to
+;; treat as robust "a designing was planning".  So change SPEC..HEAD basic_noun
+;; back to noun_or_nomger, and count on parse ranking to avoid robust analyses
+;; where a native lexical entry exists.
 ;;
 d_-_m-c_mal_lexent := det_word &
   [ SYNSEM [ LOCAL.CAT [ HEAD.MINORS.ALTMIN dofw_or_poss_q_rel,
-			 VAL.SPEC < [ LOCAL [ CAT.HEAD basic_noun &
+			 VAL.SPEC < [ LOCAL [ CAT.HEAD noun_or_nomger &
 			                               [ --MALCM + ],
 					      AGR [ PNG.PN 3s,
 						    DIV + ] ],
 				      PHON.ONSET con_or_voc ] > ],
-	     NONLOC.QUE 0-dlist ],
+	     NONLOC.QUE.LIST < > ],
     GENRE robust ].
 
 ;; DPF 2019-04-10 - Generalize ONSET to con_or_voc so we can even get misuse
@@ -262,12 +274,14 @@ det_poss_lexent :+
 		  	     --POSSRBST #pr ],
 		      VAL.SPEC.FIRST.LOCAL.CAT.HEAD.--POSSRBST #pr ] ].
 
+;; Block for "posted on the web [about camp this summer]" vie --SAMENV
 adj_equi_bse_mal_synsem := basic_adj_equi_synsem & 
   [ LOCAL [ CAT [ HEAD adj,
 		  VAL [ SPR.FIRST synsem &
 				  [ --MIN more_or_very_deg_rel,
 				    LOCAL.CAT.HS-LEX #hslex ],
-			COMPS < [ LOCAL [ CAT.HEAD.VFORM bse,
+			COMPS < [ LOCAL [ CAT.HEAD [ VFORM bse,
+						     --SAMENV - ],
 					  CONT [ HOOK.LTOP #vhand ] ] ] > ],
 		  HS-LEX #hslex ],
 	    CONT [ RELS <! adj_relation !>,
@@ -340,6 +354,11 @@ be_id := be_verb &
        LKEYS.KEYREL [ LBL #ltop,
 		      PRED _be_v_id_rel ] ] ].
 
+;; DPF 2022-05-19 - Keep the SORT identity we recently dropped for normal ERG
+aux_np_verb :+
+  [ LOCAL.CAT.VAL [ SUBJ.FIRST.--SIND.SORT #sort,
+		    COMPS.FIRST.--SIND.SORT #sort ] ].
+
 ; From auxverbs - Restrict number on COMPS for singular identity copula.
 ; Also prevent bare-sg NP subjects
 ;; DPF 13-03-14 - But blocking bare subjs prevents robust analysis of e.g.
@@ -374,7 +393,9 @@ contracted_aux_word := word &
     ALTS [ VPELLIP -,
            SQPNCT -,
 	   CSAI - ],
-    SYNSEM.LOCAL.CAT.VAL.COMPS.FIRST canonical_synsem ].
+    SYNSEM.LOCAL.CAT [ HEAD.CNTRCTD +,
+		       VAL.COMPS.FIRST expressed_synsem ] ].
+
 
 ; Add COMPS..--BARE - here to avoid spurious analysis for e.g.
 ; |the team's goalie kept running|
@@ -429,11 +450,9 @@ np_title_cmpnd_phr :+
 			  CONT.HOOK.INDEX.PNG.GEN #gen ] ].
 
 ;; Add strange E.SAME-PAST + to block robust |Tuesday next week|
-n_-_c-dow_le := n_-_c-day_lexent &
-  [ SYNSEM [ LKEYS.KEYREL.PRED dofw_rel,
-	     LOCAL [ CAT.HEAD.--BARE -,
-		     CONT.HOOK.INDEX.E.SAME-PAST + ],
-             MODIFD notmod_or_rmod ] ].
+n_-_c-dow_le := n_-_c-dow_lexent &
+  [ SYNSEM [ LOCAL [ CAT.HEAD.--BARE -,
+		     CONT.HOOK.INDEX.E.SAME-PAST + ] ] ].
 
 ;; DPF 2017-09-27 - Add boolean UNSP-TENSE for modals such as |should| which
 ;; are unmarked for tense, but don't want to combine with robust subord or
@@ -703,6 +722,10 @@ aj_-_i-many_le_rbst := adj_attr_intrans_que_lexent &
 				    MODIFD.LPERIPH na_or_- ] > ],
     GENRE robust ].
 
+;; 2023-01-27 - Block robust "the [ice many times]"
+aj_-_i-many_lexent :+
+  [ SYNSEM.MODIFD.LPERIPH + ].
+
 ;; Make COMPS..HEAD be reg_adv to allow |he did well|
 ;;
 adv_subst := unsat_two_arg_subst &
@@ -715,7 +738,7 @@ adv_subst := unsat_two_arg_subst &
                                             COMPS < > ],
 				      POSTHD + ],
                                 CONT.HOOK.LTOP #hand ],
-                              NONLOC.REL 0-dlist,
+                              NONLOC.REL.LIST < >,
                               LEX + ] > ],
     LKEYS.KEYREL [ LBL #hand,
                    ARG0 #event ] ].
@@ -758,6 +781,7 @@ _day+by+day_p_rel := miscprep_rel.
 _dear_p_rel := miscprep_rel.
 _during+break_p_rel := miscprep_rel.
 _face+to+face_p_rel := miscprep_rel.
+_in+afterward_p_rel := miscprep_rel.
 _in+anytime_p_rel := miscprep_rel.
 _in+everyday_p_rel := miscprep_rel.
 _in+home_p_rel := miscprep_rel.
@@ -1101,7 +1125,8 @@ vc_prd_was_le_mal := vc_prd_were_lexent &
     ALTS.VPELLIP -,
     SYNSEM.LOCAL.CAT.VAL [ SUBJ.FIRST expressed_synsem & 
     				      [ LOCAL.AGR [ PNG.PN pl,
-    				                    DIV + ] ],
+    				                    DIV + ],
+					--SIND.GROUPN - ],
 			   COMPS.FIRST expressed_synsem ],
     GENRE robust ].
 
@@ -1151,7 +1176,8 @@ vc_prd_wre-n_le_mal := be_past_neg_lex_entry & be_cop_neg &
 ;;
 vc_prd_be_le_mal := vc_prd_be_lexent &
   [ SYNSEM.LOCAL.CAT.HEAD [ VFORM fin,
-			    --MAL3SG + ],
+			    --MAL3SG +,
+			    --MALCOPFIN + ],
     INFLECTD +,
     ALTS.VPELLIP -,
     GENRE robust ].
@@ -1272,9 +1298,7 @@ mal_finvp_rule := basic_unary_phrase & rule &
                                           INDEX #event,
                                           XARG #arg0 ],
                               AGR.PNG #png ],
-                      NONLOC [ SLASH 0-dlist & [ LIST < > ],
-                                  REL 0-dlist,
-                                  QUE 0-dlist ] ],
+                      NONLOC non-local_none ],
 	     GENRE robust ] >,
     C-CONT [ HOOK [ LTOP #ltop,
                     INDEX #event ],
@@ -1301,7 +1325,7 @@ frag_vp_rule := frag_verbal_rule &
                                 VAL.SUBJ < synsem &
                                            [ LOCAL.CAT.HEAD noun,
                                              --SIND non_expl-ind,
-					     NONLOC.SLASH 0-dlist ] > ] ] >,
+					     NONLOC.SLASH.LIST < > ] > ] ] >,
     C-CONT [ HCONS <! !>,
 	     ICONS <! !> ] ].
 
@@ -1551,13 +1575,15 @@ aj_-_i-cmpd_le_rbst := aj_-_i-cmpd_lexent &
 ;; Also block robust 3sg for complement
 ;; 2020-04-08 - But don't want to block all inversion, since we want conditional
 ;; inv as in |were he to succeed, ...|.  So undo, and CHECK.
+;; Block vmod: "it was not until Friday that we arrived"
 ;;
 be_nv := be_verb &
   [ SYNSEM nv_cop_verb &
-	   [ LOCAL [ CAT [ VAL.COMPS.FIRST.LOCAL.CAT.HEAD.--MAL3SG - ],
+	   [ LOCAL [ CAT.VAL.COMPS.FIRST.LOCAL.CAT.HEAD.--MAL3SG -,
 		     CONT [ HOOK.INDEX #event,
 			    RELS.LIST.FIRST.ARG0 #event ] ] ],
-    ALTS.VPELLIP - ].
+    ALTS [ VPELLIP -,
+	   ADVADD - ] ].
 
 ;; DPF 2019-11-04 - Change XARG.SORT from nonhuman-or-loc to qevent-or-loc, so
 ;; we can get |the suggestion is that we arise| but block |the cat is that we
@@ -1710,8 +1736,6 @@ noun_n_cmpnd_pl_mal := binary_rule_right_to_left &
 ;; DPF 2020-05-28 - Add DETPRTNOCMP to allow blocking of partitive-to-det-nocomp
 ;; DPF 2020-09-08 - Add MALJVPIT to allow blocking of |He is kind to arise|
 ;; for rule that catches |*He is easy to admire him|
-;; 2021-04-21 - MALPASBSE to allow blocking of v_pas_bse_dlr_rbst as in
-;; "She was made alert by the noise"
 ;;
 alts :+ [ PLMASS bool,
           AVIP bool,
@@ -1725,8 +1749,7 @@ alts :+ [ PLMASS bool,
 	  TNS-ID bool,
 	  DETPRTNOCMP bool,
 	  MALJVPIT bool,
-	  DERIVPREF bool,
-	  MALPASBSE bool ].
+	  DERIVPREF bool ].
 
 ;; For robust plural of mass nouns
 ;;
@@ -1869,13 +1892,13 @@ v_np_its_le_mal := be_is_mal_lex_entry &
 psp_aux_verb_mal_ssr := basic_have_aux_verb_synsem &
   [ LOCAL.CAT.VAL.COMPS < synsem &
 			  [ LOCAL [ CAT vp_cat &
-					[ HEAD verb &
-					       [ VFORM fin,
-						 TAM #tam & [ TENSE past,
-							      IRR-TENSE + ],
-						 --ADDIN.ADDTAM #tam,
-						 --MALPAST - ],
-					  VAL.SUBJ < [ LOCAL.CAT.HEAD noun ] >],
+				    [ HEAD verb &
+					   [ VFORM fin,
+					     TAM #tam & [ TENSE past,
+							  IRR-TENSE + ],
+					     --ADDIN.ADDTAM #tam,
+					     --MALPAST - ],
+				      VAL.SUBJ < [ LOCAL.CAT.HEAD supnoun ] >],
 				    CONJ cnil ],
 			    OPT - ] > ].
 
@@ -1974,10 +1997,10 @@ aj_-_i_le_nocap_rbst := reg_intrans_adj &
     TOKENS.+LAST.+CLASS.+CASE non_capitalized,
     GENRE robust ].
 
-n_np_c-month_le := n_np_c-month_lexent &
+n_np_c-month_le := basic_n_np_c-month_lexent &
   [ ORTH.CLASS.+CASE capitalized ].
 
-n_np_c-month_le_nocap_rbst := n_np_c-month_lexent &
+n_np_c-month_le_nocap_rbst := basic_n_np_c-month_lexent &
   [ ORTH.CLASS.+CASE non_capitalized,
     GENRE robust ].
 
@@ -1993,12 +2016,12 @@ d_-_month_le_nocap_rbst := abstr_det_word &
     ORTH.CLASS.+CASE non_capitalized,
     GENRE robust ].
 
-n_-_m-hldy_le := basic_n_-_m-ssn_lexent &
+n_-_m-hldy_le := basic_basic_n_-_m-ssn_lexent &
   [ SYNSEM [ LOCAL.CAT.HEAD.MINORS.MIN holiday_rel,
 	     LKEYS.KEYREL.PRED holiday_rel ],
     TOKENS.+LAST.+CLASS.+CASE capitalized ].
 
-n_-_m-hldy_le_nocap_rbst := n_-_m-ssn_lexent &
+n_-_m-hldy_le_nocap_rbst := basic_n_-_m-ssn_lexent &
   [ SYNSEM [ LOCAL.CAT.HEAD.MINORS.MIN holiday_rel,
 	     LKEYS.KEYREL.PRED holiday_rel ],
     TOKENS.+LAST.+CLASS.+CASE non_capitalized,
@@ -2061,7 +2084,7 @@ subjh_nonfin_robust_rule := subjh_rule_basic & head_subj_phrase &
 							     PROGR - ] ] ],
 			   MC + ],
                      CONT.HOOK.INDEX.SF #pred ],
-	     NONLOC.SLASH 0-dlist,
+	     NONLOC.SLASH.LIST < >,
              PUNCT.RPUNCT.PSF #pred ],
     HD-DTR.SYNSEM.LOCAL.CONT.HOOK [ LTOP #hdtop,
 				    INDEX #hdind ],
@@ -2088,7 +2111,9 @@ subjh_robust_rule := subjh_rule_decl & basic_head_subj_phrase & clause &
                                                  CONT #cont,
                                                  CONJ #conj,
                                                  CTXT #ctxt ],
-                                         NONLOC #nonloc,
+                                         NONLOC [ SLASH.LIST #slash,
+						  REL.LIST #rel,
+						  QUE.LIST #que ],
 					 --SIND ref-ind & #sind,
                                          OPT #opt,
                                          LEX #lex,
@@ -2096,7 +2121,7 @@ subjh_robust_rule := subjh_rule_decl & basic_head_subj_phrase & clause &
                                          PHON #phon,
                                          PUNCT #punct ] > ],
 			    CONT.HOOK.INDEX non_conj_event ],
-                    NONLOC.SLASH 0-dlist ],
+                    NONLOC.SLASH.LIST < > ],
     NH-DTR.SYNSEM [ LOCAL [ CAT #cat & [ HEAD noun & 
 					      [ --BARE -,
 						MINORS.ALTMIN 
@@ -2104,7 +2129,9 @@ subjh_robust_rule := subjh_rule_decl & basic_head_subj_phrase & clause &
 			    CONT #cont,
                             CONJ #conj,
                             CTXT #ctxt ],
-                    NONLOC #nonloc,
+                    NONLOC [ SLASH.LIST #slash,
+			     REL.LIST #rel,
+			     QUE.LIST #que ],
 		    --SIND #sind,
                     OPT #opt,
                     LEX #lex,
@@ -2137,7 +2164,7 @@ subjh_mc_cma_rule := subjh_rule_decl & basic_head_subj_phrase & clause &
 			   VAL.SPR *olist*,
                            MC + ],
                      CONT.HOOK [ INDEX.SF #pred & prop-or-like ] ],
-	     NONLOC.SLASH 0-dlist,
+	     NONLOC.SLASH.LIST < >,
              PUNCT.RPUNCT.PSF #pred ],
    HD-DTR.SYNSEM [ LOCAL.CAT.VAL.SUBJ < #synsem >,
 		   MODIFD notmod ],
@@ -2209,41 +2236,6 @@ n_-_c-sg-nonnom_le_rbst := basic_n_-_c-sg_le_mal &
   [ SYNSEM [ LOCAL.CAT [ HEAD.CASE non_nom,
 			 VAL.SPR.FIRST.--MIN def_explicit_q_rel ],
 	     MODIFD.LPERIPH na ] ].
-
-;; Intransitive used as causative: |this deteriorates the problem|
-;;
-v_np_caus_le_rbst := main_verb & 
-  [ SYNSEM np_trans_verb &
-	   [ LOCAL.CAT [ VAL.COMPS < canonical_synsem &
-				   [ OPT -,
-				     LOCAL.CAT.HEAD noun &
-					 [ --BARE -,
-					   CASE acc ],
-				     PUNCT.RPUNCT clause_or_no_punct ] > ] ],
-    GENRE robust ].
-
-;; Ditransitives like `give' used as simple transitives
-;; DPF 2017-09-27 - To prevent spurious robust analysis of
-;; |Cathy handed a rock to Caleb|, restrict NP comp to notmod_or_lmod.
-;;
-#|
-v_np_ditrans_le_rbst := main_verb & 
-  [ SYNSEM np_trans_verb &
-	   [ LOCAL.CAT [ VAL.COMPS < [ --MIN non_idiom_nom_rel,
-	                               MODIFD notmod_or_lmod,
-	                               OPT - ] > ] ],
-    GENRE robust ].
-|#
-v_np_ditrans_le_rbst := main_verb & 
-  [ SYNSEM np_trans_verb &
-	   [ LOCAL.CAT [ VAL.COMPS < [ MODIFD notmod_or_lmod,
-	                               OPT - ] > ] ],
-    GENRE robust ].
-
-v_np_cp_le_rbst := main_verb & 
-  [ SYNSEM np_trans_verb &
-	   [ LOCAL.CAT [ VAL.COMPS < [ OPT - ] > ] ],
-    GENRE robust ].
 
 ;; Double negation
 ;;
@@ -2356,7 +2348,9 @@ bare_npq_phrase := basic_unary_phrase &
 			   DIV #div ],
                      CONJ #conj,
 		     CTXT #ctxt ],
-             NONLOC #nonloc,
+             NONLOC [ SLASH.LIST #slash,
+		      REL.LIST #rel,
+		      QUE.LIST #que ],
 	     LEX #lex,
              MODIFD #modif,
 	     PUNCT #punct ],
@@ -2368,7 +2362,7 @@ bare_npq_phrase := basic_unary_phrase &
                                    COMPS < >,
                                    SPR < unexpressed &
 					 [ LOCAL.CONT.HOOK.LTOP #ltop,
-					   NONLOC.QUE 0-dlist,
+					   NONLOC.QUE.LIST < >,
 					   OPT - ], ... > ] ],
                        AGR [ PNG #png,
 			     DIV #div ],
@@ -2376,7 +2370,9 @@ bare_npq_phrase := basic_unary_phrase &
                        CONT.HOOK [ INDEX #index,
 				   XARG #xarg ],
 		       CTXT #ctxt ],
-               NONLOC #nonloc,
+               NONLOC [ SLASH.LIST #slash,
+			REL.LIST #rel,
+			QUE.LIST #que ],
 	       LEX #lex,
 	       MODIFD #modif & [ RPERIPH na_or_+ ],
 	       PUNCT #punct & 
@@ -2506,6 +2502,8 @@ run_on_coord_punct_rule := basic_run_on_coord_rule &
 ;; remove.
 ;; 2021-01-15 - Exclude coord-S as left dtr:
 ;; "A lost coat has been found and if you'd like to get it back, see me."
+;; 2022-04-23 - Exclude mal-intrans as right dtr:
+;; "They'll be late, he told."
 ;;
 run_on_coord_comma_rule := run_on_coord_punct_rule &
   [ LCONJ-DTR.SYNSEM [ PUNCT.RPUNCT comma_punct,
@@ -2513,12 +2511,17 @@ run_on_coord_comma_rule := run_on_coord_punct_rule &
 					  --RUNON + ],
 			       CONT.HOOK.INDEX non_conj_event ],
 		       MODIFD notmod_or_rmod ],
-    RCONJ-DTR.SYNSEM [ PUNCT.LPUNCT lparen_or_dq_or_no_punct ] ].
+    RCONJ-DTR.SYNSEM [ LOCAL.CAT.HEAD [ --MALINTR -,
+					--RUNON + ],
+		       PUNCT.LPUNCT lparen_or_dq_or_no_punct ] ].
 
 run_on_coord_dash_rule := run_on_coord_punct_rule &
   [ LCONJ-DTR.SYNSEM.PUNCT.RPUNCT s_dash_punct,
     RCONJ-DTR.SYNSEM.PUNCT.LPUNCT lparen_or_dq_or_no_punct ].
 
+;; 2022-04-22 - Block embedded NP-S run-on
+;; 2022-04-26 - Removed RCONJ-DTR..ALTMIN role_rel since this prevented robust
+;; "In Paris. Cats are very wonderful."
 run_on_coord_rule := basic_run_on_coord_rule &
  [ SYNSEM [ MODIFD.LPERIPH +,
 	    LOCAL.CONT.HOOK.INDEX.E #e ],
@@ -2796,7 +2799,8 @@ n_poss_pro_lexent :+
 ;; DPF 2019-06-06 - Add --MALFIN to prevent |making him ate bananas| as subord
 ;; DPF 2019-06-06 - Add --NOCJCRD to prevent robust noconj-coord VP as left
 ;; member in larger VP coord.
-;; DPF 2019-11-11 - Add --MALCOPBSE to prevent |be warm| using robust |be begin|
+;; DPF 2019-11-11 - Add --MALCOPBSE to prevent |be warm| or |be alert| using 
+;; robust copula taking base VP as in |be begin|
 ;; DPF 2020-07-11 - Add --HAVEBE so we can prevent passivizable verbs and other
 ;; verbs from combining with robust is/has as in "is expected to arrive"
 ;; DPF 2020-08-11 - Add --CLRC to control extraposed relative rule, so we can
@@ -2811,6 +2815,13 @@ n_poss_pro_lexent :+
 ;; 2021-01-14 - Add --VSBRD to block mal "look" in "strong looking arms"
 ;; 2021-04-26 - Added --RUNON to enable blocking of run-on clauses for e.g.
 ;; "Thanks to Kim, we won"
+;; 2022-04-23 - Added --MALCOPFIN to block robust analysis of good subjunctive
+;; as in "They suggested that he not be charged"
+;; 2022-04-23 - If needed, could add --MALGERCM to enable verbs with a cognate
+;; native noun  "-ing" entry such as "reading" or "finding" to avoid robust 
+;; mass "a/an" with the nominal gerund, as in "a second reading".
+;; 2022-04-27 - Added --BSEVPSBJ to enable blocking of robust base-VP subject
+;; as in "[have the cat] chase dogs"
 ;;
 verbal :+
   [ --VNEG bool,
@@ -2818,6 +2829,7 @@ verbal :+
     --MALFIN bool,
     --NOCJCRD bool,
     --MALCOPBSE bool,
+    --MALCOPFIN bool,
     --HAVEBE bool,
     --CLRC bool,
     --ROBAUX bool,
@@ -2825,7 +2837,11 @@ verbal :+
     --SBJCMA bool,
     --MALVPSEQ bool,
     --VSBRD bool,
-    --RUNON bool ].
+    --VGERUND bool,
+    --BSEVPSBJ bool ].
+
+basic_verb_or_frag :+
+  [ --RUNON bool ].
 
 ;; DPF 2020-09-30 - Add --MALPASCP to avoid robust "excited and realized that S"
 ;;
@@ -2834,13 +2850,20 @@ v_or_a_or_p :+
 
 robust_nom_rel := non_proper_rel.
 
-;; DPF 2018-03-16 - Add type for adjectives used as count nouns:
+;; DPF 2018-03-16 - Add type for adjectives used as count nouns with an
+;; indefinite article that should be deleted.
 ;; |fishing is a fun for me|
-;;
+;; DPF 2022-04-23 - But the error message is wrong for e.g. "an old arrived"
+;; and anyway we also have n_-_c-aj_le_rbst, so switch the three entries of
+;; this type to that one
+#|
 n_-_c-adj_le_rbst := basic_intr_lex_entry &
-  [ SYNSEM [ LOCAL.CAT.HEAD.MINORS.MIN robust_nom_rel,
-             MODIFD.RPERIPH + ],
+  [ SYNSEM [ LOCAL.CAT [ HEAD [ MINORS.MIN robust_nom_rel,
+				--BARE - ],
+			 VAL.SPR.FIRST.--MIN _a_q_rel ],
+	     MODIFD.RPERIPH + ],
     GENRE robust ].
+|#
 
 ;; |the fifty words composition|
 ;; But exclude |[two feet] [tall fence]| via LPERIPH na, since another error 
@@ -2964,7 +2987,9 @@ lex_rule_compar_equative := lex_rule_basic & word_or_infl_rule &
 		     CTXT #ctxt,
 		     AGR #agr,
 		     ARG-S #arg-s ],
-	     NONLOC #nonloc,
+	     NONLOC [ SLASH.LIST #slash,
+		      REL.LIST #rel,
+		      QUE.LIST #que ],
 	     OPT #opt,
 	     --MIN #min,
 	     --SIND #sind,
@@ -2992,7 +3017,9 @@ lex_rule_compar_equative := lex_rule_basic & word_or_infl_rule &
 				  CTXT #ctxt,
 				  AGR #agr,
 				  ARG-S #arg-s ],
-			  NONLOC #nonloc,
+			  NONLOC [ SLASH.LIST #slash,
+				   REL.LIST #rel,
+				   QUE.LIST #que ],
 			  OPT #opt,
 			  --MIN #min,
 			  --SIND #sind,
@@ -3010,7 +3037,7 @@ av_pp_dg-as_le_rbst := que_word &
 
 ;; |we ran one and a half mile|
 ;;
-aj_np_i-frct-one_le_rbst := aj_np_i-frct-one_lexent &
+aj_np_i-frct-one_le_rbst := basic_aj_np_i-frct-one_lexent &
   [ SYNSEM.LOCAL.CAT.HEAD.MOD.FIRST.LOCAL.AGR.PNG.PN 3s,
     GENRE robust ].
 
@@ -3075,6 +3102,8 @@ n_pp_mc-of-ns_le :+
   [ SYNSEM.LKEYS.KEYREL.ARG0.TSORT nontransport_sort ].
 n_pp_c-gr-of-ns_le :+
   [ SYNSEM.LKEYS.KEYREL.ARG0.TSORT nontransport_sort ].
+n_pp_mc-of-lhc_lexent :+
+  [ SYNSEM.LKEYS.KEYREL.ARG0.TSORT nontransport_sort ].
 
 non_expl-ind :+
   [ TSORT basic-entity-or-event,
@@ -3125,8 +3154,6 @@ n_pp_c-nocnh_le :+
 n_-_mc_le :+
   [ SYNSEM.LKEYS.KEYREL.ARG0.TSORT entity ].
 n_-_mc-ntc_le :+
-  [ SYNSEM.LKEYS.KEYREL.ARG0.TSORT entity ].
-n_-_mc-time_le :+
   [ SYNSEM.LKEYS.KEYREL.ARG0.TSORT entity ].
 n_-_mc-ns_lexent :+
   [ SYNSEM.LKEYS.KEYREL.ARG0.TSORT entity ].
@@ -3350,7 +3377,17 @@ cp_frag_intrans_verb :+
 				      CONJ cnil ] ].
 
 ;; Prevent robust v_np_pp from undergoing nominal gerund, via NORM norm_rel.
+;; DPF 2022-04-23 - If needed due to inadequate parse ranking, could pass up
+;; a --MALGERCM value from dtr to mother, to enable verbs with a native count 
+;; noun "-ing" entry such as "reading" or "finding" to avoid robust mass "a/an"
+;; with the nominal gerund, as in "a second reading".  Apparently not needed yet
 ;;
+#|
+trans_nominal_gerund :+
+  [ DTR.SYNSEM.LOCAL.CAT.HEAD [ MINORS.NORM norm_rel,
+				--MALGERCM #malcm ],
+    SYNSEM.LOCAL.CAT.HEAD.--MALCM #malcm ].
+|#
 trans_nominal_gerund :+
   [ DTR.SYNSEM.LOCAL.CAT.HEAD.MINORS.NORM norm_rel ].
 
@@ -3367,20 +3404,21 @@ reg_adj_cp_word :+
 
 reg_adj_atrans_cp_word :+
   [ SYNSEM.LOCAL.CAT.VAL.COMPS.FIRST [ LOCAL.CONT.HOOK.INDEX.SF prop-or-comm,
-                                       NONLOC.SLASH 0-dlist ] ].
+                                       NONLOC.SLASH.LIST < > ] ].
 
 p_cp_ptcl-gap_lexent :+
   [ SYNSEM.LOCAL.CAT.VAL.COMPS.FIRST.LOCAL.CAT.HEAD [ --MAL3SG -,
 						      --MALN3SG - ] ].
 p_cp_ptcl-npgap_le :+
- [ SYNSEM.LOCAL.CAT.VAL.COMPS.FIRST.NONLOC.SLASH <! [CAT.HEAD.CASE non_nom]!> ].
+ [ SYNSEM.LOCAL.CAT.VAL.COMPS.FIRST.NONLOC.SLASH.LIST 
+					       < [ CAT.HEAD.CASE non_nom ] > ].
 
 ;; 2021-06-16 - Removed mystermious ARGS.FIRST..CASE non_obliq since this
 ;; blocked "the supermarket that we go to"
 ;;
 filler_head_fin_np_rel_rule :+
   [ ARGS < [ ], 
-	   [ SYNSEM.NONLOC.SLASH <! [ CAT.HEAD.--MALCOMP - ] !> ] > ].
+	   [ SYNSEM.NONLOC.SLASH.LIST < [ CAT.HEAD.--MALCOMP - ] > ] > ].
 
 ;; Avoid robust |they break plates|
 ;;
@@ -3467,9 +3505,10 @@ np_n_cmpnd_phr :+
 ;; Prevent by_means_rbst as in |was amazed by everything|
 ;; DPF 2018-09-14 - But this blocks |don't teach me anything|.  Instead,
 ;; constrain SORT to entity-or-event.
-;;
-n_generic_pro_lexent :+
-  [ SYNSEM.LOCAL.CONT.HOOK.INDEX.SORT entity-or-event ].
+;; DPF 2022-04-22 - But this blocks "Admiring the cats is something we do"
+;; and see if we need to still tame by_means_rbst
+;n_generic_pro_lexent :+
+;  [ SYNSEM.LOCAL.CONT.HOOK.INDEX.SORT entity-or-event ].
 
 ;; Block |the sign-up sheet| as mid-coord no-conj
 ;;
@@ -3728,8 +3767,14 @@ n_group_nocomp_lexent :+
 
 ;; Block robust |in costume|
 ;;
-basic_n_bare_lex_entry :+
-  [ SYNSEM.LOCAL.CAT.HEAD.--BARE - ].
+basic_n_bare_lex_entry := noun_word &
+  [ SYNSEM [ LOCAL [ CAT [ HEAD [ MINORS [ MIN bare_nom_rel,
+					   NORM norm_rel ],
+				  --BARE -,
+				  CASE non_nom ],
+                           VAL.SPR < unexpressed > ],
+                     AGR.PNG.PN 3s ] ],
+    IDIOM + ].
 
 ;; Block robust |on Wednesday night|
 ;;
@@ -3765,7 +3810,7 @@ n_-_c-ord_le := basic_intr_lex_entry &
 basic_int_adverb_synsem := basic_basic_adverb_synsem & isect_synsem &
   [ LOCAL.CAT.HEAD.MOD < [ LOCAL [ CAT.MC na_or_-,
 				   CONT.HOOK.INDEX #index ],
-			   NONLOC.QUE 0-dlist ] >,
+			   NONLOC.QUE.LIST < > ] >,
     LKEYS.KEYREL.ARG1 #index ].
 
 ;; DPF 2019-04-22 - Enable lexical blocking of robust adverb-for-adjective rule.
@@ -3794,14 +3839,18 @@ adv_noun_phrase := head_mod_phrase & binary_headed_phrase & head_final &
 		   head_nexus_phrase &
   [ SYNSEM [ LOCAL.CAT.VAL #val,
 	     LEX #lex,
-	     NONLOC #nonloc & [ SLASH 0-dlist ] ],
+	     NONLOC [ SLASH.LIST #slash & < >,
+		      REL.LIST #rel,
+		      QUE.LIST #que ] ],
     HD-DTR.SYNSEM [ LOCAL [ CAT [ HEAD basic_noun,
 				  VAL #val & [ COMPS < >,
 					       SPR.FIRST expressed_synsem ] ],
 			    CONT.HOOK #hook & [ LTOP #ltop,
 			                        INDEX #index ] ],
 		    LEX #lex,
-		    NONLOC #nonloc ],
+		    NONLOC [ SLASH.LIST #slash,
+			     REL.LIST #rel,
+			     QUE.LIST #que ] ],
     NH-DTR.SYNSEM [ LOCAL [ CAT [ HEAD reg_adv &
 				       [ MOD *cons* &
 					     [ FIRST.LOCAL int_mod_local &
@@ -3836,7 +3885,7 @@ n_-_c-ns-part_le := norm_intr_lex_entry &
 n_-_pr-fr_le := n_freerel_pro_lexent &
   [ SYNSEM [ LOCAL [ CONT.RELS.LIST.FIRST.PRED free_relative_q_rel,
 		     AGR.PNG.PN 3s ],
-             NONLOC.SLASH <! [ AGR.PNG.PN 3s ] !> ] ].
+             NONLOC.SLASH.LIST < [ AGR.PNG.PN 3s ] > ] ].
 
 ;; DPF 2019-05-06 - Ignore this for robustness, allowing as grammatical
 ;; |what bother us most are grumpy students.|
@@ -3847,8 +3896,8 @@ n_-_pr-fr_le_rbst := n_freerel_pro_lexent &
   [ SYNSEM [ LOCAL [ CONT.RELS.LIST.FIRST.PRED free_relative_q_rel,
                      CAT.HEAD.CASE nom,
 		     AGR.PNG.PN 3s ],
-             NONLOC.SLASH <! [ CAT.HEAD.CASE nom,
-			       AGR.PNG.PN 3p ] !> ],
+             NONLOC.SLASH.LIST < [ CAT.HEAD.CASE nom,
+				   AGR.PNG.PN 3p ] > ],
     GENRE robust ].
 
 n_-_pr-fr_le_ignore := n_freerel_pro_lexent &
@@ -3856,16 +3905,16 @@ n_-_pr-fr_le_ignore := n_freerel_pro_lexent &
                      CAT.HEAD [ CASE nom,
 				--BARE na ], 
 		     AGR.PNG.PN 3 ],
-             NONLOC.SLASH <! [ CAT.HEAD.CASE nom,
-			       AGR.PNG.PN 3p ] !> ] ].
+             NONLOC.SLASH.LIST < [ CAT.HEAD.CASE nom,
+				   AGR.PNG.PN 3p ] > ] ].
 
 ;; Allow for |what bothers us is cats and dogs|
 ;;
 n_-_pr-fr-agr_le := n_freerel_pro_lexent &
   [ SYNSEM [ LOCAL [ CONT.RELS.LIST.FIRST.PRED free_relative_q_rel,
 		     AGR.PNG.PN 3p ],
-             NONLOC.SLASH <! [ CAT.HEAD.CASE nom,
-			       AGR.PNG.PN 3s ] !> ] ].
+             NONLOC.SLASH.LIST < [ CAT.HEAD.CASE nom,
+				   AGR.PNG.PN 3s ] > ] ].
 
 ;; |if admire kim, we arrive|
 ;;
@@ -3906,9 +3955,7 @@ sor_fin_subst := fin_nontrans_raising_subst &
                           canonical_synsem &
 			  [ LOCAL [ CAT [ HEAD.TAM.ASPECT.PRF -,
 					  VAL.SUBJ 
-					  < [ NONLOC [ SLASH 0-dlist,
-                                                       REL 0-dlist,
-                                                       QUE 0-dlist ] ] > ],
+					  < [ NONLOC non-local_none ] > ],
                                     CONT.HOOK.XARG #subj ],
                             OPT - ] > ].
 
@@ -3922,7 +3969,7 @@ n_or_a := n_or_v_or_a.
 
 ;; |China people|
 ;;
-n_-_c-cpd_le_rbst := n_-_c-cpd_lexent &
+n_-_c-cpd_le_rbst := basic_n_-_c-cpd_lexent &
   [ SYNSEM.MODIFD lmod & [ LPERIPH + ],
     ORTH.TOKCASE non_capitalized,
     GENRE robust ].
@@ -3960,7 +4007,7 @@ sandwich_period_abb_rule := basic_punctuation_rule &
 ;; Block robust plural for |Feb.|
 ;; DPF 2020-04-06 - Also block bare singular: |Wuhan last December|
 ;;
-n_np_c-month_lexent :+
+basic_n_np_c-month_lexent :+
   [ SYNSEM.LOCAL sing_noun & [ CAT.HEAD.--BARE - ] ].
 
 nbar_coord_rule :+
@@ -3970,6 +4017,8 @@ nbar_coord_rule :+
 ;; quantiy_or_no_rel, to exclude |stuffed when I left|.
 ;; 2020-04-17 - Added RPERIPH bool to block these in v_mod.
 ;; 2021-04-21 - XARG basic_non_expl-ind blocks "it is remembered the movie"
+;; 2023-01-27 - Added COMPS..MODIFD notmod_or_rmod to avoid for
+;; "were excited [about their] trip"
 ;;
 no_by_passive_verb_lr_mal := basic_passive_verb_lexrule &
   [ DTR [ SYNSEM trans_subst &
@@ -3988,11 +4037,13 @@ no_by_passive_verb_lr_mal := basic_passive_verb_lexrule &
 						      [ MINORS.NORM
 						          quantity_or_no_rel ],
 						     VAL.SPR *olist* ],
-					       CONJ cnil,
-					       CONT.HOOK.INDEX #subjind &
-					                       [ SORT entity ]],
+					    CONJ cnil,
+					    CONT.HOOK.INDEX #subjind &
+						[ SORT entity,
+						  PT notpro ] ],
+				       MODIFD notmod_or_rmod,
        			               PUNCT.LPUNCT lparen_or_dq_or_no_punct,
-				       NONLOC #snonloc & [ SLASH 0-dlist ],
+				       NONLOC #snonloc & [ SLASH.LIST < > ],
 				       OPT - ] > ] ],
 	       CONT.HOOK.XARG #sind ],
        MODIFD.RPERIPH bool ],
@@ -4367,7 +4418,7 @@ n_-_meas-gen_lexent :+
 norm_num_word :+
   [ ORTH.TOKCASE #tokcase,
     SYNSEM.PHON.ONSET.--TL.FIRST.+CLASS.+CASE #tokcase ].
-n_np_c_lexent :+
+basic_n_np_c_lexent :+
   [ ORTH.TOKCASE #tokcase,
     SYNSEM.PHON.ONSET.--TL.FIRST.+CLASS.+CASE #tokcase ].
 n_nb_c_le :+
@@ -4414,7 +4465,9 @@ n_-_c-nochd_lexent :+
   [ ORTH.TOKCASE non_capitalized ].
 n_-_c-day_lexent :+
   [ ORTH.TOKCASE non_capitalized ].
-n_np_c-month_lexent :+
+n_-_c-dow_le :+
+  [ ORTH.TOKCASE non_capitalized ].
+basic_n_np_c-month_lexent :+
   [ ORTH.TOKCASE non_capitalized ].
 abstr_n_day_of_month_lexent :+
   [ ORTH.TOKCASE non_capitalized ].
@@ -4464,7 +4517,7 @@ n_cp_m-nocmp_le_rbst := noun_word &
              LOCAL.CAT [ HEAD.MINORS.MIN norm_nom_rel,
 			 VAL [ COMPS.FIRST.LOCAL.CAT.HEAD verb &
 					    [ MINORS.ALTMIN non_ellipt_rel ],
-			       SPR.FIRST.NONLOC.QUE 0-dlist ] ] ],
+			       SPR.FIRST.NONLOC.QUE.LIST < > ] ] ],
     GENRE robust ].
 
 ;; Block robust |She stood unmoving|
@@ -4522,9 +4575,18 @@ mal_ditrans_only_verb := verb_synsem & ditrans_subst & mal_ditrans_lt &
 
 ;; We saw thousands pictures.
 ;;
-n_np_c_le_rbst := n_np_c_lexent &
+n_np_c_le_rbst := basic_n_np_c_lexent &
   [ SYNSEM common_noun_npcomp_synsem &
            [ LOCAL.CAT.HEAD.MINORS.MIN norm_nom_rel ],
+    GENRE robust ]. 
+
+;; For "ten percent the people were ..." but avoid robust
+;; "the ten percent rise in inflation"
+n_np_c-det_le_rbst := basic_n_np_c_lexent &
+  [ SYNSEM common_noun_npcomp_synsem &
+           [ LOCAL.CAT [ HEAD.MINORS.MIN norm_nom_rel,
+	                 VAL.COMPS.FIRST.LOCAL.CAT.HEAD.MINORS.ALTMIN
+		                                              explicit_q_rel ]],
     GENRE robust ]. 
 
 ;; DPF 2018-05-25 - Added NORM norm_rel to prevent these in v_mod to block
@@ -4608,7 +4670,7 @@ s_coord_top_phr := basic_s_coord_top_phr &
 			       CONT.HOOK.INDEX.SF prop-or-comm ],
 		       PUNCT.RPUNCT clause_or_semi_or_comma_or_no_punct ] ].
 
-n_pp_c-nsnc-of-nochd_le := n_pp_c-nsnc-of_lexent &
+n_pp_c-nsnc-of-nochd_le := basic_n_pp_c-nsnc-of_lexent &
   [ SYNSEM [ MODIFD.LPERIPH +,
 	     PHON.ONSET.--TL.FIRST.+CLASS.+CASE #tokcase ],
     ORTH.TOKCASE #tokcase ].
@@ -4710,9 +4772,10 @@ n_-_c-natlty-nocap_le_rbst := basic_n_-_c-nocnh_lexent &
 subj_prd_verb := verb_synsem & subj_control_subst &
                  basic_prd_comp_lt &
   [ LOCAL [ CAT.VAL [ COMPS < synsem & #comp &
-                              [ LOCAL [ CAT.HEAD 
-					    [ TAM [ ASPECT.PROGR - ],
-					      MOD < [ LOCAL.CAT.HEAD noun ] > ],
+                              [ LOCAL [ CAT [ HEAD 
+					     [ TAM [ ASPECT.PROGR - ],
+					       MOD < [ LOCAL.CAT.HEAD noun ] > ],
+					      --SLPASS + ],
 					CONJ cnil ] ], ... >,
                       KCMP #comp ],
             CONT [ HCONS <! [ HARG #arghand ] !>,
@@ -4724,6 +4787,7 @@ subj_prd_verb := verb_synsem & subj_control_subst &
 prd_comp_lt := basic_prd_comp_lt &
   [ LOCAL [ CAT.VAL.KCMP [ --MIN independent_rel ],
 	    CONT.ICONS <! !> ] ].
+
 
 ;; DPF 2020-04-06 - Block robust det-mass "a" for group nouns: |a family|
 ;; 2021-06-15 - Block robust "the number was 60 students"
@@ -4751,7 +4815,11 @@ adj_one_an_lexent :+
   [ SYNSEM.LOCAL.CAT.HEAD.MOD.FIRST.LOCAL.CAT.HEAD.--BARE - ].
 
 ;; 2020-05-07 - Push propagation of LEX and MODIFD down to subtypes
+;; 2023-01-27 - Not needed, and mysteriously prevents parse for "Kim felt sad 
+;; we arose" when using generalization-packing, though parses fine when gen-p is
+;; disabled.  Maybe investigate puzzle later.
 ;;
+#|
 basic_head_comp_phrase := basic_head_comp_or_marker_phrase & head_initial &
 			  binary_punct_phrase & head_valence_phrase &
 			  head_compositional &
@@ -4772,6 +4840,7 @@ basic_head_comp_phrase := basic_head_comp_or_marker_phrase & head_initial &
     C-CONT [ RELS <! !>,
 	     HCONS <! !>,
 	     ICONS <! !> ] ].
+|#
 
 ;; |we made [it] possible to arrive|
 ;;
@@ -4892,7 +4961,7 @@ head_second_comp_phrase := basic_head_comp_phrase &
 							     intersective_mod ],
 				VAL [ SPR.FIRST.--MIN much_or_very_deg_rel,
 				      COMPS *olist* ] ],
-		    NONLOC.SLASH 0-dlist ] ].
+		    NONLOC.SLASH.LIST < > ] ].
 
 ;; Block subord robust for |speaking English|
 ;;
@@ -5015,11 +5084,15 @@ v_np_was_le_pron := be_was_lex_entry & be_id_pos &
 			   COMPS.FIRST.--SIND.GROUPN - ] ].
 
 ;; For adjectives wrongly used as nouns,as *a various of solutions"
-n_-_c-aj_le_rbst := n_intr_lex_entry &
-  [ SYNSEM.LOCAL [ AGR.PNG png-irreg,
-		   CAT [ HEAD [ --BARE -,
-				--MALCM - ],
-			 VAL.SPR.FIRST expressed_synsem ] ],
+;; 22-04-26 - Drop RPERIPH + since it prevented "a various of books"
+n_-_c-aj_le_rbst := norm_intr_lex_entry &
+  [ SYNSEM [ LOCAL [ AGR.PNG png-irreg,
+		     CAT [ HEAD [ --BARE -,
+				  --MALCM -,
+				  MINORS [ MIN norm_nom_rel,
+					   NORM norm_rel ] ],
+			   VAL.SPR.FIRST expressed_synsem ] ],
+	     MODIFD.LPERIPH + ],
     GENRE robust ].
 
 ;; For verbs wrongly used as nouns, as *a relax" or "a begin"
@@ -5034,11 +5107,14 @@ n_-_m-vb_le_rbst := norm_noun_word &
     GENRE robust ].
 
 ;; "expect/expectation"
+;; 2022-04-19 - For now, restrict to count-only, to avoid spurious robust appos
+;; NP for "we expect the fed will succeed"
 n_cp_mc-vb_le_rbst := n_cp_mc-optc_lexent &
   [ SYNSEM basic_mass_count_noun_cpcomp_fin_synsem &
 	   [ MODIFD notmod,
              LOCAL.CAT [ HEAD.MINORS.MIN norm_nom_rel,
-			 VAL.COMPS.FIRST.LOCAL.CAT s_cat_fin_v_c ] ],
+			 VAL.COMPS.FIRST.LOCAL.CAT s_cat_fin_v_c ],
+	     --SIND.DIV - ],
     GENRE robust ].
 
 ;; DPF 2020-07-02 - Constrain ALTMIN to no_rel to prevent these 
@@ -5071,7 +5147,7 @@ noun_n_cmpnd_phr :+
 
 ;; Nouns with wrong "the" specifier, as for "in the while"
 ;;
-n_-_c-the_le_rbst := n_-_c-sg-ifl-nmd_lexent &
+n_-_c-the_le_rbst := basic_n_-_c-sg-ifl-nmd_lexent &
   [ SYNSEM.LOCAL.CAT [ HEAD [ MINORS.ALTMIN _the_q_rel,
 			      --BARE - ],
 		       VAL.SPR.FIRST expressed_synsem ],
@@ -5149,14 +5225,16 @@ filler_head_prd_rel_rule_mal := filler_head_rel_rule &
 				VAL.SUBJ *olist* ] ] >,
     GENRE robust ].
 
+;; 2022-04-26 - Exclude for "those that fail" via INFLECTD bool
 filler_head_prd_np_rel_rule_mal := filler_head_prd_rel_rule_mal &
   [ SYNSEM.LOCAL.CAT.HEAD.MOD.FIRST.LOCAL.CONT.HOOK.XARG #xarg,
-    ARGS < [ SYNSEM.LOCAL.CAT.VAL.SPR *olist* ],
-	   [ SYNSEM.NONLOC.SLASH <! [ CAT.HEAD noun_or_nomger,
-				      CONT.HOOK.XARG #xarg ] !> ] > ].
+    ARGS < [ SYNSEM.LOCAL.CAT.VAL.SPR *olist*,
+	     INFLECTD bool ],
+	   [ SYNSEM.NONLOC.SLASH.LIST < [ CAT.HEAD noun_or_nomger,
+					  CONT.HOOK.XARG #xarg ] > ] > ].
 
 filler_head_prd_pp_rel_rule_mal := filler_head_prd_rel_rule_mal &
-  [ ARGS < [ ], [ SYNSEM.NONLOC.SLASH <! [ CAT.HEAD a_or_p ] !> ] > ].
+  [ ARGS < [ ], [ SYNSEM.NONLOC.SLASH.LIST < [ CAT.HEAD a_or_p ] > ] > ].
 
 ;; Needed in combination with flr-hd_rel-prd_c_rbst, but have latter supply
 ;; the GENRE robust, to avoid double error reporting
@@ -5164,16 +5242,10 @@ extracted_subj_phrase_prd_mal := extracted_subj_phrase &
   [ SYNSEM.LOCAL.CAT.VAL.SUBJ *anti_null*,
     HD-DTR.SYNSEM.LOCAL.CAT [ HEAD.VFORM pas_or_prp,
                               VAL.SUBJ < expressed_non_canonical &
-					 [ LOCAL.CAT.HEAD.CASE nom ] > ] ].
+					 [ LOCAL.CAT.HEAD
+                                           [ CASE nom ]] >]].
 
 extrasubj_prd_rule_mal := rule & extracted_subj_phrase_prd_mal.
-
-verb_participle_affix := local &
-  [ CAT [ HEAD verb & [ PRD + ],
-	  VAL.SUBJ < synsem &
-		     [ LOCAL.AGR #agr ] >,
-	  HC-LEX - ],
-    AGR #agr ].
 
 ;; DPF 2020-09-10 - Ensure that robust "last" (for mismatched tense) projects
 ;; npadv "last month" that only modifies VPs.  But can't simply identify
@@ -5318,11 +5390,13 @@ va_will_be_neg_lexent := will_aux_word &
 ;; "Pursue knowledge is a good strategy"
 ;; Restrict dtr to nonpast to avoid robust "get better prepared for the day"
 cp_subj_fin_rule_mal := rule & basic_cp_subj_inf_phrase &
-  [ SYNSEM.LOCAL [ CAT [ VAL.SUBJ.FIRST [ LOCAL.CAT [ HEAD verb & 
-							   [ AUX - ],
-						      VAL.SUBJ *cons* &
+  [ SYNSEM.LOCAL [ CAT [ VAL.SUBJ.FIRST [ LOCAL [ CAT [ HEAD verb & 
+							   [ AUX -,
+							     --BSEVPSBJ + ],
+							VAL.SUBJ *cons* &
 							< [ NONLOC
 							     non-local_none ]>],
+						  CONT.HOOK.XARG non_expl-ind ],
 					  NONLOC non-local_none,
 					  LEX - ],
 			 HEAD.TAM.TENSE nonpast ],
@@ -5333,18 +5407,22 @@ modal_verb_word :+
   [ SYNSEM.LOCAL.CAT [ HEAD.--NOCJCRD #nocjcrd,
 		       VAL.COMPS.FIRST.LOCAL.CAT.HEAD.--NOCJCRD #nocjcrd ] ].
 
+;; 2022-04-22 - Added COMPS..ALTMIN explicit_q_rel to avoid robust
+;; "a ten percent rise in prices"
 meas_np_npcomp_phrase_mal := norm_measure_np_phrase &
   [ SYNSEM [ LOCAL [ CAT.VAL.COMPS < [ LOCAL [ CAT nomp_cat_acc_min & 
-						   [ HEAD noun ],
+						   [ HEAD noun &
+							  [ MINORS.ALTMIN
+							     explicit_q_rel ]],
 					       CONT.HOOK [ LTOP #lbl,
 							   INDEX #arg &
 							     [ --BARESG - ] ] ],
-				       NONLOC [ REL #rel,
-						SLASH #slash ],
+				       NONLOC [ REL.LIST #rel,
+						SLASH.LIST #slash ],
 				       OPT - ] >,
 		     CONT.HOOK.LTOP #lbl ],
-	     NONLOC [ REL #rel,
-		      SLASH #slash ] ],
+	     NONLOC [ REL.LIST #rel,
+		      SLASH.LIST #slash ] ],
     DTR1.SYNSEM.LOCAL.CONT.HOOK.XARG #arg ].
 
 ;; "they hired one fifth the workers"
@@ -5376,7 +5454,10 @@ basic_NP_particle_lexrule :+
 fin_non_wh_rel_cl_commas_mal := basic_basic_fin_non_wh_rel_cl & non_wh_rel_cl &
   [ SYNSEM.LOCAL.CAT.HEAD.MOD < [ --MIN nonpro_or_refl_or_num_rel,
 				  PUNCT.RPUNCT comma_punct ] >,
-    C-CONT.RELS <! !> ].
+    ARGS.FIRST.SYNSEM.PUNCT.RPUNCT comma_punct,
+    C-CONT.RELS <! !>,
+    GENRE robust ].
+
 fin_non_wh_rel_commas_rule_mal := rule & fin_non_wh_rel_cl_commas_mal.
 
 ;; "in spite of he arrived late, he stayed"
@@ -5427,10 +5508,6 @@ vp_ellipsis :+
   [ SYNSEM.LOCAL.CAT.HEAD.--CXELLIP #cxellip,
     DTR.SYNSEM.LOCAL.CAT.HEAD.--CXELLIP #cxellip ].
 
-;; Avoid robust "left her school bag"
-v_np-np*_le :+
-  [ SYNSEM.LOCAL.CAT.VAL.COMPS < [], [ --SIND.--BARESG - ] > ].
-
 ;; 2021-06-29 - To avoid over-enthusiastic mal-case pronouns as in
 ;; "On Sunday, at our school, will be a 5km cross-country race.", let's try
 ;; restricting them to verbal complements only.
@@ -5454,3 +5531,36 @@ Pn - unknowns
 			    CARG #carg ] ],
     TOKENS.+LIST < [ +CARG #carg ] > ].
 
+n_-_m-ssn_le :+
+  [ ALTS.PLMASS - ].
+
+;; Used in chart-mapping for "7, 500" to trigger mal-entry for cardinal
+card_malcomma_ne := named_entity.
+
+;; To avoid robust "was at home studying last night"
+vc_prd_was_lexent :+
+  [ SYNSEM.MODIFD.RPERIPH bool ].
+vc_prd_were_lexent :+
+  [ SYNSEM.MODIFD.RPERIPH bool ].
+vc_prd_is_lexent :+
+  [ SYNSEM.MODIFD.RPERIPH bool ].
+vc_prd_are_lexent :+
+  [ SYNSEM.MODIFD.RPERIPH bool ].
+
+;; Avoid robust run_on "Thanks to Kim, we arrived"
+v_np_salut_lexent :+
+  [ SYNSEM.LOCAL.CAT.HEAD.--RUNON - ].
+
+n_pp_c-plc-of_le :+
+  [ SYNSEM.LOCAL.CONT.HOOK.INDEX.SORT location ].
+
+;; Avoid robust "left her school bag"
+v_np-np*_lexent :+
+  [ SYNSEM.LOCAL.CAT.VAL.COMPS < [], [ --SIND.--BARESG - ] > ].
+
+sai_ell_lexrule :+
+  [ DTR.SYNSEM.LOCAL.CAT.HEAD.CNTRCTD - ].
+
+filler_head_rule_non_wh_inv_mc :+
+  [ NH-DTR.SYNSEM.PUNCT.RPUNCT no_punct ].
+  

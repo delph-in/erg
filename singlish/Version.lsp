@@ -5,4 +5,4 @@
 ;;; assignments in either `lkb/script' or `english.tdl'.  (2-feb-99  -  oe@eo)
 ;;;
 
-(defparameter *grammar-version* "ERG Singlish (trunk)")
+(defparameter *grammar-version* "ERG-Singlish (2023)")
