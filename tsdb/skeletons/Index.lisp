@@ -98,6 +98,7 @@
  ((:path . "marcodrdev") (:content . "MSMarco Document Rank dev queries"))
  ((:path . "marcodrtrain") (:content . "MSMarco Document Rank train queries"))
  ((:path . "marcotrainwk") (:content . "MSMarco DR train queries in Wikipedia"))
+ ((:path . "singlish") (:content . "Singlish examples"))
  ((:path . "ersa") (:content . "ERS Algebra examples"))
  ((:path . "test") (:content . "Test"))
 )
