@@ -40,4 +40,4 @@ def tuple_for_polish_expression(pe):
 #print p2t(['&', 'a', '|', 'b', 'c'])['tuple'];
 #print p2t(['&', 'a', '~', 'NULL', '|', 'c', 'd'])['tuple'];
 if __name__ == '__main__':
-	print p2t(['|', 'dodec(d)', '~', 'NULL', '&', 'cube(a)', 'larger(f,a)'])['tuple'];
+	print( p2t(['|', 'dodec(d)', '~', 'NULL', '&', 'cube(a)', 'larger(f,a)'])['tuple']);

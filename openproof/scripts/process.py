@@ -95,4 +95,4 @@ def postprocess(s):
 	return s
 
 if __name__ == '__main__':
-	print preprocess('dodec(d)|~(cube(a)&larger(f, a))')
+	print(preprocess('dodec(d)|~(cube(a)&larger(f, a))'))

@@ -125,7 +125,7 @@ def fTup2mPred(fTup): # add mPreds to set and return reference to the current ob
 			elif conn in ('iff', '%'):
 				return l_ref
 			else: # and, or
-				print "and/or"
+				print("and/or")
 				return ref
 			"""
 			return ref
@@ -161,7 +161,7 @@ sample = ('|', ('dodec', 'd'), ('~', ('&', ('cube', 'a'), ('larger', 'f', 'a')))
 
 def printDict(d):
 	for key in d:
-		print key, ":", d[key]
+		print(key, ":", d[key])
 
 def index(mpred):
 	global indexedMPreds
@@ -195,7 +195,7 @@ def prettyUMRSForTuple(t):
 	return fres
 
 if __name__ == '__main__':
-	print prettyUMRSForTuple(sample)
+	print(prettyUMRSForTuple(sample))
 
 
 """

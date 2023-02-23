@@ -17,7 +17,7 @@ def e2e(s):
 
 if __name__ == '__main__':
 	if len(sys.argv) != 2:
-		print "Usage: run with a single argument in the form of an LPL FOL string. Example:"
-		print "(-cube(b)&large(c))-->((between(d, e, f)<->larger(b,c))|cube(a))"
+		print("Usage: run with a single argument in the form of an LPL FOL string. Example:")
+		print("(-cube(b)&large(c))-->((between(d, e, f)<->larger(b,c))|cube(a))")
 	else:
-		print e2e(sys.argv[1])
+		print(e2e(sys.argv[1]))
