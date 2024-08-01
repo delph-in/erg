@@ -1,0 +1,42 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tagname:
+        description: Release Tag Name
+        required: true
+        type: string
+
+env:
+  ACEVER: 0.9.34
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    env:
+      ACEFILE: "ace-${{ env.ACEVER }}-x86-64.tar.gz"
+      OUTFILE: "erg-${{ inputs.tagname }}-x86-64-$ACEVER.dat"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tagname }}
+
+      - name: Install ACE
+        run: |
+          wget "http://sweaglesw.org/linguistics/ace/download/$ACEFILE"
+          tar xf "$ACEFILE"
+          ./ace-$ACEVER/ace -V
+
+      - name: Compile Grammar
+        run: |
+          ./ace-$ACEVER/ace -g ace/config.tdl -G "$OUTFILE"
+          bzip2 "$OUTFILE"
+
+      - name: Upload Release Asset
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload "${{ inputs.tagname }}" "$OUTFILE".bz2
