@@ -1,0 +1,7 @@
+(((:path . "llmo") (:content . "Large Language Model Original"))
+ ((:path . "llmgf07") (:content . "Large Language Model Generated Falcon 7B"))
+ ((:path . "llmgl07") (:content . "Large Language Model Generated Llama 7B"))
+ ((:path . "llmgl13") (:content . "Large Language Model Generated Llama 13B"))
+ ((:path . "llmgl30") (:content . "Large Language Model Generated Llama 30B"))
+ ((:path . "llmgl65") (:content . "Large Language Model Generated Llama 65B"))
+ ((:path . "llmgm07") (:content . "Large Language Model Generated Mistral 7B")))

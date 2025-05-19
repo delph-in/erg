@@ -708,9 +708,15 @@ basic_adv_addition := lex_rule &
 ;; rest, since only "not" can be added to an elliptical aux verb, while they
 ;; can all appear with verbs that have overt complements.  Thus *we should not*
 ;; but not *we should never*, *we should both*, etc.
+;; DPF 2024-04-25 - Split the non-elliptical variant again into two, adding
+;; one for "not" which has an extracted complement (as in "a hero he is not").
 
 adv_addition := basic_adv_addition &
   [ DTR.SYNSEM.LOCAL.CAT.VAL.COMPS *cons* & [ FIRST canonical_synsem ] ].
+
+adv_add_neg_gap := basic_adv_addition &
+  [ DTR.SYNSEM.LOCAL.CAT.VAL.COMPS *cons* & [ FIRST gap ],
+    SYNSEM.LOCAL.CAT.VAL.COMPS.FIRST.LOCAL.CAT.HEAD.MINORS.MIN neg_rel ].
 
 adv_add_neg_ellipt := basic_adv_addition &
   [ DTR.SYNSEM.LOCAL.CAT.VAL.COMPS < >,
@@ -827,12 +833,13 @@ vp_ellipsis_ref := vp_ellipsis &
 ;; analysis of "there is." with regular copula.
 ;; DPF 2022-04-29 - Re 2021-06-09: But this blocks tag questions with expl-it,
 ;; as in "it is raining, isn't it" where we need the regular copula for "isn't".
+;; DPF 2024-05-29 - Restricting this rule to only copulas (regular and there)
+;; blocks e.g. "it wouldn't rain, would it?" and "it would be easy to quit,
+;; wouldn't it?".  So remove constraint DTR..MIN be_v_there-or-prd_rel.
 ;
 vp_ellipsis_expl := vp_ellipsis &
-  [ DTR.SYNSEM [ LOCAL.CAT [ HEAD.MINORS.MIN be_v_there-or-prd_rel,
-                             VAL [ SUBJ < [ --SIND expl-ind & #sind ] >,
-                                   COMPS.FIRST synsem &
-					[ --SIND #cindex ] ] ],
+  [ DTR.SYNSEM [ LOCAL.CAT.VAL [ SUBJ < [ --SIND expl-ind & #sind ] >,
+				 COMPS.FIRST synsem & [ --SIND #cindex ] ],
 		 LKEYS [ KEYREL.LBL #lbl,
 			 --+ARGIND #subjind ] ],
     SYNSEM [ LOCAL.CONT.HOOK.XARG #sind,
@@ -1025,7 +1032,10 @@ prep_passive_verb_lexrule := basic_passive_verb_lexrule &
            [ LOCAL [ CAT [ VAL [ SUBJ < [ LOCAL.CONT #objcont,
 					  --SIND #objind,
 					  NONLOC.SLASH.LIST #snonloc ] >,
-				 COMPS [ FIRST [ --MIN #min ],
+				 COMPS [ FIRST [ --MIN #min,
+						 LKEYS.KEYREL.ARG2 #objind,
+						 LOCAL.CAT.VAL.COMPS
+						  < [ LOCAL.CAT.HEAD noun ] > ],
 				  REST [ FIRST [ LOCAL.CONT.HOOK.INDEX #sind,
 						 NONLOC.SLASH.LIST #ononloc ],
 					 REST #comps ] ] ] ],
@@ -2271,6 +2281,99 @@ hour_np_lexrule := word_or_nonpunct_rule &
 		      PUNCT #punct & [ LPUNCT no_punct,
 				       RPUNCT no_punct ] ] ] > ].
 
+;; [eighteen] fifty-two (A.D.)
+year_np_lexrule := word_or_nonpunct_rule &
+  [ SYNSEM noun_nonpro_nomod_synsem &
+	   [ PUNCT #punct,
+	     PHON.ONSET #onset,
+	     LOCAL [ CAT 
+		     [ HEAD noun &
+			    [ POSS -,
+			      MINORS [ MIN yofc_rel,
+				       ALTMIN proper_q_rel,
+				       NORM norm_rel ],
+			      MOD < > ],
+		       VAL [ COMPS < [ LOCAL [ CAT [ HEAD intadj2- &
+						    [ MINORS [ MIN card_rel,
+							       ALTMIN norm_rel],
+						      MOD < synsem >,
+						      CARDINAL + ],
+						     VAL [ COMPS < >,
+							   SPR *olist* ],
+						     --SLPASS + ],
+					       CONJ cnil,
+					       CONT.HOOK [ LTOP #lbl,
+							   INDEX #decadeind ] ],
+				       OPT -,
+				       NONLOC.SLASH.LIST < >,
+				       PUNCT.LPUNCT no_punct ],
+				     [ --MIN bc_ad_rel,
+				       LOCAL [ CAT.HEAD no_head,
+					       CONJ cnil,
+					       CONT.HOOK.XARG #index ],
+				       NONLOC.SLASH.LIST < >,
+				       OPT + ] >,
+			     SPR < unexpressed &
+				   [ --MIN abstract_q_rel,
+				     LOCAL.CAT.HEAD det ] > ] ],
+		     CONT [ HOOK #hook & [ INDEX.IND + ],
+			    RELS [ LIST #rfirst,
+				   LAST #rlast ],
+			    HCONS 0-dlist,
+			    ICONS 0-dlist ],
+		     CONJ cnil ] ],
+    C-CONT [ HOOK #hook & [ LTOP #lbl,
+			    INDEX #index ],
+	     RELS [ LIST #rfirst &
+			 < [ PRED yofc_rel,
+			     LBL #lbl,
+			     ARG0 #index,
+			     ARG1 #conjind ],
+			   [ PRED plus_rel,
+			     LBL #lbl,
+			     ARG0 #conjind & event,
+			     ARG1 #centuryind & event,
+			     ARG2 #decadeind & event ],
+			   [ PRED times_rel,
+			     LBL #lbl,
+			     ARG0 #centuryind,
+			     ARG1 #numind & event,
+			     ARG2 #hundind & event ],
+			   [ PRED card_rel,
+			     LBL #lbl,
+			     ARG0 #hundind,
+			     ARG1 event_or_index,
+			     CARG "100" ] . #rmiddle >,
+		    LAST #rmiddle ],
+	     HCONS 0-dlist,
+	     ICONS 0-dlist ],
+    IDIOM #idiom, DIALECT #dialect, ALTS #alts, GENRE #genre, 
+    INFLECTD +,
+    ORTH #orth,
+    DERIVED +,
+    TOKENS #tokens,
+    ARGS < [ ORTH #orth,
+	     IDIOM #idiom, DIALECT #dialect, GENRE #genre, ALTS #alts, 
+	     INFLECTD +,
+	     TOKENS #tokens,
+	     SYNSEM [ LOCAL [ CAT [ HEAD intadj2- & 
+					 [ MINORS [ MIN card_rel,
+						    ALTMIN norm_rel ],
+					   MOD < synsem >,
+					   CARDINAL + ],
+				    VAL [ SPR *olist*,
+					  COMPS < > ] ],
+			      CONT [ HOOK [ LTOP #lbl,
+					    INDEX #numind ],
+				     RELS [ LIST #rmiddle,
+					    LAST #rlast ],
+				     HCONS 0-dlist ],
+			      CONJ cnil ],
+		      PHON [ ONSET #onset,
+			     DIGIT - ],
+		      PUNCT #punct & [ LPUNCT no_punct,
+				       RPUNCT no_punct ] ] ] > ].
+
 ; DPF 28-jun-07 - Restricted dtr to HEAD a_or_adv to block partitive dets
 ; like "a bit".  Also made mother's SPCMPS < >.
 
@@ -3140,7 +3243,7 @@ basic_derivational_prefix_rule := lex_rule_supermost & word_or_nonpunct_rule &
     KEY-ARG #keyarg,
     ARGS < #stem >,
     C-CONT [ RELS <! [ LBL #lbl,
-		       ARG1 #index,
+		       ARG1 #index & event_or_index,
 		       CFROM #from, CTO #to ] !>,
              HCONS <! !>,
 	     ICONS <! !> ] ].

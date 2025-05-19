@@ -5,4 +5,4 @@
 ;;; assignments in either `lkb/script' or `english.tdl'.  (2-feb-99  -  oe@eo)
 ;;;
 
-(defparameter *grammar-version* "ERG-educ (2023)")
+(defparameter *grammar-version* "ERG-educ (2025)")

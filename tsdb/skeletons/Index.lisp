@@ -32,7 +32,7 @@
 ;;; [        1,000,000 --         1,999,999] --- VerbMobil
 ;;; [        2,000,000 --         2,999,999] --- ecommerce
 ;;; [        3,000,000 --         3,999,999] --- LOGON
-;;; [        4,000,000 --         4,999,999] --- SciBorg
+;;; [        4,000,000 --         4,999,999] --- Cambridge Grammar of English
 ;;; [        5,000,000 --         5,099,999] --- BioScope
 ;;; [        6,000,000 --         6,099,999] --- SemCore
 ;;; [        7,000,000 --         7,099,999] --- Open Multilingual WordNet
@@ -42,6 +42,8 @@
 ;;; [       40,000,000 --        49,999,999] --- Brown Corpus
 ;;; [       60,000,000 --        69,999,999] --- Sherlock Holmes
 ;;; [       70,000,000 --        79,999,999] --- Open English WordNet
+;;; [       80,000,000 --        80,999,999] --- Large Language Model Original
+;;; [       81,000,000 --        81,999,999] --- Large Language Model Generated
 ;;; [      120,000,000 --     1,099,999,999] --- GENIA
 ;;; [    2,000,000,000 --     2,999,999,999] --- NTU CLE
 ;;; [  100,000,000,000 --   299,999,999,999] --- WeSearch Data Collection
@@ -100,5 +102,7 @@
  ((:path . "marcotrainwk") (:content . "MSMarco DR train queries in Wikipedia"))
  ((:path . "singlish") (:content . "Singlish examples"))
  ((:path . "ersa") (:content . "ERS Algebra examples"))
+ ((:path . "cgel") (:content . "Cambridge Grammar of the English Language"))
+ ((:path . "llm") (:content . "Large Language Model Comparison"))
  ((:path . "test") (:content . "Test"))
 )

@@ -91,7 +91,7 @@
 ;;; do something in addition for LOGON fragment generation.
 ;;;                                                      (dan & oe; 20-apr-05)
 (setf *fragment-start-symbols*
-  '(root_strict root_informal root_frag 
+  '(root_strict root_informal root_frag root_inffrag
     root_lex root_phr root_conj root_subord))
 
 ;;;
@@ -203,8 +203,9 @@
 ; For character encoding
 (defparameter cdb::*cdb-ascii-p* nil)
 
-; Turn on characterization in preprocessor
-(setf *characterize-p* t)
+; REPP and token mapping rules are responsible for characterization, so bypass
+; old stop-gap code for it in sentence preprocessing and parse node creation.
+(setf *characterize-p* nil)
 
 (defparameter *discriminant-path* '(SYNSEM LOCAL MINORS MIN))
 

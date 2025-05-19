@@ -239,24 +239,3 @@
                         #1#))))))))))
     (check-subsume-wffs-p-aux dag1 dag2 path)
     (values forwardp backwardp)))
-;;------------------------------------------------------------------------------
-;; Show table with edge counts in each cell of the current parse chart
-;;
-(defun sum-chart ()
- (let ((len
-        (loop for s from 0 below (1- *chart-limit*)
-            when (aref *chart* s (1+ s)) maximize (1+ s))))
-  (format t "~&Total edges: ~D~%"
-    (loop for i from 0 below (array-total-size *chart*) sum (length (row-major-aref *chart* i))))
-  (format t "      ")
-  (loop for v from 0 to len do (format t "~2D    " v))
-  (loop for start from 0 to len
-      do
-      (format t "~&~2D " start)
-      (loop for end from 0 to len
-          do
-          (cond
-            ((<= end start) (format t "      "))
-            (t (format t "~5D " (length (aref *chart* start end)))))))))
-;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

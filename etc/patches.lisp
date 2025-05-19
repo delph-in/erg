@@ -27,54 +27,10 @@
  (:block "v_event")
  )
 
-; Original, for 1214 release
-#+:null
-(progn
-  (in-package :mt)
-  (setf semi
-    (construct-semi       
-     :ids t :rules t :descendp t :embedp t
-     :semi (read-semi
-            "~/src/logon/lingo/erg/etc/erg.smi"
-            :includep nil :finalizep nil :recordp nil)
-     :patches "~/src/logon/lingo/erg/etc/patches.lisp"
-     :finalizep t))
-  (print-semi
-   semi :stream "~/src/logon/lingo/erg/etc/hierarchy.smi"
-   :format :hierarchy)
-  (print-semi
-   semi :stream "~/src/logon/lingo/erg/etc/abstract.smi"
-   :format :compact :filter "^[^_]")
-  (print-semi
-   semi :stream "~/src/logon/lingo/erg/etc/surface.smi"
-   :format :compact :filter "^_"))
-
-#+:null
-(progn
-  (setf semi
-    (construct-semi       
-     :ids t :rules t :descendp t :embedp t
-     :semi (read-semi
-            "~/erg/etc/erg.smi"
-            :includep nil :finalizep nil :recordp nil)
-     :patches "~/erg/etc/patches.lisp"
-     :finalizep t))
-  (print-semi
-   semi :stream "~/erg/etc/hierarchy.smi"
-   :format :hierarchy)
-  (print-semi
-   semi :stream "~/erg/etc/abstract.smi"
-   :format :compact :filter "^[^_]")
-  (print-semi
-   semi :stream "~/erg/etc/surface.smi"
-   :format :compact :filter "^_"))
-
-;; For trunk
-#+:null
-(setf mrs::*normalize-predicates-p* t)
 #+:null
 (progn
   (in-package "MT")
+  (mt:read-vpm "~/logon/lingo/terg/etc/semi-output.vpm" :semi)
   (setf semi
     (construct-semi       
      :ids t :rules t :descendp t :embedp t
@@ -91,4 +47,6 @@
    :format :compact :filter "^[^_]")
   (print-semi
    semi :stream "~/logon/lingo/terg/etc/surface.smi"
-   :format :compact :filter "^_"))
+   :format :compact :filter "^_")
+  (mt:read-vpm "~/logon/lingo/terg/semi.vpm" :semi)
+  )
